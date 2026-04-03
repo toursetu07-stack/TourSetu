@@ -16,11 +16,11 @@ const tourDestinations = [
 ];
 
 const vehicleTypes = [
-    { id: 'car4', name: '4 Seater Car', icon: '??' },
-    { id: 'car6', name: '6 Seater SUV', icon: '??' },
-    { id: 'car7', name: '7 Seater SUV', icon: '??' },
-    { id: 'tempo', name: 'Tempo Traveler', icon: '??' },
-    { id: 'bus', name: 'Luxury Bus', icon: '??' }
+    { id: 'car4', name: '4 Seater Car', icon: '🚗' },
+    { id: 'car6', name: '6 Seater SUV', icon: '🚙' },
+    { id: 'car7', name: '7 Seater SUV', icon: '🚐' },
+    { id: 'tempo', name: 'Tempo Traveler', icon: '🚌' },
+    { id: 'bus', name: 'Luxury Bus', icon: '🚍' }
 ];
 
 const locationData = {
@@ -41,338 +41,240 @@ function getClient() {
     return _supabase;
 }
 
-window.toggleMode = function() { 
+function toggleMode() { 
     isLoginMode = !isLoginMode; 
-    const title = document.getElementById('form-title');
-    const btn = document.getElementById('auth-btn');
-    if (title) title.innerText = isLoginMode ? "Welcome Back" : "Create Account";
-    if (btn) btn.innerText = isLoginMode ? "Login" : "Register";
-    
-    const roleSel = document.getElementById('role-selection');
-    if (roleSel) roleSel.style.display = isLoginMode ? 'none' : 'block';
-};
+    renderAuthUI(); 
+}
 
-window.toggleBusinessFields = function() {
-    const role = document.getElementById('role')?.value;
+function toggleBusinessFields() {
+    const role = document.getElementById('role').value;
     const businessFields = document.getElementById('business-fields');
     if (businessFields) businessFields.style.display = (role === 'agency') ? 'block' : 'none';
-};
-
-window.updateCities = function() {
-    const state = document.getElementById('p-state')?.value;
-    const citySelect = document.getElementById('p-city');
-    if (!citySelect) return;
-    const cities = locationData[state] || [];
-    citySelect.innerHTML = cities.map(c => `<option value="${c}">${c}</option>`).join('');
-};
-
-/* =========================================
-   3. PACKAGE FORM & SAVE LOGIC
-   ========================================= */
-
-window.showPackageForm = function(pEncoded = null) {
-    let pkg = null;
-    try {
-        pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
-    } catch (e) { console.error("Data error:", e); }
-    
-    const isEdit = !!pkg;
-    const area = document.getElementById('main-content');
-    if (!area) return;
-    
-    const pkgDestinations = isEdit ? (pkg.destination || []) : [];
-    const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
-    
-    let selectedState = "";
-    if (isEdit && pkg.starting_location) {
-        for (let s in locationData) {
-            if (locationData[s].includes(pkg.starting_location)) { selectedState = s; break; }
-        }
-    }
-
-    const stateOptions = Object.keys(locationData).map(s => 
-        `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`
-    ).join('');
-
-    const destHtml = tourDestinations.map(d => `
-        <label style="display:flex; align-items:center; gap:5px; padding:8px; background:white; border:1px solid #ddd; border-radius:5px; font-size:12px; cursor:pointer;">
-            <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}
-        </label>
-    `).join('');
-
-    const vehicleHtml = vehicleTypes.map(v => {
-        const existing = pkgVehicles.find(ev => ev.id === v.id);
-        return `
-        <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:12px; border-radius:10px; border:1px solid #ffeaa7; margin-bottom:10px;">
-            <input type="checkbox" class="v-enable" data-id="${v.id}" ${existing ? 'checked' : ''}>
-            <span style="font-size:20px;">${v.icon}</span>
-            <b style="flex:1;">${v.name}</b>
-            <input type="number" class="v-rate" data-id="${v.id}" placeholder="Rate" style="width:90px; padding:5px;" value="${existing ? existing.rate : ''}">
-            <input type="number" class="v-max" data-id="${v.id}" placeholder="Max" style="width:60px; padding:5px;" value="${existing ? existing.max_cars : '1'}">
-        </div>`;
-    }).join('');
-
-    area.innerHTML = `
-        <div style="background:white; padding:30px; border-radius:15px; border:2px solid #ff9f43; max-width:750px; margin:20px auto; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
-            <h2 style="color:#ff9f43; margin:0 0 20px 0;">${isEdit ? '?? Edit Package' : '?? Create New Package'}</h2>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
-                <div>
-                    <label style="font-weight:bold; font-size:11px; color:#666;">PACKAGE TITLE</label>
-                    <input type="text" id="p-title" value="${isEdit ? pkg.title : ''}" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:8px;">
-                </div>
-                <div>
-                    <label style="font-weight:bold; font-size:11px; color:#666;">PICKUP STATE</label>
-                    <select id="p-state" onchange="window.updateCities()" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:8px;">
-                        <option value="">Select State</option>
-                        ${stateOptions}
-                    </select>
-                </div>
-            </div>
-            <div style="margin-bottom:20px;">
-                <label style="font-weight:bold; font-size:11px; color:#666;">STARTING CITY</label>
-                <select id="p-city" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:8px;">
-                    ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
-                </select>
-            </div>
-            <p><b>Select Destinations:</b></p>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; background:#f9f9f9; padding:15px; border-radius:10px; margin-bottom:25px; border:1px solid #eee;">
-                ${destHtml}
-            </div>
-            <p><b>Vehicle Pricing:</b></p>
-            ${vehicleHtml}
-            <label style="display:block; margin-top:20px; font-weight:bold; font-size:11px; color:#666;">ITINERARY / DESCRIPTION</label>
-            <textarea id="p-desc" style="width:100%; height:120px; padding:12px; border:1px solid #ccc; border-radius:8px; margin-top:5px;">${isEdit ? (pkg.description || '') : ''}</textarea>
-            <div style="display:flex; gap:15px; margin-top:30px;">
-                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="flex:2; background:#2ecc71; color:white; border:none; padding:18px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:16px;">SAVE CHANGES</button>
-                <button onclick="window.showTab('packages')" style="flex:1; background:#eee; border:none; padding:18px; border-radius:10px; cursor:pointer; font-weight:bold;">CANCEL</button>
-            </div>
-        </div>`;
-};
-
-window.processSave = async function(pkgId) {
-    const btn = document.getElementById('save-btn');
-    if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-        if(!user) throw new Error("Session expired. Please login.");
-        const titleVal = document.getElementById('p-title')?.value;
-        if(!titleVal || !titleVal.trim()) throw new Error("Please enter a package title!");
-        const selectedVehicles = [];
-        document.querySelectorAll('.v-enable:checked').forEach(el => {
-            const vId = el.dataset.id;
-            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`)?.value) || 0;
-            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`)?.value) || 1;
-            const vType = vehicleTypes.find(vt => vt.id === vId);
-            if (vType) selectedVehicles.push({ id: vId, name: vType.name, rate: rate, max_cars: max, icon: vType.icon });
-        });
-        const pkgData = {
-            title: titleVal,
-            starting_location: document.getElementById('p-city')?.value || "",
-            destination: Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value),
-            vehicles: selectedVehicles,
-            description: document.getElementById('p-desc')?.value || "",
-            agency_id: user.id
-        };
-        const res = (pkgId && pkgId !== "undefined" && pkgId !== "")
-            ? await client.from('packages').update(pkgData).eq('id', pkgId)
-            : await client.from('packages').insert([pkgData]);
-        if (res.error) throw res.error;
-        alert("? Success! Package saved.");
-        window.showTab('packages');
-    } catch (err) {
-        alert("? Error: " + err.message);
-        if (btn) { btn.innerText = "SAVE CHANGES"; btn.disabled = false; }
-    }
-};
-
-/* =========================================
-   4. AUTHENTICATION LOGIC
-   ========================================= */
-
-window.handleAuth = async function() {
-    const status = document.getElementById('status') || { innerText: "" };
-    const btn = document.getElementById('auth-btn');
-    const email = document.getElementById('email')?.value.trim();
-    const password = document.getElementById('password')?.value;
-
-    if (!email || !password) {
-        status.innerText = "?? Please enter email and password";
-        return;
-    }
-
-    const client = getClient();
-    if (btn) { btn.disabled = true; btn.innerText = "Processing..."; }
-    status.innerText = "? Processing...";
-
-    try {
-        if (isLoginMode) {
-            const { error } = await client.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-            window.location.reload();
-        } else {
-            const role = document.getElementById('role')?.value || 'customer';
-            const metadata = { role, is_approved: (role === 'customer') };
-            const { error } = await client.auth.signUp({ 
-                email, password, 
-                options: { data: metadata, emailRedirectTo: window.location.href } 
-            });
-            if (error) throw error;
-            status.innerHTML = `<div style="color:green; padding:10px;">?? Check your Inbox! Verification sent to ${email}.</div>`;
-        }
-    } catch (err) {
-        status.innerText = "? " + err.message;
-        if (btn) { btn.disabled = false; btn.innerText = isLoginMode ? "Login" : "Register"; }
-    }
-};
-
-window.handleLogout = async function() {
-    await getClient().auth.signOut();
-    window.location.reload();
-};
-
-window.showTab = function(tab) {
-    const area = document.getElementById('main-content');
-    if (!area) return;
-    if (tab === 'packages') {
-        area.innerHTML = `<h3>My Packages</h3><button onclick="window.showPackageForm()">+ Create New</button><div id="pkg-list">Loading...</div>`;
-        fetchPackages();
-    }
-};
-
-async function fetchPackages() {
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-    const { data: pkgs } = await client.from('packages').select('*').eq('agency_id', user.id);
-    const list = document.getElementById('pkg-list');
-    if (!pkgs || pkgs.length === 0) { list.innerHTML = "<p>No packages found.</p>"; return; }
-    list.innerHTML = pkgs.map(p => `<div style="border:1px solid #ddd; padding:10px; margin:5px; border-radius:5px;">
-        <b>${p.title}</b> <button onclick="window.showPackageForm('${encodeURIComponent(JSON.stringify(p))}')">Edit</button>
-    </div>`).join('');
 }
 
 /* =========================================
-   5. UI INITIALIZATION & BRIDGE
+   3. AUTH & DASHBOARD LOGIC
    ========================================= */
-
-function bridgeGlobalFunctions() {
-    // Ensuring all functions are on window so HTML 'onclick' finds them
-    window.handleAuth = window.handleAuth || handleAuth;
-    window.handleLogout = window.handleLogout || handleLogout;
-    window.toggleMode = window.toggleMode || toggleMode;
-    window.showPackageForm = window.showPackageForm || showPackageForm;
-    window.processSave = window.processSave || processSave;
-    window.showTab = window.showTab || showTab;
-}
 
 async function initApp() {
     console.log("TourSetu Booting Up...");
-    bridgeGlobalFunctions();
-    
     const client = getClient();
     if (!client) return;
     
-    const { data: { session } } = await client.auth.getSession();
-    const authCard = document.getElementById('auth-card');
-    const dashboard = document.getElementById('dashboard');
-
-    if (session) {
-        if (authCard) authCard.style.display = 'none';
-        if (dashboard) {
-            dashboard.style.display = 'block';
-            window.showTab('packages');
-        }
+    const { data: { user } } = await client.auth.getUser();
+    if (user) {
+        showDashboard(user);
     } else {
-        if (dashboard) dashboard.style.display = 'none';
-        if (authCard) authCard.style.display = 'block';
+        renderAuthUI();
+    }
+}
+
+async function showDashboard(user) {
+    const role = user.user_metadata.role || 'customer';
+    if (role === 'agency') {
+        if (typeof renderAgencyDashboard === "function") renderAgencyDashboard(user);
+        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
+    } else {
+        if (typeof renderCustomerHomepage === "function") renderCustomerHomepage(user);
+        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
+    }
+}
+
+async function handleLogout() {
+    await getClient().auth.signOut();
+    window.location.reload();
+}
+
+
+/* =========================================
+   4. UI RENDERING (Login / Signup)
+   ========================================= */
+
+function renderAuthUI() {
+    const app = document.getElementById('app');
+    if (!app) return;
+    app.innerHTML = `
+        <div class="card" style="max-width:450px; margin: 80px auto; padding:40px; background:white; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius:15px; font-family: sans-serif;">
+            <h1 style="color:#ff9f43; margin-bottom:10px;">TourSetu</h1>
+            <h2 id="form-title">${isLoginMode ? "Welcome Back" : "Create Account"}</h2>
+            <input type="email" id="email" placeholder="Email Address" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+            <input type="password" id="password" placeholder="Password" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+            
+            <div id="role-selection" style="display: ${isLoginMode ? 'none' : 'block'}; margin: 10px 0;">
+                <label style="display:block; margin-bottom:5px; font-size:12px; color:#666;">REGISTER AS</label>
+                <select id="role" onchange="toggleBusinessFields()" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
+                    <option value="customer">Traveler</option>
+                    <option value="agency">Travel Agency</option>
+                </select>
+            </div>
+
+            <div id="business-fields" style="display:none;">
+                <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                <input type="text" id="biz-reg" placeholder="Business Reg No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                <input type="text" id="biz-lic" placeholder="Trade License" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                <input type="text" id="biz-phone" placeholder="Mobile / Contact No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+            </div>
+
+            <button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43; color:white; width:100%; padding:14px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; margin-top:20px; font-size:16px;">
+                ${isLoginMode ? "Login" : "Register"}
+            </button>
+            
+            <p style="margin-top:20px; font-size:14px; color:#636e72;">
+                ${isLoginMode ? "Don't have an account?" : "Already have account?"} 
+                <span onclick="toggleMode()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">${isLoginMode ? "Create Account" : "Login"}</span>
+            </p>
+            <div id="status" style="margin-top:15px; font-size:13px; font-weight:bold;"></div>
+        </div>
+    `;
+}
+
+/* =========================================
+   5. AUTHENTICATION (With Email Confirmation Logic)
+   ========================================= */
+
+async function handleAuth() {
+    const status = document.getElementById('status');
+    const btn = document.getElementById('auth-btn');
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+        status.innerText = "⚠️ Please enter email and password";
+        return;
+    }
+
+    const client = getClient();
+    btn.disabled = true;
+    status.innerText = "⏳ Processing...";
+
+    try {
+        if (isLoginMode) {
+            const { data, error } = await client.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            showDashboard(data.user);
+        } else {
+            const role = document.getElementById('role').value;
+            const metadata = { role, is_approved: (role === 'customer') };
+            
+            if (role === 'agency') {
+                metadata.gst = document.getElementById('gst-no').value || "N/A";
+                metadata.reg_no = document.getElementById('biz-reg').value || "N/A";
+                metadata.license = document.getElementById('biz-lic').value || "N/A";
+                metadata.phone = document.getElementById('biz-phone').value || "N/A";
+            }
+            
+            // SIGNUP WITH REDIRECT
+            const { error } = await client.auth.signUp({ 
+                email, 
+                password, 
+                options: { 
+                    data: metadata,
+                    emailRedirectTo: window.location.href // Sends user back here after confirmation
+                } 
+            });
+
+            if (error) throw error;
+            
+            status.innerHTML = `
+                <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
+                    <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
+                    A link was sent to <b>${email}</b>. You must verify your email before you can log in to TourSetu.
+                </div>`;
+            
+            // Clear inputs for security
+            document.getElementById('email').value = "";
+            document.getElementById('password').value = "";
+        }
+    } catch (err) {
+        status.innerText = "❌ " + err.message;
+    } finally {
+        btn.disabled = false;
+    }
+}
+/* =========================================
+   5. AUTHENTICATION (The "handleAuth" Function)
+   ========================================= */
+
+async function handleAuth() {
+    const status = document.getElementById('status');
+    const btn = document.getElementById('auth-btn');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!email || !password) {
+        status.innerText = "⚠️ Please enter email and password";
+        return;
+    }
+
+    const client = getClient();
+    if (!client) {
+        status.innerText = "❌ Supabase not initialized";
+        return;
+    }
+
+    btn.disabled = true;
+    status.innerText = "⏳ Processing...";
+
+    try {
+        if (isLoginMode) {
+            // LOGIN LOGIC
+            const { data, error } = await client.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            showDashboard(data.user);
+        } else {
+            // SIGNUP LOGIC
+            const role = document.getElementById('role').value;
+            const metadata = { role, is_approved: (role === 'customer') };
+            
+            if (role === 'agency') {
+                metadata.gst = document.getElementById('gst-no').value || "N/A";
+                metadata.reg_no = document.getElementById('biz-reg').value || "N/A";
+                metadata.license = document.getElementById('biz-lic').value || "N/A";
+                metadata.phone = document.getElementById('biz-phone').value || "N/A";
+            }
+            
+            const { error } = await client.auth.signUp({ 
+                email, 
+                password, 
+                options: { 
+                    data: metadata,
+                    emailRedirectTo: window.location.href // Redirects back to your site after click
+                } 
+            });
+
+            if (error) throw error;
+            
+            // Success UI for Email Confirmation
+            status.innerHTML = `
+                <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
+                    <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
+                    A link was sent to <b>${email}</b>. You must verify your email before you can log in to TourSetu.
+                </div>`;
+            
+            // Clear inputs for security and better UI
+            emailInput.value = "";
+            passwordInput.value = "";
+        }
+    } catch (err) {
+        status.innerText = "❌ " + err.message;
+    } finally {
+        btn.disabled = false;
     }
 }
 
 /* =========================================
-   6. THE STARTUP SWITCH & INITIALIZATION
+   6. THE STARTUP SWITCH (Fixed ReferenceError)
    ========================================= */
+// Make functions global so HTML onclick can find them
+window.handleAuth = handleAuth;
+window.toggleMode = toggleMode;
+window.toggleBusinessFields = toggleBusinessFields;
+window.handleLogout = handleLogout;
 
-/**
- * Ensures all functions are available to the HTML 
- * even if the script loads after the HTML.
- */
-function bridgeGlobalFunctions() {
-    console.log("Bridging functions to window scope...");
-    
-    // Auth & Navigation
-    window.handleAuth = window.handleAuth || handleAuth;
-    window.handleLogout = window.handleLogout || handleLogout;
-    window.toggleMode = window.toggleMode || toggleMode;
-    window.toggleBusinessFields = window.toggleBusinessFields || toggleBusinessFields;
-    
-    // Dashboard & Tabs
-    window.showTab = window.showTab || showTab;
-    window.renderAgencyDashboard = window.renderAgencyDashboard || renderAgencyDashboard;
-    
-    // Package Management
-    window.showPackageForm = window.showPackageForm || showPackageForm;
-    window.handleSave = window.handleSave || handleSave;
-    window.processSave = window.processSave || processSave;
-    window.updatePackage = window.updatePackage || updatePackage;
-    window.updateCities = window.updateCities || updateCities;
-    window.loadPackageList = window.loadPackageList || loadPackageList;
-
-    // Modals
-    window.confirmLogout = window.confirmLogout || confirmLogout;
-    window.executeLogout = window.executeLogout || executeLogout;
-}
-
-/**
- * Main App Bootloader
- */
-async function initApp() {
-    console.log("TourSetu Booting...");
-    
-    // 1. Bridge functions immediately
-    bridgeGlobalFunctions();
-    
-    const client = getClient();
-    if (!client) {
-        console.error("Supabase client not found. Ensure the CDN is in your HTML <head>.");
-        return;
-    }
-    
-    try {
-        // 2. Check for active session
-        const { data: { session }, error } = await client.auth.getSession();
-        if (error) throw error;
-
-        const authCard = document.getElementById('auth-card');
-        const dashboard = document.getElementById('dashboard');
-
-        if (session) {
-            console.log("Session active for:", session.user.email);
-            
-            // Hide login, show dashboard
-            if (authCard) authCard.style.display = 'none';
-            if (dashboard) dashboard.style.display = 'block';
-            
-            // Trigger dashboard UI
-            window.renderAgencyDashboard(session.user);
-        } else {
-            console.log("No session. Rendering Auth UI.");
-            if (dashboard) dashboard.style.display = 'none';
-            if (authCard) authCard.style.display = 'block';
-            // ensure the Auth UI is actually drawn inside the 'app' div
-            if (typeof renderAuthUI === 'function') renderAuthUI();
-        }
-    } catch (err) {
-        console.error("Init Error:", err.message);
-    }
-}
-
-// --- EXECUTION ---
-// This ensures it runs regardless of how CodePen loads the script
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(initApp, 1); // Tiny delay helps in Debug mode
-} else {
-    document.addEventListener('DOMContentLoaded', initApp);
-}
+document.addEventListener('DOMContentLoaded', initApp);
 
 // 7. CUSTOMER HOMEPAGE
 function renderCustomerHomepage(user) {
@@ -422,7 +324,7 @@ function renderCustomerHomepage(user) {
                  <div style="display:flex; gap:10px; align-items:center;">
                    <div style="position:relative;">
                         <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
-                        <span id="cust-notif-badge" style="display:none; position:absolute; top:-10px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:3px 7px; border-radius:50%; border:2px solid white; font-weight:bold;">??</span>
+                        <span id="cust-notif-badge" style="display:none; position:absolute; top:-10px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:3px 7px; border-radius:50%; border:2px solid white; font-weight:bold;">🔔</span>
                    </div>
                    <button onclick="confirmCustomerLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
                  </div>
@@ -432,7 +334,7 @@ function renderCustomerHomepage(user) {
         </div>
 
         <div id="booking-success-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:2000; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
-            <div style="font-size:60px; margin-bottom:20px;">?</div>
+            <div style="font-size:60px; margin-bottom:20px;">✅</div>
             <h2 style="color:#2d3436;">Request Sent Successfully!</h2>
             <p style="color:#636e72; max-width:400px; line-height:1.6;">Your booking inquiry has been sent to the agency. You can track the status in <b>My Requests</b>.</p>
             <button onclick="closeSuccessAndShowRequests()" style="background:#ff9f43; color:white; border:none; padding:12px 30px; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:20px;">VIEW MY REQUESTS</button>
@@ -562,14 +464,14 @@ window.renderCustomerRequests = async () => {
                 <div>
                    <h3 style="margin:0 0 10px 0;">${b.package_title}</h3>
                    <div style="font-size:13px; color:#636e72;">
-                       <div>?? Vehicles: ${b.selected_vehicles}</div>
+                       <div>🚗 Vehicles: ${b.selected_vehicles}</div>
                        <div style="margin-top:5px;">Status: <b style="color:${color}">${b.status.toUpperCase()}</b></div>
                    </div>
                </div>
-               ${b.status === 'pending' ? `<button onclick="deleteBookingRequest(${b.id})" style="color:#ff7675; cursor:pointer; background:none; border:none;">???</button>` : ''}
+               ${b.status === 'pending' ? `<button onclick="deleteBookingRequest(${b.id})" style="color:#ff7675; cursor:pointer; background:none; border:none;">🗑️</button>` : ''}
             </div>
             <div style="margin-top:20px; padding:15px; border-radius:10px; background:#f8f9fa;">
-               ${b.status === 'paid' ? `<h3>?? ${b.agency_contact || 'Contact info missing'}</h3>` : 
+               ${b.status === 'paid' ? `<h3>📞 ${b.agency_contact || 'Contact info missing'}</h3>` : 
                  b.status === 'approved' ? `<button onclick="simulatePayment(${b.id})" style="background:#2ecc71; color:white; width:100%; padding:10px; border-radius:5px; border:none; cursor:pointer;">PAY TO UNLOCK CONTACT</button>` : 
                  `<p style="text-align:center; font-size:12px; color:#999;">${b.status === 'denied' ? 'Request Denied' : 'Waiting for Agency Approval'}</p>`}
             </div>
@@ -642,10 +544,10 @@ function renderPackageCards(data, isFiltered) {
         <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; cursor:pointer;" onclick="showPackageDetails('${pString}')">
             <div style="padding:25px;">
                 <h3 style="margin:0;">${p.title}</h3>
-                <p style="color:#ff9f43; font-weight:bold;">Starts from ?${minPrice}</p>
+                <p style="color:#ff9f43; font-weight:bold;">Starts from ₹${minPrice}</p>
                <div style="font-size:13px; color:#636e72; margin:15px 0;">
-                   <div>?? <b>From:</b> ${p.starting_location}</div>
-                   <div style="margin-top:5px;">?? <b>To:</b> ${destDisplay}...</div>
+                   <div>🚩 <b>From:</b> ${p.starting_location}</div>
+                   <div style="margin-top:5px;">📍 <b>To:</b> ${destDisplay}...</div>
                </div>
                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:15px;">
                    ${vels.map(v => `<span style="font-size:10px; background:#f0f0f0; padding:3px 8px; border-radius:4px;">${v.name}</span>`).join('')}
@@ -664,7 +566,7 @@ window.showPackageDetails = function(pEncoded) {
     // Calculate values outside the string to prevent SyntaxErrors
     const historyList = p.updates_history || [];
     const vehicleList = p.vehicles || [];
-    const routeInfo = `${p.starting_location} ? ${Array.isArray(p.destination) ? p.destination.join(' ? ') : p.destination}`;
+    const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
 
     // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
@@ -674,7 +576,7 @@ window.showPackageDetails = function(pEncoded) {
                     <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')">
                     <b>${v.name}</b>
                 </div>
-                <span style="color:#2ecc71; font-weight:bold;">?${v.rate}</span>
+                <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
             </div>
             <div id="qty-container-${v.id}" style="display:none; margin-top:10px;">
                 <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:60px;">
@@ -686,7 +588,7 @@ window.showPackageDetails = function(pEncoded) {
         <div style="text-align:left;">
             <div style="display:flex; justify-content:space-between;">
                 <h2 style="margin:0;">${p.title}</h2>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="border:none; background:none; font-size:20px; cursor:pointer;">?</button>
+                <button onclick="document.getElementById('detail-modal').style.display='none'" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
             </div>
             <p style="color:#ff9f43; font-weight:bold;">${routeInfo}</p>
             
@@ -699,7 +601,7 @@ window.showPackageDetails = function(pEncoded) {
 
             <div style="background:#2d3436; color:white; padding:15px; border-radius:8px; margin-top:15px; display:flex; justify-content:space-between;">
                 <span>TOTAL:</span>
-                <span id="live-total-display" style="color:#ff9f43; font-weight:bold;">?0</span>
+                <span id="live-total-display" style="color:#ff9f43; font-weight:bold;">₹0</span>
             </div>
 
             <div style="margin-top:20px;">
@@ -774,10 +676,8 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("Error: " + error.message);
     }
 };
-/* =========================================
-   1. DASHBOARD RENDERING
-   ========================================= */
-window.renderAgencyDashboard = function(user) {
+// 9. AGENCY DASHBOARD
+function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
     
@@ -786,463 +686,428 @@ window.renderAgencyDashboard = function(user) {
             <div style="width:260px; background:#2d3436; color:white; padding:25px; position:relative; flex-shrink:0;">
                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
                    <h2 style="color:#ff9f43; margin:0;">TourSetu</h2>
-                   <div id="notif-bell" onclick="window.showTab('bookings')" style="position:relative; cursor:pointer; font-size:20px;">
-                       ?? <span id="bell-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:2px 6px; border-radius:50%;">0</span>
+                   <div id="notif-bell" onclick="showTab('bookings')" style="position:relative; cursor:pointer; font-size:20px; transition: 0.3s;">
+                       🔔
+                       <span id="bell-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:2px 6px; border-radius:50%; font-weight:bold; border: 2px solid #2d3436;">0</span>
                    </div>
                </div>
                <nav>
-                   <div onclick="window.showTab('earnings')" class="nav-item">?? Dashboard</div>
-                   <div onclick="window.showTab('bookings')" class="nav-item">?? Bookings</div>
-                   <div onclick="window.showTab('packages')" class="nav-item">?? My Packages</div>
-                   <div onclick="window.showTab('profile')" class="nav-item">?? Agency Profile</div>
-                   <div onclick="window.confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">? Logout</div>
+                   <div onclick="showTab('earnings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
+                   <div onclick="showTab('bookings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+                       <span>📅 Bookings</span>
+                       <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
+                   </div>
+                   <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 My Packages</div>
+                   <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
+                   <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
                </nav>
             </div>
             <div id="main-content" style="flex:1; padding:40px; overflow-y:auto; background:#f8f9fa;"></div>
         </div>
 
         <div id="logout-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
-            <div style="background:white; padding:30px; border-radius:12px; text-align:center;">
-                <h2>Logout?</h2>
-                <button onclick="window.executeLogout()" style="background:#ff7675; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">Yes, Logout</button>
-                <button onclick="document.getElementById('logout-modal').style.display='none'" style="background:#eee; padding:10px 20px; border:none; border-radius:5px; margin-left:10px; cursor:pointer;">Cancel</button>
+            <div style="background:white; padding:30px; border-radius:12px; text-align:center; max-width:350px;">
+               <h2 style="margin:0 0 20px 0;">Logout?</h2>
+               <div style="display:flex; gap:10px;">
+                   <button onclick="executeLogout()" style="background:#ff7675; color:white; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Yes</button>
+                   <button onclick="document.getElementById('logout-modal').style.display='none'" style="background:#eee; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">No</button>
+               </div>
            </div>
         </div>
+
+        <div id="action-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center; padding:20px;">
+            <div id="action-modal-content" style="background:white; padding:30px; border-radius:15px; max-width:400px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                </div>
+        </div>
     `;
-    window.showTab('earnings'); 
+    showTab('earnings'); 
+}
+
+window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
+window.executeLogout = async () => { 
+    await getClient().auth.signOut(); 
+    if(typeof renderAuthUI === 'function') renderAuthUI(); 
+    else window.location.reload(); 
 };
 
-/* =========================================
-   2. TAB & PACKAGE LIST LOGIC
-   ========================================= */
 window.showTab = async function(tabName) {
     const container = document.getElementById('main-content');
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
-    if (tabName === 'packages') {
-        container.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h1>My Packages</h1>
-                <button onclick="window.showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">+ CREATE NEW</button>
-            </div>
-            <div id="pkg-list-container">Loading packages...</div>`;
-        window.loadPackageList(user.id);
-    } else {
-        container.innerHTML = `<h1>${tabName.toUpperCase()}</h1><p>Content for ${tabName} coming soon.</p>`;
-    }
-};
+    const { data: myPkgs } = await client.from('packages').select('id').eq('agency_id', user.id);
+    const myPkgIds = (myPkgs || []).map(p => p.id);
 
-window.loadPackageList = async function(agencyId) {
-    const client = getClient();
-    const { data: pkgs } = await client.from('packages').select('*').eq('agency_id', agencyId);
-    const container = document.getElementById('pkg-list-container');
-
-    if (!pkgs || pkgs.length === 0) {
-        container.innerHTML = `<p>No packages found. Create your first one!</p>`;
-        return;
+    let pendingCount = 0;
+    if (myPkgIds.length > 0) {
+        const { count } = await client.from('bookings').select('*', { count: 'exact', head: true }).in('package_id', myPkgIds).eq('status', 'pending');
+        pendingCount = count || 0;
     }
 
-    container.innerHTML = pkgs.map(p => `
-        <div class="card" style="background:white; padding:20px; border-radius:12px; margin-bottom:20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h3 style="margin:0;">${p.title}</h3>
-                    <small style="color:#666;">${p.starting_location || 'No location set'}</small>
+    const badge = document.getElementById('bell-badge');
+    const sideCount = document.getElementById('side-notif-count');
+    const bellIcon = document.getElementById('notif-bell');
+    
+    if (badge && pendingCount > 0) {
+        badge.innerText = pendingCount; badge.style.display = 'block';
+        sideCount.innerText = pendingCount; sideCount.style.display = 'block';
+        bellIcon.style.color = '#ff7675';
+    } else if (badge) {
+        badge.style.display = 'none'; sideCount.style.display = 'none';
+        bellIcon.style.color = 'white';
+    }
+
+    if (tabName === 'earnings') {
+        container.innerHTML = `<h1>Overview</h1>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
+                <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>REVENUE</small><h2>₹0</h2></div>
+                <div class="card" style="border-top:5px solid #ff9f43; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>PENDING BOOKINGS</small><h2>${pendingCount}</h2></div>
+                <div class="card" style="border-top:5px solid #3498db; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>ACTIVE PACKAGES</small><h2 id="act-pkg-count">...</h2></div>
+            </div>`;
+        const { count } = await client.from('packages').select('*', { count: 'exact', head: true }).eq('agency_id', user.id);
+        if(document.getElementById('act-pkg-count')) document.getElementById('act-pkg-count').innerText = count || 0;
+    } 
+    else if (tabName === 'bookings') {
+        container.innerHTML = `<h1>Customer Bookings</h1><div id="booking-list-area">Loading...</div>`;
+        const listArea = document.getElementById('booking-list-area');
+
+        if (myPkgIds.length === 0) {
+            listArea.innerHTML = `<p style="padding:20px; color:#666;">No packages created yet. Go to 'My Packages' to start.</p>`;
+            return;
+        }
+
+        const { data: bookingsData } = await client.from('bookings').select('*').in('package_id', myPkgIds).order('created_at', { ascending: false });
+
+        if (!bookingsData || bookingsData.length === 0) {
+            listArea.innerHTML = `<p style="padding:20px; color:#666;">No booking requests found.</p>`;
+            return;
+        }
+
+        listArea.innerHTML = bookingsData.map(b => {
+            const isPaid = b.status === 'paid';
+            const isPending = b.status === 'pending';
+            const displayPhone = isPaid ? b.customer_phone : "Locked (Unlocks after Payment)";
+            const phoneColor = isPaid ? "#ff9f43" : "#999";
+            
+            let statusColor = '#ff9f43';
+            if (b.status === 'cancelled' || b.status === 'denied') statusColor = '#ff7675';
+            if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
+
+            return `
+            <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${statusColor}; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div>
+                        <h3 style="margin:0; color:#2d3436;">${b.package_title}</h3>
+                        <p style="font-size:12px; color:#636e72;">Requested: ${new Date(b.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:22px; font-weight:bold; color:#2ecc71;">₹${b.total_price || 0}</div>
+                        <span style="padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold; background:#f0f0f0; color:${statusColor};">
+                            ${b.status.toUpperCase()}
+                        </span>
+                    </div>
                 </div>
-                <button onclick="window.showPackageForm('${encodeURIComponent(JSON.stringify(p))}')" style="background:#3498db; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">?? Edit Details</button>
+
+                <div style="margin-top:20px; padding:15px; background:#f4f7f6; border-radius:10px; display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                    <div>
+                        <label style="font-size:11px; color:#999; font-weight:bold;">📍 PICKUP ADDRESS</label>
+                        <p style="margin:5px 0; font-size:14px; color:#2d3436;">${b.customer_address || 'Not Provided'}</p>
+                    </div>
+                    <div>
+                        <label style="font-size:11px; color:#999; font-weight:bold;">📞 CUSTOMER PHONE</label>
+                        <p style="margin:5px 0; font-size:15px; font-weight:bold; color:${phoneColor};">
+                            ${isPaid ? `<a href="tel:${displayPhone}" style="color:inherit;">${displayPhone}</a>` : displayPhone}
+                        </p>
+                    </div>
+                </div>
+
+                <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px;">
+                    <p style="font-size:13px; margin:0;"><b>Vehicles:</b> ${b.selected_vehicles}</p>
+                </div>
+
+                ${isPending ? `
+                    <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
+                        <button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve</button>
+                        <button onclick="openActionModal('${b.id}', 'denied')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny</button>
+                    </div>
+                ` : ''}
+            </div>`;
+        }).join('');
+    }
+    else if (tabName === 'packages') {
+        container.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h1>My Packages</h1>
+                <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
             </div>
-        </div>
-    `).join('');
+            <div id="package-form-area"></div>
+            <div id="pkg-list-container" style="margin-top:25px;"></div>`;
+        if(typeof loadPackageList === 'function') loadPackageList(user.id);
+    }
+    else if (tabName === 'profile') {
+        const meta = user.user_metadata || {};
+        container.innerHTML = `
+            <h1>Agency Profile</h1>
+            <div class="card" style="background:white; padding:30px; max-width:600px; border-left:5px solid #ff9f43; border-radius:8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">EMAIL</label><h3>${user.email}</h3></div>
+                <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">CONTACT</label><h3 style="color:#ff9f43;">${meta.phone || 'N/A'}</h3></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                    <div><label style="color:#666; font-size:11px; font-weight:bold;">GST</label><p style="margin:5px 0;">${meta.gst || 'N/A'}</p></div>
+                    <div><label style="color:#666; font-size:11px; font-weight:bold;">REG NO</label><p style="margin:5px 0;">${meta.reg_no || 'N/A'}</p></div>
+                </div>
+                <p style="border-top:1px solid #eee; padding-top:15px; font-size:12px; color:#999;">
+                    Status: ${meta.is_approved ? '✅ Verified' : '⏳ Pending Verification'}
+                </p>
+            </div>`;
+    }
 };
 
-/* =========================================
-   3. PACKAGE FORM (CREATE & EDIT)
-   ========================================= */
+// NEW: In-Page Action Modal Flow
+window.openActionModal = function(bookingId, type) {
+    const modal = document.getElementById('action-modal');
+    const content = document.getElementById('action-modal-content');
+    modal.style.display = 'flex';
+
+    if (type === 'approved') {
+        content.innerHTML = `
+            <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
+            <p style="font-size:14px; color:#666;">The customer will be notified to proceed with the payment.</p>
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">ENTER CONTACT NO. FOR PAYMENT:</label>
+            <input type="text" id="modal-contact-input" placeholder="e.g. +91 9876543210" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
+            <div style="display:flex; gap:10px;">
+                <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM APPROVAL</button>
+                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
+            </div>
+        `;
+    } else {
+        content.innerHTML = `
+            <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
+            <p style="font-size:14px; color:#666;">This will cancel the request and notify the customer that the agency denied the booking.</p>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM DENIAL</button>
+                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
+            </div>
+        `;
+    }
+};
+
+window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
+
+window.processStatusUpdate = async function(bookingId, newStatus) {
+    const client = getClient();
+    let updateData = { status: newStatus };
+
+    if (newStatus === 'approved') {
+        const contact = document.getElementById('modal-contact-input').value;
+        if (!contact.trim()) { alert("Please enter a contact number!"); return; }
+        updateData.agency_contact = contact;
+    }
+
+    try {
+        const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
+        
+        if (!error) {
+            const content = document.getElementById('action-modal-content');
+            if (newStatus === 'approved') {
+                content.innerHTML = `
+                    <div style="text-align:center; padding:20px;">
+                        <div style="font-size:40px; margin-bottom:10px;">✅</div>
+                        <h3 style="color:#2ecc71;">Approved!</h3>
+                        <p>Customer can now proceed to payment on <b>${updateData.agency_contact}</b>.</p>
+                        <button onclick="closeActionModal(); showTab('bookings');" style="background:#2d3436; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-top:10px;">CLOSE</button>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div style="text-align:center; padding:20px;">
+                        <div style="font-size:40px; margin-bottom:10px;">🚫</div>
+                        <h3 style="color:#ff7675;">Denied</h3>
+                        <p>Booking has been cancelled. The customer will see the denial message.</p>
+                        <button onclick="closeActionModal(); showTab('bookings');" style="background:#2d3436; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-top:10px;">CLOSE</button>
+                    </div>
+                `;
+            }
+        } else {
+            alert("Database Error: " + error.message);
+        }
+    } catch (e) {
+        alert("System error. Please try again.");
+    }
+};
+
+// 10. PACKAGE FORM (CodePen Optimized Version)
 window.showPackageForm = function(pEncoded = null) {
     let pkg = null;
     try {
         pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
-    } catch (e) { console.error("Data error:", e); }
+    } catch (e) { console.error(e); }
     
     const isEdit = !!pkg;
-    const area = document.getElementById('main-content');
-    
+    const area = document.getElementById('package-form-area');
     const pkgDestinations = isEdit ? (pkg.destination || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
     
+    // 1. Pre-build State Options
     let selectedState = "";
-    if (isEdit && pkg.starting_location) {
+    if (isEdit) {
         for (let s in locationData) {
             if (locationData[s].includes(pkg.starting_location)) { selectedState = s; break; }
         }
     }
-
     const stateOptions = Object.keys(locationData).map(s => 
         `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`
     ).join('');
 
+    // 2. Pre-build Destination Checkboxes
     const destHtml = tourDestinations.map(d => `
-        <label style="display:flex; align-items:center; gap:5px; padding:8px; background:white; border:1px solid #ddd; border-radius:5px; font-size:12px; cursor:pointer;">
+        <label style="display:flex; align-items:center; gap:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px;">
             <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}
         </label>
     `).join('');
 
+    // 3. Pre-build Vehicle List
     const vehicleHtml = vehicleTypes.map(v => {
         const existing = pkgVehicles.find(ev => ev.id === v.id);
         return `
-        <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:12px; border-radius:10px; border:1px solid #ffeaa7; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:10px; border-radius:10px; border:1px solid #ffeaa7;">
             <input type="checkbox" class="v-enable" data-id="${v.id}" ${existing ? 'checked' : ''}>
             <span style="font-size:20px;">${v.icon}</span>
             <b style="flex:1;">${v.name}</b>
-            <input type="number" class="v-rate" data-id="${v.id}" placeholder="Rate" style="width:90px; padding:5px;" value="${existing ? existing.rate : ''}">
-            <input type="number" class="v-max" data-id="${v.id}" placeholder="Max" style="width:60px; padding:5px;" value="${existing ? existing.max_cars : '1'}">
+            <input type="number" class="v-rate" data-id="${v.id}" placeholder="₹ Rate" style="width:80px;" value="${existing ? existing.rate : ''}">
+            <input type="number" class="v-max" data-id="${v.id}" placeholder="Units" style="width:70px;" value="${existing ? existing.max_cars : '1'}">
         </div>`;
     }).join('');
 
+    // 4. Finally, Render the Main Container
     area.innerHTML = `
-        <div style="background:white; padding:30px; border-radius:15px; border:2px solid #ff9f43; max-width:750px; margin:20px auto; box-shadow:0 10px 30px rgba(0,0,0,0.1);">
-            <h2 style="color:#ff9f43; margin:0 0 20px 0;">${isEdit ? '?? Edit Package' : '?? Create New Package'}</h2>
-            
-            <input type="text" id="p-title" placeholder="Package Title" value="${isEdit ? pkg.title : ''}" style="width:100%; padding:12px; margin-bottom:15px; border:1px solid #ccc; border-radius:8px;">
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
-                <select id="p-state" onchange="window.updateCities()" style="padding:12px; border:1px solid #ccc; border-radius:8px;">
-                    <option value="">Select State</option>
-                    ${stateOptions}
-                </select>
-                <select id="p-city" style="padding:12px; border:1px solid #ccc; border-radius:8px;">
-                    ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
-                </select>
-            </div>
-            
-            <p><b>Select Destinations:</b></p>
-            <div style="display:flex; flex-wrap:wrap; gap:8px; background:#f9f9f9; padding:15px; border-radius:10px; margin-bottom:20px; border:1px solid #eee; max-height:150px; overflow-y:auto;">
-                ${destHtml}
-            </div>
-
-            <p><b>Vehicle Pricing:</b></p>
-            ${vehicleHtml}
-
-            <textarea id="p-desc" placeholder="Describe the itinerary..." style="width:100%; height:120px; padding:12px; border:1px solid #ccc; border-radius:8px; margin-top:10px;">${isEdit ? (pkg.description || '') : ''}</textarea>
-            
-            <div style="display:flex; gap:15px; margin-top:30px;">
-                <button id="save-btn" onclick="window.handleSave('${isEdit ? pkg.id : ''}')" style="flex:2; background:#2ecc71; color:white; padding:18px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:16px;">SAVE CHANGES</button>
-                <button onclick="window.showTab('packages')" style="flex:1; background:#eee; padding:18px; border-radius:10px; cursor:pointer; font-weight:bold;">CANCEL</button>
-            </div>
-        </div>`;
-};
-
-/* =========================================
-   4. FINAL SAVE LOGIC (GUARDS INCLUDED)
- ========================================= */
-window.handleSave = async function(pkgId) {
-    const btn = document.getElementById('save-btn');
-    if (btn) { btn.innerText = "? Saving..."; btn.disabled = true; }
-
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-        if(!user) throw new Error("Session expired.");
-
-        const titleVal = document.getElementById('p-title')?.value;
-        if(!titleVal) throw new Error("Title is required!");
-
-        const selectedVehicles = [];
-        document.querySelectorAll('.v-enable:checked').forEach(el => {
-            const vId = el.dataset.id;
-            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`)?.value) || 0;
-            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`)?.value) || 1;
-            const vType = vehicleTypes.find(vt => vt.id === vId);
-            if (vType && rate > 0) {
-                selectedVehicles.push({ id: vId, name: vType.name, rate, max_cars: max, icon: vType.icon });
-            }
-        });
-
-        const pkgData = {
-            title: titleVal,
-            starting_location: document.getElementById('p-city')?.value || "",
-            destination: Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value),
-            vehicles: selectedVehicles,
-            description: document.getElementById('p-desc')?.value || "",
-            agency_id: user.id
-        };
-
-        const res = (pkgId && pkgId !== "undefined" && pkgId !== "")
-            ? await client.from('packages').update(pkgData).eq('id', pkgId)
-            : await client.from('packages').insert([pkgData]);
-
-        if (res.error) throw res.error;
-
-        alert("? Package Published!");
-        window.showTab('packages');
-
-    } catch (err) {
-        alert("? Error: " + err.message);
-        if (btn) { btn.innerText = "SAVE CHANGES"; btn.disabled = false; }
-    }
-};
-
-/* =========================================
-   5. LOGOUT & UTILS
-   ========================================= */
-window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
-window.executeLogout = async () => { await getClient().auth.signOut(); window.location.reload(); };
-
-window.updateCities = function() {
-    const state = document.getElementById('p-state')?.value;
-    const citySelect = document.getElementById('p-city');
-    if (!citySelect) return;
-    const cities = locationData[state] || [];
-    citySelect.innerHTML = cities.map(c => `<option value="${c}">${c}</option>`).join('');
-};
-
-// --- 10. PACKAGE FORM (Fixed & Integrated) ---
-window.showPackageForm = function(pEncoded = null) {
-    let pkg = null;
-    try {
-        // Decode the package data if we are editing
-        pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
-    } catch (e) { 
-        console.error("Decoding error:", e); 
-    }
-    
-    const isEdit = !!pkg;
-    // Target the main content area of your dashboard
-    const area = document.getElementById('main-content');
-    
-    const pkgDestinations = isEdit ? (pkg.destination || []) : [];
-    const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
-    
-    // 1. Determine the selected state for the dropdown
-    let selectedState = "";
-    if (isEdit && pkg.starting_location) {
-        for (let s in locationData) {
-            if (locationData[s].includes(pkg.starting_location)) { 
-                selectedState = s; 
-                break; 
-            }
-        }
-    }
-
-    const stateOptions = Object.keys(locationData).map(s => 
-        `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`
-    ).join('');
-
-    // 2. Build Destination Checkboxes
-    const destHtml = tourDestinations.map(d => `
-        <label style="display:flex; align-items:center; gap:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px; cursor:pointer;">
-            <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}
-        </label>
-    `).join('');
-
-    // 3. Build Vehicle List (Matches your vehicleTypes array)
-    const vehicleHtml = vehicleTypes.map(v => {
-        const existing = pkgVehicles.find(ev => ev.id === v.id);
-        return `
-        <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:10px; border-radius:10px; border:1px solid #ffeaa7; margin-bottom:8px;">
-            <input type="checkbox" class="v-enable" data-id="${v.id}" ${existing ? 'checked' : ''}>
-            <span style="font-size:20px;">${v.icon}</span>
-            <b style="flex:1;">${v.name}</b>
-            <input type="number" class="v-rate" data-id="${v.id}" placeholder="? Rate" style="width:80px; padding:5px;" value="${existing ? existing.rate : ''}">
-            <input type="number" class="v-max" data-id="${v.id}" placeholder="Max" style="width:60px; padding:5px;" value="${existing ? existing.max_cars : '1'}">
-        </div>`;
-    }).join('');
-
-    // 4. Render the Form
-    area.innerHTML = `
-        <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto;">
-            <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '?? Edit Package' : '?? Create New Package'}</h3>
+        <div class="card" style="background:white; padding:30px; margin-top:20px; border:1px solid #ff9f43; border-radius:12px;">
+            <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🎒 Create New Package'}</h3>
             
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
-                <input type="text" id="p-title" placeholder="Package Title" value="${isEdit ? pkg.title : ''}" style="padding:12px; border-radius:8px; border:1px solid #ddd;">
-                <select id="p-state" onchange="window.updateCities()" style="padding:12px; border-radius:8px; border:1px solid #ddd;">
+                <input type="text" id="p-title" placeholder="Package Title" value="${isEdit ? pkg.title : ''}">
+                <select id="p-state" onchange="updateCities()">
                     <option value="">Select State</option>
                     ${stateOptions}
                 </select>
             </div>
 
-            <select id="p-city" style="width:100%; margin-bottom:15px; padding:12px; border-radius:8px; border:1px solid #ddd;">
-                ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
+            <select id="p-city" style="width:100%; margin-bottom:15px;">
+                ${isEdit ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
             </select>
             
-            <p><b>Destinations:</b></p>
-            <div style="background:#f9f9f9; padding:15px; border-radius:10px; max-height:150px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:8px; border:1px solid #eee; margin-bottom:20px;">
+            <div style="background:#f9f9f9; padding:15px; border-radius:10px; max-height:150px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:8px;">
                 ${destHtml}
             </div>
 
-            <p><b>Vehicle Pricing & Availability:</b></p>
-            <div style="margin-bottom:20px;">
+            <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:20px;">
                 ${vehicleHtml}
             </div>
 
-            <textarea id="p-desc" style="height:120px; width:100%; padding:12px; border-radius:8px; border:1px solid #ddd;" placeholder="Enter Itinerary Details...">${isEdit ? (pkg.description || '') : ''}</textarea>
+            <textarea id="p-desc" style="height:100px; width:100%; margin-top:20px;" placeholder="Itinerary...">${isEdit ? pkg.description : ''}</textarea>
             
             <div style="display:flex; gap:10px; margin-top:25px;">
-                <button onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold; cursor:pointer; border:none; border-radius:8px; font-size:16px;">
+                <button onclick="processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold; cursor:pointer; border:none; border-radius:8px;">
                     ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
                 </button>
-                <button onclick="window.showTab('packages')" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
+                <button onclick="document.getElementById('package-form-area').innerHTML=''" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
             </div>
         </div>`;
 };
 
-// --- SAVE LOGIC ---
-window.processSave = function(id) {
-    // If id is empty string or "undefined", treat as null (new package)
-    const cleanId = (id && id !== "undefined" && id !== "") ? id : null;
-    window.handleSave(cleanId);
+// HELPER TO PREVENT TOKEN ERRORS IN ONCLICK
+window.processSave = (id) => {
+    if (id && id !== "undefined") {
+        handleSave(id);
+    } else {
+        handleSave();
+    }
 };
 
-window.handleSave = async function(pkgId) {
+// 11. HANDLESAVE
+window.handleSave = async function(id = null) {
     const client = getClient();
+    const btn = document.getElementById('save-btn');
     const { data: { user } } = await client.auth.getUser();
     
-    // Collect checked destinations
-    const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
-    
-    // Collect checked vehicles and their rates
     const selectedVehicles = [];
-    document.querySelectorAll('.v-enable:checked').forEach(el => {
-        const vId = el.dataset.id;
-        const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`).value) || 0;
-        const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`).value) || 1;
-        const vType = vehicleTypes.find(vt => vt.id === vId);
-        
-        selectedVehicles.push({
-            id: vId,
-            name: vType.name,
-            rate: rate,
-            max_cars: max,
-            icon: vType.icon
-        });
+    document.querySelectorAll('.v-enable:checked').forEach(checkbox => {
+        const vid = checkbox.dataset.id;
+        const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
+        const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
+        const rate = parseFloat(rateInput.value);
+        const name = rateInput.dataset.name;
+        if (rate > 0) {
+            selectedVehicles.push({ id: vid, name: name, rate: rate, max_cars: parseInt(maxInput.value) || 1 });
+        }
     });
 
+    if (selectedVehicles.length === 0) return alert("Please TICK at least one vehicle and provide a price.");
+    
+    btn.innerText = "Processing...";
+    btn.disabled = true;
+
     const pkgData = {
+        agency_id: user.id,
         title: document.getElementById('p-title').value,
         starting_location: document.getElementById('p-city').value,
-        destination: selectedDests,
-        vehicles: selectedVehicles, // Saved as JSON for the booking side
         description: document.getElementById('p-desc').value,
-        agency_id: user.id
+        destination: Array.from(document.querySelectorAll('.d-check:checked')).map(c => c.value),
+        vehicles: selectedVehicles
     };
 
     try {
-        let response;
-        if (pkgId) {
-            // Update existing
-            response = await client.from('packages').update(pkgData).eq('id', pkgId);
+        if (id) {
+            const { data: oldPkg } = await client.from('packages').select('*').eq('id', id).single();
+            const history = oldPkg.updates_history || [];
+            history.push({ 
+                title: oldPkg.title, 
+                description: oldPkg.description, 
+                vehicles: oldPkg.vehicles, 
+                destination: oldPkg.destination, 
+                updated_at: new Date().toISOString() 
+            });
+            pkgData.updates_history = history;
+            const { error } = await client.from('packages').update(pkgData).eq('id', id);
+            if (error) throw error;
         } else {
-            // Insert new
-            response = await client.from('packages').insert([pkgData]);
+            pkgData.updates_history = [];
+            const { error } = await client.from('packages').insert([pkgData]);
+            if (error) throw error;
         }
-
-        if (response.error) throw response.error;
-
-        alert("? Success! Package saved and updated in Customer Dashboard.");
-        window.showTab('packages'); // Refresh the list
-
-    } catch (err) {
-        console.error("Save Error:", err);
-        alert("? Unsuccessful save. Error: " + err.message);
+        
+        setTimeout(() => showTab('packages'), 500);
+    } catch (e) {
+        alert("Error saving: " + e.message);
+        btn.disabled = false;
+        btn.innerText = "Try Again";
     }
 };
 
-// Helper to update city dropdown
-window.updateCities = function() {
-    const state = document.getElementById('p-state').value;
-    const citySelect = document.getElementById('p-city');
-    if (!state) {
-        citySelect.innerHTML = '<option value="">Select City</option>';
+async function loadPackageList(aid) {
+    const { data } = await getClient().from('packages').select('*').eq('agency_id', aid).order('id', { ascending: false });
+    const container = document.getElementById('pkg-list-container');
+    if(!data || data.length === 0) {
+       container.innerHTML = `<div style="text-align:center; padding:40px; color:#999;">No packages created yet.</div>`;
         return;
     }
-    const cities = locationData[state] || [];
-    citySelect.innerHTML = cities.map(c => `<option value="${c}">${c}</option>`).join('');
-};
+   container.innerHTML = data.map(p => {
+        const pString = encodeURIComponent(JSON.stringify(p));
+        return `
+        <div class="card" style="background:white; padding:20px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; border-left:5px solid #ff9f43;">
+            <div style="text-align:left;">
+                <h3 style="margin:0;">${p.title}</h3>
+                <small style="color:#666;">${p.starting_location} ➔ ${(p.destination || []).length} Destinations | <b>${(p.updates_history || []).length} edits</b></small>
+           </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="showPackageForm('${pString}')" style="width:auto; padding:8px 15px; background:#f0f0f0;">Edit</button>
+                <button onclick="deletePkg(${p.id})" style="color:#ff7675; background:none; width:auto; border:1px solid #ff7675; padding:8px 15px;">Delete</button>
+           </div>
+        </div>`;
+   }).join('');
+}
 
-// 11. HANDLESAVE - SILENT GUARD VERSION
-window.handleSave = async function(id = null) {
-    console.log("Save process started for ID:", id);
-    
-    // 1. Safe Button Reference
-    const btn = document.getElementById('save-btn') || document.querySelector('button[onclick*="handleSave"]');
-    
-    // The ?. prevents the "null" error if the button isn't found
-    if (btn) {
-        btn.innerText = "Processing...";
-        btn.disabled = true;
-    }
-
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("No user logged in");
-
-        const selectedVehicles = [];
-        document.querySelectorAll('.v-enable:checked').forEach(checkbox => {
-            const vid = checkbox.dataset.id;
-            const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
-            const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
-            
-            // Safety check for inputs
-            if (!rateInput) return;
-
-            const rate = parseFloat(rateInput.value) || 0;
-            const vInfo = window.vehicleTypes ? window.vehicleTypes.find(v => v.id === vid) : null;
-            
-            if (rate > 0) {
-                selectedVehicles.push({ 
-                    id: vid, 
-                    name: vInfo ? vInfo.name : "Vehicle", 
-                    rate: rate, 
-                    max_cars: maxInput ? (parseInt(maxInput.value) || 1) : 1,
-                    icon: vInfo ? vInfo.icon : "??" 
-                });
-            }
-        });
-
-        if (selectedVehicles.length === 0) {
-            alert("Please select at least one vehicle and enter a price.");
-            if (btn) { btn.innerText = "SAVE CHANGES"; btn.disabled = false; }
-            return;
-        }
-
-        const pkgData = {
-            agency_id: user.id,
-            title: document.getElementById('p-title')?.value || "Untitled",
-            starting_location: document.getElementById('p-city')?.value || "",
-            description: document.getElementById('p-desc')?.value || "",
-            destination: Array.from(document.querySelectorAll('.d-check:checked')).map(c => c.value),
-            vehicles: selectedVehicles
-        };
-
-        // Database Action
-        const isExisting = (id && id !== "null" && id !== "" && id !== "undefined");
-        let result;
-
-        if (isExisting) {
-            result = await client.from('packages').update(pkgData).eq('id', id);
-        } else {
-            result = await client.from('packages').insert([pkgData]);
-        }
-
-        if (result.error) throw result.error;
-
-        alert("? Package Saved!");
-        window.showTab('packages');
-
-    } catch (e) {
-        console.error("CRITICAL SAVE ERROR:", e);
-        alert("Error: " + e.message);
-        
-        // Reset button if it fails
-        if (btn) {
-            btn.innerText = "Try Again";
-            btn.disabled = false;
-        }
-    }
-};
+window.deletePkg = async (id) => { if(confirm("Are you sure?")) { await getClient().from('packages').delete().eq('id', id); showTab('packages'); } };
 
 // 12. STYLES
 const styleTag = document.createElement('style');
