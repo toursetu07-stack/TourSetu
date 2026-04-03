@@ -1,70 +1,98 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TourSetu | Agency & Traveler Portal</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+:root {
+  --primary-orange: #ff9f43;
+  --light-orange: #fff5eb;
+  --dark-text: #2d3436;
+}
 
-<div id="app">
-    <div class="auth-card" id="auth-card">
-        <div style="text-align: center; margin-bottom: 25px;">
-            <h1 id="form-title" style="margin:0;">?? Tour<span style="color: #ff9f43;">Setu</span></h1>
-            <p id="auth-subtitle" style="color: #666; font-size: 14px; margin-top: 5px;">Welcome Back</p>
-        </div>
-        
-        <div id="auth-section">
-            <input type="email" id="email" placeholder="Email Address">
-            <input type="password" id="password" placeholder="Password">
-            
-            <div id="role-selection" style="display: none; margin-top: 15px;">
-                <label style="font-size: 12px; color: #666; font-weight: bold; display: block; margin-bottom: 5px;">REGISTER AS:</label>
-                <select id="role" onchange="window.toggleBusinessFields()">
-                    <option value="customer">Traveler</option>
-                    <option value="agency">Travel Agency</option>
-                </select>
-            </div>
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  color: var(--dark-text);
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
 
-            <div id="business-fields" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
-                <input type="text" id="gst-no" placeholder="GST Number">
-                <input type="text" id="biz-reg" placeholder="Business Registration No.">
-                <input type="text" id="biz-lic" placeholder="Trade License / License No.">
-            </div>
+#app {
+  background: white;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  width: 100%;
+  max-width: 400px;
+}
 
-            <button id="auth-btn" onclick="window.handleAuth()" style="margin-top: 20px;">Login</button>
-            
-            <p id="toggle-text" style="text-align: center; margin-top: 20px; font-size: 14px;">
-                Don't have an account? <a href="javascript:void(0)" onclick="window.toggleMode()" style="color: #ff9f43; font-weight: bold; text-decoration: none;">Create one here</a>
-            </p>
-        </div>
-        
-        <div id="status" style="margin-top:15px; font-weight:bold; text-align: center; font-size: 13px;"></div>
-    </div>
+h1 {
+  color: var(--primary-orange);
+  text-align: center;
+  font-size: 1.8rem;
+}
 
-    <div id="dashboard" style="display:none;">
-        <div id="dashboard-placeholder">
-            <nav style="background:#fff; padding:15px 30px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                <h2 style="margin:0; color:#ff9f43;">TourSetu Agency</h2>
-                <div style="display:flex; gap:20px; align-items:center;">
-                    <button onclick="window.showTab('packages')" style="background:none; border:none; color:#666; cursor:pointer; font-weight: 600;">My Packages</button>
-                    <button onclick="window.handleLogout()" style="background:#ff7675; color:white; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight: bold;">Logout</button>
-                </div>
-            </nav>
-            <div id="main-content" style="padding:40px; max-width: 1000px; margin: 0 auto;">
-                </div>
-        </div>
-    </div>
-</div>
+.input-group {
+  margin-bottom: 15px;
+}
 
-<script src="script.js"></script>
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin-top: 5px;
+  border: 2px solid var(--light-orange);
+  border-radius: 8px;
+  box-sizing: border-box; /* Prevents input from overflowing */
+}
 
-</body>
-</html>
+input:focus {
+  outline: none;
+  border-color: var(--primary-orange);
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--primary-orange);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background-color: #ee5253;
+}
+
+#status {
+  margin-top: 15px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #636e72;
+}
+/* Styling for the new verification forms */
+.verify-container {
+  text-align: left;
+  margin-top: 20px;
+}
+
+label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-top: 10px;
+  color: #555;
+}
+
+input[type="file"] {
+  font-size: 0.8rem;
+  border: 1px dashed var(--primary-orange);
+  padding: 5px;
+  background: var(--light-orange);
+  cursor: pointer;
+}
+
+.city-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
