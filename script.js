@@ -1,11 +1,11 @@
 /* =========================================
-   1. GLOBAL HELPERS & LOCATION DATA
+   1. GLOBAL HELPERS & DATA
    ========================================= */
 window.updateCities = function() {
-    const state = document.getElementById('p-state').value;
+    const state = document.getElementById('p-state')?.value;
     const citySelect = document.getElementById('p-city');
-    if (!state || !locationData[state]) {
-        citySelect.innerHTML = '<option value="">Select City</option>';
+    if (!state || !locationData[state] || !citySelect) {
+        if(citySelect) citySelect.innerHTML = '<option value="">Select City</option>';
         return;
     }
     citySelect.innerHTML = locationData[state].map(c => `<option value="${c}">${c}</option>`).join('');
@@ -13,9 +13,9 @@ window.updateCities = function() {
 
 window.processSave = (id) => {
     if (id && id !== "undefined" && id !== "" && id !== "null") {
-        window.handleSave(id);
+        if (typeof window.handleSave === "function") window.handleSave(id);
     } else {
-        window.handleSave();
+        if (typeof window.handleSave === "function") window.handleSave();
     }
 };
 
@@ -59,7 +59,7 @@ function getClient() {
 }
 
 /* =========================================
-   3. AUTHENTICATION LOGIC
+   3. AUTHENTICATION CORE
    ========================================= */
 
 async function handleAuth() {
@@ -97,10 +97,10 @@ async function handleAuth() {
             const metadata = { role, is_approved: (role === 'customer') };
             
             if (role === 'agency') {
-                metadata.gst = document.getElementById('gst-no').value || "N/A";
-                metadata.reg_no = document.getElementById('biz-reg').value || "N/A";
-                metadata.license = document.getElementById('biz-lic').value || "N/A";
-                metadata.phone = document.getElementById('biz-phone').value || "N/A";
+                metadata.gst = document.getElementById('gst-no')?.value || "N/A";
+                metadata.reg_no = document.getElementById('biz-reg')?.value || "N/A";
+                metadata.license = document.getElementById('biz-lic')?.value || "N/A";
+                metadata.phone = document.getElementById('biz-phone')?.value || "N/A";
             }
             
             const { error } = await client.auth.signUp({ 
@@ -117,7 +117,7 @@ async function handleAuth() {
             status.innerHTML = `
                 <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
                     <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
-                    A link was sent to <b>${email}</b>. You must verify your email before you can log in.
+                    A verification link was sent to <b>${email}</b>.
                 </div>`;
             
             emailInput.value = "";
@@ -130,23 +130,22 @@ async function handleAuth() {
     }
 }
 
-function toggleMode() { 
-    isLoginMode = !isLoginMode; 
-    renderAuthUI(); 
-}
-
-function toggleBusinessFields() {
-    const role = document.getElementById('role').value;
-    const businessFields = document.getElementById('business-fields');
-    if (businessFields) businessFields.style.display = (role === 'agency') ? 'block' : 'none';
-}
-
 /* =========================================
-   4. APP NAVIGATION & DASHBOARD ROUTING
+   4. UI STATE & NAVIGATION
    ========================================= */
 
+window.toggleMode = function() { 
+    isLoginMode = !isLoginMode; 
+    renderAuthUI(); 
+};
+
+window.toggleBusinessFields = function() {
+    const role = document.getElementById('role')?.value;
+    const businessFields = document.getElementById('business-fields');
+    if (businessFields) businessFields.style.display = (role === 'agency') ? 'block' : 'none';
+};
+
 async function initApp() {
-    console.log("TourSetu Booting Up...");
     const client = getClient();
     if (!client) return;
     
@@ -162,20 +161,20 @@ async function showDashboard(user) {
     const role = user.user_metadata.role || 'customer';
     if (role === 'agency') {
         if (typeof renderAgencyDashboard === "function") renderAgencyDashboard(user);
-        else document.getElementById('app').innerHTML = `<h2>Agency Home</h2><button onclick="window.handleLogout()">Logout</button>`;
+        else document.getElementById('app').innerHTML = `<h2>Agency Dashboard</h2><button onclick="window.handleLogout()">Logout</button>`;
     } else {
         if (typeof renderCustomerHomepage === "function") renderCustomerHomepage(user);
-        else document.getElementById('app').innerHTML = `<h2>Traveler Home</h2><button onclick="window.handleLogout()">Logout</button>`;
+        else document.getElementById('app').innerHTML = `<h2>Traveler Homepage</h2><button onclick="window.handleLogout()">Logout</button>`;
     }
 }
 
-async function handleLogout() {
+window.handleLogout = async function() {
     await getClient().auth.signOut();
     window.location.reload();
-}
+};
 
 /* =========================================
-   5. UI RENDERING
+   5. RENDER AUTH UI
    ========================================= */
 
 function renderAuthUI() {
@@ -184,7 +183,7 @@ function renderAuthUI() {
     app.innerHTML = `
         <div class="card" style="max-width:450px; margin: 80px auto; padding:40px; background:white; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius:15px; font-family: sans-serif;">
             <h1 style="color:#ff9f43; margin-bottom:10px;">TourSetu</h1>
-            <h2 id="form-title">${isLoginMode ? "Welcome Back" : "Create Account"}</h2>
+            <h2>${isLoginMode ? "Welcome Back" : "Create Account"}</h2>
             <input type="email" id="email" placeholder="Email Address" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
             <input type="password" id="password" placeholder="Password" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
             
@@ -197,10 +196,10 @@ function renderAuthUI() {
             </div>
 
             <div id="business-fields" style="display:none;">
-                <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-reg" placeholder="Business Reg No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-lic" placeholder="Trade License" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-phone" placeholder="Mobile / Contact No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
+                <input type="text" id="biz-reg" placeholder="Business Reg No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
+                <input type="text" id="biz-lic" placeholder="Trade License" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
+                <input type="text" id="biz-phone" placeholder="Mobile / Contact No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
             </div>
 
             <button id="auth-btn" onclick="window.handleAuth()" style="background:#ff9f43; color:white; width:100%; padding:14px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; margin-top:20px; font-size:16px;">
@@ -217,14 +216,12 @@ function renderAuthUI() {
 }
 
 /* =========================================
-   6. EXPORT TO GLOBAL SCOPE
+   6. GLOBAL EXPOSURE & BOOTSTRAP
    ========================================= */
 window.handleAuth = handleAuth;
-window.toggleMode = toggleMode;
-window.toggleBusinessFields = toggleBusinessFields;
-window.handleLogout = handleLogout;
-
 document.addEventListener('DOMContentLoaded', initApp);
+
+// (Customer homepage and other functions follow below...)
 // 7. CUSTOMER HOMEPAGE
 function renderCustomerHomepage(user) {
     const app = document.getElementById('app');
