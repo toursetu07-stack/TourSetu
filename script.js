@@ -1,5 +1,5 @@
 /* =========================================
-   1. GLOBAL HELPERS (Fixed Scope)
+   1. GLOBAL HELPERS & LOCATION DATA
    ========================================= */
 window.updateCities = function() {
     const state = document.getElementById('p-state').value;
@@ -12,28 +12,26 @@ window.updateCities = function() {
 };
 
 window.processSave = (id) => {
-    // Ensures "null" strings from template literals don't break the logic
     if (id && id !== "undefined" && id !== "" && id !== "null") {
         window.handleSave(id);
     } else {
         window.handleSave();
     }
 };
-/* =========================================
-   1. CONFIGURATION & GLOBAL STATE
-   ========================================= */
-const SUPABASE_URL = 'https://udfwcqrmksfyeigxgdws.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTIyNTQsImV4cCI6MjA4ODAyODI1NH0.zf1taGGbEszA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw';
 
-let _supabase = null;
-let isLoginMode = true;
+const locationData = {
+    "Uttarakhand": ["Dehradun", "Rishikesh", "Haridwar", "Kashipur", "Rudpur", "Lalkuan", "Kichha", "Bareilly", "Pantnagar", "Lalpur", "Almora", "Nainital"],
+    "Delhi": ["New Delhi", "Old Delhi", "Saket", "Dwarka"],
+    "Punjab": ["Amritsar", "Ludhiana", "Patiala"],
+    "Uttar Pradesh": ["Lucknow", "Ayodhya", "Vrindavan", "Varanasi", "Agra"]
+};
 
 const tourDestinations = [
-  "Char Dham Yatra (Uttarakhand)", "Kedarnath (Uttarakhand)", "Badrinath (Uttarakhand)", 
-  "Gangotri (Uttarakhand)", "Yamunotri (Uttarakhand)", "Vaishno Devi (Katra)", 
-  "Jagarnath (Puri, Odisha)", "Somnath (Gujarat)", "Tirumala Venkateswara (Tirupati)", 
-  "Ram Janmabhoomi (Ayodhya)", "Banke Bihari (Vrindavan)", "Prem Mandir (Vrindavan)", 
-  "Ajmer Sharif Dargah (Rajasthan)", "Golden Temple (Amritsar)", "Basilica of Bom Jesus (Goa)"
+    "Char Dham Yatra (Uttarakhand)", "Kedarnath (Uttarakhand)", "Badrinath (Uttarakhand)", 
+    "Gangotri (Uttarakhand)", "Yamunotri (Uttarakhand)", "Vaishno Devi (Katra)", 
+    "Jagarnath (Puri, Odisha)", "Somnath (Gujarat)", "Tirumala Venkateswara (Tirupati)", 
+    "Ram Janmabhoomi (Ayodhya)", "Banke Bihari (Vrindavan)", "Prem Mandir (Vrindavan)", 
+    "Ajmer Sharif Dargah (Rajasthan)", "Golden Temple (Amritsar)", "Basilica of Bom Jesus (Goa)"
 ];
 
 const vehicleTypes = [
@@ -44,15 +42,14 @@ const vehicleTypes = [
     { id: 'bus', name: 'Luxury Bus', icon: '🚍' }
 ];
 
-const locationData = {
- "Uttarakhand": ["Dehradun", "Rishikesh", "Haridwar", "Kashipur", "Rudpur", "Lalkuan", "Kichha", "Bareilly", "Pantnagar", "Lalpur", "Almora", "Nainital"],
-  "Delhi": ["New Delhi", "Old Delhi", "Saket", "Dwarka"],
-  "Punjab": ["Amritsar", "Ludhiana", "Patiala"],
-  "Uttar Pradesh": ["Lucknow", "Ayodhya", "Vrindavan", "Varanasi", "Agra"]
-};
 /* =========================================
-   2. CORE UTILITY FUNCTIONS
+   2. CONFIGURATION & SUPABASE CLIENT
    ========================================= */
+const SUPABASE_URL = 'https://udfwcqrmksfyeigxgdws.supabase.co'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTIyNTQsImV4cCI6MjA4ODAyODI1NH0.zf1taGGbEszA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw';
+
+let _supabase = null;
+let isLoginMode = true;
 
 function getClient() {
     if (!_supabase && window.supabase) {
@@ -61,158 +58,8 @@ function getClient() {
     return _supabase;
 }
 
-function toggleMode() { 
-    isLoginMode = !isLoginMode; 
-    renderAuthUI(); 
-}
-
-function toggleBusinessFields() {
-    const role = document.getElementById('role').value;
-    const businessFields = document.getElementById('business-fields');
-    if (businessFields) businessFields.style.display = (role === 'agency') ? 'block' : 'none';
-}
-
 /* =========================================
-   3. AUTH & DASHBOARD LOGIC
-   ========================================= */
-
-async function initApp() {
-    console.log("TourSetu Booting Up...");
-    const client = getClient();
-    if (!client) return;
-    
-    const { data: { user } } = await client.auth.getUser();
-    if (user) {
-        showDashboard(user);
-    } else {
-        renderAuthUI();
-    }
-}
-
-async function showDashboard(user) {
-    const role = user.user_metadata.role || 'customer';
-    if (role === 'agency') {
-        if (typeof renderAgencyDashboard === "function") renderAgencyDashboard(user);
-        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
-    } else {
-        if (typeof renderCustomerHomepage === "function") renderCustomerHomepage(user);
-        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
-    }
-}
-
-async function handleLogout() {
-    await getClient().auth.signOut();
-    window.location.reload();
-}
-
-
-/* =========================================
-   4. UI RENDERING (Login / Signup)
-   ========================================= */
-
-function renderAuthUI() {
-    const app = document.getElementById('app');
-    if (!app) return;
-    app.innerHTML = `
-        <div class="card" style="max-width:450px; margin: 80px auto; padding:40px; background:white; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius:15px; font-family: sans-serif;">
-            <h1 style="color:#ff9f43; margin-bottom:10px;">TourSetu</h1>
-            <h2 id="form-title">${isLoginMode ? "Welcome Back" : "Create Account"}</h2>
-            <input type="email" id="email" placeholder="Email Address" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-            <input type="password" id="password" placeholder="Password" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-            
-            <div id="role-selection" style="display: ${isLoginMode ? 'none' : 'block'}; margin: 10px 0;">
-                <label style="display:block; margin-bottom:5px; font-size:12px; color:#666;">REGISTER AS</label>
-                <select id="role" onchange="toggleBusinessFields()" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
-                    <option value="customer">Traveler</option>
-                    <option value="agency">Travel Agency</option>
-                </select>
-            </div>
-
-            <div id="business-fields" style="display:none;">
-                <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-reg" placeholder="Business Reg No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-lic" placeholder="Trade License" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-phone" placeholder="Mobile / Contact No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-            </div>
-
-            <button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43; color:white; width:100%; padding:14px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; margin-top:20px; font-size:16px;">
-                ${isLoginMode ? "Login" : "Register"}
-            </button>
-            
-            <p style="margin-top:20px; font-size:14px; color:#636e72;">
-                ${isLoginMode ? "Don't have an account?" : "Already have account?"} 
-                <span onclick="toggleMode()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">${isLoginMode ? "Create Account" : "Login"}</span>
-            </p>
-            <div id="status" style="margin-top:15px; font-size:13px; font-weight:bold;"></div>
-        </div>
-    `;
-}
-
-/* =========================================
-   5. AUTHENTICATION (With Email Confirmation Logic)
-   ========================================= */
-
-async function handleAuth() {
-    const status = document.getElementById('status');
-    const btn = document.getElementById('auth-btn');
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-
-    if (!email || !password) {
-        status.innerText = "⚠️ Please enter email and password";
-        return;
-    }
-
-    const client = getClient();
-    btn.disabled = true;
-    status.innerText = "⏳ Processing...";
-
-    try {
-        if (isLoginMode) {
-            const { data, error } = await client.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-            showDashboard(data.user);
-        } else {
-            const role = document.getElementById('role').value;
-            const metadata = { role, is_approved: (role === 'customer') };
-            
-            if (role === 'agency') {
-                metadata.gst = document.getElementById('gst-no').value || "N/A";
-                metadata.reg_no = document.getElementById('biz-reg').value || "N/A";
-                metadata.license = document.getElementById('biz-lic').value || "N/A";
-                metadata.phone = document.getElementById('biz-phone').value || "N/A";
-            }
-            
-            // SIGNUP WITH REDIRECT
-            const { error } = await client.auth.signUp({ 
-                email, 
-                password, 
-                options: { 
-                    data: metadata,
-                    emailRedirectTo: window.location.href // Sends user back here after confirmation
-                } 
-            });
-
-            if (error) throw error;
-            
-            status.innerHTML = `
-                <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
-                    <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
-                    A link was sent to <b>${email}</b>. You must verify your email before you can log in to TourSetu.
-                </div>`;
-            
-            // Clear inputs for security
-            document.getElementById('email').value = "";
-            document.getElementById('password').value = "";
-        }
-    } catch (err) {
-        status.innerText = "❌ " + err.message;
-    } finally {
-        btn.disabled = false;
-    }
-}
-/* =========================================
-   5. AUTHENTICATION (The "handleAuth" Function)
+   3. AUTHENTICATION LOGIC
    ========================================= */
 
 async function handleAuth() {
@@ -221,6 +68,8 @@ async function handleAuth() {
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     
+    if(!emailInput || !passwordInput) return;
+
     const email = emailInput.value.trim();
     const password = passwordInput.value;
 
@@ -240,12 +89,10 @@ async function handleAuth() {
 
     try {
         if (isLoginMode) {
-            // LOGIN LOGIC
             const { data, error } = await client.auth.signInWithPassword({ email, password });
             if (error) throw error;
             showDashboard(data.user);
         } else {
-            // SIGNUP LOGIC
             const role = document.getElementById('role').value;
             const metadata = { role, is_approved: (role === 'customer') };
             
@@ -261,20 +108,18 @@ async function handleAuth() {
                 password, 
                 options: { 
                     data: metadata,
-                    emailRedirectTo: window.location.href // Redirects back to your site after click
+                    emailRedirectTo: window.location.href 
                 } 
             });
 
             if (error) throw error;
             
-            // Success UI for Email Confirmation
             status.innerHTML = `
                 <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
                     <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
-                    A link was sent to <b>${email}</b>. You must verify your email before you can log in to TourSetu.
+                    A link was sent to <b>${email}</b>. You must verify your email before you can log in.
                 </div>`;
             
-            // Clear inputs for security and better UI
             emailInput.value = "";
             passwordInput.value = "";
         }
@@ -285,17 +130,101 @@ async function handleAuth() {
     }
 }
 
+function toggleMode() { 
+    isLoginMode = !isLoginMode; 
+    renderAuthUI(); 
+}
+
+function toggleBusinessFields() {
+    const role = document.getElementById('role').value;
+    const businessFields = document.getElementById('business-fields');
+    if (businessFields) businessFields.style.display = (role === 'agency') ? 'block' : 'none';
+}
+
 /* =========================================
-   6. THE STARTUP SWITCH (Fixed ReferenceError)
+   4. APP NAVIGATION & DASHBOARD ROUTING
    ========================================= */
-// Make functions global so HTML onclick can find them
+
+async function initApp() {
+    console.log("TourSetu Booting Up...");
+    const client = getClient();
+    if (!client) return;
+    
+    const { data: { user } } = await client.auth.getUser();
+    if (user) {
+        showDashboard(user);
+    } else {
+        renderAuthUI();
+    }
+}
+
+async function showDashboard(user) {
+    const role = user.user_metadata.role || 'customer';
+    if (role === 'agency') {
+        if (typeof renderAgencyDashboard === "function") renderAgencyDashboard(user);
+        else document.getElementById('app').innerHTML = `<h2>Agency Home</h2><button onclick="window.handleLogout()">Logout</button>`;
+    } else {
+        if (typeof renderCustomerHomepage === "function") renderCustomerHomepage(user);
+        else document.getElementById('app').innerHTML = `<h2>Traveler Home</h2><button onclick="window.handleLogout()">Logout</button>`;
+    }
+}
+
+async function handleLogout() {
+    await getClient().auth.signOut();
+    window.location.reload();
+}
+
+/* =========================================
+   5. UI RENDERING
+   ========================================= */
+
+function renderAuthUI() {
+    const app = document.getElementById('app');
+    if (!app) return;
+    app.innerHTML = `
+        <div class="card" style="max-width:450px; margin: 80px auto; padding:40px; background:white; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius:15px; font-family: sans-serif;">
+            <h1 style="color:#ff9f43; margin-bottom:10px;">TourSetu</h1>
+            <h2 id="form-title">${isLoginMode ? "Welcome Back" : "Create Account"}</h2>
+            <input type="email" id="email" placeholder="Email Address" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+            <input type="password" id="password" placeholder="Password" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+            
+            <div id="role-selection" style="display: ${isLoginMode ? 'none' : 'block'}; margin: 10px 0;">
+                <label style="display:block; margin-bottom:5px; font-size:12px; color:#666;">REGISTER AS</label>
+                <select id="role" onchange="window.toggleBusinessFields()" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
+                    <option value="customer">Traveler</option>
+                    <option value="agency">Travel Agency</option>
+                </select>
+            </div>
+
+            <div id="business-fields" style="display:none;">
+                <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                <input type="text" id="biz-reg" placeholder="Business Reg No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                <input type="text" id="biz-lic" placeholder="Trade License" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                <input type="text" id="biz-phone" placeholder="Mobile / Contact No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+            </div>
+
+            <button id="auth-btn" onclick="window.handleAuth()" style="background:#ff9f43; color:white; width:100%; padding:14px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; margin-top:20px; font-size:16px;">
+                ${isLoginMode ? "Login" : "Register"}
+            </button>
+            
+            <p style="margin-top:20px; font-size:14px; color:#636e72;">
+                ${isLoginMode ? "Don't have an account?" : "Already have account?"} 
+                <span onclick="window.toggleMode()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">${isLoginMode ? "Create Account" : "Login"}</span>
+            </p>
+            <div id="status" style="margin-top:15px; font-size:13px; font-weight:bold;"></div>
+        </div>
+    `;
+}
+
+/* =========================================
+   6. EXPORT TO GLOBAL SCOPE
+   ========================================= */
 window.handleAuth = handleAuth;
 window.toggleMode = toggleMode;
 window.toggleBusinessFields = toggleBusinessFields;
 window.handleLogout = handleLogout;
 
 document.addEventListener('DOMContentLoaded', initApp);
-
 // 7. CUSTOMER HOMEPAGE
 function renderCustomerHomepage(user) {
     const app = document.getElementById('app');
