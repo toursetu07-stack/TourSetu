@@ -1024,58 +1024,63 @@ window.processSave = (id) => {
     }
 };
 
-// 11. HANDLESAVE (Enhanced with Error Safety & UI Feedback)
+// 11. HANDLESAVE (Synced with Dynamic Form)
 window.handleSave = async function(id = null) {
     const client = getClient();
     const btn = document.getElementById('save-btn');
-    const statusDiv = document.getElementById('status'); // Optional: for messages
     
-    // Get current user
+    // 1. Get current user
     const { data: { user }, error: userError } = await client.auth.getUser();
     if (userError || !user) return alert("Please login again to save.");
     
-    // Collect Vehicles
+    // 2. Collect Vehicle Data (Fixed to match dynamic checkboxes)
     const selectedVehicles = [];
     document.querySelectorAll('.v-enable:checked').forEach(checkbox => {
         const vid = checkbox.dataset.id;
+        // Find the specific rate and max inputs for this vehicle ID
         const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
         const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
-        const rate = parseFloat(rateInput.value);
-        const name = rateInput.dataset.name;
+        
+        const rate = parseFloat(rateInput.value) || 0;
+        const max = parseInt(maxInput.value) || 1;
+        
+        // We only add the vehicle if a rate is provided
         if (rate > 0) {
             selectedVehicles.push({ 
                 id: vid, 
-                name: name, 
+                name: vid.charAt(0).toUpperCase() + vid.slice(1), // Capitalize name
                 rate: rate, 
-                max_cars: parseInt(maxInput.value) || 1 
+                max_cars: max 
             });
         }
     });
 
-    // Validation
-    if (selectedVehicles.length === 0) {
-        return alert("Please TICK at least one vehicle and provide a price/rate.");
-    }
-    
+    // 3. Validation
     const titleVal = document.getElementById('p-title').value;
+    const cityVal = document.getElementById('p-city').value;
+    
     if (!titleVal) return alert("Please enter a Package Title.");
+    if (!cityVal) return alert("Please select a Starting City.");
+    if (selectedVehicles.length === 0) {
+        return alert("Please select at least one vehicle and enter a rate.");
+    }
 
-    // UI Feedback: Start Loading
-    const originalBtnText = btn.innerText;
+    // 4. UI Feedback: Loading
     btn.innerText = "⏳ Saving to Cloud...";
     btn.disabled = true;
 
+    // 5. Build the Data Object
     const pkgData = {
         agency_id: user.id,
         title: titleVal,
-        starting_location: document.getElementById('p-city').value,
+        starting_location: cityVal,
         description: document.getElementById('p-desc').value,
         destination: Array.from(document.querySelectorAll('.d-check:checked')).map(c => c.value),
         vehicles: selectedVehicles
     };
 
     try {
-        if (id) {
+        if (id && id !== "undefined" && id !== "") {
             // --- UPDATE MODE (With History) ---
             const { data: oldPkg, error: fetchError } = await client
                 .from('packages')
@@ -1085,10 +1090,8 @@ window.handleSave = async function(id = null) {
             
             if (fetchError) throw fetchError;
 
-            // Ensure history is an array
             const history = Array.isArray(oldPkg.updates_history) ? oldPkg.updates_history : [];
             
-            // Add current version to history before updating
             history.push({ 
                 title: oldPkg.title, 
                 description: oldPkg.description, 
@@ -1107,7 +1110,7 @@ window.handleSave = async function(id = null) {
             if (updateError) throw updateError;
         } else {
             // --- INSERT MODE (New Package) ---
-            pkgData.updates_history = []; // New packages start with empty history
+            pkgData.updates_history = []; 
             const { error: insertError } = await client
                 .from('packages')
                 .insert([pkgData]);
@@ -1115,13 +1118,10 @@ window.handleSave = async function(id = null) {
             if (insertError) throw insertError;
         }
         
-        // Success: Refresh and Go Back
-        setTimeout(() => {
-            showTab('packages'); 
-            // Re-run the list loader to show the new data
-            loadPackageList(user.id); 
-        }, 500);
-
+        // 6. Finalize: Clear form and refresh list
+        document.getElementById('package-form-area').innerHTML = ''; // Hide form
+        loadPackageList(user.id); // Refresh the list cards
+        
     } catch (e) {
         console.error("Save Error:", e);
         alert("Error saving: " + e.message);
