@@ -1,79 +1,39 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TourSetu | Agency & Traveler Portal</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+0<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<div id="app">
-    <div class="auth-card" id="auth-card">
-        <div style="text-align: center; margin-bottom: 25px;">
-            <h1 id="form-title" style="margin:0;">🚀 Tour<span style="color: #ff9f43;">Setu</span></h1>
-            <p id="auth-subtitle" style="color: #666; font-size: 14px; margin-top: 5px;">Welcome Back</p>
-        </div>
-        
-        <div id="auth-section">
-            <input type="email" id="email" placeholder="Email Address">
-            <input type="password" id="password" placeholder="Password">
-            
-            <div id="role-selection" style="display: none; margin-top: 15px;">
-                <label style="font-size: 12px; color: #666; font-weight: bold; display: block; margin-bottom: 5px;">REGISTER AS:</label>
-                <select id="role" onchange="window.toggleBusinessFields()">
-                    <option value="customer">Traveler</option>
-                    <option value="agency">Travel Agency</option>
-                </select>
-            </div>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-            <div id="business-fields" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
-                <input type="text" id="gst-no" placeholder="GST Number">
-                <input type="text" id="biz-reg" placeholder="Business Registration No.">
-                <input type="text" id="biz-lic" placeholder="Trade License / License No.">
-            </div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">  <div id="app">
+  <div class="auth-card">
+    <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>
+    
+    <div id="auth-section">
+      <input type="email" id="email" placeholder="Email Address">
+      <input type="password" id="password" placeholder="Password">
+      
+      <div id="role-selection">
+        <label>I am a:</label>
+        <select id="role" onchange="toggleBusinessFields()">
+          <option value="customer">Traveler</option>
+          <option value="agency">Travel Agency</option>
+        </select>
+      </div>
 
-            <button id="auth-btn" onclick="window.handleAuth()" style="margin-top: 20px;">Login</button>
-            
-            <p id="toggle-text" style="text-align: center; margin-top: 20px; font-size: 14px;">
-                Don't have an account? <a href="javascript:void(0)" onclick="window.toggleMode()" style="color: #ff9f43; font-weight: bold; text-decoration: none;">Create one here</a>
-            </p>
-        </div>
-        
-        <div id="status" style="margin-top:15px; font-weight:bold; text-align: center; font-size: 13px;"></div>
+      <div id="business-fields" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+        <input type="text" id="gst-no" placeholder="GST Number">
+        <input type="text" id="biz-reg" placeholder="Business Registration No.">
+        <input type="text" id="biz-lic" placeholder="Trade License / License No.">
+        <p style="font-size:0.75rem; color:#666; margin-top:5px;">
+          Note: Agency accounts require admin approval to go public.
+        </p>
+      </div>
+
+      <button id="auth-btn" onclick="handleAuth()">Create Account</button>
+      
+      <p id="toggle-text">
+        Already have an account? <a href="javascript:void(0)" onclick="toggleMode()">Login here</a>
+      </p>
     </div>
-
-    <div id="dashboard" style="display:none;">
-        <nav style="background:#fff; padding:15px 30px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-            <h2 style="margin:0; color:#ff9f43;">TourSetu Agency</h2>
-            <div style="display:flex; gap:20px; align-items:center;">
-                <button onclick="window.showTab('packages')" style="background:none; border:none; color:#666; cursor:pointer; font-weight: 600;">My Packages</button>
-                <button onclick="window.handleLogout()" style="background:#ff7675; color:white; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight: bold;">Logout</button>
-            </div>
-        </nav>
-
-        <div id="main-content" style="padding:40px; max-width: 1000px; margin: 0 auto;">
-            <div id="pkg-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-                <h1 style="margin:0;">My Tour Packages</h1>
-                <button id="create-pkg-btn" onclick="window.showPackageForm()" style="width:auto; padding:12px 25px; background:#ff9f43; border:none; color:white; border-radius:8px; cursor:pointer; font-weight:bold;">
-                    <i class="fas fa-plus"></i> Create New Package
-                </button>
-            </div>
-
-            <div id="package-form-area"></div>
-
-            <div id="pkg-list-container" style="margin-top: 20px;"></div>
-        </div>
-    </div>
+    
+    <div id="status" style="margin-top:15px; font-weight:bold;"></div>
+  </div>
 </div>
-
-<script src="script.js"></script>
-
-</body>
-</html>
