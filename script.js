@@ -1029,58 +1029,68 @@ window.handleSave = async function(id = null) {
     const client = getClient();
     const btn = document.getElementById('save-btn');
     
-    // 1. Get current user
-    const { data: { user }, error: userError } = await client.auth.getUser();
-    if (userError || !user) return alert("Please login again to save.");
-    
-    // 2. Collect Vehicle Data (Fixed to match dynamic checkboxes)
-    const selectedVehicles = [];
-    document.querySelectorAll('.v-enable:checked').forEach(checkbox => {
-        const vid = checkbox.dataset.id;
-        // Find the specific rate and max inputs for this vehicle ID
-        const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
-        const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
-        
-        const rate = parseFloat(rateInput.value) || 0;
-        const max = parseInt(maxInput.value) || 1;
-        
-        // We only add the vehicle if a rate is provided
-        if (rate > 0) {
-            selectedVehicles.push({ 
-                id: vid, 
-                name: vid.charAt(0).toUpperCase() + vid.slice(1), // Capitalize name
-                rate: rate, 
-                max_cars: max 
-            });
-        }
-    });
-
-    // 3. Validation
-    const titleVal = document.getElementById('p-title').value;
-    const cityVal = document.getElementById('p-city').value;
-    
-    if (!titleVal) return alert("Please enter a Package Title.");
-    if (!cityVal) return alert("Please select a Starting City.");
-    if (selectedVehicles.length === 0) {
-        return alert("Please select at least one vehicle and enter a rate.");
+    // Safety Guard: Stop if the button doesn't exist (form closed)
+    if (!btn) {
+        console.error("Save button not found. Is the form open?");
+        return;
     }
 
-    // 4. UI Feedback: Loading
-    btn.innerText = "⏳ Saving to Cloud...";
-    btn.disabled = true;
-
-    // 5. Build the Data Object
-    const pkgData = {
-        agency_id: user.id,
-        title: titleVal,
-        starting_location: cityVal,
-        description: document.getElementById('p-desc').value,
-        destination: Array.from(document.querySelectorAll('.d-check:checked')).map(c => c.value),
-        vehicles: selectedVehicles
-    };
-
     try {
-        if (id && id !== "undefined" && id !== "") {
+        // 1. Get current user
+        const { data: { user }, error: userError } = await client.auth.getUser();
+        if (userError || !user) {
+            alert("Please login again to save.");
+            window.location.reload(); // Refresh to show login card
+            return;
+        }
+
+        // 2. Validation Checks
+        const titleVal = document.getElementById('p-title') ? document.getElementById('p-title').value : null;
+        const cityVal = document.getElementById('p-city') ? document.getElementById('p-city').value : null;
+        const descVal = document.getElementById('p-desc') ? document.getElementById('p-desc').value : "";
+
+        if (!titleVal) return alert("Please enter a Package Title.");
+        if (!cityVal) return alert("Please select or enter a Starting City.");
+
+        // 3. Collect Vehicle Data
+        const selectedVehicles = [];
+        document.querySelectorAll('.v-enable:checked').forEach(checkbox => {
+            const vid = checkbox.dataset.id;
+            const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
+            const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
+            
+            const rate = rateInput ? parseFloat(rateInput.value) : 0;
+            const max = maxInput ? parseInt(maxInput.value) : 1;
+            
+            if (rate > 0) {
+                selectedVehicles.push({ 
+                    id: vid, 
+                    name: vid.charAt(0).toUpperCase() + vid.slice(1), 
+                    rate: rate, 
+                    max_cars: max 
+                });
+            }
+        });
+
+        if (selectedVehicles.length === 0) {
+            return alert("Please select at least one vehicle and enter a price.");
+        }
+
+        // 4. UI Feedback: Start Loading
+        btn.innerText = "⏳ Saving to Cloud...";
+        btn.disabled = true;
+
+        // 5. Build the Data Object
+        const pkgData = {
+            agency_id: user.id,
+            title: titleVal,
+            starting_location: cityVal,
+            description: descVal,
+            destination: Array.from(document.querySelectorAll('.d-check:checked')).map(c => c.value),
+            vehicles: selectedVehicles
+        };
+
+        if (id && id !== "undefined" && id !== "" && id !== "null") {
             // --- UPDATE MODE (With History) ---
             const { data: oldPkg, error: fetchError } = await client
                 .from('packages')
@@ -1108,6 +1118,7 @@ window.handleSave = async function(id = null) {
                 .eq('id', id);
             
             if (updateError) throw updateError;
+            console.log("Package Updated Successfully");
         } else {
             // --- INSERT MODE (New Package) ---
             pkgData.updates_history = []; 
@@ -1116,12 +1127,16 @@ window.handleSave = async function(id = null) {
                 .insert([pkgData]);
             
             if (insertError) throw insertError;
+            console.log("New Package Created Successfully");
         }
         
-        // 6. Finalize: Clear form and refresh list
+        // 6. Success: Clear form and refresh UI
+        alert("Success! Package Saved.");
         document.getElementById('package-form-area').innerHTML = ''; // Hide form
-        loadPackageList(user.id); // Refresh the list cards
-        
+        if (typeof loadPackageList === "function") {
+            loadPackageList(user.id); 
+        }
+
     } catch (e) {
         console.error("Save Error:", e);
         alert("Error saving: " + e.message);
