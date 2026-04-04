@@ -17,7 +17,7 @@
 <div id="app">
     <div class="auth-card" id="auth-card">
         <div style="text-align: center; margin-bottom: 25px;">
-            <h1 id="form-title" style="margin:0;">?? Tour<span style="color: #ff9f43;">Setu</span></h1>
+            <h1 id="form-title" style="margin:0;">🚀 Tour<span style="color: #ff9f43;">Setu</span></h1>
             <p id="auth-subtitle" style="color: #666; font-size: 14px; margin-top: 5px;">Welcome Back</p>
         </div>
         
@@ -50,16 +50,54 @@
     </div>
 
     <div id="dashboard" style="display:none;">
-        <div id="dashboard-placeholder">
-            <nav style="background:#fff; padding:15px 30px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                <h2 style="margin:0; color:#ff9f43;">TourSetu Agency</h2>
-                <div style="display:flex; gap:20px; align-items:center;">
-                    <button onclick="window.showTab('packages')" style="background:none; border:none; color:#666; cursor:pointer; font-weight: 600;">My Packages</button>
-                    <button onclick="window.handleLogout()" style="background:#ff7675; color:white; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight: bold;">Logout</button>
+        <nav style="background:#fff; padding:15px 30px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+            <h2 style="margin:0; color:#ff9f43;">TourSetu Agency</h2>
+            <div style="display:flex; gap:20px; align-items:center;">
+                <button onclick="window.showTab('packages')" style="background:none; border:none; color:#666; cursor:pointer; font-weight: 600;">My Packages</button>
+                <button onclick="window.handleLogout()" style="background:#ff7675; color:white; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight: bold;">Logout</button>
+            </div>
+        </nav>
+
+        <div id="main-content" style="padding:40px; max-width: 1000px; margin: 0 auto;">
+            <div id="pkg-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                <h1>My Tour Packages</h1>
+                <button onclick="window.showPackageForm()" style="width:auto; padding:10px 20px; background:#ff9f43;">+ Create New Package</button>
+             </div>
+             <div id="pkg-list-container"></div>
+        </div>
+    </div>
+
+    <div id="package-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; overflow-y:auto;">
+        <div style="background:white; max-width:600px; margin:50px auto; padding:30px; border-radius:12px; position:relative;">
+            <h2 id="modal-title">Create Tour Package</h2>
+            <hr>
+            
+            <label>Package Title</label>
+            <input type="text" id="p-title" placeholder="e.g. Golden Triangle Tour">
+            
+            <label>Starting City</label>
+            <input type="text" id="p-city" placeholder="e.g. Delhi">
+            
+            <label>Description</label>
+            <textarea id="p-desc" rows="4" placeholder="Tell travelers about this trip..."></textarea>
+            
+            <div style="margin-top:20px;">
+                <label><b>Select Vehicles & Set Rates:</b></label>
+                <div id="vehicle-options" style="margin-top:10px;">
+                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+                        <input type="checkbox" class="v-enable" data-id="sedan"> Sedan
+                        <input type="number" class="v-rate" data-id="sedan" data-name="Sedan" placeholder="Rate/km" style="width:100px;">
+                        <input type="number" class="v-max" data-id="sedan" placeholder="Max Cars" style="width:80px;">
+                    </div>
                 </div>
-            </nav>
-            <div id="main-content" style="padding:40px; max-width: 1000px; margin: 0 auto;">
-                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:30px;">
+                <button id="save-btn" onclick="window.handleSave()" style="flex:1;">Save Changes</button>
+                <button onclick="document.getElementById('package-modal').style.display='none'" style="flex:1; background:#eee; color:#333;">Cancel</button>
+            </div>
+            
+            <input type="hidden" id="editing-id">
         </div>
     </div>
 </div>
