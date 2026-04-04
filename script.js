@@ -1,12 +1,11 @@
-/* =========================================
-   1. CONFIGURATION & GLOBAL STATE
-   ========================================= */
+// 1. SUPABASE CONFIGURATION
 const SUPABASE_URL = 'https://udfwcqrmksfyeigxgdws.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTIyNTQsImV4cCI6MjA4ODAyODI1NH0.zf1taGGbEszA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw';
 
-let _supabase = null;
+let _supabase;
 let isLoginMode = true;
 
+// 2. DATA CONFIGURATION
 const tourDestinations = [
   "Char Dham Yatra (Uttarakhand)", "Kedarnath (Uttarakhand)", "Badrinath (Uttarakhand)", 
   "Gangotri (Uttarakhand)", "Yamunotri (Uttarakhand)", "Vaishno Devi (Katra)", 
@@ -30,95 +29,53 @@ const locationData = {
   "Uttar Pradesh": ["Lucknow", "Ayodhya", "Vrindavan", "Varanasi", "Agra"]
 };
 
-/* =========================================
-   2. CORE UTILITY FUNCTIONS
-   ========================================= */
-
 function getClient() {
-    if (!_supabase && window.supabase) {
-        _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
+    if (!_supabase && window.supabase) _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     return _supabase;
 }
 
-function toggleMode() { 
-    isLoginMode = !isLoginMode; 
-    renderAuthUI(); 
-}
-
-function toggleBusinessFields() {
-    const role = document.getElementById('role').value;
-    const businessFields = document.getElementById('business-fields');
-    if (businessFields) businessFields.style.display = (role === 'agency') ? 'block' : 'none';
-}
-
-/* =========================================
-   3. AUTH & DASHBOARD LOGIC
-   ========================================= */
-
+// 3. APP INITIALIZATION
 async function initApp() {
-    console.log("TourSetu Booting Up...");
     const client = getClient();
     if (!client) return;
-    
     const { data: { user } } = await client.auth.getUser();
-    if (user) {
-        showDashboard(user);
-    } else {
-        renderAuthUI();
-    }
+    if (user) showDashboard(user);
+    else renderAuthUI();
 }
 
+
+
+// 5. DASHBOARD ROUTING
 async function showDashboard(user) {
     const role = user.user_metadata.role || 'customer';
-    if (role === 'agency') {
-        if (typeof renderAgencyDashboard === "function") renderAgencyDashboard(user);
-        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
-    } else {
-        if (typeof renderCustomerHomepage === "function") renderCustomerHomepage(user);
-        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
-    }
+    if (role === 'agency') renderAgencyDashboard(user);
+    else renderCustomerHomepage(user);
 }
 
-async function handleLogout() {
-    await getClient().auth.signOut();
-    window.location.reload();
-}
-
-
-/* =========================================
-   4. UI RENDERING (Login / Signup)
-   ========================================= */
-
+// 4. AUTH UI
 function renderAuthUI() {
     const app = document.getElementById('app');
-    if (!app) return;
     app.innerHTML = `
-        <div class="card" style="max-width:450px; margin: 80px auto; padding:40px; background:white; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius:15px; font-family: sans-serif;">
+        <div class="card" style="max-width:450px; margin: 80px auto; padding:40px; background:white; text-align:center;">
             <h1 style="color:#ff9f43; margin-bottom:10px;">TourSetu</h1>
             <h2 id="form-title">${isLoginMode ? "Welcome Back" : "Create Account"}</h2>
-            <input type="email" id="email" placeholder="Email Address" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-            <input type="password" id="password" placeholder="Password" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-            
-            <div id="role-selection" style="display: ${isLoginMode ? 'none' : 'block'}; margin: 10px 0;">
-                <label style="display:block; margin-bottom:5px; font-size:12px; color:#666;">REGISTER AS</label>
-                <select id="role" onchange="toggleBusinessFields()" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
+            <input type="email" id="email" placeholder="Email Address">
+            <input type="password" id="password" placeholder="Password">
+            <div id="role-selection" style="display: ${isLoginMode ? 'none' : 'block'};">
+                <select id="role" onchange="toggleBusinessFields()">
                     <option value="customer">Traveler</option>
                     <option value="agency">Travel Agency</option>
                 </select>
             </div>
-
             <div id="business-fields" style="display:none;">
-                <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-reg" placeholder="Business Reg No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-lic" placeholder="Trade License" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-phone" placeholder="Mobile / Contact No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                <input type="text" id="gst-no" placeholder="GST Number">
+                <input type="text" id="biz-reg" placeholder="Business Reg No">
+                <input type="text" id="biz-lic" placeholder="Trade License">
+                <input type="text" id="biz-phone" placeholder="Mobile / Contact No">
             </div>
-
-            <button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43; color:white; width:100%; padding:14px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; margin-top:20px; font-size:16px;">
+            <button onclick="handleAuth()" style="background:#ff9f43; color:white; width:100%; padding:14px; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:20px;">
                 ${isLoginMode ? "Login" : "Register"}
             </button>
-            
             <p style="margin-top:20px; font-size:14px; color:#636e72;">
                 ${isLoginMode ? "Don't have an account?" : "Already have account?"} 
                 <span onclick="toggleMode()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">${isLoginMode ? "Create Account" : "Login"}</span>
@@ -128,160 +85,39 @@ function renderAuthUI() {
     `;
 }
 
-/* =========================================
-   5. AUTHENTICATION (With Email Confirmation Logic)
-   ========================================= */
+window.toggleMode = () => { isLoginMode = !isLoginMode; renderAuthUI(); };
+window.toggleBusinessFields = () => {
+    const role = document.getElementById('role').value;
+    document.getElementById('business-fields').style.display = (role === 'agency') ? 'block' : 'none';
+};
 
-async function handleAuth() {
-    const status = document.getElementById('status');
-    const btn = document.getElementById('auth-btn');
-    const email = document.getElementById('email').value.trim();
+window.handleAuth = async function() {
+    const client = getClient();
+    const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-
-    if (!email || !password) {
-        status.innerText = "⚠️ Please enter email and password";
-        return;
-    }
-
-    const client = getClient();
-    btn.disabled = true;
-    status.innerText = "⏳ Processing...";
-
-    try {
-        if (isLoginMode) {
-            const { data, error } = await client.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-            showDashboard(data.user);
-        } else {
-            const role = document.getElementById('role').value;
-            const metadata = { role, is_approved: (role === 'customer') };
-            
-            if (role === 'agency') {
-                metadata.gst = document.getElementById('gst-no').value || "N/A";
-                metadata.reg_no = document.getElementById('biz-reg').value || "N/A";
-                metadata.license = document.getElementById('biz-lic').value || "N/A";
-                metadata.phone = document.getElementById('biz-phone').value || "N/A";
-            }
-            
-            // SIGNUP WITH REDIRECT
-            const { error } = await client.auth.signUp({ 
-                email, 
-                password, 
-                options: { 
-                    data: metadata,
-                    emailRedirectTo: window.location.href // Sends user back here after confirmation
-                } 
-            });
-
-            if (error) throw error;
-            
-            status.innerHTML = `
-                <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
-                    <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
-                    A link was sent to <b>${email}</b>. You must verify your email before you can log in to TourSetu.
-                </div>`;
-            
-            // Clear inputs for security
-            document.getElementById('email').value = "";
-            document.getElementById('password').value = "";
-        }
-    } catch (err) {
-        status.innerText = "❌ " + err.message;
-    } finally {
-        btn.disabled = false;
-    }
-}
-/* =========================================
-   5. AUTHENTICATION (The "handleAuth" Function)
-   ========================================= */
-
-async function handleAuth() {
     const status = document.getElementById('status');
-    const btn = document.getElementById('auth-btn');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-
-    if (!email || !password) {
-        status.innerText = "⚠️ Please enter email and password";
-        return;
-    }
-
-    const client = getClient();
-    if (!client) {
-        status.innerText = "❌ Supabase not initialized";
-        return;
-    }
-
-    btn.disabled = true;
-    status.innerText = "⏳ Processing...";
-
-    try {
-        if (isLoginMode) {
-            // LOGIN LOGIC
-            const { data, error } = await client.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-            showDashboard(data.user);
-        } else {
-            // SIGNUP LOGIC
-            const role = document.getElementById('role').value;
-            const metadata = { role, is_approved: (role === 'customer') };
-            
-            if (role === 'agency') {
-                metadata.gst = document.getElementById('gst-no').value || "N/A";
-                metadata.reg_no = document.getElementById('biz-reg').value || "N/A";
-                metadata.license = document.getElementById('biz-lic').value || "N/A";
-                metadata.phone = document.getElementById('biz-phone').value || "N/A";
-            }
-            
-            const { error } = await client.auth.signUp({ 
-                email, 
-                password, 
-                options: { 
-                    data: metadata,
-                    // FIX: Removed the double "emailRedirectTo:" and replaced with your actual link
-                    emailRedirectTo: "https://toursetu-app.netlify.app"
-                } 
-            });
-
-            if (error) throw error;
-            
-            // Success UI for Email Confirmation
-            status.innerHTML = `
-                <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
-                    <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
-                    A link was sent to <b>${email}</b>. You must verify your email before you can log in to TourSetu.
-                </div>`;
-            
-            // Clear inputs for security and better UI
-            emailInput.value = "";
-            passwordInput.value = "";
+    if (isLoginMode) {
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        if (error) status.innerText = "❌ " + error.message;
+        else showDashboard(data.user);
+    } else {
+        const role = document.getElementById('role').value;
+        const metadata = { role, is_approved: false };
+        if (role === 'agency') {
+            metadata.gst = document.getElementById('gst-no').value;
+            metadata.reg_no = document.getElementById('biz-reg').value;
+            metadata.license = document.getElementById('biz-lic').value;
+            metadata.phone = document.getElementById('biz-phone').value;
         }
-    } catch (err) {
-        status.innerText = "❌ " + err.message;
-    } finally {
-        btn.disabled = false;
+        const { error } = await client.auth.signUp({ email, password, options: { data: metadata } });
+        if (error) status.innerText = "❌ " + error.message;
+        else status.innerText = "✅ Registration Successful!";
     }
-}
-/* =========================================
-   6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
-   ========================================= */
-
+};
+// 6. CUSTOMER HOMEPAGE
 function renderCustomerHomepage(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
-    
-    // Pre-calculate search options to avoid nested template literal errors
-    const startCityOptions = Object.values(locationData).flat().sort().map(city => 
-        `<option value="${city}">${city}</option>`
-    ).join('');
-
-    const destOptions = tourDestinations.map(d => 
-        `<option value="${d}">${d}</option>`
-    ).join('');
-
     app.innerHTML = `
         <div style="font-family:'Inter', sans-serif; background:#f4f7f6; min-height:100vh; margin:-20px;">
             <div style="background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80');
@@ -292,16 +128,16 @@ function renderCustomerHomepage(user) {
                 <div class="card" style="background:white; padding:30px; border-radius:20px; display:flex; gap:15px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); flex-wrap:wrap;">
                   <div style="flex:1; min-width:250px; text-align:left;">
                       <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">MY STARTING LOCATION</label>
-                      <select id="search-start" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
+                      <select id="search-start" style="border: 2px solid #eee; margin-top:8px;">
                          <option value="">Select City</option>
-                         ${startCityOptions}
+                          ${Object.values(locationData).flat().sort().map(city => `<option value="${city}">${city}</option>`).join('')}
                       </select>
                    </div>
                   <div style="flex:1; min-width:250px; text-align:left;">
                       <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">TOUR DESTINATION</label>
-                      <select id="search-dest" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
+                      <select id="search-dest" style="border: 2px solid #eee; margin-top:8px;">
                           <option value="">Select Destination</option>
-                          ${destOptions}
+                          ${tourDestinations.map(d => `<option value="${d}">${d}</option>`).join('')}
                       </select>
                   </div>
                   <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 40px; border-radius:12px; font-weight:bold; cursor:pointer; height:55px; margin-top:22px; font-size:16px;">FIND AGENCIES</button>
@@ -315,15 +151,15 @@ function renderCustomerHomepage(user) {
                       <p id="result-subtitle" style="color:#636e72; margin-top:5px;">Explore tours from all over India</p>
                   </div>
                   <div style="display:flex; gap:10px;">
-                    <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
-                    <button onclick="executeLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
+                    <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer;">My Requests</button>
+                    <button onclick="executeLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer;">Logout</button>
                   </div>
               </div>
                <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap:30px;"></div>
-            </div>
+           </div>
         </div>
-        <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; overflow-y:auto;">
-            <div class="modal-content card" style="background:white; width:90%; max-width:700px; padding:30px; border-radius:20px; position:relative; margin: 40px 0;">
+        <div id="detail-modal" class="modal-overlay" style="display:none;">
+            <div class="modal-content card">
                 <div id="detail-view-body"></div>
            </div>
         </div>
@@ -331,6 +167,7 @@ function renderCustomerHomepage(user) {
     loadAllPackages();
 }
 
+// NEW: FUNCTION TO RENDER CUSTOMER BOOKING REQUESTS
 window.renderCustomerRequests = async () => {
     const container = document.getElementById('customer-pkg-list');
     const resultTitle = document.getElementById('result-title');
@@ -351,27 +188,23 @@ window.renderCustomerRequests = async () => {
         return;
     }
 
-    container.innerHTML = data.map(b => {
-        const statusColor = b.status === 'paid' ? '#2ecc71' : '#ff9f43';
-        const isPending = b.status === 'pending';
-        const isPaid = b.status === 'paid';
-        const isApproved = b.status === 'approved';
-
-        return `
-        <div class="card" style="background:white; padding:25px; border-left:5px solid ${statusColor}; position:relative; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+    container.innerHTML = data.map(b => `
+        <div class="card" style="background:white; padding:25px; border-left:5px solid ${b.status === 'paid' ? '#2ecc71' : '#ff9f43'}; position:relative;">
             <div style="display:flex; justify-content:space-between; align-items:start;">
                 <div>
                     <h3 style="margin:0 0 10px 0;">${b.package_title}</h3>
                     <div style="font-size:13px; color:#636e72;">
                         <div>🚗 Vehicles: ${b.selected_vehicles}</div>
-                        <div style="margin-top:5px;">Status: <b style="color:${statusColor}">${b.status.toUpperCase()}</b></div>
+                        <div style="margin-top:5px;">Status: <b style="color:${b.status === 'paid' ? '#2ecc71' : '#e67e22'}">${b.status.toUpperCase()}</b></div>
                     </div>
                 </div>
-                ${isPending ? `<button onclick="deleteBookingRequest(${b.id})" style="background:none; border:1px solid #ff7675; color:#ff7675; padding:5px 10px; font-size:12px; border-radius:5px; cursor:pointer;">🗑️ Delete Request</button>` : ''}
+                ${b.status === 'pending' ? `
+                    <button onclick="deleteBookingRequest(${b.id})" style="background:none; border:1px solid #ff7675; color:#ff7675; padding:5px 10px; font-size:12px; border-radius:5px;">🗑️ Delete Request</button>
+                ` : ''}
             </div>
 
-            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : '#f8f9fa'}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
-                ${isPaid ? `
+            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${b.status === 'paid' ? '#f0fff4' : '#f8f9fa'}; border:1px solid ${b.status === 'paid' ? '#2ecc71' : '#eee'};">
+                ${b.status === 'paid' ? `
                     <div style="text-align:center;">
                         <p style="margin:0 0 5px 0; font-size:12px; color:#27ae60; font-weight:bold;">✅ AGENCY CONTACT REVEALED</p>
                         <h2 style="margin:0; color:#2d3436;">${b.agency_contact || 'Contact info missing'}</h2>
@@ -380,176 +213,17 @@ window.renderCustomerRequests = async () => {
                     <div style="text-align:center; color:#636e72;">
                         <p style="margin:0; font-size:13px;">🔒 Contact Details Locked</p>
                         <small>Available only after payment is confirmed</small>
-                        ${isApproved ? `<button onclick="simulatePayment(${b.id})" style="margin-top:10px; background:#2ecc71; color:white; width:100%; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">PROCEED TO PAYMENT</button>` : ''}
+                        ${b.status === 'approved' ? `
+                            <button onclick="simulatePayment(${b.id})" style="margin-top:10px; background:#2ecc71; color:white; width:100%; padding:10px;">PROCEED TO PAYMENT</button>
+                        ` : ''}
                     </div>
                 `}
             </div>
-        </div>`;
-    }).join('');
-};
-
-window.showPackageDetails = function(pEncoded) {
-    const p = JSON.parse(decodeURIComponent(pEncoded));
-    const modal = document.getElementById('detail-modal');
-    const body = document.getElementById('detail-view-body');
-    
-    // 1. Prepare History HTML
-    const historyList = p.updates_history || [];
-    let historyHtml = '';
-    if (historyList.length > 0) {
-        const historyItems = historyList.map((h, i) => `
-            <div style="padding:8px 0; border-bottom:1px solid #eee; margin-bottom:5px;">
-                <div style="display:flex; justify-content:space-between;">
-                    <b>Update #${i+1}</b>
-                    <span style="font-size:10px; color:#999;">${new Date(h.updated_at).toLocaleDateString()}</span>
-                </div>
-                <div style="margin-top:4px;"><b>Title:</b> ${h.title}</div>
-            </div>`).reverse().join('');
-        
-        historyHtml = `<div style="margin-top:20px; border-top: 1px dashed #ddd; padding-top:15px;">
-            <details>
-                <summary style="cursor:pointer; color:#ff9f43; font-size:13px; font-weight:bold;">View Previous Package Updates (${historyList.length})</summary>
-                <div style="margin-top:10px; font-size:12px; color:#636e72; background:#f9f9f9; padding:10px; border-radius:8px;">${historyItems}</div>
-            </details>
-        </div>`;
-    }
-
-    // 2. Prepare Vehicle List HTML
-    const vehicleListHtml = (p.vehicles || []).map(v => `
-        <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')" style="width:20px; height:20px; cursor:pointer;">
-                    <span><b>${v.name}</b> <br> <small style="color:#666;">Available Units: ${v.max_cars || 1}</small></span>
-                </div>
-                <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
-            </div>
-            <div id="qty-container-${v.id}" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid #f0f0f0;">
-                <label style="font-size:12px; color:#636e72; display:block; margin-bottom:5px;">Quantity for ${v.name} (Max: ${v.max_cars || 1})</label>
-                <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:80px; padding:8px; border:2px solid #ff9f43; border-radius:5px;">
-            </div>
-        </div>`).join('');
-
-    // 3. Prepare Final Layout
-    const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
-    const escapedTitle = p.title.replace(/'/g, "\\'");
-
-    body.innerHTML = `
-        <div style="text-align:left;">
-            <div style="display:flex; justify-content:space-between; align-items:start;">
-                <h2 style="margin:0; color:#2d3436;">${p.title}</h2>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:24px; color:#999; cursor:pointer;">✕</button>
-            </div>
-            <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
-            
-            <div style="margin:20px 0; padding:15px; background:#f9f9f9; border-radius:12px; font-size:14px;">
-                <h4 style="margin-top:0;">Itinerary / Description</h4>
-                <p style="white-space: pre-line; color:#636e72; line-height:1.6;">${p.description || 'No description provided.'}</p>
-            </div>
-            
-            <h4>Select Vehicles to Book</h4>
-            <div style="display:grid; gap:5px;">${vehicleListHtml}</div>
-
-            <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold;">ESTIMATED TOTAL:</span>
-                <span id="live-total-display" style="font-size:20px; font-weight:bold; color:#ff9f43;">₹0</span>
-            </div>
-
-            <div style="margin-top:25px; border-top: 2px solid #eee; padding-top:20px;">
-                <h4 style="margin-top:0; color:#2d3436;">Pickup & Contact Details</h4>
-                <div style="display:grid; gap:15px;">
-                    <div>
-                        <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">🏠 HOME ADDRESS FOR PICKUP</label>
-                        <textarea id="cust-address" placeholder="Enter your full street address..." style="width:100%; height:70px; padding:10px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;"></textarea>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">📞 PHONE NUMBER</label>
-                        <input type="text" id="cust-phone" placeholder="Your mobile number" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    </div>
-                </div>
-            </div>
-
-            ${historyHtml}
-
-            <div style="margin-top:30px; display:flex; gap:10px;">
-                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:8px; border:none;">SEND BOOKING REQUEST</button>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; background:#eee; padding:15px; border-radius:8px; cursor:pointer; border:none;">BACK</button>
-            </div>
         </div>
-    `;
-    modal.style.display = 'flex';
+    `).join('');
 };
 
-/* =========================================
-   SUPPORTING LOGIC (STAY IN SAME SCRIPT)
-   ========================================= */
-
-window.updateLivePrice = () => {
-    let total = 0;
-    document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
-        const id = checkbox.dataset.id;
-        const rate = parseFloat(checkbox.dataset.rate) || 0;
-        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
-        const qty = parseInt(qtyInput.value) || 1;
-        total += (rate * qty);
-    });
-    document.getElementById('live-total-display').innerText = `₹${total}`;
-};
-
-window.toggleQtyInput = (id) => {
-    const container = document.getElementById(`qty-container-${id}`);
-    const checkbox = document.querySelector(`.book-v-check[data-id="${id}"]`);
-    if (container) container.style.display = checkbox.checked ? 'block' : 'none';
-    updateLivePrice();
-};
-
-window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) {
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-    const address = document.getElementById('cust-address').value;
-    const phone = document.getElementById('cust-phone').value;
-
-    if (!address.trim() || !phone.trim()) {
-        alert("Please provide pickup address and phone number!"); 
-        return;
-    }
-
-    let totalPrice = 0;
-    const selectedVehicles = Array.from(document.querySelectorAll('.book-v-check:checked')).map(el => {
-        const id = el.dataset.id;
-        const rate = parseFloat(el.dataset.rate) || 0;
-        const qty = parseInt(document.querySelector(`.book-v-qty[data-id="${id}"]`).value) || 1;
-        totalPrice += (rate * qty);
-        return `${qty}x vehicle_id:${id}`;
-    });
-
-    if (selectedVehicles.length === 0) { 
-        alert("Please select at least one vehicle to book."); 
-        return; 
-    }
-
-    const { error } = await client.from('bookings').insert([{
-        package_id: packageId, 
-        package_title: packageTitle,
-        customer_id: user.id, 
-        customer_email: user.email,
-        customer_address: address, 
-        customer_phone: phone,
-        selected_vehicles: selectedVehicles.join(', '),
-        total_price: totalPrice, 
-        status: 'pending',
-        agency_id: agencyId
-    }]);
-
-    if (!error) {
-        alert(`🔔 Notification: Your booking request for "${packageTitle}" has been sent! Total: ₹${totalPrice}`);
-        document.getElementById('detail-modal').style.display = 'none';
-        renderCustomerRequests();
-    } else {
-        alert("Booking Error: " + error.message);
-    }
-};
-
+// NEW: DELETE REQUEST ACTION
 window.deleteBookingRequest = async (id) => {
     if(confirm("Are you sure you want to cancel and delete this request?")) {
         await getClient().from('bookings').delete().eq('id', id);
@@ -557,8 +231,9 @@ window.deleteBookingRequest = async (id) => {
     }
 };
 
+// NEW: PAYMENT SIMULATION
 window.simulatePayment = async (id) => {
-    if(confirm("Confirm payment of booking fees? This will reveal agency contact.")) {
+    if(confirm("Confirm payment of booking fees?")) {
         const { error } = await getClient().from('bookings').update({ status: 'paid' }).eq('id', id);
         if(!error) renderCustomerRequests();
     }
@@ -628,83 +303,119 @@ function renderPackageCards(data, isFiltered) {
         </div>`;
     }).join('');
 }
-// 8. PACKAGE DETAIL VIEW (CODEPEN SYNTAX-SAFE VERSION)
+// 8. PACKAGE DETAIL VIEW (UPDATED WITH NOTIFICATIONS & PRICE CALCULATION)
 window.showPackageDetails = function(pEncoded) {
     const p = JSON.parse(decodeURIComponent(pEncoded));
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
-    
-    // Calculate values outside the string to prevent SyntaxErrors
     const historyList = p.updates_history || [];
-    const vehicleList = p.vehicles || [];
-    const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
-
-    // Pre-build Vehicle HTML
-    const vehicleHtml = vehicleList.map(v => `
-        <div style="padding:12px; border:1px solid #eee; border-radius:10px; margin-bottom:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')">
-                    <b>${v.name}</b>
+    
+    const historyHtml = (historyList.length > 0) ? `
+        <div style="margin-top:20px; border-top: 1px dashed #ddd; padding-top:15px;">
+            <details>
+                <summary style="cursor:pointer; color:#ff9f43; font-size:13px; font-weight:bold;">View Previous Package Updates (${historyList.length})</summary>
+                <div style="margin-top:10px; font-size:12px; color:#636e72; background:#f9f9f9; padding:10px; border-radius:8px;">
+                    ${historyList.map((h, i) => `
+                        <div style="padding:8px 0; border-bottom:1px solid #eee; margin-bottom:5px;">
+                            <div style="display:flex; justify-content:space-between;">
+                                 <b>Update #${i+1}</b>
+                                 <span style="font-size:10px; color:#999;">${new Date(h.updated_at).toLocaleDateString()}</span>
+                            </div>
+                            <div style="margin-top:4px;"><b>Title:</b> ${h.title}</div>
+                        </div>
+                    `).reverse().join('')}
                 </div>
-                <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
-            </div>
-            <div id="qty-container-${v.id}" style="display:none; margin-top:10px;">
-                <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:60px;">
-                <small>Max: ${v.max_cars || 1}</small>
-            </div>
-        </div>`).join('');
+            </details>
+        </div>
+    ` : '';
 
     body.innerHTML = `
         <div style="text-align:left;">
-            <div style="display:flex; justify-content:space-between;">
-                <h2 style="margin:0;">${p.title}</h2>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+                <h2 style="margin:0; color:#2d3436;">${p.title}</h2>
+              <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; font-size:24px; color:#999; padding:0;">✕</button>
+          </div>
+            <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}</p>
+            <div style="margin:20px 0; padding:15px; background:#f9f9f9; border-radius:12px; font-size:14px;">
+                <h4 style="margin-top:0;">Itinerary / Description</h4>
+                <p style="white-space: pre-line; color:#636e72; line-height:1.6;">${p.description || 'No description provided.'}</p>
             </div>
-            <p style="color:#ff9f43; font-weight:bold;">${routeInfo}</p>
             
-            <div style="margin:15px 0; padding:10px; background:#f9f9f9; border-radius:8px;">
-                <p style="white-space: pre-line; font-size:14px;">${p.description || 'No description.'}</p>
-            </div>
-            
-            <h4>Select Vehicles</h4>
-            ${vehicleHtml}
+            <h4>Select Vehicles to Book</h4>
+            <div style="display:grid; gap:12px;">
+              ${(p.vehicles || []).map(v => `
+                  <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; transition: 0.3s;">
+                      <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <div style="display:flex; align-items:center; gap:10px;">
+                               <input type="checkbox" class="book-v-check" 
+                                      data-id="${v.id}" 
+                                      data-rate="${v.rate}" 
+                                      onchange="toggleQtyInput('${v.id}')" 
+                                      style="width:20px; height:20px; cursor:pointer;">
+                              <span><b>${v.name}</b> <br> <small style="color:#666;">Available Units: ${v.max_cars || 1}</small></span>
+                          </div>
+                          <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
+                      </div>
+                      
+                      <div id="qty-container-${v.id}" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid #f0f0f0;">
+                          <label style="font-size:12px; color:#636e72; display:block; margin-bottom:5px;">How many ${v.name} do you want? (Max: ${v.max_cars || 1})</label>
+                          <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" 
+                                 style="width:80px; padding:8px; border:2px solid #ff9f43; margin:0;"
+                                 oninput="updateLivePrice()">
+                      </div>
+                  </div>
+              `).join('')}
+           </div>
 
-            <div style="background:#2d3436; color:white; padding:15px; border-radius:8px; margin-top:15px; display:flex; justify-content:space-between;">
-                <span>TOTAL:</span>
-                <span id="live-total-display" style="color:#ff9f43; font-weight:bold;">₹0</span>
+            <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold;">ESTIMATED TOTAL:</span>
+                <span id="live-total-display" style="font-size:20px; font-weight:bold; color:#ff9f43;">₹0</span>
             </div>
 
-            <div style="margin-top:20px;">
-                <input type="text" id="cust-phone" placeholder="Phone Number" style="width:100%; margin-bottom:10px; padding:10px;">
-                <textarea id="cust-address" placeholder="Pickup Address" style="width:100%; height:60px; padding:10px;"></textarea>
-            </div>
+            <div style="margin-top:25px; border-top: 2px solid #eee; padding-top:20px;">
+                <h4 style="margin-top:0; color:#2d3436;">Pickup & Contact Details</h4>
+               <div style="display:grid; gap:15px;">
+                   <div>
+                       <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">🏠 HOME ADDRESS FOR PICKUP</label>
+                       <textarea id="cust-address" placeholder="Enter your full street address..." style="width:100%; height:70px; padding:10px; border:1px solid #ddd; border-radius:8px;"></textarea>
+                   </div>
+                   <div>
+                       <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">📞 PHONE NUMBER</label>
+                       <input type="text" id="cust-phone" placeholder="Your mobile number" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                    </div>
+               </div>
+           </div>
 
-            <div style="margin-top:20px; display:flex; gap:10px;">
-                <button id="main-book-btn" 
-                    data-pkg-id="${p.id}" 
-                    data-pkg-title="${p.title}" 
-                    data-agency-id="${p.agency_id}"
-                    onclick="initiateBooking(this)" 
-                    style="flex:2; background:#ff9f43; color:white; border:none; padding:15px; font-weight:bold; border-radius:8px; cursor:pointer;">
-                    SEND BOOKING REQUEST
-                </button>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; border:none; border-radius:8px; cursor:pointer;">BACK</button>
-            </div>
-        </div>`;
+          ${historyHtml}
+           <div style="margin-top:30px; display:flex; gap:10px;">
+              <button onclick="handleBookingInquiry(${p.id}, '${p.title.replace(/'/g, "\\'")}', '${p.agency_id}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:8px;">SEND BOOKING REQUEST</button>
+              <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; background:#eee; padding:15px; border-radius:8px; cursor:pointer;">BACK</button>
+          </div>
+        </div>
+    `;
     modal.style.display = 'flex';
 };
 
-// THE BOOKING INITIATOR (Uses the button's data attributes)
-window.initiateBooking = function(btnElement) {
-    const packageId = btnElement.getAttribute('data-pkg-id');
-    const packageTitle = btnElement.getAttribute('data-pkg-title');
-    const agencyId = btnElement.getAttribute('data-agency-id');
-    
-    // Now call your logic function
-    handleBookingInquiry(packageId, packageTitle, agencyId);
+// LIVE PRICE CALCULATION LOGIC
+window.updateLivePrice = () => {
+    let total = 0;
+    document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
+        const id = checkbox.dataset.id;
+        const rate = parseFloat(checkbox.dataset.rate) || 0;
+        const qty = parseInt(document.querySelector(`.book-v-qty[data-id="${id}"]`).value) || 1;
+        total += (rate * qty);
+    });
+    document.getElementById('live-total-display').innerText = `₹${total}`;
 };
 
+window.toggleQtyInput = (id) => {
+    const container = document.getElementById(`qty-container-${id}`);
+    const checkbox = document.querySelector(`.book-v-check[data-id="${id}"]`);
+    container.style.display = checkbox.checked ? 'block' : 'none';
+    updateLivePrice(); 
+};
+
+// DATABASE SAVE LOGIC (WITH NOTIFICATIONS)
 window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) {
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
@@ -712,7 +423,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     const phone = document.getElementById('cust-phone').value;
 
     if (!address.trim() || !phone.trim()) {
-        alert("Enter phone and address!"); return;
+       alert("Please provide details!"); return;
     }
 
     let totalPrice = 0;
@@ -724,8 +435,9 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         return `${qty}x vehicle_id:${id}`;
     });
 
-    if (selectedVehicles.length === 0) { alert("Select a vehicle!"); return; }
+    if (selectedVehicles.length === 0) { alert("Select a vehicle."); return; }
 
+    // 1. INSERT BOOKING
     const { error } = await client.from('bookings').insert([{
         package_id: packageId, 
         package_title: packageTitle,
@@ -735,14 +447,21 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         customer_phone: phone,
         selected_vehicles: selectedVehicles.join(', '),
         total_price: totalPrice, 
-        status: 'pending',
-        agency_id: agencyId
+        status: 'pending'
     }]);
 
     if (!error) {
-        alert("Booking Sent!");
+        // 2. SEND NOTIFICATIONS
+        
+        // Notify Customer (In-App)
+        alert(`🔔 Notification: Your booking request for "${packageTitle}" has been sent successfully! Total: ₹${totalPrice}`);
+
+        // Notify Agency (Preparing for real-time fetch)
+        // Note: Agencies see this automatically when they refresh or if you have a real-time listener active.
+        console.log(`Notification sent to Agency ID: ${agencyId} for new request.`);
+
         document.getElementById('detail-modal').style.display = 'none';
-        renderCustomerRequests();
+        if (typeof renderCustomerRequests === 'function') renderCustomerRequests();
     } else {
         alert("Error: " + error.message);
     }
@@ -751,130 +470,105 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
-    
     app.innerHTML = `
         <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
-            <div style="width:260px; background:#2d3436; color:white; padding:25px; position:relative; flex-shrink:0;">
-               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
-                   <h2 style="color:#ff9f43; margin:0;">TourSetu</h2>
-                   <div id="notif-bell" onclick="showTab('bookings')" style="position:relative; cursor:pointer; font-size:20px; transition: 0.3s;">
-                       🔔
-                       <span id="bell-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:2px 6px; border-radius:50%; font-weight:bold; border: 2px solid #2d3436;">0</span>
-                   </div>
-               </div>
-               <nav>
-                   <div onclick="showTab('earnings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
-                   <div onclick="showTab('bookings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                       <span>📅 Bookings</span>
-                       <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
-                   </div>
-                   <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 My Packages</div>
-                   <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
-                   <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
-               </nav>
+            <div style="width:260px; background:#2d3436; color:white; padding:25px; position:relative;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+                    <h2 style="color:#ff9f43; margin:0;">TourSetu</h2>
+                    <div id="notif-bell" onclick="showTab('bookings')" style="position:relative; cursor:pointer; font-size:20px;">
+                        🔔
+                        <span id="bell-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:2px 6px; border-radius:50%; font-weight:bold;">0</span>
+                    </div>
+                </div>
+                <nav>
+                    <div onclick="showTab('earnings')" class="nav-item">📊 Dashboard</div>
+                    <div onclick="showTab('bookings')" class="nav-item" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>📅 Bookings</span>
+                        <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
+                    </div>
+                    <div onclick="showTab('packages')" class="nav-item">🎒 My Packages</div>
+                    <div onclick="showTab('profile')" class="nav-item">👤 Agency Profile</div>
+                    <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
+                </nav>
             </div>
-            <div id="main-content" style="flex:1; padding:40px; overflow-y:auto; background:#f8f9fa;"></div>
+            <div id="main-content" style="flex:1; padding:40px; overflow-y:auto;"></div>
         </div>
-
         <div id="logout-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
             <div style="background:white; padding:30px; border-radius:12px; text-align:center; max-width:350px;">
-               <h2 style="margin:0 0 20px 0;">Logout?</h2>
-               <div style="display:flex; gap:10px;">
-                   <button onclick="executeLogout()" style="background:#ff7675; color:white; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Yes</button>
-                   <button onclick="document.getElementById('logout-modal').style.display='none'" style="background:#eee; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">No</button>
-               </div>
-           </div>
-        </div>
-
-        <div id="action-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center; padding:20px;">
-            <div id="action-modal-content" style="background:white; padding:30px; border-radius:15px; max-width:400px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <h2>Logout?</h2>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button onclick="executeLogout()" style="background:#ff7675; color:white; width:100px; padding:10px;">Yes</button>
+                    <button onclick="document.getElementById('logout-modal').style.display='none'" style="background:#eee; width:100px; padding:10px;">No</button>
                 </div>
+            </div>
         </div>
     `;
     showTab('earnings'); 
 }
 
 window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
-window.executeLogout = async () => { 
-    await getClient().auth.signOut(); 
-    if(typeof renderAuthUI === 'function') renderAuthUI(); 
-    else window.location.reload(); 
-};
+window.executeLogout = async () => { await getClient().auth.signOut(); isLoginMode = true; renderAuthUI(); };
 
 window.showTab = async function(tabName) {
     const container = document.getElementById('main-content');
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
-    if (!user) return;
 
-    const { data: myPkgs } = await client.from('packages').select('id').eq('agency_id', user.id);
-    const myPkgIds = (myPkgs || []).map(p => p.id);
-
-    let pendingCount = 0;
-    if (myPkgIds.length > 0) {
-        const { count } = await client.from('bookings').select('*', { count: 'exact', head: true }).in('package_id', myPkgIds).eq('status', 'pending');
-        pendingCount = count || 0;
-    }
-
+    // Notification Logic: Check for pending bookings to light up the bell
+    const { count: pCountNotif } = await client.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending');
     const badge = document.getElementById('bell-badge');
     const sideCount = document.getElementById('side-notif-count');
-    const bellIcon = document.getElementById('notif-bell');
     
-    if (badge && pendingCount > 0) {
-        badge.innerText = pendingCount; badge.style.display = 'block';
-        sideCount.innerText = pendingCount; sideCount.style.display = 'block';
-        bellIcon.style.color = '#ff7675';
-    } else if (badge) {
-        badge.style.display = 'none'; sideCount.style.display = 'none';
-        bellIcon.style.color = 'white';
+    if (pCountNotif > 0) {
+        badge.innerText = pCountNotif;
+        badge.style.display = 'block';
+        sideCount.innerText = pCountNotif;
+        sideCount.style.display = 'block';
+        document.getElementById('notif-bell').style.color = '#ff7675';
+    } else {
+        badge.style.display = 'none';
+        sideCount.style.display = 'none';
+        document.getElementById('notif-bell').style.color = 'white';
     }
 
     if (tabName === 'earnings') {
         container.innerHTML = `<h1>Overview</h1>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
-                <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>REVENUE</small><h2>₹0</h2></div>
-                <div class="card" style="border-top:5px solid #ff9f43; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>PENDING BOOKINGS</small><h2>${pendingCount}</h2></div>
-                <div class="card" style="border-top:5px solid #3498db; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>ACTIVE PACKAGES</small><h2 id="act-pkg-count">...</h2></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px;">
+                <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:25px;"><small>REVENUE</small><h2>₹0</h2></div>
+                <div class="card" style="border-top:5px solid #ff9f43; background:white; padding:25px;"><small>PENDING BOOKINGS</small><h2 id="pending-count">...</h2></div>
+                <div class="card" style="border-top:5px solid #3498db; background:white; padding:25px;"><small>ACTIVE PACKAGES</small><h2 id="act-pkg-count">...</h2></div>
             </div>`;
         const { count } = await client.from('packages').select('*', { count: 'exact', head: true }).eq('agency_id', user.id);
-        if(document.getElementById('act-pkg-count')) document.getElementById('act-pkg-count').innerText = count || 0;
+        document.getElementById('act-pkg-count').innerText = count || 0;
+        
+        const { count: pCount } = await client.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+        document.getElementById('pending-count').innerText = pCount || 0;
     } 
     else if (tabName === 'bookings') {
-        container.innerHTML = `<h1>Customer Bookings</h1><div id="booking-list-area">Loading...</div>`;
+        container.innerHTML = `<h1>Customer Bookings</h1><div id="booking-list-area">Loading requests...</div>`;
+        
+        const { data, error } = await client
+            .from('bookings')
+            .select('*')
+            .order('created_at', { ascending: false });
+
         const listArea = document.getElementById('booking-list-area');
-
-        if (myPkgIds.length === 0) {
-            listArea.innerHTML = `<p style="padding:20px; color:#666;">No packages created yet. Go to 'My Packages' to start.</p>`;
+        
+        if (!data || data.length === 0) {
+            listArea.innerHTML = `<p>No booking requests yet.</p>`;
             return;
         }
 
-        const { data: bookingsData } = await client.from('bookings').select('*').in('package_id', myPkgIds).order('created_at', { ascending: false });
-
-        if (!bookingsData || bookingsData.length === 0) {
-            listArea.innerHTML = `<p style="padding:20px; color:#666;">No booking requests found.</p>`;
-            return;
-        }
-
-        listArea.innerHTML = bookingsData.map(b => {
-            const isPaid = b.status === 'paid';
-            const isPending = b.status === 'pending';
-            const displayPhone = isPaid ? b.customer_phone : "Locked (Unlocks after Payment)";
-            const phoneColor = isPaid ? "#ff9f43" : "#999";
-            
-            let statusColor = '#ff9f43';
-            if (b.status === 'cancelled' || b.status === 'denied') statusColor = '#ff7675';
-            if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
-
-            return `
-            <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${statusColor}; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        listArea.innerHTML = data.map(b => `
+            <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${b.status === 'pending' ? '#ff9f43' : '#2ecc71'};">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <div>
                         <h3 style="margin:0; color:#2d3436;">${b.package_title}</h3>
-                        <p style="font-size:12px; color:#636e72;">Requested: ${new Date(b.created_at).toLocaleDateString()}</p>
+                        <p style="font-size:12px; color:#636e72;">Requested on: ${new Date(b.created_at).toLocaleDateString()}</p>
                     </div>
                     <div style="text-align:right;">
                         <div style="font-size:22px; font-weight:bold; color:#2ecc71;">₹${b.total_price || 0}</div>
-                        <span style="padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold; background:#f0f0f0; color:${statusColor};">
+                        <span style="padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold; background:${b.status === 'pending' ? '#fff3e0' : '#e8f5e9'}; color:${b.status === 'pending' ? '#e67e22' : '#2ecc71'};">
                             ${b.status.toUpperCase()}
                         </span>
                     </div>
@@ -883,216 +577,157 @@ window.showTab = async function(tabName) {
                 <div style="margin-top:20px; padding:15px; background:#f4f7f6; border-radius:10px; display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                     <div>
                         <label style="font-size:11px; color:#999; font-weight:bold;">📍 PICKUP ADDRESS</label>
-                        <p style="margin:5px 0; font-size:14px; color:#2d3436;">${b.customer_address || 'Not Provided'}</p>
+                        <p style="margin:5px 0; font-size:14px; color:#2d3436; line-height:1.4;">${b.customer_address || 'Not Provided'}</p>
                     </div>
                     <div>
                         <label style="font-size:11px; color:#999; font-weight:bold;">📞 CUSTOMER PHONE</label>
-                        <p style="margin:5px 0; font-size:15px; font-weight:bold; color:${phoneColor};">
-                            ${isPaid ? `<a href="tel:${displayPhone}" style="color:inherit;">${displayPhone}</a>` : displayPhone}
+                        <p style="margin:5px 0; font-size:16px; font-weight:bold; color:#ff9f43;">
+                            <a href="tel:${b.customer_phone}" style="text-decoration:none; color:inherit;">${b.customer_phone || 'N/A'}</a>
                         </p>
                     </div>
                 </div>
 
-                <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px;">
-                    <p style="font-size:13px; margin:0;"><b>Vehicles:</b> ${b.selected_vehicles}</p>
+                <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center; border-top: 1px dashed #ddd; padding-top:10px;">
+                    <p style="font-size:13px; margin:0;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
+                    <div style="font-size:12px; color:#666; font-weight:bold;">Total Units: ${b.selected_vehicles.split(',').length} Item(s)</div>
                 </div>
 
-                ${isPending ? `
-                    <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
-                        <button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve</button>
-                        <button onclick="openActionModal('${b.id}', 'denied')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny</button>
+                ${b.status === 'pending' ? `
+                    <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
+                        <button onclick="approveWithContact(${b.id})" style="background:#2ecc71; color:white; padding:10px 20px; width:auto;">Approve & Send My Details</button>
                     </div>
                 ` : ''}
-            </div>`;
-        }).join('');
+            </div>
+        `).join('');
     }
     else if (tabName === 'packages') {
         container.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h1>My Packages</h1>
-                <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
+                <button onclick="showPackageForm()" style="width:auto; padding:12px 25px; background:#2ecc71; color:white;">+ CREATE NEW PACKAGE</button>
             </div>
             <div id="package-form-area"></div>
             <div id="pkg-list-container" style="margin-top:25px;"></div>`;
-        if(typeof loadPackageList === 'function') loadPackageList(user.id);
+        loadPackageList(user.id);
     }
     else if (tabName === 'profile') {
         const meta = user.user_metadata || {};
         container.innerHTML = `
             <h1>Agency Profile</h1>
-            <div class="card" style="background:white; padding:30px; max-width:600px; border-left:5px solid #ff9f43; border-radius:8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">EMAIL</label><h3>${user.email}</h3></div>
-                <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">CONTACT</label><h3 style="color:#ff9f43;">${meta.phone || 'N/A'}</h3></div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
-                    <div><label style="color:#666; font-size:11px; font-weight:bold;">GST</label><p style="margin:5px 0;">${meta.gst || 'N/A'}</p></div>
-                    <div><label style="color:#666; font-size:11px; font-weight:bold;">REG NO</label><p style="margin:5px 0;">${meta.reg_no || 'N/A'}</p></div>
+            <div class="card" style="background:white; padding:30px; max-width:600px; border-left:5px solid #ff9f43;">
+                <div style="margin-bottom:20px;">
+                    <label style="color:#666; font-size:12px;">EMAIL ADDRESS</label>
+                    <div style="font-size:18px; font-weight:bold;">${user.email}</div>
                 </div>
-                <p style="border-top:1px solid #eee; padding-top:15px; font-size:12px; color:#999;">
-                    Status: ${meta.is_approved ? '✅ Verified' : '⏳ Pending Verification'}
+                <div style="margin-bottom:20px;">
+                    <label style="color:#666; font-size:12px;">CONTACT / MOBILE NUMBER</label>
+                    <div style="font-size:18px; font-weight:bold; color:#ff9f43;">${meta.phone || 'Not Provided'}</div>
+                </div>
+                <div style="margin-bottom:20px; display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                    <div>
+                        <label style="color:#666; font-size:12px;">GST NUMBER</label>
+                        <div style="font-weight:bold;">${meta.gst || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <label style="color:#666; font-size:12px;">REGISTRATION NO</label>
+                        <div style="font-weight:bold;">${meta.reg_no || 'N/A'}</div>
+                    </div>
+                </div>
+                <p style="font-size:12px; color:#999; border-top:1px solid #eee; padding-top:15px; margin-top:10px;">
+                    Business Status: ${meta.is_approved ? '✅ Verified' : '⏳ Verification Pending'}
                 </p>
-            </div>`;
-    }
-};
-
-// NEW: In-Page Action Modal Flow
-window.openActionModal = function(bookingId, type) {
-    const modal = document.getElementById('action-modal');
-    const content = document.getElementById('action-modal-content');
-    modal.style.display = 'flex';
-
-    if (type === 'approved') {
-        content.innerHTML = `
-            <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
-            <p style="font-size:14px; color:#666;">The customer will be notified to proceed with the payment.</p>
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">ENTER CONTACT NO. FOR PAYMENT:</label>
-            <input type="text" id="modal-contact-input" placeholder="e.g. +91 9876543210" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
-            <div style="display:flex; gap:10px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM APPROVAL</button>
-                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
-            </div>
-        `;
-    } else {
-        content.innerHTML = `
-            <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
-            <p style="font-size:14px; color:#666;">This will cancel the request and notify the customer that the agency denied the booking.</p>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM DENIAL</button>
-                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
             </div>
         `;
     }
 };
 
-window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
-
-window.processStatusUpdate = async function(bookingId, newStatus) {
-    const client = getClient();
-    let updateData = { status: newStatus };
-
-    if (newStatus === 'approved') {
-        const contact = document.getElementById('modal-contact-input').value;
-        if (!contact.trim()) { alert("Please enter a contact number!"); return; }
-        updateData.agency_contact = contact;
-    }
-
-    try {
-        const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
-        
+window.approveWithContact = async (bookingId) => {
+    const contactNum = prompt("Enter the contact number you want the traveler to see (e.g., Driver or Manager number):");
+    if (contactNum) {
+        const { error } = await getClient()
+            .from('bookings')
+            .update({ 
+                status: 'approved', 
+                agency_contact: contactNum 
+            })
+            .eq('id', bookingId);
+            
         if (!error) {
-            const content = document.getElementById('action-modal-content');
-            if (newStatus === 'approved') {
-                content.innerHTML = `
-                    <div style="text-align:center; padding:20px;">
-                        <div style="font-size:40px; margin-bottom:10px;">✅</div>
-                        <h3 style="color:#2ecc71;">Approved!</h3>
-                        <p>Customer can now proceed to payment on <b>${updateData.agency_contact}</b>.</p>
-                        <button onclick="closeActionModal(); showTab('bookings');" style="background:#2d3436; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-top:10px;">CLOSE</button>
-                    </div>
-                `;
-            } else {
-                content.innerHTML = `
-                    <div style="text-align:center; padding:20px;">
-                        <div style="font-size:40px; margin-bottom:10px;">🚫</div>
-                        <h3 style="color:#ff7675;">Denied</h3>
-                        <p>Booking has been cancelled. The customer will see the denial message.</p>
-                        <button onclick="closeActionModal(); showTab('bookings');" style="background:#2d3436; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-top:10px;">CLOSE</button>
-                    </div>
-                `;
-            }
-        } else {
-            alert("Database Error: " + error.message);
+            alert("Booking Approved! Traveler can now proceed.");
+            showTab('bookings');
         }
-    } catch (e) {
-        alert("System error. Please try again.");
     }
 };
 
-// 10. PACKAGE FORM (CodePen Optimized Version)
+// 10. PACKAGE FORM
 window.showPackageForm = function(pEncoded = null) {
-    let pkg = null;
-    try {
-        pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
-    } catch (e) { console.error(e); }
-    
+    const pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
     const isEdit = !!pkg;
     const area = document.getElementById('package-form-area');
     const pkgDestinations = isEdit ? (pkg.destination || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
     
-    // 1. Pre-build State Options
     let selectedState = "";
     if (isEdit) {
-        for (let s in locationData) {
-            if (locationData[s].includes(pkg.starting_location)) { selectedState = s; break; }
+        for (let state in locationData) {
+            if (locationData[state].includes(pkg.starting_location)) {
+                selectedState = state;
+                break;
+            }
         }
     }
-    const stateOptions = Object.keys(locationData).map(s => 
-        `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`
-    ).join('');
 
-    // 2. Pre-build Destination Checkboxes
-    const destHtml = tourDestinations.map(d => `
-        <label style="display:flex; align-items:center; gap:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px;">
-            <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}
-        </label>
-    `).join('');
-
-    // 3. Pre-build Vehicle List
-    const vehicleHtml = vehicleTypes.map(v => {
-        const existing = pkgVehicles.find(ev => ev.id === v.id);
-        return `
-        <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:10px; border-radius:10px; border:1px solid #ffeaa7;">
-            <input type="checkbox" class="v-enable" data-id="${v.id}" ${existing ? 'checked' : ''}>
-            <span style="font-size:20px;">${v.icon}</span>
-            <b style="flex:1;">${v.name}</b>
-            <input type="number" class="v-rate" data-id="${v.id}" placeholder="₹ Rate" style="width:80px;" value="${existing ? existing.rate : ''}">
-            <input type="number" class="v-max" data-id="${v.id}" placeholder="Units" style="width:70px;" value="${existing ? existing.max_cars : '1'}">
-        </div>`;
-    }).join('');
-
-    // 4. Finally, Render the Main Container
     area.innerHTML = `
-        <div class="card" style="background:white; padding:30px; margin-top:20px; border:1px solid #ff9f43; border-radius:12px;">
-            <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🎒 Create New Package'}</h3>
-            
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
-                <input type="text" id="p-title" placeholder="Package Title" value="${isEdit ? pkg.title : ''}">
-                <select id="p-state" onchange="updateCities()">
-                    <option value="">Select State</option>
-                    ${stateOptions}
-                </select>
-            </div>
-
-            <select id="p-city" style="width:100%; margin-bottom:15px;">
-                ${isEdit ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
+        <div class="card" style="background:white; padding:30px; margin-top:20px; border:1px solid #ff9f43;">
+            <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🎒 Create New Tour Package'}</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+               <input type="text" id="p-title" placeholder="Package Name" value="${isEdit ? pkg.title : ''}">
+               <select id="p-state" onchange="updateCities()">
+                  <option value="">Select Base State</option>
+                   ${Object.keys(locationData).map(s => `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`).join('')}
+               </select>
+           </div>
+            <select id="p-city">
+                ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option>Select City</option>'}
             </select>
             
-            <div style="background:#f9f9f9; padding:15px; border-radius:10px; max-height:150px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:8px;">
-                ${destHtml}
+            <label style="font-weight:bold; display:block; margin-top:15px;">Select Destinations Covered:</label>
+            <div style="background:#f9f9f9; padding:15px; border-radius:10px; margin:10px 0; max-height:150px; overflow-y:auto; border:1px solid #eee;">
+               ${tourDestinations.map(d => `
+                   <label style="display:inline-block; margin:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px;">
+                       <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}
+                   </label>`).join('')}
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:20px;">
-                ${vehicleHtml}
+            <label style="font-weight:bold; display:block; margin-top:20px;">Vehicle Fleet (Tick and provide price):</label>
+            <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:10px;">
+               ${vehicleTypes.map(v => {
+                   const existing = pkgVehicles.find(ev => ev.id === v.id);
+                   return `
+                   <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:10px; border-radius:10px;">
+                       <input type="checkbox" class="v-enable" data-id="${v.id}" ${existing ? 'checked' : ''} style="width:20px; height:20px; margin:0;">
+                       <span style="font-size:20px; width:30px;">${v.icon}</span>
+                       <b style="flex:1;">${v.name}</b>
+                       <input type="number" class="v-rate" data-id="${v.id}" data-name="${v.name}" placeholder="Rate (₹)" style="width:100px; margin:0;" value="${existing ? existing.rate : ''}">
+                       <input type="number" class="v-max" data-id="${v.id}" placeholder="Units" style="width:100px; margin:0;" value="${existing ? existing.max_cars : '1'}">
+                   </div>`;
+               }).join('')}
             </div>
 
-            <textarea id="p-desc" style="height:100px; width:100%; margin-top:20px;" placeholder="Itinerary...">${isEdit ? pkg.description : ''}</textarea>
-            
-            <div style="display:flex; gap:10px; margin-top:25px;">
-                <button onclick="processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold; cursor:pointer; border:none; border-radius:8px;">
-                    ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
-                </button>
-                <button onclick="document.getElementById('package-form-area').innerHTML=''" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
-            </div>
+           <textarea id="p-desc" style="height:100px; margin-top:20px;" placeholder="Describe itinerary...">${isEdit ? pkg.description : ''}</textarea>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+               <button id="save-btn" onclick="${isEdit ? `handleSave(${pkg.id})` : 'handleSave()'}" style="background:#2ecc71; color:white; width:100%; height:50px;">
+                   ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
+               </button>
+               <button onclick="document.getElementById('package-form-area').innerHTML=''" style="background:#eee; width:auto; padding:0 20px;">Cancel</button>
+           </div>
         </div>`;
 };
 
-// HELPER TO PREVENT TOKEN ERRORS IN ONCLICK
-window.processSave = (id) => {
-    if (id && id !== "undefined") {
-        handleSave(id);
-    } else {
-        handleSave();
-    }
+window.updateCities = () => {
+    const state = document.getElementById('p-state').value;
+    const citySelect = document.getElementById('p-city');
+   citySelect.innerHTML = locationData[state] ? locationData[state].map(c => `<option value="${c}">${c}</option>`).join('') : '<option>Select City</option>';
 };
 
 // 11. HANDLESAVE
