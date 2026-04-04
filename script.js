@@ -551,38 +551,6 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     }
 };
 /* =========================================
-   2. CONFIGURATION & GLOBAL STATE
-   ========================================= */
-const SUPABASE_URL = 'https://udfwcqrmksfyeigxgdws.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTIyNTQsImV4cCI6MjA4ODAyODI1NH0.zf1taGGbEszA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw';
-
-let _supabase = null;
-let isLoginMode = true;
-
-const tourDestinations = [
-  "Char Dham Yatra (Uttarakhand)", "Kedarnath (Uttarakhand)", "Badrinath (Uttarakhand)", 
-  "Gangotri (Uttarakhand)", "Yamunotri (Uttarakhand)", "Vaishno Devi (Katra)", 
-  "Jagarnath (Puri, Odisha)", "Somnath (Gujarat)", "Tirumala Venkateswara (Tirupati)", 
-  "Ram Janmabhoomi (Ayodhya)", "Banke Bihari (Vrindavan)", "Prem Mandir (Vrindavan)", 
-  "Ajmer Sharif Dargah (Rajasthan)", "Golden Temple (Amritsar)", "Basilica of Bom Jesus (Goa)"
-];
-
-const vehicleTypes = [
-    { id: 'car4', name: '4 Seater Car', icon: '🚗' },
-    { id: 'car6', name: '6 Seater SUV', icon: '🚙' },
-    { id: 'car7', name: '7 Seater SUV', icon: '🚐' },
-    { id: 'tempo', name: 'Tempo Traveler', icon: '🚌' },
-    { id: 'bus', name: 'Luxury Bus', icon: '🚍' }
-];
-
-const locationData = {
- "Uttarakhand": ["Dehradun", "Rishikesh", "Haridwar", "Kashipur", "Rudpur", "Lalkuan", "Kichha", "Bareilly", "Pantnagar", "Lalpur", "Almora", "Nainital"],
-  "Delhi": ["New Delhi", "Old Delhi", "Saket", "Dwarka"],
-  "Punjab": ["Amritsar", "Ludhiana", "Patiala"],
-  "Uttar Pradesh": ["Lucknow", "Ayodhya", "Vrindavan", "Varanasi", "Agra"]
-};
-
-/* =========================================
    3. AGENCY DASHBOARD
    ========================================= */
 function renderAgencyDashboard(user) {
