@@ -1,13 +1,15 @@
 /* =========================================
-   0. BOOTSTRAP (Immediate Global Mapping)
+   0. EMERGENCY GLOBAL MAPPING (Top of File)
    ========================================= */
-// We define these immediately so they are available even if later code has a minor error
-window.handleAuth = async () => { await _internalHandleAuth(); };
-window.toggleMode = () => { isLoginMode = !isLoginMode; renderAuthUI(); };
-window.toggleBusinessFields = () => {
-    const role = document.getElementById('role')?.value;
-    const fields = document.getElementById('business-fields');
-    if (fields) fields.style.display = (role === 'agency') ? 'block' : 'none';
+// We map these immediately. If any code below has a typo, 
+// the buttons will still "find" these functions.
+window.handleAuth = async () => { 
+    console.log("Auth Triggered");
+    await _executeAuthLogic(); 
+};
+window.toggleMode = () => { 
+    isLoginMode = !isLoginMode; 
+    renderAuthUI(); 
 };
 
 /* =========================================
@@ -19,28 +21,30 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let _supabase = null;
 let isLoginMode = true;
 
-function getClient() {
+const getClient = () => {
     if (!_supabase && window.supabase) {
         _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
     return _supabase;
-}
+};
 
 /* =========================================
-   2. AUTHENTICATION CORE (Internal)
+   2. THE ACTUAL AUTH LOGIC
    ========================================= */
-async function _internalHandleAuth() {
+async function _executeAuthLogic() {
     const status = document.getElementById('status');
     const btn = document.getElementById('auth-btn');
     const email = document.getElementById('email')?.value.trim();
     const password = document.getElementById('password')?.value;
 
     if (!email || !password) {
-        if (status) status.innerText = "⚠️ Please enter email and password";
+        if (status) status.innerText = "⚠️ Enter email and password";
         return;
     }
 
     const client = getClient();
+    if (!client) return;
+
     if (btn) btn.disabled = true;
     if (status) status.innerText = "⏳ Processing...";
 
@@ -50,7 +54,7 @@ async function _internalHandleAuth() {
             if (error) throw error;
             showDashboard(data.user);
         } else {
-            const role = document.getElementById('role').value;
+            const role = document.getElementById('role')?.value || 'customer';
             const metadata = { role, is_approved: (role === 'customer') };
             
             if (role === 'agency') {
@@ -65,7 +69,7 @@ async function _internalHandleAuth() {
             });
 
             if (error) throw error;
-            status.innerHTML = `<div style="color:#d9480f; background:#fff4e6; padding:10px; border-radius:8px;">✉️ Check <b>${email}</b> for a verification link!</div>`;
+            status.innerHTML = `<div style="color:#d9480f; background:#fff4e6; padding:10px; border-radius:8px;">✉️ Verification sent to <b>${email}</b>!</div>`;
         }
     } catch (err) {
         if (status) status.innerText = "❌ " + err.message;
@@ -75,52 +79,64 @@ async function _internalHandleAuth() {
 }
 
 /* =========================================
-   3. APP INITIALIZATION
+   3. UI RENDERING
    ========================================= */
-async function initApp() {
-    const client = getClient();
-    if (!client) return;
-    const { data: { user } } = await client.auth.getUser();
-    if (user) showDashboard(user); else renderAuthUI();
+function renderAuthUI() {
+    const app = document.getElementById('app');
+    if (!app) return;
+    
+    app.innerHTML = `
+        <div style="max-width:400px; margin:50px auto; padding:30px; border:1px solid #ddd; border-radius:15px; text-align:center; font-family:sans-serif; background:white; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+            <h2 style="color:#ff9f43; margin-bottom:5px;">TourSetu</h2>
+            <p style="color:#666; margin-bottom:20px;">${isLoginMode ? "Welcome Back" : "Create Account"}</p>
+            
+            <input type="email" id="email" placeholder="Email" style="width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+            <input type="password" id="password" placeholder="Password" style="width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+            
+            <div style="display: ${isLoginMode ? 'none' : 'block'};">
+                <select id="role" onchange="window.toggleBusinessFields()" style="width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px;">
+                    <option value="customer">Traveler</option>
+                    <option value="agency">Travel Agency</option>
+                </select>
+                <div id="business-fields" style="display:none;">
+                    <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="text" id="biz-phone" placeholder="Business Phone" style="width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                </div>
+            </div>
+
+            <button id="auth-btn" onclick="window.handleAuth()" style="width:100%; padding:14px; background:#ff9f43; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">
+                ${isLoginMode ? "Login" : "Sign Up"}
+            </button>
+            
+            <p style="margin-top:20px; font-size:14px;">
+                ${isLoginMode ? "New here?" : "Joined already?"} 
+                <span onclick="window.toggleMode()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">
+                    ${isLoginMode ? "Register" : "Login"}
+                </span>
+            </p>
+            <div id="status" style="margin-top:15px; font-size:13px; font-weight:bold;"></div>
+        </div>`;
 }
+
+/* =========================================
+   4. STARTUP
+   ========================================= */
+window.toggleBusinessFields = () => {
+    const role = document.getElementById('role')?.value;
+    const fields = document.getElementById('business-fields');
+    if (fields) fields.style.display = (role === 'agency') ? 'block' : 'none';
+};
 
 window.handleLogout = async () => {
     await getClient().auth.signOut();
     window.location.reload();
 };
 
-/* =========================================
-   4. UI RENDERING
-   ========================================= */
-function renderAuthUI() {
-    const app = document.getElementById('app');
-    if (!app) return;
-    app.innerHTML = `
-        <div style="max-width:400px; margin:50px auto; padding:30px; border:1px solid #ddd; border-radius:15px; text-align:center; font-family:sans-serif;">
-            <h2 style="color:#ff9f43;">TourSetu</h2>
-            <p>${isLoginMode ? "Login" : "Register"}</p>
-            <input type="email" id="email" placeholder="Email" style="width:100%; padding:10px; margin:5px 0;">
-            <input type="password" id="password" placeholder="Password" style="width:100%; padding:10px; margin:5px 0;">
-            
-            <div id="role-selection" style="display: ${isLoginMode ? 'none' : 'block'};">
-                <select id="role" onchange="window.toggleBusinessFields()" style="width:100%; padding:10px; margin:5px 0;">
-                    <option value="customer">Traveler</option>
-                    <option value="agency">Travel Agency</option>
-                </select>
-                <div id="business-fields" style="display:none;">
-                    <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:10px; margin:5px 0;">
-                    <input type="text" id="biz-phone" placeholder="Phone" style="width:100%; padding:10px; margin:5px 0;">
-                </div>
-            </div>
-
-            <button id="auth-btn" onclick="window.handleAuth()" style="width:100%; padding:12px; background:#ff9f43; color:white; border:none; border-radius:8px; cursor:pointer; margin-top:10px;">
-                ${isLoginMode ? "Login" : "Create Account"}
-            </button>
-            <p onclick="window.toggleMode()" style="cursor:pointer; color:#ff9f43; font-size:14px; margin-top:15px;">
-                ${isLoginMode ? "Need an account? Register" : "Have an account? Login"}
-            </p>
-            <div id="status" style="margin-top:10px; font-weight:bold; font-size:12px;"></div>
-        </div>`;
+async function initApp() {
+    const client = getClient();
+    if (!client) return;
+    const { data: { user } } = await client.auth.getUser();
+    if (user) showDashboard(user); else renderAuthUI();
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
