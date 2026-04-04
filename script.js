@@ -974,18 +974,21 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
     } catch (e) { alert("System error."); }
 };
 
-/* =========================================
-   5. PACKAGE FORM & SAVE LOGIC
-   ========================================= */
+// --- 10. PACKAGE FORM (Fixed & Optimized) ---
 window.showPackageForm = function(pEncoded = null) {
     let pkg = null;
-    try { pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null; } catch (e) { console.error(e); }
+    try {
+        pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
+    } catch (e) { console.error("Data Parse Error:", e); }
     
     const isEdit = !!pkg;
     const area = document.getElementById('package-form-area');
+    if (!area) return; // Safety check
+
     const pkgDestinations = isEdit ? (pkg.destination || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
     
+    // Pre-build State Options
     let selectedState = "";
     if (isEdit) {
         for (let s in locationData) {
@@ -996,12 +999,14 @@ window.showPackageForm = function(pEncoded = null) {
         `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`
     ).join('');
 
+    // Pre-build Destination Checkboxes
     const destHtml = tourDestinations.map(d => `
         <label style="display:flex; align-items:center; gap:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px;">
             <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}
         </label>
     `).join('');
 
+    // Pre-build Vehicle List
     const vehicleHtml = vehicleTypes.map(v => {
         const existing = pkgVehicles.find(ev => ev.id === v.id);
         return `
@@ -1014,19 +1019,20 @@ window.showPackageForm = function(pEncoded = null) {
         </div>`;
     }).join('');
 
+    // Render the Form
     area.innerHTML = `
         <div class="card" style="background:white; padding:30px; margin-top:20px; border:1px solid #ff9f43; border-radius:12px;">
             <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🎒 Create New Package'}</h3>
             
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
-                <input type="text" id="p-title" placeholder="Package Title" value="${isEdit ? pkg.title : ''}" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ddd;">
-                <select id="p-state" onchange="window.updateCities()" style="padding:10px; border-radius:5px; border:1px solid #ddd;">
+                <input type="text" id="p-title" placeholder="Package Title" value="${isEdit ? pkg.title : ''}" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                <select id="p-state" onchange="window.updateCities()" style="padding:10px; border:1px solid #ddd; border-radius:5px;">
                     <option value="">Select State</option>
                     ${stateOptions}
                 </select>
             </div>
 
-            <select id="p-city" style="width:100%; margin-bottom:15px; padding:10px; border-radius:5px; border:1px solid #ddd;">
+            <select id="p-city" style="width:100%; margin-bottom:15px; padding:10px; border:1px solid #ddd; border-radius:5px;">
                 ${isEdit ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
             </select>
             
@@ -1038,7 +1044,7 @@ window.showPackageForm = function(pEncoded = null) {
                 ${vehicleHtml}
             </div>
 
-            <textarea id="p-desc" style="height:100px; width:100%; margin-top:20px; padding:10px; border-radius:5px; border:1px solid #ddd;" placeholder="Itinerary...">${isEdit ? pkg.description : ''}</textarea>
+            <textarea id="p-desc" style="height:100px; width:100%; margin-top:20px; padding:10px; border:1px solid #ddd; border-radius:5px;" placeholder="Itinerary...">${isEdit ? pkg.description : ''}</textarea>
             
             <div style="display:flex; gap:10px; margin-top:25px;">
                 <button onclick="window.processSave('${isEdit ? pkg.id : ''}')" id="save-btn" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold; cursor:pointer; border:none; border-radius:8px;">
@@ -1047,66 +1053,6 @@ window.showPackageForm = function(pEncoded = null) {
                 <button onclick="document.getElementById('package-form-area').innerHTML=''" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
             </div>
         </div>`;
-};
-
-window.handleSave = async function(pkgId = null) {
-    const btn = document.getElementById('save-btn');
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-    
-    if (!user) { alert("User not found"); return; }
-
-    const title = document.getElementById('p-title').value;
-    const city = document.getElementById('p-city').value;
-    const desc = document.getElementById('p-desc').value;
-    const dests = Array.from(document.querySelectorAll('.d-check:checked')).map(cb => cb.value);
-
-    const vehicles = [];
-    document.querySelectorAll('.v-enable:checked').forEach(cb => {
-        const id = cb.getAttribute('data-id');
-        const rate = document.querySelector(`.v-rate[data-id="${id}"]`).value;
-        const max = document.querySelector(`.v-max[data-id="${id}"]`).value;
-        const vType = vehicleTypes.find(v => v.id === id);
-        if (rate) {
-            vehicles.push({ id, name: vType.name, icon: vType.icon, rate: parseFloat(rate), max_cars: parseInt(max) });
-        }
-    });
-
-    if (!title || !city || dests.length === 0 || vehicles.length === 0) {
-        alert("Please fill Title, City, at least one Destination and one Vehicle (with rate).");
-        return;
-    }
-
-    btn.innerText = "Processing...";
-    btn.disabled = true;
-
-    const pkgData = {
-        agency_id: user.id,
-        title: title,
-        starting_location: city,
-        destination: dests,
-        description: desc,
-        vehicles: vehicles
-    };
-
-    try {
-        let result;
-        if (pkgId) {
-            result = await client.from('packages').update(pkgData).eq('id', pkgId);
-        } else {
-            result = await client.from('packages').insert([pkgData]);
-        }
-
-        if (result.error) throw result.error;
-
-        alert(pkgId ? "Package Updated!" : "Package Published!");
-        document.getElementById('package-form-area').innerHTML = '';
-        showTab('packages');
-    } catch (e) {
-        alert("Error: " + e.message);
-        btn.innerText = pkgId ? "SAVE CHANGES" : "PUBLISH PACKAGE";
-        btn.disabled = false;
-    }
 };
 // 11. HANDLESAVE (Synced with Dynamic Form)
 window.handleSave = async function(id = null) {
