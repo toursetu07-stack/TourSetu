@@ -1,49 +1,17 @@
 /* =========================================
-   1. GLOBAL HELPERS & DATA
+   0. BOOTSTRAP (Immediate Global Mapping)
    ========================================= */
-window.updateCities = function() {
-    const state = document.getElementById('p-state')?.value;
-    const citySelect = document.getElementById('p-city');
-    if (!state || !locationData[state] || !citySelect) {
-        if(citySelect) citySelect.innerHTML = '<option value="">Select City</option>';
-        return;
-    }
-    citySelect.innerHTML = locationData[state].map(c => `<option value="${c}">${c}</option>`).join('');
+// We define these immediately so they are available even if later code has a minor error
+window.handleAuth = async () => { await _internalHandleAuth(); };
+window.toggleMode = () => { isLoginMode = !isLoginMode; renderAuthUI(); };
+window.toggleBusinessFields = () => {
+    const role = document.getElementById('role')?.value;
+    const fields = document.getElementById('business-fields');
+    if (fields) fields.style.display = (role === 'agency') ? 'block' : 'none';
 };
-
-window.processSave = (id) => {
-    if (id && id !== "undefined" && id !== "" && id !== "null") {
-        if (typeof window.handleSave === "function") window.handleSave(id);
-    } else {
-        if (typeof window.handleSave === "function") window.handleSave();
-    }
-};
-
-const locationData = {
-    "Uttarakhand": ["Dehradun", "Rishikesh", "Haridwar", "Kashipur", "Rudpur", "Lalkuan", "Kichha", "Bareilly", "Pantnagar", "Lalpur", "Almora", "Nainital"],
-    "Delhi": ["New Delhi", "Old Delhi", "Saket", "Dwarka"],
-    "Punjab": ["Amritsar", "Ludhiana", "Patiala"],
-    "Uttar Pradesh": ["Lucknow", "Ayodhya", "Vrindavan", "Varanasi", "Agra"]
-};
-
-const tourDestinations = [
-    "Char Dham Yatra (Uttarakhand)", "Kedarnath (Uttarakhand)", "Badrinath (Uttarakhand)", 
-    "Gangotri (Uttarakhand)", "Yamunotri (Uttarakhand)", "Vaishno Devi (Katra)", 
-    "Jagarnath (Puri, Odisha)", "Somnath (Gujarat)", "Tirumala Venkateswara (Tirupati)", 
-    "Ram Janmabhoomi (Ayodhya)", "Banke Bihari (Vrindavan)", "Prem Mandir (Vrindavan)", 
-    "Ajmer Sharif Dargah (Rajasthan)", "Golden Temple (Amritsar)", "Basilica of Bom Jesus (Goa)"
-];
-
-const vehicleTypes = [
-    { id: 'car4', name: '4 Seater Car', icon: '🚗' },
-    { id: 'car6', name: '6 Seater SUV', icon: '🚙' },
-    { id: 'car7', name: '7 Seater SUV', icon: '🚐' },
-    { id: 'tempo', name: 'Tempo Traveler', icon: '🚌' },
-    { id: 'bus', name: 'Luxury Bus', icon: '🚍' }
-];
 
 /* =========================================
-   2. CONFIGURATION & SUPABASE CLIENT
+   1. CONFIGURATION & STATE
    ========================================= */
 const SUPABASE_URL = 'https://udfwcqrmksfyeigxgdws.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTIyNTQsImV4cCI6MjA4ODAyODI1NH0.zf1taGGbEszA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw';
@@ -59,33 +27,22 @@ function getClient() {
 }
 
 /* =========================================
-   3. AUTHENTICATION CORE
+   2. AUTHENTICATION CORE (Internal)
    ========================================= */
-
-async function handleAuth() {
+async function _internalHandleAuth() {
     const status = document.getElementById('status');
     const btn = document.getElementById('auth-btn');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    
-    if(!emailInput || !passwordInput) return;
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
+    const email = document.getElementById('email')?.value.trim();
+    const password = document.getElementById('password')?.value;
 
     if (!email || !password) {
-        status.innerText = "⚠️ Please enter email and password";
+        if (status) status.innerText = "⚠️ Please enter email and password";
         return;
     }
 
     const client = getClient();
-    if (!client) {
-        status.innerText = "❌ Supabase not initialized";
-        return;
-    }
-
-    btn.disabled = true;
-    status.innerText = "⏳ Processing...";
+    if (btn) btn.disabled = true;
+    if (status) status.innerText = "⏳ Processing...";
 
     try {
         if (isLoginMode) {
@@ -98,80 +55,75 @@ async function handleAuth() {
             
             if (role === 'agency') {
                 metadata.gst = document.getElementById('gst-no')?.value || "N/A";
-                metadata.reg_no = document.getElementById('biz-reg')?.value || "N/A";
-                metadata.license = document.getElementById('biz-lic')?.value || "N/A";
                 metadata.phone = document.getElementById('biz-phone')?.value || "N/A";
             }
             
             const { error } = await client.auth.signUp({ 
                 email, 
                 password, 
-                options: { 
-                    data: metadata,
-                    emailRedirectTo: window.location.href 
-                } 
+                options: { data: metadata, emailRedirectTo: window.location.href } 
             });
 
             if (error) throw error;
-            
-            status.innerHTML = `
-                <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
-                    <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
-                    A verification link was sent to <b>${email}</b>.
-                </div>`;
-            
-            emailInput.value = "";
-            passwordInput.value = "";
+            status.innerHTML = `<div style="color:#d9480f; background:#fff4e6; padding:10px; border-radius:8px;">✉️ Check <b>${email}</b> for a verification link!</div>`;
         }
     } catch (err) {
-        status.innerText = "❌ " + err.message;
+        if (status) status.innerText = "❌ " + err.message;
     } finally {
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
     }
 }
 
 /* =========================================
-   4. UI STATE & NAVIGATION
+   3. APP INITIALIZATION
    ========================================= */
-
-window.toggleMode = function() { 
-    isLoginMode = !isLoginMode; 
-    renderAuthUI(); 
-};
-
-window.toggleBusinessFields = function() {
-    const role = document.getElementById('role')?.value;
-    const businessFields = document.getElementById('business-fields');
-    if (businessFields) businessFields.style.display = (role === 'agency') ? 'block' : 'none';
-};
-
 async function initApp() {
     const client = getClient();
     if (!client) return;
-    
     const { data: { user } } = await client.auth.getUser();
-    if (user) {
-        showDashboard(user);
-    } else {
-        renderAuthUI();
-    }
+    if (user) showDashboard(user); else renderAuthUI();
 }
 
-async function showDashboard(user) {
-    const role = user.user_metadata.role || 'customer';
-    if (role === 'agency') {
-        if (typeof renderAgencyDashboard === "function") renderAgencyDashboard(user);
-        else document.getElementById('app').innerHTML = `<h2>Agency Dashboard</h2><button onclick="window.handleLogout()">Logout</button>`;
-    } else {
-        if (typeof renderCustomerHomepage === "function") renderCustomerHomepage(user);
-        else document.getElementById('app').innerHTML = `<h2>Traveler Homepage</h2><button onclick="window.handleLogout()">Logout</button>`;
-    }
-}
-
-window.handleLogout = async function() {
+window.handleLogout = async () => {
     await getClient().auth.signOut();
     window.location.reload();
 };
+
+/* =========================================
+   4. UI RENDERING
+   ========================================= */
+function renderAuthUI() {
+    const app = document.getElementById('app');
+    if (!app) return;
+    app.innerHTML = `
+        <div style="max-width:400px; margin:50px auto; padding:30px; border:1px solid #ddd; border-radius:15px; text-align:center; font-family:sans-serif;">
+            <h2 style="color:#ff9f43;">TourSetu</h2>
+            <p>${isLoginMode ? "Login" : "Register"}</p>
+            <input type="email" id="email" placeholder="Email" style="width:100%; padding:10px; margin:5px 0;">
+            <input type="password" id="password" placeholder="Password" style="width:100%; padding:10px; margin:5px 0;">
+            
+            <div id="role-selection" style="display: ${isLoginMode ? 'none' : 'block'};">
+                <select id="role" onchange="window.toggleBusinessFields()" style="width:100%; padding:10px; margin:5px 0;">
+                    <option value="customer">Traveler</option>
+                    <option value="agency">Travel Agency</option>
+                </select>
+                <div id="business-fields" style="display:none;">
+                    <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:10px; margin:5px 0;">
+                    <input type="text" id="biz-phone" placeholder="Phone" style="width:100%; padding:10px; margin:5px 0;">
+                </div>
+            </div>
+
+            <button id="auth-btn" onclick="window.handleAuth()" style="width:100%; padding:12px; background:#ff9f43; color:white; border:none; border-radius:8px; cursor:pointer; margin-top:10px;">
+                ${isLoginMode ? "Login" : "Create Account"}
+            </button>
+            <p onclick="window.toggleMode()" style="cursor:pointer; color:#ff9f43; font-size:14px; margin-top:15px;">
+                ${isLoginMode ? "Need an account? Register" : "Have an account? Login"}
+            </p>
+            <div id="status" style="margin-top:10px; font-weight:bold; font-size:12px;"></div>
+        </div>`;
+}
+
+document.addEventListener('DOMContentLoaded', initApp);
 
 /* =========================================
    5. RENDER AUTH UI
