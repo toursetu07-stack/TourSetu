@@ -1,19 +1,5 @@
 /* =========================================
-   0. EMERGENCY GLOBAL MAPPING (Top of File)
-   ========================================= */
-// We map these immediately. If any code below has a typo, 
-// the buttons will still "find" these functions.
-window.handleAuth = async () => { 
-    console.log("Auth Triggered");
-    await _executeAuthLogic(); 
-};
-window.toggleMode = () => { 
-    isLoginMode = !isLoginMode; 
-    renderAuthUI(); 
-};
-
-/* =========================================
-   1. CONFIGURATION & STATE
+   1. CONFIGURATION & STATE (Define ONLY once)
    ========================================= */
 const SUPABASE_URL = 'https://udfwcqrmksfyeigxgdws.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTIyNTQsImV4cCI6MjA4ODAyODI1NH0.zf1taGGbEszA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw';
@@ -29,7 +15,31 @@ const getClient = () => {
 };
 
 /* =========================================
-   2. THE ACTUAL AUTH LOGIC
+   2. EMERGENCY GLOBAL MAPPING
+   ========================================= */
+window.handleAuth = async () => { 
+    console.log("Auth Triggered");
+    await _executeAuthLogic(); 
+};
+
+window.toggleMode = () => { 
+    isLoginMode = !isLoginMode; 
+    renderAuthUI(); 
+};
+
+window.toggleBusinessFields = () => {
+    const role = document.getElementById('role')?.value;
+    const fields = document.getElementById('business-fields');
+    if (fields) fields.style.display = (role === 'agency') ? 'block' : 'none';
+};
+
+window.handleLogout = async () => {
+    await getClient().auth.signOut();
+    window.location.reload();
+};
+
+/* =========================================
+   3. AUTHENTICATION LOGIC
    ========================================= */
 async function _executeAuthLogic() {
     const status = document.getElementById('status');
@@ -59,6 +69,8 @@ async function _executeAuthLogic() {
             
             if (role === 'agency') {
                 metadata.gst = document.getElementById('gst-no')?.value || "N/A";
+                metadata.biz_reg = document.getElementById('biz-reg')?.value || "N/A";
+                metadata.license = document.getElementById('biz-lic')?.value || "N/A";
                 metadata.phone = document.getElementById('biz-phone')?.value || "N/A";
             }
             
@@ -69,7 +81,7 @@ async function _executeAuthLogic() {
             });
 
             if (error) throw error;
-            status.innerHTML = `<div style="color:#d9480f; background:#fff4e6; padding:10px; border-radius:8px;">✉️ Verification sent to <b>${email}</b>!</div>`;
+            status.innerHTML = `<div style="color:#d9480f; background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8;">✉️ Verification sent to <b>${email}</b>! Check your inbox.</div>`;
         }
     } catch (err) {
         if (status) status.innerText = "❌ " + err.message;
@@ -79,79 +91,17 @@ async function _executeAuthLogic() {
 }
 
 /* =========================================
-   3. UI RENDERING
+   4. UI RENDERING (Merged & Fixed)
    ========================================= */
 function renderAuthUI() {
     const app = document.getElementById('app');
     if (!app) return;
     
     app.innerHTML = `
-        <div style="max-width:400px; margin:50px auto; padding:30px; border:1px solid #ddd; border-radius:15px; text-align:center; font-family:sans-serif; background:white; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
-            <h2 style="color:#ff9f43; margin-bottom:5px;">TourSetu</h2>
-            <p style="color:#666; margin-bottom:20px;">${isLoginMode ? "Welcome Back" : "Create Account"}</p>
-            
-            <input type="email" id="email" placeholder="Email" style="width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-            <input type="password" id="password" placeholder="Password" style="width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-            
-            <div style="display: ${isLoginMode ? 'none' : 'block'};">
-                <select id="role" onchange="window.toggleBusinessFields()" style="width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px;">
-                    <option value="customer">Traveler</option>
-                    <option value="agency">Travel Agency</option>
-                </select>
-                <div id="business-fields" style="display:none;">
-                    <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    <input type="text" id="biz-phone" placeholder="Business Phone" style="width:100%; padding:12px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                </div>
-            </div>
-
-            <button id="auth-btn" onclick="window.handleAuth()" style="width:100%; padding:14px; background:#ff9f43; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">
-                ${isLoginMode ? "Login" : "Sign Up"}
-            </button>
-            
-            <p style="margin-top:20px; font-size:14px;">
-                ${isLoginMode ? "New here?" : "Joined already?"} 
-                <span onclick="window.toggleMode()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">
-                    ${isLoginMode ? "Register" : "Login"}
-                </span>
-            </p>
-            <div id="status" style="margin-top:15px; font-size:13px; font-weight:bold;"></div>
-        </div>`;
-}
-
-/* =========================================
-   4. STARTUP
-   ========================================= */
-window.toggleBusinessFields = () => {
-    const role = document.getElementById('role')?.value;
-    const fields = document.getElementById('business-fields');
-    if (fields) fields.style.display = (role === 'agency') ? 'block' : 'none';
-};
-
-window.handleLogout = async () => {
-    await getClient().auth.signOut();
-    window.location.reload();
-};
-
-async function initApp() {
-    const client = getClient();
-    if (!client) return;
-    const { data: { user } } = await client.auth.getUser();
-    if (user) showDashboard(user); else renderAuthUI();
-}
-
-document.addEventListener('DOMContentLoaded', initApp);
-
-/* =========================================
-   5. RENDER AUTH UI
-   ========================================= */
-
-function renderAuthUI() {
-    const app = document.getElementById('app');
-    if (!app) return;
-    app.innerHTML = `
-        <div class="card" style="max-width:450px; margin: 80px auto; padding:40px; background:white; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius:15px; font-family: sans-serif;">
+        <div class="card" style="max-width:450px; margin: 60px auto; padding:40px; background:white; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius:15px; font-family: sans-serif;">
             <h1 style="color:#ff9f43; margin-bottom:10px;">TourSetu</h1>
-            <h2>${isLoginMode ? "Welcome Back" : "Create Account"}</h2>
+            <h2 id="form-title">${isLoginMode ? "Welcome Back" : "Create Account"}</h2>
+            
             <input type="email" id="email" placeholder="Email Address" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
             <input type="password" id="password" placeholder="Password" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
             
@@ -161,13 +111,13 @@ function renderAuthUI() {
                     <option value="customer">Traveler</option>
                     <option value="agency">Travel Agency</option>
                 </select>
-            </div>
-
-            <div id="business-fields" style="display:none;">
-                <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
-                <input type="text" id="biz-reg" placeholder="Business Reg No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
-                <input type="text" id="biz-lic" placeholder="Trade License" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
-                <input type="text" id="biz-phone" placeholder="Mobile / Contact No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
+                
+                <div id="business-fields" style="display:none; margin-top:10px;">
+                    <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="text" id="biz-reg" placeholder="Business Reg No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="text" id="biz-lic" placeholder="Trade License" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="text" id="biz-phone" placeholder="Mobile / Contact No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                </div>
             </div>
 
             <button id="auth-btn" onclick="window.handleAuth()" style="background:#ff9f43; color:white; width:100%; padding:14px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; margin-top:20px; font-size:16px;">
@@ -179,10 +129,20 @@ function renderAuthUI() {
                 <span onclick="window.toggleMode()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">${isLoginMode ? "Create Account" : "Login"}</span>
             </p>
             <div id="status" style="margin-top:15px; font-size:13px; font-weight:bold;"></div>
-        </div>
-    `;
+        </div>`;
 }
 
+/* =========================================
+   5. STARTUP
+   ========================================= */
+async function initApp() {
+    const client = getClient();
+    if (!client) return;
+    const { data: { user } } = await client.auth.getUser();
+    if (user) showDashboard(user); else renderAuthUI();
+}
+
+document.addEventListener('DOMContentLoaded', initApp);
 /* =========================================
    6. GLOBAL EXPOSURE & BOOTSTRAP
    ========================================= */
