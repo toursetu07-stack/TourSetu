@@ -1024,12 +1024,17 @@ window.processSave = (id) => {
     }
 };
 
-// 11. HANDLESAVE
+// 11. HANDLESAVE (Enhanced with Error Safety & UI Feedback)
 window.handleSave = async function(id = null) {
     const client = getClient();
     const btn = document.getElementById('save-btn');
-    const { data: { user } } = await client.auth.getUser();
+    const statusDiv = document.getElementById('status'); // Optional: for messages
     
+    // Get current user
+    const { data: { user }, error: userError } = await client.auth.getUser();
+    if (userError || !user) return alert("Please login again to save.");
+    
+    // Collect Vehicles
     const selectedVehicles = [];
     document.querySelectorAll('.v-enable:checked').forEach(checkbox => {
         const vid = checkbox.dataset.id;
@@ -1038,18 +1043,31 @@ window.handleSave = async function(id = null) {
         const rate = parseFloat(rateInput.value);
         const name = rateInput.dataset.name;
         if (rate > 0) {
-            selectedVehicles.push({ id: vid, name: name, rate: rate, max_cars: parseInt(maxInput.value) || 1 });
+            selectedVehicles.push({ 
+                id: vid, 
+                name: name, 
+                rate: rate, 
+                max_cars: parseInt(maxInput.value) || 1 
+            });
         }
     });
 
-    if (selectedVehicles.length === 0) return alert("Please TICK at least one vehicle and provide a price.");
+    // Validation
+    if (selectedVehicles.length === 0) {
+        return alert("Please TICK at least one vehicle and provide a price/rate.");
+    }
     
-    btn.innerText = "Processing...";
+    const titleVal = document.getElementById('p-title').value;
+    if (!titleVal) return alert("Please enter a Package Title.");
+
+    // UI Feedback: Start Loading
+    const originalBtnText = btn.innerText;
+    btn.innerText = "⏳ Saving to Cloud...";
     btn.disabled = true;
 
     const pkgData = {
         agency_id: user.id,
-        title: document.getElementById('p-title').value,
+        title: titleVal,
         starting_location: document.getElementById('p-city').value,
         description: document.getElementById('p-desc').value,
         destination: Array.from(document.querySelectorAll('.d-check:checked')).map(c => c.value),
@@ -1058,8 +1076,19 @@ window.handleSave = async function(id = null) {
 
     try {
         if (id) {
-            const { data: oldPkg } = await client.from('packages').select('*').eq('id', id).single();
-            const history = oldPkg.updates_history || [];
+            // --- UPDATE MODE (With History) ---
+            const { data: oldPkg, error: fetchError } = await client
+                .from('packages')
+                .select('title, description, vehicles, destination, updates_history')
+                .eq('id', id)
+                .single();
+            
+            if (fetchError) throw fetchError;
+
+            // Ensure history is an array
+            const history = Array.isArray(oldPkg.updates_history) ? oldPkg.updates_history : [];
+            
+            // Add current version to history before updating
             history.push({ 
                 title: oldPkg.title, 
                 description: oldPkg.description, 
@@ -1067,47 +1096,56 @@ window.handleSave = async function(id = null) {
                 destination: oldPkg.destination, 
                 updated_at: new Date().toISOString() 
             });
+            
             pkgData.updates_history = history;
-            const { error } = await client.from('packages').update(pkgData).eq('id', id);
-            if (error) throw error;
+
+            const { error: updateError } = await client
+                .from('packages')
+                .update(pkgData)
+                .eq('id', id);
+            
+            if (updateError) throw updateError;
         } else {
-            pkgData.updates_history = [];
-            const { error } = await client.from('packages').insert([pkgData]);
-            if (error) throw error;
+            // --- INSERT MODE (New Package) ---
+            pkgData.updates_history = []; // New packages start with empty history
+            const { error: insertError } = await client
+                .from('packages')
+                .insert([pkgData]);
+            
+            if (insertError) throw insertError;
         }
         
-        setTimeout(() => showTab('packages'), 500);
+        // Success: Refresh and Go Back
+        setTimeout(() => {
+            showTab('packages'); 
+            // Re-run the list loader to show the new data
+            loadPackageList(user.id); 
+        }, 500);
+
     } catch (e) {
+        console.error("Save Error:", e);
         alert("Error saving: " + e.message);
         btn.disabled = false;
         btn.innerText = "Try Again";
     }
 };
 
-async function loadPackageList(aid) {
-    const { data } = await getClient().from('packages').select('*').eq('agency_id', aid).order('id', { ascending: false });
-    const container = document.getElementById('pkg-list-container');
-    if(!data || data.length === 0) {
-       container.innerHTML = `<div style="text-align:center; padding:40px; color:#999;">No packages created yet.</div>`;
-        return;
-    }
-   container.innerHTML = data.map(p => {
-        const pString = encodeURIComponent(JSON.stringify(p));
-        return `
-        <div class="card" style="background:white; padding:20px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; border-left:5px solid #ff9f43;">
-            <div style="text-align:left;">
-                <h3 style="margin:0;">${p.title}</h3>
-                <small style="color:#666;">${p.starting_location} ➔ ${(p.destination || []).length} Destinations | <b>${(p.updates_history || []).length} edits</b></small>
-           </div>
-            <div style="display:flex; gap:10px;">
-                <button onclick="showPackageForm('${pString}')" style="width:auto; padding:8px 15px; background:#f0f0f0;">Edit</button>
-                <button onclick="deletePkg(${p.id})" style="color:#ff7675; background:none; width:auto; border:1px solid #ff7675; padding:8px 15px;">Delete</button>
-           </div>
-        </div>`;
-   }).join('');
-}
-
-window.deletePkg = async (id) => { if(confirm("Are you sure?")) { await getClient().from('packages').delete().eq('id', id); showTab('packages'); } };
+// 12. IMPROVED DELETE (With UI Refresh)
+window.deletePkg = async (id) => { 
+    if(confirm("Are you sure you want to delete this package? This cannot be undone.")) { 
+        const client = getClient();
+        const { data: { user } } = await client.auth.getUser();
+        
+        const { error } = await client.from('packages').delete().eq('id', id);
+        
+        if (error) {
+            alert("Error deleting: " + error.message);
+        } else {
+            // Refresh the list immediately
+            loadPackageList(user.id);
+        }
+    } 
+};
 
 // 12. STYLES
 const styleTag = document.createElement('style');
