@@ -1,39 +1,55 @@
-0<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">  <div id="app">
-  <div class="auth-card">
-    <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TourSetu | Travel Agency Portal</title>
     
-    <div id="auth-section">
-      <input type="email" id="email" placeholder="Email Address">
-      <input type="password" id="password" placeholder="Password">
-      
-      <div id="role-selection">
-        <label>I am a:</label>
-        <select id="role" onchange="toggleBusinessFields()">
-          <option value="customer">Traveler</option>
-          <option value="agency">Travel Agency</option>
-        </select>
-      </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-      <div id="business-fields" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
-        <input type="text" id="gst-no" placeholder="GST Number">
-        <input type="text" id="biz-reg" placeholder="Business Registration No.">
-        <input type="text" id="biz-lic" placeholder="Trade License / License No.">
-        <p style="font-size:0.75rem; color:#666; margin-top:5px;">
-          Note: Agency accounts require admin approval to go public.
-        </p>
-      </div>
+<div id="app">
+    <div class="auth-card">
+        <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>
+        
+        <div id="auth-section">
+            <input type="email" id="email" placeholder="Email Address">
+            <input type="password" id="password" placeholder="Password">
+            
+            <div id="role-selection">
+                <label>I am a:</label>
+                <select id="role" onchange="toggleBusinessFields()">
+                    <option value="customer">Traveler</option>
+                    <option value="agency">Travel Agency</option>
+                </select>
+            </div>
 
-      <button id="auth-btn" onclick="handleAuth()">Create Account</button>
-      
-      <p id="toggle-text">
-        Already have an account? <a href="javascript:void(0)" onclick="toggleMode()">Login here</a>
-      </p>
+            <div id="business-fields" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+                <input type="text" id="gst-no" placeholder="GST Number">
+                <input type="text" id="biz-reg" placeholder="Business Registration No.">
+                <input type="text" id="biz-lic" placeholder="Trade License / License No.">
+                <p style="font-size:0.75rem; color:#666; margin-top:5px;">
+                    Note: Agency accounts require admin approval to go public.
+                </p>
+            </div>
+
+            <button id="auth-btn" onclick="handleAuth()">Create Account</button>
+            
+            <p id="toggle-text">
+                Already have an account? <a href="javascript:void(0)" onclick="toggleMode()">Login here</a>
+            </p>
+        </div>
+        
+        <div id="status" style="margin-top:15px; font-weight:bold;"></div>
     </div>
-    
-    <div id="status" style="margin-top:15px; font-weight:bold;"></div>
-  </div>
 </div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
