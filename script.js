@@ -983,7 +983,6 @@ window.showTab = async function(tabName) {
             pkgList.innerHTML = `<div style="text-align:center; padding:40px; background:white; border-radius:10px; border:2px dashed #ddd; color:#999;">No packages published yet.</div>`;
         } else {
             pkgList.innerHTML = myPackages.map(p => {
-                // FIXED: Support both naming conventions to resolve schema errors
                 const destArray = p.destination || p.destinations || [];
                 const destText = Array.isArray(destArray) ? destArray.join(', ') : 'No destinations set';
                 const encoded = encodeURIComponent(JSON.stringify(p));
@@ -997,7 +996,7 @@ window.showTab = async function(tabName) {
                             🌍 <b>To:</b> ${destText}
                         </p>
                     </div>
-                    <button onclick="showPackageForm('${encoded}')" style="background:#f1f2f6; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">✏️ Edit</button>
+                    <button onclick="showPackageForm('${encoded}')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.3s; box-shadow:0 4px 6px rgba(255,159,67,0.2);">✏️ Edit Package</button>
                 </div>`;
             }).join('');
         }
@@ -1005,7 +1004,10 @@ window.showTab = async function(tabName) {
     else if (tabName === 'profile') {
         const meta = user.user_metadata || {};
         container.innerHTML = `
-            <h1>Agency Profile</h1>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h1>Agency Profile</h1>
+                <button onclick="alert('Profile Editing coming soon!')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 6px rgba(255,159,67,0.2);">✏️ Edit Profile</button>
+            </div>
             <div class="card" style="background:white; padding:30px; max-width:600px; border-left:5px solid #ff9f43; border-radius:8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
                 <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">EMAIL</label><h3>${user.email}</h3></div>
                 <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">CONTACT</label><h3 style="color:#ff9f43;">${meta.phone || 'N/A'}</h3></div>
@@ -1020,7 +1022,7 @@ window.showTab = async function(tabName) {
     }
 };
 
-// MODAL Logic (Approve/Deny)
+// MODAL Logic (Approve/Deny) remains the same...
 window.openActionModal = function(bookingId, type) {
     const modal = document.getElementById('action-modal');
     const content = document.getElementById('action-modal-content');
