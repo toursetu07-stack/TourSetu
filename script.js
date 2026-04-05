@@ -858,6 +858,7 @@ window.showTab = async function(tabName) {
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
+    // Prefetch for notifications
     const { data: myPkgs } = await client.from('packages').select('id').eq('agency_id', user.id);
     const myPkgIds = (myPkgs || []).map(p => p.id);
 
@@ -959,13 +960,48 @@ window.showTab = async function(tabName) {
     }
     else if (tabName === 'packages') {
         container.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h1>My Packages</h1>
-                <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
+                <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
             </div>
             <div id="package-form-area"></div>
-            <div id="pkg-list-container" style="margin-top:25px;"></div>`;
-        if(typeof loadPackageList === 'function') loadPackageList(user.id);
+            <div id="pkg-list-container">
+                <p style="color:#999;">Loading your packages...</p>
+            </div>`;
+
+        const pkgList = document.getElementById('pkg-list-container');
+        
+        // Fetch Packages directly here to ensure visibility
+        const { data: myPackages, error } = await client
+            .from('packages')
+            .select('*')
+            .eq('agency_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            pkgList.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+        } else if (!myPackages || myPackages.length === 0) {
+            pkgList.innerHTML = `<div style="text-align:center; padding:40px; background:white; border-radius:10px; border:2px dashed #ddd; color:#999;">No packages published yet.</div>`;
+        } else {
+            pkgList.innerHTML = myPackages.map(p => {
+                // FIXED: Support both naming conventions
+                const destArray = p.destinations || p.destination || [];
+                const destText = Array.isArray(destArray) ? destArray.join(', ') : 'No destinations set';
+                const encoded = encodeURIComponent(JSON.stringify(p));
+
+                return `
+                <div style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); border-left:5px solid #ff9f43;">
+                    <div style="flex:1;">
+                        <h3 style="margin:0; color:#2d3436;">${p.title || 'Untitled'}</h3>
+                        <p style="margin:5px 0; color:#666; font-size:14px;">
+                            📍 <b>From:</b> ${p.starting_location || 'N/A'} <br>
+                            🌍 <b>To:</b> ${destText}
+                        </p>
+                    </div>
+                    <button onclick="showPackageForm('${encoded}')" style="background:#f1f2f6; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">✏️ Edit</button>
+                </div>`;
+            }).join('');
+        }
     }
     else if (tabName === 'profile') {
         const meta = user.user_metadata || {};
@@ -985,7 +1021,7 @@ window.showTab = async function(tabName) {
     }
 };
 
-// NEW: In-Page Action Modal Flow
+// MODAL Logic (Approve/Deny)
 window.openActionModal = function(bookingId, type) {
     const modal = document.getElementById('action-modal');
     const content = document.getElementById('action-modal-content');
@@ -994,20 +1030,20 @@ window.openActionModal = function(bookingId, type) {
     if (type === 'approved') {
         content.innerHTML = `
             <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
-            <p style="font-size:14px; color:#666;">The customer will be notified to proceed with the payment.</p>
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">ENTER CONTACT NO. FOR PAYMENT:</label>
+            <p style="font-size:14px; color:#666;">The customer will be notified to proceed with payment.</p>
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">CONTACT NO. FOR PAYMENT:</label>
             <input type="text" id="modal-contact-input" placeholder="e.g. +91 9876543210" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
             <div style="display:flex; gap:10px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM APPROVAL</button>
+                <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
             </div>
         `;
     } else {
         content.innerHTML = `
             <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
-            <p style="font-size:14px; color:#666;">This will cancel the request and notify the customer that the agency denied the booking.</p>
+            <p style="font-size:14px; color:#666;">This will cancel the request.</p>
             <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM DENIAL</button>
+                <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
             </div>
         `;
@@ -1028,28 +1064,13 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
 
     try {
         const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
-        
         if (!error) {
             const content = document.getElementById('action-modal-content');
-            if (newStatus === 'approved') {
-                content.innerHTML = `
-                    <div style="text-align:center; padding:20px;">
-                        <div style="font-size:40px; margin-bottom:10px;">✅</div>
-                        <h3 style="color:#2ecc71;">Approved!</h3>
-                        <p>Customer can now proceed to payment on <b>${updateData.agency_contact}</b>.</p>
-                        <button onclick="closeActionModal(); showTab('bookings');" style="background:#2d3436; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-top:10px;">CLOSE</button>
-                    </div>
-                `;
-            } else {
-                content.innerHTML = `
-                    <div style="text-align:center; padding:20px;">
-                        <div style="font-size:40px; margin-bottom:10px;">🚫</div>
-                        <h3 style="color:#ff7675;">Denied</h3>
-                        <p>Booking has been cancelled. The customer will see the denial message.</p>
-                        <button onclick="closeActionModal(); showTab('bookings');" style="background:#2d3436; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-top:10px;">CLOSE</button>
-                    </div>
-                `;
-            }
+            content.innerHTML = `
+                <div style="text-align:center; padding:20px;">
+                    <h3 style="color:${newStatus === 'approved' ? '#2ecc71' : '#ff7675'};">${newStatus === 'approved' ? '✅ Approved' : '🚫 Denied'}</h3>
+                    <button onclick="closeActionModal(); showTab('bookings');" style="background:#2d3436; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-top:10px;">CLOSE</button>
+                </div>`;
         } else {
             alert("Database Error: " + error.message);
         }
