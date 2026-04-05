@@ -971,7 +971,6 @@ window.showTab = async function(tabName) {
 
         const pkgList = document.getElementById('pkg-list-container');
         
-        // Fetch Packages directly here to ensure visibility
         const { data: myPackages, error } = await client
             .from('packages')
             .select('*')
@@ -984,8 +983,8 @@ window.showTab = async function(tabName) {
             pkgList.innerHTML = `<div style="text-align:center; padding:40px; background:white; border-radius:10px; border:2px dashed #ddd; color:#999;">No packages published yet.</div>`;
         } else {
             pkgList.innerHTML = myPackages.map(p => {
-                // FIXED: Support both naming conventions
-                const destArray = p.destinations || p.destination || [];
+                // FIXED: Support both naming conventions to resolve schema errors
+                const destArray = p.destination || p.destinations || [];
                 const destText = Array.isArray(destArray) ? destArray.join(', ') : 'No destinations set';
                 const encoded = encodeURIComponent(JSON.stringify(p));
 
@@ -1193,7 +1192,7 @@ window.showPackageForm = function(pEncoded = null) {
         </div>`;
 };
 
-// 11. SAVE LOGIC: Sends data to Supabase
+// 11. SAVE LOGIC: Sends data to Supabase (FIXED COLUMN NAMES)
 window.processSave = async function(pkgId) {
     const btn = document.getElementById('save-btn');
     if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
@@ -1225,17 +1224,19 @@ window.processSave = async function(pkgId) {
 
         if (selectedVehicles.length === 0) throw new Error("Set a price for at least one vehicle!");
 
+        // FIXED: Changed 'destinations' to 'destination' to match your Supabase schema
         const pkgData = {
             title: title,
             starting_location: city,
-            destinations: selectedDests, // Using plural to match common DB schema
+            destination: selectedDests, 
             vehicles: selectedVehicles,
             description: desc,
             agency_id: user.id
         };
 
         let result;
-        if (pkgId && pkgId !== "undefined" && pkgId !== "") {
+        // Check if pkgId is a valid string/UUID and not the literal string "null" or "undefined"
+        if (pkgId && pkgId !== "undefined" && pkgId !== "null" && pkgId !== "") {
             result = await client.from('packages').update(pkgData).eq('id', pkgId);
         } else {
             result = await client.from('packages').insert([pkgData]);
@@ -1250,7 +1251,7 @@ window.processSave = async function(pkgId) {
         console.error("Save Error:", err);
         alert("❌ Error: " + err.message);
         if (btn) {
-            btn.innerText = pkgId ? "SAVE CHANGES" : "PUBLISH PACKAGE";
+            btn.innerText = (pkgId && pkgId !== "undefined" && pkgId !== "null") ? "SAVE CHANGES" : "PUBLISH PACKAGE";
             btn.disabled = false;
         }
     }
