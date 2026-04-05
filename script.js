@@ -684,7 +684,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     }
 };
 /* =========================================
-   9. AGENCY DASHBOARD (Full Managed Version)
+   9. AGENCY DASHBOARD
    ========================================= */
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
@@ -701,13 +701,13 @@ function renderAgencyDashboard(user) {
                    </div>
                </div>
                <nav>
-                   <div onclick="showTab('earnings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
-                   <div onclick="showTab('bookings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+                   <div onclick="showTab('earnings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; transition:0.2s;" onmouseover="this.style.background='#444'" onmouseout="this.style.background='transparent'">📊 Dashboard</div>
+                   <div onclick="showTab('bookings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center; transition:0.2s;" onmouseover="this.style.background='#444'" onmouseout="this.style.background='transparent'">
                        <span>📅 Bookings</span>
                        <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
                    </div>
-                   <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 My Packages</div>
-                   <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
+                   <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; transition:0.2s;" onmouseover="this.style.background='#444'" onmouseout="this.style.background='transparent'">🎒 My Packages</div>
+                   <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; transition:0.2s;" onmouseover="this.style.background='#444'" onmouseout="this.style.background='transparent'">👤 Agency Profile</div>
                    <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
                </nav>
             </div>
@@ -738,100 +738,119 @@ window.showTab = async function(tabName) {
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
-    // 1. Manage Notifications Badge
-    const { data: myPkgs } = await client.from('packages').select('id').eq('agency_id', user.id);
-    const myPkgIds = (myPkgs || []).map(p => p.id);
-    let pendingCount = 0;
-    if (myPkgIds.length > 0) {
-        const { count } = await client.from('bookings').select('*', { count: 'exact', head: true }).in('package_id', myPkgIds).eq('status', 'pending');
-        pendingCount = count || 0;
-    }
-    const badge = document.getElementById('bell-badge');
-    const sideCount = document.getElementById('side-notif-count');
-    if (badge) {
-        badge.innerText = pendingCount; badge.style.display = pendingCount > 0 ? 'block' : 'none';
-        sideCount.innerText = pendingCount; sideCount.style.display = pendingCount > 0 ? 'block' : 'none';
-    }
-
-    // 2. Tab Routing
+    // --- 1. DASHBOARD OVERVIEW ---
     if (tabName === 'earnings') {
         container.innerHTML = `<h1>Overview</h1>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
-                <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>REVENUE</small><h2>₹0</h2></div>
-                <div class="card" style="border-top:5px solid #ff9f43; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>PENDING BOOKINGS</small><h2>${pendingCount}</h2></div>
-                <div class="card" style="border-top:5px solid #3498db; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>ACTIVE PACKAGES</small><h2 id="act-pkg-count">...</h2></div>
+                <div style="background:white; padding:25px; border-radius:12px; border-top:5px solid #2ecc71; box-shadow: 0 4px 6px rgba(0,0,0,0.05);"><small style="color:#999; font-weight:bold;">REVENUE</small><h2 style="margin:10px 0 0 0;">₹0</h2></div>
+                <div style="background:white; padding:25px; border-radius:12px; border-top:5px solid #ff9f43; box-shadow: 0 4px 6px rgba(0,0,0,0.05);"><small style="color:#999; font-weight:bold;">PENDING BOOKINGS</small><h2 id="pending-count-box" style="margin:10px 0 0 0;">...</h2></div>
+                <div style="background:white; padding:25px; border-radius:12px; border-top:5px solid #3498db; box-shadow: 0 4px 6px rgba(0,0,0,0.05);"><small style="color:#999; font-weight:bold;">ACTIVE PACKAGES</small><h2 id="act-pkg-count" style="margin:10px 0 0 0;">...</h2></div>
             </div>`;
-        const { count } = await client.from('packages').select('*', { count: 'exact', head: true }).eq('agency_id', user.id);
-        if(document.getElementById('act-pkg-count')) document.getElementById('act-pkg-count').innerText = count || 0;
+        
+        const { count: pkgCount } = await client.from('packages').select('*', { count: 'exact', head: true }).eq('agency_id', user.id);
+        document.getElementById('act-pkg-count').innerText = pkgCount || 0;
+        // Check pending bookings
+        const { data: pkgs } = await client.from('packages').select('id').eq('agency_id', user.id);
+        const pkgIds = (pkgs || []).map(p => p.id);
+        if (pkgIds.length > 0) {
+            const { count: bCount } = await client.from('bookings').select('*', { count: 'exact', head: true }).in('package_id', pkgIds).eq('status', 'pending');
+            document.getElementById('pending-count-box').innerText = bCount || 0;
+        } else {
+            document.getElementById('pending-count-box').innerText = 0;
+        }
     } 
+
+    // --- 2. BOOKINGS TAB ---
     else if (tabName === 'bookings') {
         container.innerHTML = `<h1>Customer Bookings</h1><div id="booking-list-area">Loading...</div>`;
-        // ... (Your existing booking logic remains same)
+        const { data: pkgs } = await client.from('packages').select('id').eq('agency_id', user.id);
+        const pkgIds = (pkgs || []).map(p => p.id);
+        
+        if (pkgIds.length === 0) {
+            document.getElementById('booking-list-area').innerHTML = `<p style="color:#666;">Create a package first to receive bookings.</p>`;
+            return;
+        }
+
+        const { data: bData } = await client.from('bookings').select('*').in('package_id', pkgIds).order('created_at', { ascending: false });
         const listArea = document.getElementById('booking-list-area');
-        if (myPkgIds.length === 0) { listArea.innerHTML = `<p>No packages found.</p>`; return; }
-        const { data: bData } = await client.from('bookings').select('*').in('package_id', myPkgIds).order('created_at', { ascending: false });
-        if (!bData || bData.length === 0) { listArea.innerHTML = `<p>No bookings yet.</p>`; return; }
+        
+        if (!bData || bData.length === 0) {
+            listArea.innerHTML = `<p style="color:#666;">No booking requests found.</p>`;
+            return;
+        }
+
         listArea.innerHTML = bData.map(b => `
-            <div class="card" style="background:white; padding:20px; margin-bottom:15px; border-left:5px solid ${b.status === 'pending' ? '#ff9f43' : '#2ecc71'}; border-radius:8px;">
-                <h3>${b.package_title}</h3>
-                <p>Status: ${b.status.toUpperCase()} | Total: ₹${b.total_price}</p>
-                ${b.status === 'pending' ? `<button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">Approve</button>` : ''}
+            <div style="background:white; padding:20px; border-radius:10px; margin-bottom:15px; border-left:5px solid ${b.status === 'pending' ? '#ff9f43' : '#2ecc71'}; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+                <div style="display:flex; justify-content:space-between;">
+                    <h3>${b.package_title}</h3>
+                    <strong style="color:#2ecc71;">₹${b.total_price}</strong>
+                </div>
+                <p style="font-size:13px; color:#666;">Status: <b>${b.status.toUpperCase()}</b> | Customer: ${b.customer_phone || 'N/A'}</p>
+                ${b.status === 'pending' ? `
+                    <div style="margin-top:10px; display:flex; gap:10px;">
+                        <button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">Approve</button>
+                        <button onclick="openActionModal('${b.id}', 'denied')" style="background:#ff7675; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">Deny</button>
+                    </div>
+                ` : ''}
             </div>
         `).join('');
     }
+
+    // --- 3. PACKAGES TAB (Where you Create/Edit) ---
     else if (tabName === 'packages') {
         container.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h1>My Packages</h1>
-                <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
+                <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
             </div>
             <div id="package-form-area"></div>
             <div id="pkg-list-container" style="margin-top:25px;">
-                <p style="color:#999;">Loading your published packages...</p>
+                <p style="color:#999;">Loading packages...</p>
             </div>`;
-        
-        // --- LOAD PACKAGE LIST LOGIC ---
-        const pkgContainer = document.getElementById('pkg-list-container');
-        const { data: packages, error } = await client.from('packages').select('*').eq('agency_id', user.id).order('created_at', { ascending: false });
-        
-        if (error || !packages || packages.length === 0) {
-            pkgContainer.innerHTML = `<div style="text-align:center; padding:40px; background:#fff; border-radius:10px; border:2px dashed #ddd; color:#999;">No packages published yet. Click '+ Create New' to start.</div>`;
+
+        // Load the actual packages list
+        const pkgList = document.getElementById('pkg-list-container');
+        const { data: myPackages } = await client.from('packages').select('*').eq('agency_id', user.id).order('created_at', { ascending: false });
+
+        if (!myPackages || myPackages.length === 0) {
+            pkgList.innerHTML = `<div style="text-align:center; padding:50px; background:white; border-radius:15px; border:2px dashed #ddd; color:#999;">No packages published yet.</div>`;
         } else {
-            pkgContainer.innerHTML = packages.map(p => {
+            pkgList.innerHTML = myPackages.map(p => {
                 const encoded = encodeURIComponent(JSON.stringify(p));
                 return `
-                <div class="card" style="background:white; padding:20px; margin-bottom:15px; border-radius:10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center; border-left:5px solid #ff9f43;">
+                <div style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); border-left:5px solid #ff9f43;">
                     <div>
-                        <h3 style="margin:0; color:#2d3436;">${p.title}</h3>
-                        <p style="margin:5px 0; color:#636e72; font-size:14px;">📍 ${p.starting_location} → ${p.destinations.join(', ')}</p>
+                        <h3 style="margin:0;">${p.title}</h3>
+                        <p style="margin:5px 0; color:#666; font-size:14px;">📍 ${p.starting_location} → ${p.destinations.join(', ')}</p>
                     </div>
-                    <button onclick="showPackageForm('${encoded}')" style="background:#f1f2f6; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; color:#2d3436;">✏️ Edit</button>
+                    <button onclick="showPackageForm('${encoded}')" style="background:#f1f2f6; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">✏️ Edit</button>
                 </div>`;
             }).join('');
         }
     }
+
+    // --- 4. PROFILE TAB ---
     else if (tabName === 'profile') {
         const meta = user.user_metadata || {};
         container.innerHTML = `
             <h1>Agency Profile</h1>
-            <div class="card" style="background:white; padding:30px; max-width:600px; border-left:5px solid #ff9f43; border-radius:8px;">
-                <p><b>Email:</b> ${user.email}</p>
-                <p><b>Phone:</b> ${meta.phone || 'N/A'}</p>
-                <p><b>GST:</b> ${meta.gst || 'N/A'}</p>
-                <p><b>Status:</b> ${meta.is_approved ? 'Verified' : 'Pending Verification'}</p>
+            <div style="background:white; padding:30px; border-radius:15px; max-width:600px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <div style="margin-bottom:15px;"><label style="font-size:12px; color:#999; font-weight:bold;">AGENCY EMAIL</label><p style="font-size:18px; margin:5px 0;">${user.email}</p></div>
+                <div style="margin-bottom:15px;"><label style="font-size:12px; color:#999; font-weight:bold;">BUSINESS CONTACT</label><p style="font-size:18px; margin:5px 0; color:#ff9f43;">${meta.phone || 'Not Provided'}</p></div>
+                <div style="display:flex; gap:30px;">
+                    <div><label style="font-size:12px; color:#999; font-weight:bold;">GST NO</label><p>${meta.gst || 'N/A'}</p></div>
+                    <div><label style="font-size:12px; color:#999; font-weight:bold;">REG NO</label><p>${meta.reg_no || 'N/A'}</p></div>
+                </div>
             </div>`;
     }
 };
 
-// ... (Action Modal and Update Logic remains exactly as you provided)
+// --- LOGOUT LOGIC ---
 window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
 window.executeLogout = async () => { 
     await getClient().auth.signOut(); 
     window.location.reload(); 
 };
-window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
-// ... (Rest of your modal functions go here)
-
 // 10. PACKAGE FORM (CodePen Optimized Version)
 window.showPackageForm = function(pEncoded = null) {
     let pkg = null;
