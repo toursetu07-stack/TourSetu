@@ -1073,7 +1073,8 @@ window.showPackageForm = function(pEncoded = null) {
     const area = document.getElementById('main-content');
     if (!area) return;
     
-    const pkgDestinations = isEdit ? (pkg.destination || []) : [];
+    // Support both 'destination' and 'destinations' naming conventions
+    const pkgDestinations = isEdit ? (pkg.destination || pkg.destinations || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
     
     // Determine the selected state for the dropdown
@@ -1104,7 +1105,7 @@ window.showPackageForm = function(pEncoded = null) {
         return `
         <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:10px; border-radius:10px; border:1px solid #ffeaa7; margin-bottom:8px;">
             <input type="checkbox" class="v-enable" data-id="${v.id}" ${existing ? 'checked' : ''}>
-            <span style="font-size:20px;">${v.icon || '??'}</span>
+            <span style="font-size:20px;">${v.icon || '🚗'}</span>
             <b style="flex:1;">${v.name}</b>
             <input type="number" class="v-rate" data-id="${v.id}" placeholder="Rate" style="width:80px; padding:5px;" value="${existing ? existing.rate : ''}">
             <input type="number" class="v-max" data-id="${v.id}" placeholder="Max" style="width:60px; padding:5px;" value="${existing ? existing.max_cars : '1'}">
@@ -1113,7 +1114,7 @@ window.showPackageForm = function(pEncoded = null) {
 
     area.innerHTML = `
         <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
-            <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '?? Edit Package' : '?? Create New Package'}</h3>
+            <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🚀 Create New Package'}</h3>
             
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
                 <div>
@@ -1175,16 +1176,19 @@ window.processSave = async function(pkgId) {
         if (!title) throw new Error("Package Title is required!");
         if (!city) throw new Error("Please select a starting city!");
 
-        // Collect Destinations
+        // Collect Selected Destinations
         const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
         if (selectedDests.length === 0) throw new Error("Select at least one destination!");
 
-        // Collect Vehicles
+        // Collect Selected Vehicles
         const selectedVehicles = [];
         document.querySelectorAll('.v-enable:checked').forEach(el => {
             const vId = el.dataset.id;
-            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`).value) || 0;
-            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`).value) || 1;
+            const rateInput = document.querySelector(`.v-rate[data-id="${vId}"]`);
+            const maxInput = document.querySelector(`.v-max[data-id="${vId}"]`);
+            
+            const rate = parseFloat(rateInput.value) || 0;
+            const max = parseInt(maxInput.value) || 1;
             const vType = vehicleTypes.find(vt => vt.id === vId);
             
             if (rate > 0) {
@@ -1198,19 +1202,19 @@ window.processSave = async function(pkgId) {
             }
         });
 
-        if (selectedVehicles.length === 0) throw new Error("Enable at least one vehicle with a price!");
+        if (selectedVehicles.length === 0) throw new Error("Please set a price for at least one vehicle!");
 
         const pkgData = {
             title: title,
             starting_location: city,
-            destination: selectedDests,
+            destination: selectedDests, // Ensure this matches your Supabase column name
             vehicles: selectedVehicles,
             description: desc,
             agency_id: user.id
         };
 
         let result;
-        // Clean check for existing ID
+        // Check if we are updating or creating
         if (pkgId && pkgId !== "" && pkgId !== "undefined" && pkgId !== "null") {
             result = await client.from('packages').update(pkgData).eq('id', pkgId);
         } else {
@@ -1219,18 +1223,18 @@ window.processSave = async function(pkgId) {
 
         if (result.error) throw result.error;
 
-        alert("? Success! Package data updated.");
-        window.showTab('packages'); // Go back to list
+        alert("✅ Success! Package data updated.");
+        window.showTab('packages'); 
 
     } catch (err) {
-        alert("? Error: " + err.message);
+        console.error("Save Error:", err);
+        alert("❌ Error: " + err.message);
         if (btn) {
             btn.innerText = pkgId ? "SAVE CHANGES" : "PUBLISH PACKAGE";
             btn.disabled = false;
         }
     }
 };
-
 
 // 12. STYLES
 const styleTag = document.createElement('style');
