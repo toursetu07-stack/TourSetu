@@ -1006,179 +1006,180 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
         alert("System error. Please try again.");
     }
 };
+/* =========================================
+   10 & 11. PACKAGE FORM & SAVE LOGIC (FIXED)
+   ========================================= */
 
-// 10. PACKAGE FORM (CodePen Optimized Version)
 window.showPackageForm = function(pEncoded = null) {
     let pkg = null;
     try {
         pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error("Decoding error:", e); 
+    }
     
-    const isEdit = !!pkg;
-    const area = document.getElementById('package-form-area');
+    const isEdit = (pkg && pkg.id);
+    const area = document.getElementById('main-content');
+    if (!area) return;
+    
     const pkgDestinations = isEdit ? (pkg.destination || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
     
-    // 1. Pre-build State Options
+    // Determine the selected state for the dropdown
     let selectedState = "";
-    if (isEdit) {
+    if (isEdit && pkg.starting_location) {
         for (let s in locationData) {
-            if (locationData[s].includes(pkg.starting_location)) { selectedState = s; break; }
+            if (locationData[s].includes(pkg.starting_location)) { 
+                selectedState = s; 
+                break; 
+            }
         }
     }
+
     const stateOptions = Object.keys(locationData).map(s => 
         `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`
     ).join('');
 
-    // 2. Pre-build Destination Checkboxes
+    // Build Destination Checkboxes
     const destHtml = tourDestinations.map(d => `
-        <label style="display:flex; align-items:center; gap:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px;">
+        <label style="display:flex; align-items:center; gap:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px; cursor:pointer;">
             <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}
         </label>
     `).join('');
 
-    // 3. Pre-build Vehicle List
+    // Build Vehicle List
     const vehicleHtml = vehicleTypes.map(v => {
         const existing = pkgVehicles.find(ev => ev.id === v.id);
         return `
-        <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:10px; border-radius:10px; border:1px solid #ffeaa7;">
+        <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:10px; border-radius:10px; border:1px solid #ffeaa7; margin-bottom:8px;">
             <input type="checkbox" class="v-enable" data-id="${v.id}" ${existing ? 'checked' : ''}>
-            <span style="font-size:20px;">${v.icon}</span>
+            <span style="font-size:20px;">${v.icon || '??'}</span>
             <b style="flex:1;">${v.name}</b>
-            <input type="number" class="v-rate" data-id="${v.id}" placeholder="₹ Rate" style="width:80px;" value="${existing ? existing.rate : ''}">
-            <input type="number" class="v-max" data-id="${v.id}" placeholder="Units" style="width:70px;" value="${existing ? existing.max_cars : '1'}">
+            <input type="number" class="v-rate" data-id="${v.id}" placeholder="Rate" style="width:80px; padding:5px;" value="${existing ? existing.rate : ''}">
+            <input type="number" class="v-max" data-id="${v.id}" placeholder="Max" style="width:60px; padding:5px;" value="${existing ? existing.max_cars : '1'}">
         </div>`;
     }).join('');
 
-    // 4. Finally, Render the Main Container
     area.innerHTML = `
-        <div class="card" style="background:white; padding:30px; margin-top:20px; border:1px solid #ff9f43; border-radius:12px;">
-            <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🎒 Create New Package'}</h3>
+        <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
+            <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '?? Edit Package' : '?? Create New Package'}</h3>
             
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
-                <input type="text" id="p-title" placeholder="Package Title" value="${isEdit ? pkg.title : ''}">
-                <select id="p-state" onchange="updateCities()">
-                    <option value="">Select State</option>
-                    ${stateOptions}
-                </select>
+                <div>
+                    <label style="font-size:11px; font-weight:bold; color:#666;">PACKAGE TITLE</label>
+                    <input type="text" id="p-title" placeholder="e.g. 3 Days Kedarnath Trip" value="${isEdit ? pkg.title : ''}" style="padding:12px; border-radius:8px; border:1px solid #ddd; width:100%;">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:bold; color:#666;">PICKUP STATE</label>
+                    <select id="p-state" onchange="window.updateCities()" style="padding:12px; border-radius:8px; border:1px solid #ddd; width:100%;">
+                        <option value="">Select State</option>
+                        ${stateOptions}
+                    </select>
+                </div>
             </div>
 
-            <select id="p-city" style="width:100%; margin-bottom:15px;">
-                ${isEdit ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
+            <label style="font-size:11px; font-weight:bold; color:#666;">STARTING CITY</label>
+            <select id="p-city" style="width:100%; margin-bottom:15px; padding:12px; border-radius:8px; border:1px solid #ddd;">
+                ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
             </select>
             
-            <div style="background:#f9f9f9; padding:15px; border-radius:10px; max-height:150px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:8px;">
+            <p><b>Destinations:</b></p>
+            <div style="background:#f9f9f9; padding:15px; border-radius:10px; max-height:150px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:8px; border:1px solid #eee; margin-bottom:20px;">
                 ${destHtml}
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-top:20px;">
+            <p><b>Vehicle Pricing & Availability:</b></p>
+            <div style="margin-bottom:20px;">
                 ${vehicleHtml}
             </div>
 
-            <textarea id="p-desc" style="height:100px; width:100%; margin-top:20px;" placeholder="Itinerary...">${isEdit ? pkg.description : ''}</textarea>
+            <label style="font-size:11px; font-weight:bold; color:#666;">ITINERARY DETAILS</label>
+            <textarea id="p-desc" style="height:120px; width:100%; padding:12px; border-radius:8px; border:1px solid #ddd;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
             
             <div style="display:flex; gap:10px; margin-top:25px;">
-                <button onclick="processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold; cursor:pointer; border:none; border-radius:8px;">
+                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold; cursor:pointer; border:none; border-radius:8px; font-size:16px;">
                     ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
                 </button>
-                <button onclick="document.getElementById('package-form-area').innerHTML=''" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
+                <button onclick="window.showTab('packages')" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
             </div>
         </div>`;
 };
 
-// HELPER TO PREVENT TOKEN ERRORS IN ONCLICK
-window.processSave = (id) => {
-    if (id && id !== "undefined") {
-        handleSave(id);
-    } else {
-        handleSave();
-    }
-};
-
-// 11. HANDLESAVE
-window.handleSave = async function(id = null) {
-    const client = getClient();
+window.processSave = async function(pkgId) {
     const btn = document.getElementById('save-btn');
-    const { data: { user } } = await client.auth.getUser();
-    
-    const selectedVehicles = [];
-    document.querySelectorAll('.v-enable:checked').forEach(checkbox => {
-        const vid = checkbox.dataset.id;
-        const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
-        const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
-        const rate = parseFloat(rateInput.value);
-        const name = rateInput.dataset.name;
-        if (rate > 0) {
-            selectedVehicles.push({ id: vid, name: name, rate: rate, max_cars: parseInt(maxInput.value) || 1 });
-        }
-    });
-
-    if (selectedVehicles.length === 0) return alert("Please TICK at least one vehicle and provide a price.");
-    
-    btn.innerText = "Processing...";
-    btn.disabled = true;
-
-    const pkgData = {
-        agency_id: user.id,
-        title: document.getElementById('p-title').value,
-        starting_location: document.getElementById('p-city').value,
-        description: document.getElementById('p-desc').value,
-        destination: Array.from(document.querySelectorAll('.d-check:checked')).map(c => c.value),
-        vehicles: selectedVehicles
-    };
+    if (btn) {
+        btn.innerText = "Processing...";
+        btn.disabled = true;
+    }
 
     try {
-        if (id) {
-            const { data: oldPkg } = await client.from('packages').select('*').eq('id', id).single();
-            const history = oldPkg.updates_history || [];
-            history.push({ 
-                title: oldPkg.title, 
-                description: oldPkg.description, 
-                vehicles: oldPkg.vehicles, 
-                destination: oldPkg.destination, 
-                updated_at: new Date().toISOString() 
-            });
-            pkgData.updates_history = history;
-            const { error } = await client.from('packages').update(pkgData).eq('id', id);
-            if (error) throw error;
+        const client = getClient();
+        const { data: { user } } = await client.auth.getUser();
+        if (!user) throw new Error("Please login again.");
+
+        const title = document.getElementById('p-title').value.trim();
+        const city = document.getElementById('p-city').value;
+        const desc = document.getElementById('p-desc').value;
+
+        if (!title) throw new Error("Package Title is required!");
+        if (!city) throw new Error("Please select a starting city!");
+
+        // Collect Destinations
+        const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
+        if (selectedDests.length === 0) throw new Error("Select at least one destination!");
+
+        // Collect Vehicles
+        const selectedVehicles = [];
+        document.querySelectorAll('.v-enable:checked').forEach(el => {
+            const vId = el.dataset.id;
+            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`).value) || 0;
+            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`).value) || 1;
+            const vType = vehicleTypes.find(vt => vt.id === vId);
+            
+            if (rate > 0) {
+                selectedVehicles.push({
+                    id: vId,
+                    name: vType.name,
+                    rate: rate,
+                    max_cars: max,
+                    icon: vType.icon
+                });
+            }
+        });
+
+        if (selectedVehicles.length === 0) throw new Error("Enable at least one vehicle with a price!");
+
+        const pkgData = {
+            title: title,
+            starting_location: city,
+            destination: selectedDests,
+            vehicles: selectedVehicles,
+            description: desc,
+            agency_id: user.id
+        };
+
+        let result;
+        // Clean check for existing ID
+        if (pkgId && pkgId !== "" && pkgId !== "undefined" && pkgId !== "null") {
+            result = await client.from('packages').update(pkgData).eq('id', pkgId);
         } else {
-            pkgData.updates_history = [];
-            const { error } = await client.from('packages').insert([pkgData]);
-            if (error) throw error;
+            result = await client.from('packages').insert([pkgData]);
         }
-        
-        setTimeout(() => showTab('packages'), 500);
-    } catch (e) {
-        alert("Error saving: " + e.message);
-        btn.disabled = false;
-        btn.innerText = "Try Again";
+
+        if (result.error) throw result.error;
+
+        alert("? Success! Package data updated.");
+        window.showTab('packages'); // Go back to list
+
+    } catch (err) {
+        alert("? Error: " + err.message);
+        if (btn) {
+            btn.innerText = pkgId ? "SAVE CHANGES" : "PUBLISH PACKAGE";
+            btn.disabled = false;
+        }
     }
 };
 
-async function loadPackageList(aid) {
-    const { data } = await getClient().from('packages').select('*').eq('agency_id', aid).order('id', { ascending: false });
-    const container = document.getElementById('pkg-list-container');
-    if(!data || data.length === 0) {
-       container.innerHTML = `<div style="text-align:center; padding:40px; color:#999;">No packages created yet.</div>`;
-        return;
-    }
-   container.innerHTML = data.map(p => {
-        const pString = encodeURIComponent(JSON.stringify(p));
-        return `
-        <div class="card" style="background:white; padding:20px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; border-left:5px solid #ff9f43;">
-            <div style="text-align:left;">
-                <h3 style="margin:0;">${p.title}</h3>
-                <small style="color:#666;">${p.starting_location} ➔ ${(p.destination || []).length} Destinations | <b>${(p.updates_history || []).length} edits</b></small>
-           </div>
-            <div style="display:flex; gap:10px;">
-                <button onclick="showPackageForm('${pString}')" style="width:auto; padding:8px 15px; background:#f0f0f0;">Edit</button>
-                <button onclick="deletePkg(${p.id})" style="color:#ff7675; background:none; width:auto; border:1px solid #ff7675; padding:8px 15px;">Delete</button>
-           </div>
-        </div>`;
-   }).join('');
-}
-
-window.deletePkg = async (id) => { if(confirm("Are you sure?")) { await getClient().from('packages').delete().eq('id', id); showTab('packages'); } };
 
 // 12. STYLES
 const styleTag = document.createElement('style');
