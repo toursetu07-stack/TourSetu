@@ -274,6 +274,13 @@ window.toggleMode = toggleMode;
 window.toggleBusinessFields = toggleBusinessFields;
 window.handleLogout = handleLogout;
 
+// --- New Additions for Package Management ---
+window.showPackageForm = showPackageForm; 
+window.handleSave = handleSave;
+window.processSave = processSave;
+window.loadAgencyPackages = loadAgencyPackages;
+// --------------------------------------------
+
 document.addEventListener('DOMContentLoaded', initApp);
 
 // 7. CUSTOMER HOMEPAGE
@@ -557,7 +564,7 @@ function renderPackageCards(data, isFiltered) {
         </div>`;
     }).join('');
 }
-// 8. PACKAGE DETAIL VIEW (CODEPEN SYNTAX-SAFE VERSION)
+ 
 window.showPackageDetails = function(pEncoded) {
     const p = JSON.parse(decodeURIComponent(pEncoded));
     const modal = document.getElementById('detail-modal');
