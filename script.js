@@ -24,12 +24,63 @@ const vehicleTypes = [
 ];
 
 const locationData = {
- "Uttarakhand": ["Dehradun", "Rishikesh", "Haridwar", "Kashipur", "Rudpur", "Lalkuan", "Kichha", "Bareilly", "Pantnagar", "Lalpur", "Almora", "Nainital"],
-  "Delhi": ["New Delhi", "Old Delhi", "Saket", "Dwarka"],
-  "Punjab": ["Amritsar", "Ludhiana", "Patiala"],
-  "Uttar Pradesh": ["Lucknow", "Ayodhya", "Vrindavan", "Varanasi", "Agra"]
+  "Andaman & Nicobar": ["Port Blair", "Havelock Island", "Neil Island"],
+  "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Tirupati", "Guntur", "Nellore"],
+  "Arunachal Pradesh": ["Itanagar", "Tawang", "Ziro", "Pasighat"],
+  "Assam": ["Guwahati", "Dibrugarh", "Silchar", "Jorhat", "Tezpur"],
+  "Bihar": ["Patna", "Gaya", "Bhagalpur", "Muzaffarpur", "Purnia"],
+  "Chandigarh": ["Mohali", "Kharar", "Zirakpur"],
+  "Chhattisgarh": ["Raipur", "Bhilai", "Bilaspur", "Korba"],
+  "Dadra & Nagar Haveli": ["Silvassa"],
+  "Daman & Diu": ["Daman", "Diu"],
+  "Delhi": ["New Delhi", "Old Delhi", "Saket", "Dwarka", "Rohini", "Connaught Place"],
+  "Goa": ["Panaji", "Margao", "Vasco da Gama", "Calangute"],
+  "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar", "Somnath"],
+  "Haryana": ["Gurugram", "Faridabad", "Panipat", "Ambala", "Karnal"],
+  "Himachal Pradesh": ["Shimla", "Manali", "Dharamshala", "Kullu", "Solan"],
+  "Jammu & Kashmir": ["Srinagar", "Jammu", "Katra", "Gulmarg", "Pahalgam"],
+  "Jharkhand": ["Ranchi", "Jamshedpur", "Dhanbad", "Bokaro"],
+  "Karnataka": ["Bengaluru", "Mysuru", "Hubballi", "Mangaluru", "Belagavi"],
+  "Kerala": ["Thiruvananthapuram", "Kochi", "Kozhikode", "Munnar", "Wayand"],
+  "Ladakh": ["Leh", "Kargil"],
+  "Lakshadweep": ["Kavaratti"],
+  "Madhya Pradesh": ["Bhopal", "Indore", "Gwalior", "Jabalpur", "Ujjain"],
+  "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad", "Thane"],
+  "Manipur": ["Imphal"],
+  "Meghalaya": ["Shillong", "Cherrapunji", "Tura"],
+  "Mizoram": ["Aizawl"],
+  "Nagaland": ["Kohima", "Dimapur"],
+  "Odisha": ["Bhubaneswar", "Cuttack", "Puri", "Rourkela", "Sambalpur"],
+  "Puducherry": ["Puducherry"],
+  "Punjab": ["Ludhiana", "Amritsar", "Jalandhar", "Patiala", "Bathinda"],
+  "Rajasthan": ["Jaipur", "Jodhpur", "Udaipur", "Ajmer", "Bikaner", "Pushkar"],
+  "Sikkim": ["Gangtok", "Pelling", "Namchi"],
+  "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem"],
+  "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Khammam"],
+  "Tripura": ["Agartala"],
+  "Uttar Pradesh": ["Lucknow", "Kanpur", "Varanasi", "Agra", "Noida", "Ayodhya", "Prayagraj", "Meerut"],
+  "Uttarakhand": ["Dehradun", "Haridwar", "Rishikesh", "Haldwani", "Rudrapur", "Kashipur", "Nainital", "Roorkee", "Kichha", "Pantnagar", "Lal kuan", "Lalpur", "Kashipur", "Rudrapryag", "Almora", "Ranikhet", "Bageshwar", "Kausani", "Uttarkashi", "Barkot",],
+  "West Bengal": ["Kolkata", "Howrah", "Darjeeling", "Siliguri", "Durgapur"]
 };
 
+// HELPER FUNCTION: Ensure this exists in your script so the dropdowns work
+window.updateCities = function() {
+    const stateSelect = document.getElementById('p-state');
+    const citySelect = document.getElementById('p-city');
+    const selectedState = stateSelect.value;
+
+    // Clear current cities
+    citySelect.innerHTML = '<option value="">Select City</option>';
+
+    if (selectedState && locationData[selectedState]) {
+        locationData[selectedState].forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.innerText = city;
+            citySelect.appendChild(opt);
+        });
+    }
+};
 /* =========================================
    2. CORE UTILITY FUNCTIONS
    ========================================= */
