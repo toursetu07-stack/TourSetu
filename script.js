@@ -420,7 +420,7 @@ window.renderCustomerRequests = async () => {
     }
 
     container.innerHTML = data.map(b => {
-        const statusColor = b.status === 'paid' ? '#2ecc71' : '#ff9f43';
+        const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : '#ff9f43');
         const isPending = b.status === 'pending';
         const isPaid = b.status === 'paid';
         const isApproved = b.status === 'approved';
@@ -431,7 +431,7 @@ window.renderCustomerRequests = async () => {
                 <div>
                     <h3 style="margin:0 0 10px 0;">${b.package_title}</h3>
                     <div style="font-size:13px; color:#636e72;">
-                        <div style="margin-bottom:4px;">📅 Travel Date: <b>${b.travel_date ? new Date(b.travel_date).toLocaleDateString() : 'Not Set'}</b></div>
+                        <div style="margin-bottom:4px; color:#e67e22; font-weight:bold;">📅 Travel Date: ${b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'}) : 'Not Set'}</div>
                         <div>🚗 Vehicles: ${b.selected_vehicles}</div>
                         <div style="margin-top:5px;">Status: <b style="color:${statusColor}">${b.status.toUpperCase()}</b></div>
                     </div>
@@ -462,7 +462,6 @@ window.showPackageDetails = function(pEncoded) {
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
     
-    // 1. History Logic
     const historyList = p.updates_history || [];
     let historyHtml = '';
     if (historyList.length > 0) {
@@ -483,7 +482,6 @@ window.showPackageDetails = function(pEncoded) {
         </div>`;
     }
 
-    // 2. Vehicle List HTML
     const vehicleListHtml = (p.vehicles || []).map(v => `
         <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -609,7 +607,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         customer_email: user.email,
         customer_address: address, 
         customer_phone: phone,
-        travel_date: travelDate, // Date included here
+        travel_date: travelDate, 
         selected_vehicles: selectedVehicles.join(', '),
         total_price: totalPrice, 
         status: 'pending',
@@ -625,20 +623,27 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     }
 };
 
-window.deleteBookingRequest = async (id) => {
-    if(confirm("Are you sure you want to cancel and delete this request?")) {
-        await getClient().from('bookings').delete().eq('id', id);
-        renderCustomerRequests();
-    }
-};
+/* =========================================
+   AGENCY DASHBOARD - BOOKINGS VIEW
+   ========================================= */
 
-window.simulatePayment = async (id) => {
-    if(confirm("Confirm payment of booking fees? This will reveal agency contact.")) {
-        const { error } = await getClient().from('bookings').update({ status: 'paid' }).eq('id', id);
-        if(!error) renderCustomerRequests();
-    }
-};
+// NOTE: Add this logic inside your agency showTab('bookings') function
+// to show the date to the agency.
 
+/*
+const { data: bookingsData } = await client.from('bookings').select('*').in('package_id', myPkgIds);
+
+container.innerHTML = bookingsData.map(b => `
+    <div class="card" style="padding:20px; border-left:5px solid #ff9f43; margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between;">
+            <h3 style="margin:0;">${b.package_title}</h3>
+            <span style="font-weight:bold; color:#2ecc71;">₹${b.total_price}</span>
+        </div>
+        <p style="color:#e67e22; font-weight:bold; margin:10px 0;">📅 PLANNED DATE: ${new Date(b.travel_date).toLocaleDateString('en-IN')}</p>
+        <p>📍 ${b.customer_address}</p>
+    </div>
+`).join('');
+*/
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
     const start = document.getElementById('search-start').value;
@@ -882,14 +887,22 @@ window.showTab = async function(tabName) {
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
-    // Prefetch for notifications
+    // Prefetch for notifications and calculations
     const { data: myPkgs } = await client.from('packages').select('id').eq('agency_id', user.id);
     const myPkgIds = (myPkgs || []).map(p => p.id);
 
     let pendingCount = 0;
+    let totalRevenue = 0;
     if (myPkgIds.length > 0) {
-        const { count } = await client.from('bookings').select('*', { count: 'exact', head: true }).in('package_id', myPkgIds).eq('status', 'pending');
-        pendingCount = count || 0;
+        // Get all bookings to calculate revenue and pending count
+        const { data: allBookings } = await client.from('bookings').select('status, total_price').in('package_id', myPkgIds);
+        
+        if (allBookings) {
+            pendingCount = allBookings.filter(b => b.status === 'pending').length;
+            totalRevenue = allBookings
+                .filter(b => b.status === 'paid')
+                .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
+        }
     }
 
     const badge = document.getElementById('bell-badge');
@@ -908,7 +921,7 @@ window.showTab = async function(tabName) {
     if (tabName === 'earnings') {
         container.innerHTML = `<h1>Overview</h1>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
-                <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>REVENUE</small><h2>₹0</h2></div>
+                <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>REVENUE (PAID)</small><h2>₹${totalRevenue.toLocaleString('en-IN')}</h2></div>
                 <div class="card" style="border-top:5px solid #ff9f43; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>PENDING BOOKINGS</small><h2>${pendingCount}</h2></div>
                 <div class="card" style="border-top:5px solid #3498db; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>ACTIVE PACKAGES</small><h2 id="act-pkg-count">...</h2></div>
             </div>`;
@@ -941,12 +954,18 @@ window.showTab = async function(tabName) {
             if (b.status === 'cancelled' || b.status === 'denied') statusColor = '#ff7675';
             if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
 
+            // Format travel date for display
+            const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
+
             return `
             <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${statusColor}; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <div>
                         <h3 style="margin:0; color:#2d3436;">${b.package_title}</h3>
-                        <p style="font-size:12px; color:#636e72;">Requested: ${new Date(b.created_at).toLocaleDateString()}</p>
+                        <div style="margin-top:5px; display:flex; gap:15px; font-size:12px; color:#636e72;">
+                             <span>📩 Requested: ${new Date(b.created_at).toLocaleDateString()}</span>
+                             <span style="color:#e67e22; font-weight:bold;">📅 TRAVEL DATE: ${travelDateStr}</span>
+                        </div>
                     </div>
                     <div style="text-align:right;">
                         <div style="font-size:22px; font-weight:bold; color:#2ecc71;">₹${b.total_price || 0}</div>
@@ -970,13 +989,14 @@ window.showTab = async function(tabName) {
                 </div>
 
                 <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px;">
-                    <p style="font-size:13px; margin:0;"><b>Vehicles:</b> ${b.selected_vehicles}</p>
+                    <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
+                    <p style="font-size:12px; margin-top:5px; color:#999;">Customer Email: ${b.customer_email}</p>
                 </div>
 
                 ${isPending ? `
                     <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
-                        <button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve</button>
-                        <button onclick="openActionModal('${b.id}', 'denied')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny</button>
+                        <button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
+                        <button onclick="openActionModal('${b.id}', 'denied')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
                     </div>
                 ` : ''}
             </div>`;
@@ -1046,7 +1066,6 @@ window.showTab = async function(tabName) {
     }
 };
 
-// MODAL Logic (Approve/Deny) remains the same...
 window.openActionModal = function(bookingId, type) {
     const modal = document.getElementById('action-modal');
     const content = document.getElementById('action-modal-content');
@@ -1056,7 +1075,7 @@ window.openActionModal = function(bookingId, type) {
         content.innerHTML = `
             <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
             <p style="font-size:14px; color:#666;">The customer will be notified to proceed with payment.</p>
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">CONTACT NO. FOR PAYMENT:</label>
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">CONTACT NO. FOR PAYMENT (Reveal on Pay):</label>
             <input type="text" id="modal-contact-input" placeholder="e.g. +91 9876543210" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
             <div style="display:flex; gap:10px;">
                 <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
@@ -1066,7 +1085,7 @@ window.openActionModal = function(bookingId, type) {
     } else {
         content.innerHTML = `
             <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
-            <p style="font-size:14px; color:#666;">This will cancel the request.</p>
+            <p style="font-size:14px; color:#666;">This will cancel the customer's inquiry.</p>
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
