@@ -324,9 +324,9 @@ function renderCustomerHomepage(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
     
-    // Pre-calculate search options to avoid nested template literal errors
-    const startCityOptions = Object.values(locationData).flat().sort().map(city => 
-        `<option value="${city}">${city}</option>`
+    // Get all unique states from your locationData
+    const stateOptions = Object.keys(locationData).sort().map(state => 
+        `<option value="${state}">${state}</option>`
     ).join('');
 
     const destOptions = tourDestinations.map(d => 
@@ -341,11 +341,17 @@ function renderCustomerHomepage(user) {
                 <p style="font-size:1.2rem; margin-bottom:40px; opacity:0.9;">Direct connections with verified local travel agencies</p>
                 
                 <div class="card" style="background:white; padding:30px; border-radius:20px; display:flex; gap:15px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); flex-wrap:wrap;">
-                  <div style="flex:1; min-width:250px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">MY STARTING LOCATION</label>
+                  <div style="flex:1; min-width:200px; text-align:left;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
+                      <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
+                         <option value="">Select State</option>
+                         ${stateOptions}
+                      </select>
+                   </div>
+                   <div style="flex:1; min-width:200px; text-align:left;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT CITY</label>
                       <select id="search-start" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
-                         <option value="">Select City</option>
-                         ${startCityOptions}
+                         <option value="">Select City First</option>
                       </select>
                    </div>
                   <div style="flex:1; min-width:250px; text-align:left;">
@@ -382,6 +388,17 @@ function renderCustomerHomepage(user) {
     loadAllPackages();
 }
 
+window.updateCityDropdown = () => {
+    const state = document.getElementById('search-state').value;
+    const citySelect = document.getElementById('search-start');
+    if (!state) {
+        citySelect.innerHTML = '<option value="">Select City First</option>';
+        return;
+    }
+    const cities = locationData[state] || [];
+    citySelect.innerHTML = cities.sort().map(c => `<option value="${c}">${c}</option>`).join('');
+};
+
 window.renderCustomerRequests = async () => {
     const container = document.getElementById('customer-pkg-list');
     const resultTitle = document.getElementById('result-title');
@@ -414,6 +431,7 @@ window.renderCustomerRequests = async () => {
                 <div>
                     <h3 style="margin:0 0 10px 0;">${b.package_title}</h3>
                     <div style="font-size:13px; color:#636e72;">
+                        <div style="margin-bottom:4px;">📅 Travel Date: <b>${b.travel_date ? new Date(b.travel_date).toLocaleDateString() : 'Not Set'}</b></div>
                         <div>🚗 Vehicles: ${b.selected_vehicles}</div>
                         <div style="margin-top:5px;">Status: <b style="color:${statusColor}">${b.status.toUpperCase()}</b></div>
                     </div>
@@ -444,7 +462,7 @@ window.showPackageDetails = function(pEncoded) {
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
     
-    // 1. Prepare History HTML
+    // 1. History Logic
     const historyList = p.updates_history || [];
     let historyHtml = '';
     if (historyList.length > 0) {
@@ -465,7 +483,7 @@ window.showPackageDetails = function(pEncoded) {
         </div>`;
     }
 
-    // 2. Prepare Vehicle List HTML
+    // 2. Vehicle List HTML
     const vehicleListHtml = (p.vehicles || []).map(v => `
         <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -481,7 +499,6 @@ window.showPackageDetails = function(pEncoded) {
             </div>
         </div>`).join('');
 
-    // 3. Prepare Final Layout
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
     const escapedTitle = p.title.replace(/'/g, "\\'");
 
@@ -498,6 +515,11 @@ window.showPackageDetails = function(pEncoded) {
                 <p style="white-space: pre-line; color:#636e72; line-height:1.6;">${p.description || 'No description provided.'}</p>
             </div>
             
+            <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
+                <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
+                <input type="date" id="cust-travel-date" min="${new Date().toISOString().split('T')[0]}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436;">
+            </div>
+
             <h4>Select Vehicles to Book</h4>
             <div style="display:grid; gap:5px;">${vehicleListHtml}</div>
 
@@ -532,7 +554,7 @@ window.showPackageDetails = function(pEncoded) {
 };
 
 /* =========================================
-   SUPPORTING LOGIC (STAY IN SAME SCRIPT)
+   SUPPORTING LOGIC
    ========================================= */
 
 window.updateLivePrice = () => {
@@ -559,9 +581,10 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     const { data: { user } } = await client.auth.getUser();
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
+    const travelDate = document.getElementById('cust-travel-date').value;
 
-    if (!address.trim() || !phone.trim()) {
-        alert("Please provide pickup address and phone number!"); 
+    if (!address.trim() || !phone.trim() || !travelDate) {
+        alert("Please provide travel date, pickup address and phone number!"); 
         return;
     }
 
@@ -586,6 +609,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         customer_email: user.email,
         customer_address: address, 
         customer_phone: phone,
+        travel_date: travelDate, // Date included here
         selected_vehicles: selectedVehicles.join(', '),
         total_price: totalPrice, 
         status: 'pending',
@@ -593,7 +617,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     }]);
 
     if (!error) {
-        alert(`🔔 Notification: Your booking request for "${packageTitle}" has been sent! Total: ₹${totalPrice}`);
+        alert(`🔔 Notification: Request sent for ${travelDate}! Total: ₹${totalPrice}`);
         document.getElementById('detail-modal').style.display = 'none';
         renderCustomerRequests();
     } else {
