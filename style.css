@@ -42,18 +42,19 @@ input, select {
   box-sizing: border-box;
 }
 
-/* --- UPDATED CALENDAR FIX --- */
+/* --- CALENDAR FIX SECTION --- */
 input[type="date"] {
   position: relative;
   min-height: 50px;
   cursor: pointer;
   background-color: white !important;
-  /* Ensures the native date appearance is active */
-  -webkit-appearance: listbox !important; 
+  /* Removes default styling that might block the icon */
   appearance: auto !important;
+  -webkit-appearance: listbox !important;
 }
 
-/* Forces the clickable calendar area to cover the entire box */
+/* This creates a giant "invisible button" over the whole input */
+/* So clicking ANYWHERE in the box opens the calendar */
 input[type="date"]::-webkit-calendar-picker-indicator {
     position: absolute;
     top: 0;
@@ -71,7 +72,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     opacity: 1;
 }
 
-/* Ensures a calendar icon is visible on the right if the browser hides it */
+/* Ensures the calendar icon is visible on the right */
 input[type="date"]::-webkit-inner-spin-button,
 input[type="date"]::-webkit-clear-button {
     display: block !important;
