@@ -317,7 +317,7 @@ async function handleAuth() {
     }
 }
 /* =========================================
-   6. CUSTOMER HOMEPAGE & BOOKING SYSTEM (UPDATED)
+   6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
    ========================================= */
 
 window.showPackageDetails = function(pEncoded) {
@@ -325,16 +325,17 @@ window.showPackageDetails = function(pEncoded) {
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
     
-    // Referral Logic: Capture refA and refB from the current URL
+    // --- NEW: REFERRAL CAPTURE ---
     const urlParams = new URLSearchParams(window.location.search);
     const refA = urlParams.get('refA') || '';
     const refB = urlParams.get('refB') || '';
 
-    // Date Logic: Minimum 8 days from today for agency preparation
+    // --- NEW: 8-DAY PREP CALENDAR LOGIC ---
     const prepDate = new Date();
     prepDate.setDate(prepDate.getDate() + 8);
     const minDateStr = prepDate.toISOString().split('T')[0];
 
+    // (Original Feature: Vehicle List)
     const vehicleListHtml = (p.vehicles || []).map(v => `
         <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -365,14 +366,14 @@ window.showPackageDetails = function(pEncoded) {
                 <h4 style="margin-top:0;">Itinerary / Description</h4>
                 <p style="white-space: pre-line; color:#636e72; line-height:1.6;">${p.description || 'No description provided.'}</p>
             </div>
-            
+
             <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
-                <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TOUR STARTING DATE</h4>
-                <p style="font-size:12px; color:#d35400; margin-bottom:10px;">(Tours must be booked at least 8 days in advance)</p>
-                <input type="date" id="cust-travel-date" min="${minDateStr}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436;">
+                <h4 style="margin-top:0; color:#e67e22;">📅 TOUR STARTING DATE</h4>
+                <p style="font-size:11px; color:#d35400; margin-bottom:8px;">* Required 8 days preparation time for agency.</p>
+                <input type="date" id="cust-travel-date" min="${minDateStr}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold;">
             </div>
 
-            <h4>Select Vehicles to Book</h4>
+            <h4>Select Vehicles</h4>
             <div style="display:grid; gap:5px;">${vehicleListHtml}</div>
 
             <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
@@ -380,35 +381,27 @@ window.showPackageDetails = function(pEncoded) {
                 <span id="live-total-display" style="font-size:20px; font-weight:bold; color:#ff9f43;">₹0</span>
             </div>
 
-            <div style="margin-top:20px; padding:15px; background:#f1f2f6; border:1px solid #dfe6e9; border-radius:12px;">
-                <h4 style="margin-top:0; font-size:14px; color:#2d3436;">Cancellation & Refund Policy</h4>
-                <p style="font-size:13px; color:#636e72; line-height:1.4;">
-                    • Full refund available if cancelled <b>7 days or more</b> before the tour date.<br>
-                    • <b>No refund</b> will be issued if cancelled within 7 days of the tour start date.
+            <div style="margin-top:20px; padding:15px; background:#f8f9fa; border:1px solid #ddd; border-radius:12px;">
+                <h4 style="margin:0 0 5px 0; font-size:14px;">Refund & Cancellation Policy</h4>
+                <p style="font-size:12px; color:#636e72; margin-bottom:10px;">
+                    - Under 7 days to tour: Full Refund.<br>
+                    - Less than 7 days to tour: No Refund.
                 </p>
-                <label style="display:flex; align-items:center; gap:10px; margin-top:10px; cursor:pointer; font-weight:bold; color:#2d3436;">
-                    <input type="checkbox" id="refund-agree-checkbox" style="width:18px; height:18px;">
-                    I agree to the refund policy and tour contract.
+                <label style="display:flex; align-items:center; gap:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+                    <input type="checkbox" id="contract-agree" style="width:18px; height:18px;"> I agree to this contract
                 </label>
             </div>
 
-            <div style="margin-top:25px; border-top: 2px solid #eee; padding-top:20px;">
-                <h4 style="margin-top:0; color:#2d3436;">Pickup & Contact Details</h4>
-                <div style="display:grid; gap:15px;">
-                    <div>
-                        <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">🏠 HOME ADDRESS FOR PICKUP</label>
-                        <textarea id="cust-address" placeholder="Enter your full street address..." style="width:100%; height:70px; padding:10px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;"></textarea>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">📞 PHONE NUMBER</label>
-                        <input type="text" id="cust-phone" placeholder="Your mobile number" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    </div>
-                </div>
+            <div style="margin-top:20px;">
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">Pickup Address</label>
+                <textarea id="cust-address" placeholder="Enter full address" style="width:100%; height:60px; padding:10px; border-radius:8px; border:1px solid #ddd;"></textarea>
+                <label style="font-weight:bold; display:block; margin-top:10px; margin-bottom:5px;">Phone Number</label>
+                <input type="text" id="cust-phone" placeholder="Enter phone" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
             </div>
 
             <div style="margin-top:30px; display:flex; gap:10px;">
-                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${refA}', '${refB}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:8px; border:none;">SEND BOOKING REQUEST</button>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; background:#eee; padding:15px; border-radius:8px; cursor:pointer; border:none;">BACK</button>
+                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${refA}', '${refB}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:10px; border:none;">SEND BOOKING REQUEST</button>
+                <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; background:#eee; padding:15px; border-radius:10px; cursor:pointer; border:none; font-weight:bold; color:#666;">BACK</button>
             </div>
         </div>
     `;
@@ -422,15 +415,15 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
     const travelDate = document.getElementById('cust-travel-date').value;
-    const isAgreed = document.getElementById('refund-agree-checkbox').checked;
+    const isAgreed = document.getElementById('contract-agree').checked;
 
-    // Validation
+    // --- VALIDATION ---
     if (!address.trim() || !phone.trim() || !travelDate) {
-        alert("Please provide travel date, pickup address and phone number!"); 
+        alert("⚠️ Please select travel date and provide contact info!"); 
         return;
     }
     if (!isAgreed) {
-        alert("You must agree to the refund policy and contract to book!");
+        alert("⚠️ You must agree to the contract before booking!");
         return;
     }
 
@@ -438,40 +431,45 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     const selectedVehicles = Array.from(document.querySelectorAll('.book-v-check:checked')).map(el => {
         const id = el.dataset.id;
         const rate = parseFloat(el.dataset.rate) || 0;
-        const qty = parseInt(document.querySelector(`.book-v-qty[data-id="${id}"]`).value) || 1;
+        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
+        const qty = parseInt(qtyInput.value) || 1;
         totalPrice += (rate * qty);
         return `${qty}x vehicle_id:${id}`;
     });
 
-    if (selectedVehicles.length === 0) { 
-        alert("Please select at least one vehicle to book."); 
-        return; 
+    if (selectedVehicles.length === 0) {
+        alert("❌ Please select at least one vehicle.");
+        return;
     }
 
-    // Save to Supabase including referral IDs and policy agreement
-    const { error } = await client.from('bookings').insert([{
-        package_id: packageId, 
-        package_title: packageTitle,
-        customer_id: user.id, 
-        customer_email: user.email,
-        customer_address: address, 
-        customer_phone: phone,
-        travel_date: travelDate, 
-        selected_vehicles: selectedVehicles.join(', '),
-        total_price: totalPrice, 
-        status: 'pending',
-        agency_id: agencyId,
-        referrer_id_a: refA, // Tracks original sharer (gets 1%)
-        referrer_id_b: refB, // Tracks direct sharer (gets 1%)
-        policy_agreed: true
-    }]);
+    try {
+        // --- UPDATED SUPABASE SAVE (With referral tracking) ---
+        const { error } = await client.from('bookings').insert([{
+            package_id: packageId,
+            package_title: packageTitle,
+            customer_id: user.id,
+            customer_email: user.email,
+            customer_address: address,
+            customer_phone: phone,
+            travel_date: travelDate, // Date shown to Agency
+            selected_vehicles: selectedVehicles.join(', '),
+            total_price: totalPrice,
+            status: 'pending',
+            agency_id: agencyId,
+            referrer_id_a: refA,    // Track Commission A (1%)
+            referrer_id_b: refB,    // Track Commission B (1%)
+            policy_agreed: true
+        }]);
 
-    if (!error) {
-        alert(`🔔 Notification: Request sent for ${travelDate}! Total: ₹${totalPrice}`);
-        document.getElementById('detail-modal').style.display = 'none';
-        renderCustomerRequests();
-    } else {
-        alert("Booking Error: " + error.message);
+        if (!error) {
+            alert(`✅ Request Sent for ${travelDate}!`);
+            document.getElementById('detail-modal').style.display = 'none';
+            renderCustomerRequests();
+        } else {
+            alert("Booking Error: " + error.message);
+        }
+    } catch (e) {
+        alert("Network Error.");
     }
 };
 // 7. MATCHING & CARD RENDERING
