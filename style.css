@@ -32,55 +32,14 @@ h1 {
   margin-bottom: 15px;
 }
 
-/* Base style for all inputs */
 input, select {
   width: 100%;
   padding: 12px;
   margin-top: 5px;
   border: 2px solid var(--light-orange);
   border-radius: 8px;
-  box-sizing: border-box;
+  box-sizing: border-box; /* Prevents input from overflowing */
 }
-
-/* --- THE ALL-DEVICE CALENDAR FIX --- */
-input[type="date"] {
-  position: relative;
-  min-height: 50px; /* Makes it easier to tap on Samsung S24 FE */
-  cursor: pointer;
-  background-color: white !important;
-  appearance: auto !important;
-  -webkit-appearance: listbox !important;
-  /* Ensures it stays in front of modal layers */
-  z-index: 5; 
-}
-
-/* This expands the calendar trigger to cover the ENTIRE input box */
-input[type="date"]::-webkit-calendar-picker-indicator {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    cursor: pointer;
-    background: transparent;
-    color: transparent;
-    display: block !important;
-    opacity: 1;
-    z-index: 10;
-}
-
-/* Keeps native icons visible on laptops and older browsers */
-input[type="date"]::-webkit-inner-spin-button,
-input[type="date"]::-webkit-clear-button {
-    display: block !important;
-    position: relative;
-    z-index: 11;
-}
-/* --- END OF FIX --- */
 
 input:focus {
   outline: none;
@@ -109,7 +68,7 @@ button:hover {
   font-size: 0.9rem;
   color: #636e72;
 }
-
+/* Styling for the new verification forms */
 .verify-container {
   text-align: left;
   margin-top: 20px;
