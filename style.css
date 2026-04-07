@@ -38,7 +38,7 @@ input, select {
   margin-top: 5px;
   border: 2px solid var(--light-orange);
   border-radius: 8px;
-  box-sizing: border-box; /* Prevents input from overflowing */
+  box-sizing: border-box;
 }
 
 input:focus {
@@ -68,7 +68,7 @@ button:hover {
   font-size: 0.9rem;
   color: #636e72;
 }
-/* Styling for the new verification forms */
+
 .verify-container {
   text-align: left;
   margin-top: 20px;
