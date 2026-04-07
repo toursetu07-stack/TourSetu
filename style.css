@@ -42,19 +42,19 @@ input, select {
   box-sizing: border-box;
 }
 
-/* --- CALENDAR FIX SECTION --- */
+/* --- THE ALL-DEVICE CALENDAR FIX --- */
 input[type="date"] {
   position: relative;
-  min-height: 50px;
+  min-height: 50px; /* Makes it easier to tap on Samsung S24 FE */
   cursor: pointer;
   background-color: white !important;
-  /* Removes default styling that might block the icon */
   appearance: auto !important;
   -webkit-appearance: listbox !important;
+  /* Ensures it stays in front of modal layers */
+  z-index: 5; 
 }
 
-/* This creates a giant "invisible button" over the whole input */
-/* So clicking ANYWHERE in the box opens the calendar */
+/* This expands the calendar trigger to cover the ENTIRE input box */
 input[type="date"]::-webkit-calendar-picker-indicator {
     position: absolute;
     top: 0;
@@ -70,12 +70,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     color: transparent;
     display: block !important;
     opacity: 1;
+    z-index: 10;
 }
 
-/* Ensures the calendar icon is visible on the right */
+/* Keeps native icons visible on laptops and older browsers */
 input[type="date"]::-webkit-inner-spin-button,
 input[type="date"]::-webkit-clear-button {
     display: block !important;
+    position: relative;
+    z-index: 11;
 }
 /* --- END OF FIX --- */
 
