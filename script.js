@@ -502,21 +502,21 @@ window.showPackageDetails = function(pEncoded) {
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
     const escapedTitle = p.title.replace(/'/g, "\\'");
 
-    // --- NEW DATE LOGIC START ---
-    const now = new Date();
-    const currentMonth = now.toLocaleString('default', { month: 'long' });
-    const currentYear = now.getFullYear();
-    
-    // Generate only next 7 days for the date dropdown
-    let dateOptions = "";
+    // --- NEW THREE-BOX SELECTION SYSTEM LOGIC ---
+    const today = new Date();
+    const currentMonthLabel = today.toLocaleString('default', { month: 'long' });
+    const currentYearLabel = today.getFullYear();
+
+    let dayOptions = "";
     for (let i = 0; i <= 7; i++) {
-        let d = new Date();
-        d.setDate(now.getDate() + i);
-        const dayNum = d.getDate();
-        const fullValue = d.toISOString().split('T')[0];
-        dateOptions += `<option value="${fullValue}">${dayNum}</option>`;
+        let futureDate = new Date();
+        futureDate.setDate(today.getDate() + i);
+        
+        const dayVal = futureDate.getDate();
+        const fullISODate = futureDate.toISOString().split('T')[0];
+        
+        dayOptions += `<option value="${fullISODate}">${dayVal}</option>`;
     }
-    // --- NEW DATE LOGIC END ---
 
     body.innerHTML = `
         <div style="text-align:left;">
@@ -532,23 +532,24 @@ window.showPackageDetails = function(pEncoded) {
             </div>
             
             <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
-                <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE (Within 7 Days)</h4>
+                <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;">
-                        <label style="font-size:11px; color:#636e72; font-weight:bold;">DATE</label>
-                        <select id="cust-travel-date" style="width:100%; padding:10px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold;">
-                            ${dateOptions}
+                        <label style="font-size:11px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">STARTING DATE</label>
+                        <select id="cust-travel-date" style="width:100%; padding:10px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; cursor:pointer;">
+                            ${dayOptions}
                         </select>
                     </div>
                     <div style="flex:1;">
-                        <label style="font-size:11px; color:#636e72; font-weight:bold;">MONTH</label>
-                        <input type="text" value="${currentMonth}" disabled style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; background:#eee; text-align:center;">
+                        <label style="font-size:11px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">MONTH</label>
+                        <input type="text" value="${currentMonthLabel}" disabled style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; background:#f0f0f0; color:#666; text-align:center; font-weight:bold;">
                     </div>
                     <div style="flex:1;">
-                        <label style="font-size:11px; color:#636e72; font-weight:bold;">YEAR</label>
-                        <input type="text" value="${currentYear}" disabled style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; background:#eee; text-align:center;">
+                        <label style="font-size:11px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">YEAR</label>
+                        <input type="text" value="${currentYearLabel}" disabled style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; background:#f0f0f0; color:#666; text-align:center; font-weight:bold;">
                     </div>
                 </div>
+                <small style="color:#e67e22; display:block; margin-top:8px;">*Bookings are limited to the next 7 days.</small>
             </div>
 
             <h4>Select Vehicles to Book</h4>
@@ -667,7 +668,6 @@ window.deleteBookingRequest = async function(id) {
     const { error } = await client.from('bookings').delete().eq('id', id);
     if (!error) renderCustomerRequests();
     else alert("Error deleting: " + error.message);
-};
 };
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
