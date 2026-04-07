@@ -41,6 +41,29 @@ input, select {
   box-sizing: border-box;
 }
 
+/* FIX FOR CALENDAR VISIBILITY */
+input[type="date"] {
+  position: relative;
+  min-height: 45px; /* Ensures the box is tall enough for the icon */
+  cursor: pointer;
+}
+
+/* This forces the calendar icon to stay visible and clickable */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    display: block !important;
+    background: transparent;
+    bottom: 0;
+    color: transparent;
+    cursor: pointer;
+    height: auto;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: auto;
+    z-index: 999;
+}
+
 input:focus {
   outline: none;
   border-color: var(--primary-orange);
