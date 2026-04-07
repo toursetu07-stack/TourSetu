@@ -340,29 +340,29 @@ function renderCustomerHomepage(user) {
                 <p style="font-size:1.2rem; margin-bottom:40px; opacity:0.9;">Direct connections with verified local travel agencies</p>
                 
                 <div class="card" style="background:white; padding:30px; border-radius:20px; display:flex; gap:15px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); flex-wrap:wrap;">
-                    <div style="flex:1; min-width:200px; text-align:left;">
-                        <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
-                        <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
-                           <option value="">Select State</option>
-                           ${stateOptions}
-                        </select>
-                     </div>
-                     <div style="flex:1; min-width:200px; text-align:left;">
-                        <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT CITY</label>
-                        <select id="search-start" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
-                           <option value="">Select City First</option>
-                        </select>
-                     </div>
-                    <div style="flex:1; min-width:250px; text-align:left;">
-                        <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">TOUR DESTINATION</label>
-                        <select id="search-dest" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
-                            <option value="">Select Destination</option>
-                            ${destOptions}
-                        </select>
-                    </div>
-                    <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 40px; border-radius:12px; font-weight:bold; cursor:pointer; height:55px; margin-top:22px; font-size:16px;">FIND AGENCIES</button>
-                </div>
-            </div>
+                  <div style="flex:1; min-width:200px; text-align:left;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
+                      <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
+                         <option value="">Select State</option>
+                         ${stateOptions}
+                      </select>
+                   </div>
+                   <div style="flex:1; min-width:200px; text-align:left;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT CITY</label>
+                      <select id="search-start" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
+                         <option value="">Select City First</option>
+                      </select>
+                   </div>
+                  <div style="flex:1; min-width:250px; text-align:left;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">TOUR DESTINATION</label>
+                      <select id="search-dest" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
+                          <option value="">Select Destination</option>
+                          ${destOptions}
+                      </select>
+                  </div>
+                  <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 40px; border-radius:12px; font-weight:bold; cursor:pointer; height:55px; margin-top:22px; font-size:16px;">FIND AGENCIES</button>
+              </div>
+           </div>
 
             <div style="max-width:1200px; margin:auto; padding:50px 20px;">
                <div style="display:flex; justify-content:space-between; align-items:end; margin-bottom:40px; border-bottom:2px solid #eee; padding-bottom:15px;">
@@ -380,7 +380,7 @@ function renderCustomerHomepage(user) {
         </div>
 
         <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center; overflow-y:auto; padding:20px;">
-            <div class="modal-content card" style="background:white; width:100%; max-width:800px; padding:35px; border-radius:20px; position:relative; margin: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.4);">
                 <div id="detail-view-body"></div>
            </div>
         </div>
@@ -393,92 +393,84 @@ window.showPackageDetails = async function(pEncoded) {
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
     
-    // 1. EXTRACT REFERENCE PARAMETERS
+    // --- REFERENCE LINK SYSTEM ---
     const urlParams = new URLSearchParams(window.location.search);
     const refA = urlParams.get('refA') || '';
     const refB = urlParams.get('refB') || '';
 
-    // 2. SET MINIMUM TRAVEL DATE (Today + 8 Days)
-    const today = new Date();
-    today.setDate(today.getDate() + 8);
-    const minDateStr = today.toISOString().split('T')[0];
+    // --- CALENDAR SYSTEM (Today + 8 Days Minimum) ---
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 8);
+    const minDateStr = targetDate.toISOString().split('T')[0];
 
-    // 3. FETCH PREVIOUS DATA FOR AUTO-FILL
+    // Fetch User Info for Address/Phone auto-fill
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
     const { data: lastBooking } = await client.from('bookings').select('customer_address, customer_phone').eq('customer_id', user.id).limit(1).maybeSingle();
 
-    // 4. GENERATE VEHICLE LIST
     const vehicleListHtml = (p.vehicles || []).map(v => `
-        <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:#fcfcfc; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')" style="width:20px; height:20px;">
-                <div>
-                    <span style="font-weight:bold; display:block;">${v.name}</span>
-                    <small style="color:#666;">Available: ${v.max_cars || 1} units</small>
-                    <div id="qty-container-${v.id}" style="display:none; margin-top:10px;">
-                        <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ff9f43; border-radius:5px;">
-                    </div>
+        <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:#fafafa; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')" style="width:20px; height:20px;">
+                    <span><b>${v.name}</b> <br> <small style="color:#666;">Max: ${v.max_cars || 1}</small></span>
                 </div>
+                <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
             </div>
-            <span style="color:#2ecc71; font-weight:bold; font-size:1.1rem;">₹${v.rate}</span>
+            <div id="qty-container-${v.id}" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+                <label style="font-size:11px; font-weight:bold;">Quantity:</label>
+                <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ddd; border-radius:5px;">
+            </div>
         </div>`).join('');
 
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
     const escapedTitle = p.title.replace(/'/g, "\\'");
 
-    // 5. INJECT MODAL CONTENT (With Calendar Visible)
     body.innerHTML = `
-        <div style="position:relative;">
-            <button onclick="document.getElementById('detail-modal').style.display='none'" style="position:absolute; right:-15px; top:-15px; background:#eee; border:none; width:40px; height:40px; border-radius:50%; font-size:20px; cursor:pointer;">✕</button>
+        <div style="text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:20px;">
+                <h2 style="margin:0; color:#2d3436; font-size:1.8rem;">${p.title}</h2>
+                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:#f1f2f6; border:none; width:35px; height:35px; border-radius:50%; font-size:20px; cursor:pointer;">✕</button>
+            </div>
             
-            <h2 style="margin:0; color:#2d3436; font-size:1.8rem;">${p.title}</h2>
-            <div style="background:#e1f5fe; padding:10px; border-radius:8px; margin:15px 0; color:#0288d1; font-weight:bold;">
-                📍 Route: ${routeInfo}
+            <p style="color:#ff9f43; font-weight:bold; margin-bottom:5px;">Route: ${routeInfo}</p>
+            <p style="color:#636e72; font-size:14px; margin-bottom:20px;">Duration: ${p.days || 0} Days / ${p.nights || 0} Nights</p>
+
+            <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:25px; display:block !important;">
+                <label style="font-weight:bold; color:#e67e22; display:block; margin-bottom:10px; font-size:14px;">📅 SELECT TRAVEL DATE (8+ Days From Today)</label>
+                <input type="date" id="cust-travel-date" min="${minDateStr}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:10px; font-weight:bold; background:white; font-size:16px;">
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:25px;">
-                <div style="background:#fff4e6; padding:15px; border-radius:12px; border:1px solid #ffd8a8;">
-                    <label style="display:block; font-weight:bold; color:#d35400; margin-bottom:8px;">📅 Select Travel Date</label>
-                    <input type="date" id="cust-travel-date" min="${minDateStr}" style="width:100%; padding:10px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold;">
-                    <small style="color:#e67e22; font-size:10px; display:block; margin-top:5px;">*Min 8 days gap required</small>
-                </div>
-                <div style="background:#f8f9fa; padding:15px; border-radius:12px; border:1px solid #eee;">
-                    <label style="display:block; font-weight:bold; color:#636e72; margin-bottom:8px;">🕒 Duration</label>
-                    <span style="font-size:1.1rem;">${p.days || 0} Days / ${p.nights || 0} Nights</span>
-                </div>
-            </div>
-
-            <div style="max-height:250px; overflow-y:auto; margin-bottom:20px; padding-right:10px;">
-                <h4 style="margin:0 0 10px 0;">Select Your Vehicles</h4>
+            <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-bottom:20px;">
+                <h4 style="margin:0;">Select Vehicle(s)</h4>
                 ${vehicleListHtml}
             </div>
 
-            <div style="background:#2d3436; color:white; padding:20px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
-                <span style="font-weight:bold; opacity:0.8;">ESTIMATED TOTAL</span>
-                <span id="live-total-display" style="font-size:1.8rem; font-weight:bold; color:#ff9f43;">₹0</span>
+            <div style="background:#2d3436; color:white; padding:15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <span style="font-weight:bold;">TOTAL QUOTATION:</span>
+                <span id="live-total-display" style="font-size:24px; font-weight:bold; color:#ff9f43;">₹0</span>
             </div>
 
-            <div style="display:grid; gap:15px; margin-bottom:20px;">
-                <textarea id="cust-address" placeholder="🏠 Complete Pickup Address..." style="height:60px; padding:12px; border:1px solid #ddd; border-radius:8px;">${lastBooking?.customer_address || ''}</textarea>
-                <input type="text" id="cust-phone" value="${lastBooking?.customer_phone || ''}" placeholder="📞 Mobile Number" style="padding:12px; border:1px solid #ddd; border-radius:8px;">
+            <div style="margin-top:20px; padding:15px; background:#f9f9f9; border-radius:12px;">
+                <h4 style="margin-top:0;">Pickup Details</h4>
+                <textarea id="cust-address" placeholder="Enter Full Pickup Address..." style="height:60px; margin-bottom:10px;">${lastBooking?.customer_address || ''}</textarea>
+                <input type="text" id="cust-phone" value="${lastBooking?.customer_phone || ''}" placeholder="Contact Mobile Number" style="margin-bottom:10px;">
+                
+                <label style="display:flex; align-items:center; gap:10px; padding:10px; background:#eee; border-radius:8px; cursor:pointer; font-size:12px;">
+                    <input type="checkbox" id="refund-policy-check"> I agree to the <b>No Refund</b> (within 7 days) policy and contract.
+                </label>
             </div>
 
-            <label style="display:flex; align-items:center; gap:10px; margin-bottom:25px; padding:15px; background:#f1f2f6; border-radius:10px; cursor:pointer;">
-                <input type="checkbox" id="refund-policy-check" style="width:20px; height:20px;">
-                <span style="font-size:13px;">I agree to the <b>No Refund within 7 days</b> policy and trip contract.</span>
-            </label>
-
-            <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${refA}', '${refB}')" style="width:100%; background:#ff9f43; color:white; padding:18px; font-weight:bold; cursor:pointer; border-radius:12px; border:none; font-size:18px; box-shadow: 0 4px 15px rgba(255,159,67,0.4);">
-                SEND BOOKING REQUEST
-            </button>
+            <div style="margin-top:30px;">
+                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${refA}', '${refB}')" style="width:100%; background:#ff9f43; color:white; padding:18px; font-weight:bold; cursor:pointer; border-radius:12px; border:none; font-size:16px;">SEND BOOKING REQUEST</button>
+            </div>
         </div>
     `;
     modal.style.display = 'flex';
 };
 
 /* =========================================
-   SUPPORTING LOGIC (STRICTLY PRESERVED)
+   SUPPORTING LOGIC (STRICTLY KEPT)
    ========================================= */
 
 window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, refA = '', refB = '') {
@@ -491,12 +483,12 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     const policyAgreed = document.getElementById('refund-policy-check').checked;
 
     if (!address.trim() || !phone.trim() || !travelDate) {
-        alert("❌ Please provide: Travel Date, Address, and Phone Number."); 
+        alert("❌ Missing Information: Travel Date, Pickup Address, and Phone Number are required."); 
         return;
     }
 
     if (!policyAgreed) {
-        alert("❌ You must agree to the policy.");
+        alert("❌ You must agree to the refund policy.");
         return;
     }
 
@@ -511,7 +503,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     });
 
     if (selectedVehicles.length === 0) { 
-        alert("❌ Select at least one vehicle."); 
+        alert("❌ Please select at least one vehicle."); 
         return; 
     }
 
@@ -528,24 +520,23 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             total_price: totalPrice, 
             status: 'pending',
             agency_id: agencyId,
-            referrer_a: refA, // Preservation of Ref Link System
-            referrer_b: refB, // Preservation of Ref Link System
+            referrer_a: refA,
+            referrer_b: refB,
             contract_agreed: true
         }]);
 
         if (!error) {
-            alert(`✅ Success! Booking request sent for ${travelDate}.`);
+            alert(`✅ Success! Request sent for ${travelDate}.`);
             document.getElementById('detail-modal').style.display = 'none';
             renderCustomerRequests();
         } else {
-            alert("Error: " + error.message);
+            alert("Booking Error: " + error.message);
         }
     } catch (e) {
-        alert("Database connection error.");
+        alert("System error. Please check connection.");
     }
 };
 
-// Toggle Qty inputs and update live price
 window.toggleQtyInput = (id) => {
     const container = document.getElementById(`qty-container-${id}`);
     const checkbox = document.querySelector(`.book-v-check[data-id="${id}"]`);
