@@ -32,6 +32,7 @@ h1 {
   margin-bottom: 15px;
 }
 
+/* Base style for all inputs */
 input, select {
   width: 100%;
   padding: 12px;
@@ -41,16 +42,19 @@ input, select {
   box-sizing: border-box;
 }
 
-/* FIX FOR CALENDAR VISIBILITY */
+/* FIX FOR CALENDAR VISIBILITY ON PHONE & LAPTOP */
 input[type="date"] {
   position: relative;
-  min-height: 45px; /* Ensures the box is tall enough for the icon */
+  min-height: 50px; /* Makes it easier to tap on phone */
   cursor: pointer;
+  background-color: white !important;
+  display: block !important;
+  visibility: visible !important;
 }
 
-/* This forces the calendar icon to stay visible and clickable */
+/* This forces the "Calendar Icon" to appear and covers the whole box */
+/* So clicking ANYWHERE in the box opens the calendar */
 input[type="date"]::-webkit-calendar-picker-indicator {
-    display: block !important;
     background: transparent;
     bottom: 0;
     color: transparent;
@@ -61,7 +65,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     right: 0;
     top: 0;
     width: auto;
-    z-index: 999;
+    display: block !important;
+    z-index: 10;
 }
 
 input:focus {
