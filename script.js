@@ -847,7 +847,9 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("Error: " + error.message);
     }
 };
-// 9. AGENCY DASHBOARD
+/* =========================================
+   9. AGENCY DASHBOARD & TAB LOGIC
+   ========================================= */
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
@@ -894,35 +896,23 @@ function renderAgencyDashboard(user) {
     showTab('earnings'); 
 }
 
-window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
-window.executeLogout = async () => { 
-    await getClient().auth.signOut(); 
-    if(typeof renderAuthUI === 'function') renderAuthUI(); 
-    else window.location.reload(); 
-};
-
 window.showTab = async function(tabName) {
     const container = document.getElementById('main-content');
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
-    // Prefetch for notifications and calculations
-    const { data: myPkgs } = await client.from('packages').select('id').eq('agency_id', user.id);
-    const myPkgIds = (myPkgs || []).map(p => p.id);
+    // Prefetch for notifications and calculations (Agency View)
+    // We fetch based on agency_id to find all relevant bookings
+    const { data: allBookings } = await client.from('bookings').select('*').eq('agency_id', user.id);
 
     let pendingCount = 0;
     let totalRevenue = 0;
-    if (myPkgIds.length > 0) {
-        // Get all bookings to calculate revenue and pending count
-        const { data: allBookings } = await client.from('bookings').select('status, total_price').in('package_id', myPkgIds);
-        
-        if (allBookings) {
-            pendingCount = allBookings.filter(b => b.status === 'pending').length;
-            totalRevenue = allBookings
-                .filter(b => b.status === 'paid')
-                .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
-        }
+    if (allBookings) {
+        pendingCount = allBookings.filter(b => b.status === 'pending').length;
+        totalRevenue = allBookings
+            .filter(b => b.status === 'paid')
+            .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
     }
 
     const badge = document.getElementById('bell-badge');
@@ -952,14 +942,14 @@ window.showTab = async function(tabName) {
         container.innerHTML = `<h1>Customer Bookings</h1><div id="booking-list-area">Loading...</div>`;
         const listArea = document.getElementById('booking-list-area');
 
-        if (myPkgIds.length === 0) {
-            listArea.innerHTML = `<p style="padding:20px; color:#666;">No packages created yet. Go to 'My Packages' to start.</p>`;
-            return;
-        }
+        // Fetch bookings directly using the agency_id
+        const { data: bookingsData, error } = await client
+            .from('bookings')
+            .select('*')
+            .eq('agency_id', user.id)
+            .order('created_at', { ascending: false });
 
-        const { data: bookingsData } = await client.from('bookings').select('*').in('package_id', myPkgIds).order('created_at', { ascending: false });
-
-        if (!bookingsData || bookingsData.length === 0) {
+        if (error || !bookingsData || bookingsData.length === 0) {
             listArea.innerHTML = `<p style="padding:20px; color:#666;">No booking requests found.</p>`;
             return;
         }
@@ -974,9 +964,6 @@ window.showTab = async function(tabName) {
             if (b.status === 'cancelled' || b.status === 'denied') statusColor = '#ff7675';
             if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
 
-            // Format travel date for display
-            const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
-
             return `
             <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${statusColor}; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -984,7 +971,7 @@ window.showTab = async function(tabName) {
                         <h3 style="margin:0; color:#2d3436;">${b.package_title}</h3>
                         <div style="margin-top:5px; display:flex; gap:15px; font-size:12px; color:#636e72;">
                              <span>📩 Requested: ${new Date(b.created_at).toLocaleDateString()}</span>
-                             <span style="color:#e67e22; font-weight:bold;">📅 TRAVEL DATE: ${travelDateStr}</span>
+                             <span style="color:#e67e22; font-weight:bold;">📅 TRAVEL DATE: ${b.travel_date}</span>
                         </div>
                     </div>
                     <div style="text-align:right;">
@@ -1028,39 +1015,25 @@ window.showTab = async function(tabName) {
                 <h1>My Packages</h1>
                 <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
             </div>
-            <div id="package-form-area"></div>
             <div id="pkg-list-container">
                 <p style="color:#999;">Loading your packages...</p>
             </div>`;
 
         const pkgList = document.getElementById('pkg-list-container');
-        
-        const { data: myPackages, error } = await client
-            .from('packages')
-            .select('*')
-            .eq('agency_id', user.id)
-            .order('created_at', { ascending: false });
+        const { data: myPackages } = await client.from('packages').select('*').eq('agency_id', user.id).order('created_at', { ascending: false });
 
-        if (error) {
-            pkgList.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
-        } else if (!myPackages || myPackages.length === 0) {
+        if (!myPackages || myPackages.length === 0) {
             pkgList.innerHTML = `<div style="text-align:center; padding:40px; background:white; border-radius:10px; border:2px dashed #ddd; color:#999;">No packages published yet.</div>`;
         } else {
             pkgList.innerHTML = myPackages.map(p => {
-                const destArray = p.destination || p.destinations || [];
-                const destText = Array.isArray(destArray) ? destArray.join(', ') : 'No destinations set';
                 const encoded = encodeURIComponent(JSON.stringify(p));
-
                 return `
                 <div style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); border-left:5px solid #ff9f43;">
                     <div style="flex:1;">
                         <h3 style="margin:0; color:#2d3436;">${p.title || 'Untitled'}</h3>
-                        <p style="margin:5px 0; color:#666; font-size:14px;">
-                            📍 <b>From:</b> ${p.starting_location || 'N/A'} <br>
-                            🌍 <b>To:</b> ${destText}
-                        </p>
+                        <p style="margin:5px 0; color:#666; font-size:14px;">📍 <b>From:</b> ${p.starting_location || 'N/A'}</p>
                     </div>
-                    <button onclick="showPackageForm('${encoded}')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.3s; box-shadow:0 4px 6px rgba(255,159,67,0.2);">✏️ Edit Package</button>
+                    <button onclick="showPackageForm('${encoded}')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold;">✏️ Edit</button>
                 </div>`;
             }).join('');
         }
@@ -1068,79 +1041,93 @@ window.showTab = async function(tabName) {
     else if (tabName === 'profile') {
         const meta = user.user_metadata || {};
         container.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h1>Agency Profile</h1>
-                <button onclick="alert('Profile Editing coming soon!')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 6px rgba(255,159,67,0.2);">✏️ Edit Profile</button>
-            </div>
+            <h1>Agency Profile</h1>
             <div class="card" style="background:white; padding:30px; max-width:600px; border-left:5px solid #ff9f43; border-radius:8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
                 <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">EMAIL</label><h3>${user.email}</h3></div>
-                <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">CONTACT</label><h3 style="color:#ff9f43;">${meta.phone || 'N/A'}</h3></div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
-                    <div><label style="color:#666; font-size:11px; font-weight:bold;">GST</label><p style="margin:5px 0;">${meta.gst || 'N/A'}</p></div>
-                    <div><label style="color:#666; font-size:11px; font-weight:bold;">REG NO</label><p style="margin:5px 0;">${meta.reg_no || 'N/A'}</p></div>
-                </div>
-                <p style="border-top:1px solid #eee; padding-top:15px; font-size:12px; color:#999;">
-                    Status: ${meta.is_approved ? '✅ Verified' : '⏳ Pending Verification'}
-                </p>
+                <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">CONTACT</label><h3>${meta.phone || 'N/A'}</h3></div>
+                <p style="border-top:1px solid #eee; padding-top:15px; font-size:12px; color:#999;">Status: Verified Agency</p>
             </div>`;
     }
 };
 
-window.openActionModal = function(bookingId, type) {
-    const modal = document.getElementById('action-modal');
-    const content = document.getElementById('action-modal-content');
-    modal.style.display = 'flex';
+/* =========================================
+   10. PACKAGE FORM LOGIC
+   ========================================= */
 
-    if (type === 'approved') {
-        content.innerHTML = `
-            <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
-            <p style="font-size:14px; color:#666;">The customer will be notified to proceed with payment.</p>
-            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">CONTACT NO. FOR PAYMENT (Reveal on Pay):</label>
-            <input type="text" id="modal-contact-input" placeholder="e.g. +91 9876543210" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
-            <div style="display:flex; gap:10px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
-                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
-            </div>
-        `;
-    } else {
-        content.innerHTML = `
-            <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
-            <p style="font-size:14px; color:#666;">This will cancel the customer's inquiry.</p>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
-                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
-            </div>
-        `;
+window.updateCities = function() {
+    const stateSelect = document.getElementById('p-state');
+    const citySelect = document.getElementById('p-city');
+    if (!stateSelect || !citySelect) return;
+    const selectedState = stateSelect.value;
+    citySelect.innerHTML = '<option value="">Select City</option>';
+    if (selectedState && locationData[selectedState]) {
+        locationData[selectedState].forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.innerText = city;
+            citySelect.appendChild(opt);
+        });
     }
 };
 
-window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
-
-window.processStatusUpdate = async function(bookingId, newStatus) {
-    const client = getClient();
-    let updateData = { status: newStatus };
-
-    if (newStatus === 'approved') {
-        const contact = document.getElementById('modal-contact-input').value;
-        if (!contact.trim()) { alert("Please enter a contact number!"); return; }
-        updateData.agency_contact = contact;
-    }
-
-    try {
-        const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
-        if (!error) {
-            const content = document.getElementById('action-modal-content');
-            content.innerHTML = `
-                <div style="text-align:center; padding:20px;">
-                    <h3 style="color:${newStatus === 'approved' ? '#2ecc71' : '#ff7675'};">${newStatus === 'approved' ? '✅ Approved' : '🚫 Denied'}</h3>
-                    <button onclick="closeActionModal(); showTab('bookings');" style="background:#2d3436; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-top:10px;">CLOSE</button>
-                </div>`;
-        } else {
-            alert("Database Error: " + error.message);
+window.showPackageForm = function(pEncoded = null) {
+    let pkg = null;
+    try { pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null; } catch (e) {}
+    const isEdit = (pkg && pkg.id);
+    const area = document.getElementById('main-content');
+    
+    const pkgDestinations = isEdit ? (pkg.destinations || pkg.destination || []) : [];
+    const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
+    
+    let selectedState = "";
+    if (isEdit && pkg.starting_location) {
+        for (let s in locationData) {
+            if (locationData[s].includes(pkg.starting_location)) { selectedState = s; break; }
         }
-    } catch (e) {
-        alert("System error. Please try again.");
     }
+
+    const stateOptions = Object.keys(locationData).map(s => `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`).join('');
+    const destHtml = tourDestinations.map(d => `<label style="display:flex; align-items:center; gap:5px; font-size:13px;"><input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}</label>`).join('');
+
+    const vehicleHtml = vehicleTypes.map(v => {
+        const existing = pkgVehicles.find(ev => ev.id === v.id);
+        return `
+        <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:10px; border-radius:10px; margin-bottom:8px;">
+            <input type="checkbox" class="v-enable" data-id="${v.id}" ${existing ? 'checked' : ''}>
+            <b>${v.name}</b>
+            <input type="number" class="v-rate" data-id="${v.id}" placeholder="Rate" style="width:80px;" value="${existing ? existing.rate : ''}">
+            <input type="number" class="v-max" data-id="${v.id}" placeholder="Max" style="width:60px;" value="${existing ? existing.max_cars : '1'}">
+        </div>`;
+    }).join('');
+
+    area.innerHTML = `
+        <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto;">
+            <h3>${isEdit ? '✏️ Edit Package' : '🚀 Create New Package'}</h3>
+            <label>PACKAGE TITLE</label>
+            <input type="text" id="p-title" value="${isEdit ? pkg.title : ''}">
+            
+            <label>PICKUP STATE</label>
+            <select id="p-state" onchange="window.updateCities()">${stateOptions}</select>
+            
+            <label>STARTING CITY</label>
+            <select id="p-city">
+                ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
+            </select>
+            
+            <p><b>Destinations:</b></p>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; max-height:100px; overflow-y:auto; background:#f9f9f9; padding:10px;">${destHtml}</div>
+
+            <p><b>Vehicle Pricing:</b></p>
+            <div>${vehicleHtml}</div>
+
+            <label>ITINERARY DETAILS</label>
+            <textarea id="p-desc" style="height:100px;">${isEdit ? pkg.description : ''}</textarea>
+            
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; padding:15px; font-weight:bold; border-radius:8px; border:none; cursor:pointer;">SAVE</button>
+                <button onclick="window.showTab('packages')" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
+            </div>
+        </div>`;
 };
 /* =========================================
    10 & 11. PACKAGE FORM & SAVE LOGIC (FIXED)
