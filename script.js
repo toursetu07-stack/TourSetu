@@ -502,6 +502,22 @@ window.showPackageDetails = function(pEncoded) {
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
     const escapedTitle = p.title.replace(/'/g, "\\'");
 
+    // --- NEW DATE LOGIC START ---
+    const now = new Date();
+    const currentMonth = now.toLocaleString('default', { month: 'long' });
+    const currentYear = now.getFullYear();
+    
+    // Generate only next 7 days for the date dropdown
+    let dateOptions = "";
+    for (let i = 0; i <= 7; i++) {
+        let d = new Date();
+        d.setDate(now.getDate() + i);
+        const dayNum = d.getDate();
+        const fullValue = d.toISOString().split('T')[0];
+        dateOptions += `<option value="${fullValue}">${dayNum}</option>`;
+    }
+    // --- NEW DATE LOGIC END ---
+
     body.innerHTML = `
         <div style="text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -516,11 +532,23 @@ window.showPackageDetails = function(pEncoded) {
             </div>
             
             <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
-                <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
-                <input type="date" id="cust-travel-date" 
-                       min="${new Date().toISOString().split('T')[0]}" 
-                       onclick="this.showPicker()"
-                       style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit; cursor:pointer;">
+                <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE (Within 7 Days)</h4>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label style="font-size:11px; color:#636e72; font-weight:bold;">DATE</label>
+                        <select id="cust-travel-date" style="width:100%; padding:10px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold;">
+                            ${dateOptions}
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:11px; color:#636e72; font-weight:bold;">MONTH</label>
+                        <input type="text" value="${currentMonth}" disabled style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; background:#eee; text-align:center;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:11px; color:#636e72; font-weight:bold;">YEAR</label>
+                        <input type="text" value="${currentYear}" disabled style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; background:#eee; text-align:center;">
+                    </div>
+                </div>
             </div>
 
             <h4>Select Vehicles to Book</h4>
@@ -639,6 +667,7 @@ window.deleteBookingRequest = async function(id) {
     const { error } = await client.from('bookings').delete().eq('id', id);
     if (!error) renderCustomerRequests();
     else alert("Error deleting: " + error.message);
+};
 };
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
