@@ -317,13 +317,17 @@ async function handleAuth() {
     }
 }
 /* =========================================
-   6. CUSTOMER HOMEPAGE & BOOKING SYSTEM (FIXED)
+   6. CUSTOMER HOMEPAGE & BOOKING SYSTEM (UPDATED)
    ========================================= */
 
 function renderCustomerHomepage(user) {
     const app = document.getElementById('app');
+    // Important: Override the 400px CSS limit so the dashboard can be full-width
     app.style.maxWidth = "100%";
+    app.style.width = "100%";
+    app.style.padding = "0";
     
+    // Get all unique states from locationData
     const stateOptions = Object.keys(locationData).sort().map(state => 
         `<option value="${state}">${state}</option>`
     ).join('');
@@ -333,34 +337,34 @@ function renderCustomerHomepage(user) {
     ).join('');
 
     app.innerHTML = `
-        <div style="font-family:'Inter', sans-serif; background:#f4f7f6; min-height:100vh; margin:-20px;">
+        <div style="font-family:'Inter', sans-serif; background:#f4f7f6; min-height:100vh; margin:0; width:100%;">
             <div style="background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80');
                     height:450px; background-size:cover; background-position:center; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; padding:20px;">
-                <h1 style="font-size:3rem; margin-bottom:10px; text-align:center;">Find Your Perfect Match</h1>
+                <h1 style="font-size:3rem; margin-bottom:10px; text-align:center; color:white;">Find Your Perfect Match</h1>
                 <p style="font-size:1.2rem; margin-bottom:40px; opacity:0.9;">Direct connections with verified local travel agencies</p>
                 
                 <div class="card" style="background:white; padding:30px; border-radius:20px; display:flex; gap:15px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); flex-wrap:wrap;">
                   <div style="flex:1; min-width:200px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
-                      <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px; margin-bottom:5px; display:block;">SELECT STATE</label>
+                      <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; width:100%; height:45px; border-radius:8px; background:white;">
                          <option value="">Select State</option>
                          ${stateOptions}
                       </select>
                    </div>
                    <div style="flex:1; min-width:200px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT CITY</label>
-                      <select id="search-start" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px; margin-bottom:5px; display:block;">SELECT CITY</label>
+                      <select id="search-start" style="border: 2px solid #eee; width:100%; height:45px; border-radius:8px; background:white;">
                          <option value="">Select City First</option>
                       </select>
                    </div>
                   <div style="flex:1; min-width:250px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">TOUR DESTINATION</label>
-                      <select id="search-dest" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px; margin-bottom:5px; display:block;">TOUR DESTINATION</label>
+                      <select id="search-dest" style="border: 2px solid #eee; width:100%; height:45px; border-radius:8px; background:white;">
                           <option value="">Select Destination</option>
                           ${destOptions}
                       </select>
                   </div>
-                  <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 40px; border-radius:12px; font-weight:bold; cursor:pointer; height:55px; margin-top:22px; font-size:16px;">FIND AGENCIES</button>
+                  <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 40px; border-radius:12px; font-weight:bold; cursor:pointer; height:55px; margin-top:20px; font-size:16px; width:auto;">FIND AGENCIES</button>
               </div>
            </div>
 
@@ -371,7 +375,7 @@ function renderCustomerHomepage(user) {
                       <p id="result-subtitle" style="color:#636e72; margin-top:5px;">Explore tours from all over India</p>
                   </div>
                   <div style="display:flex; gap:10px;">
-                    <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
+                    <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none; width:auto;">My Requests</button>
                     <button onclick="executeLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
                   </div>
               </div>
@@ -379,14 +383,84 @@ function renderCustomerHomepage(user) {
             </div>
         </div>
 
-        <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center; overflow-y:auto; padding:20px;">
-            <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.4);">
+        <div id="detail-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:99999; justify-content:center; align-items:center; overflow-y:auto; padding:20px;">
+            <div class="card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
                 <div id="detail-view-body"></div>
            </div>
         </div>
     `;
     loadAllPackages();
 }
+
+window.updateCityDropdown = () => {
+    const state = document.getElementById('search-state').value;
+    const citySelect = document.getElementById('search-start');
+    if (!state) {
+        citySelect.innerHTML = '<option value="">Select City First</option>';
+        return;
+    }
+    const cities = locationData[state] || [];
+    citySelect.innerHTML = cities.sort().map(c => `<option value="${c}">${c}</option>`).join('');
+};
+
+window.renderCustomerRequests = async () => {
+    const container = document.getElementById('customer-pkg-list');
+    const resultTitle = document.getElementById('result-title');
+    const resultSubtitle = document.getElementById('result-subtitle');
+    
+    resultTitle.innerText = "My Trip Requests";
+    resultSubtitle.innerText = "Track your inquiries and booking status";
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Loading your requests...</h3></div>`;
+    
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    const { data, error } = await client.from('bookings').select('*').eq('customer_id', user.id).order('created_at', {ascending: false});
+    
+    if(!data || data.length === 0) {
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px;">
+            <p>No requests found. <span onclick="renderCustomerHomepage()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">Search for packages</span></p>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = data.map(b => {
+        const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : '#ff9f43');
+        const isPending = b.status === 'pending';
+        const isPaid = b.status === 'paid';
+        const isApproved = b.status === 'approved';
+
+        return `
+        <div class="card" style="background:white; padding:25px; border-left:5px solid ${statusColor}; position:relative; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+                <div>
+                    <h3 style="margin:0 0 10px 0; color:#2d3436;">${b.package_title}</h3>
+                    <div style="font-size:13px; color:#636e72;">
+                        <div style="margin-bottom:6px; color:#e67e22; font-weight:bold;">📅 Travel Date: ${b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'}) : 'Not Set'}</div>
+                        <div style="margin-bottom:4px;">🚗 Vehicles: ${b.selected_vehicles}</div>
+                        <div style="margin-top:5px;">Status: <span style="padding:2px 8px; border-radius:10px; font-size:11px; background:#f0f0f0; color:${statusColor}; font-weight:bold;">${b.status.toUpperCase()}</span></div>
+                    </div>
+                </div>
+                ${isPending ? `<button onclick="deleteBookingRequest(${b.id})" style="background:none; border:1px solid #ff7675; color:#ff7675; padding:5px 10px; font-size:12px; border-radius:5px; cursor:pointer; width:auto;">🗑️ Delete</button>` : ''}
+            </div>
+
+            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : '#f8f9fa'}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
+                ${isPaid ? `
+                    <div style="text-align:center;">
+                        <p style="margin:0 0 5px 0; font-size:12px; color:#27ae60; font-weight:bold;">✅ AGENCY CONTACT REVEALED</p>
+                        <h2 style="margin:0; color:#2d3436;">${b.agency_contact || 'Contact info missing'}</h2>
+                        <small style="color:#666;">Call now to coordinate your trip!</small>
+                    </div>
+                ` : `
+                    <div style="text-align:center; color:#636e72;">
+                        <p style="margin:0; font-size:13px;">🔒 Contact Details Locked</p>
+                        <small>Available only after payment is confirmed</small>
+                        ${isApproved ? `<button onclick="simulatePayment(${b.id})" style="margin-top:10px; background:#2ecc71; color:white; width:100%; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">PROCEED TO PAYMENT (₹${b.total_price})</button>` : ''}
+                    </div>
+                `}
+            </div>
+        </div>`;
+    }).join('');
+};
 
 window.showPackageDetails = async function(pEncoded) {
     const p = JSON.parse(decodeURIComponent(pEncoded));
@@ -398,28 +472,27 @@ window.showPackageDetails = async function(pEncoded) {
     const refA = urlParams.get('refA') || '';
     const refB = urlParams.get('refB') || '';
 
-    // --- CALENDAR SYSTEM (Today + 8 Days Minimum) ---
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + 8);
-    const minDateStr = targetDate.toISOString().split('T')[0];
+    // --- CALENDAR SYSTEM (Min Date: Today + 8 Days) ---
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + 8);
+    const minDateStr = minDate.toISOString().split('T')[0];
 
-    // Fetch User Info for Address/Phone auto-fill
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
     const { data: lastBooking } = await client.from('bookings').select('customer_address, customer_phone').eq('customer_id', user.id).limit(1).maybeSingle();
 
     const vehicleListHtml = (p.vehicles || []).map(v => `
-        <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:#fafafa; margin-bottom:10px;">
+        <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:#fff; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')" style="width:20px; height:20px;">
-                    <span><b>${v.name}</b> <br> <small style="color:#666;">Max: ${v.max_cars || 1}</small></span>
+                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')" style="width:20px; height:20px; cursor:pointer;">
+                    <span><b>${v.name}</b> <br> <small style="color:#666;">Available Units: ${v.max_cars || 1}</small></span>
                 </div>
                 <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
             </div>
-            <div id="qty-container-${v.id}" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
-                <label style="font-size:11px; font-weight:bold;">Quantity:</label>
-                <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ddd; border-radius:5px;">
+            <div id="qty-container-${v.id}" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid #f0f0f0;">
+                <label style="font-size:12px; color:#636e72; display:block; margin-bottom:5px;">Quantity:</label>
+                <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:80px; padding:8px; border:2px solid #ff9f43; border-radius:5px;">
             </div>
         </div>`).join('');
 
@@ -428,41 +501,42 @@ window.showPackageDetails = async function(pEncoded) {
 
     body.innerHTML = `
         <div style="text-align:left;">
-            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
                 <h2 style="margin:0; color:#2d3436; font-size:1.8rem;">${p.title}</h2>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:#f1f2f6; border:none; width:35px; height:35px; border-radius:50%; font-size:20px; cursor:pointer;">✕</button>
+                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:28px; color:#999; cursor:pointer; line-height:1;">✕</button>
             </div>
+            <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
             
-            <p style="color:#ff9f43; font-weight:bold; margin-bottom:5px;">Route: ${routeInfo}</p>
-            <p style="color:#636e72; font-size:14px; margin-bottom:20px;">Duration: ${p.days || 0} Days / ${p.nights || 0} Nights</p>
-
-            <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:25px; display:block !important;">
-                <label style="font-weight:bold; color:#e67e22; display:block; margin-bottom:10px; font-size:14px;">📅 SELECT TRAVEL DATE (8+ Days From Today)</label>
-                <input type="date" id="cust-travel-date" min="${minDateStr}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:10px; font-weight:bold; background:white; font-size:16px;">
+            <div style="background:#fff4e6; padding:20px; border-radius:15px; border:2px solid #ff9f43; margin:20px 0; display:block !important; visibility:visible !important;">
+                <h4 style="margin:0 0 10px 0; color:#e67e22; display:flex; align-items:center; gap:8px;">📅 SELECT TRAVEL DATE</h4>
+                <input type="date" id="cust-travel-date" min="${minDateStr}" 
+                       style="display:block !important; visibility:visible !important; width:100% !important; padding:15px !important; border:1px solid #ddd !important; border-radius:10px !important; font-weight:bold !important; background:white !important; cursor:pointer !important; font-size:16px !important; box-sizing:border-box !important;">
+                <p style="font-size:11px; color:#d35400; margin-top:8px;">*Note: Please select a date at least 8 days from today.</p>
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr; gap:10px; margin-bottom:20px;">
-                <h4 style="margin:0;">Select Vehicle(s)</h4>
-                ${vehicleListHtml}
-            </div>
+            <h4 style="margin-bottom:10px;">Select Vehicles</h4>
+            <div style="display:grid; gap:5px;">${vehicleListHtml}</div>
 
-            <div style="background:#2d3436; color:white; padding:15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-weight:bold;">TOTAL QUOTATION:</span>
                 <span id="live-total-display" style="font-size:24px; font-weight:bold; color:#ff9f43;">₹0</span>
             </div>
 
-            <div style="margin-top:20px; padding:15px; background:#f9f9f9; border-radius:12px;">
-                <h4 style="margin-top:0;">Pickup Details</h4>
-                <textarea id="cust-address" placeholder="Enter Full Pickup Address..." style="height:60px; margin-bottom:10px;">${lastBooking?.customer_address || ''}</textarea>
-                <input type="text" id="cust-phone" value="${lastBooking?.customer_phone || ''}" placeholder="Contact Mobile Number" style="margin-bottom:10px;">
+            <div style="margin-top:20px; padding:15px; background:#f8f9fa; border-radius:12px; border:1px solid #eee;">
+                <h4 style="margin-top:0;">Pickup & Contact</h4>
+                <textarea id="cust-address" placeholder="Enter Full Pickup Address..." style="width:100%; height:70px; margin-bottom:10px; padding:12px; border-radius:8px; border:1px solid #ddd;">${lastBooking?.customer_address || ''}</textarea>
+                <input type="text" id="cust-phone" value="${lastBooking?.customer_phone || ''}" placeholder="Contact Mobile Number" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; margin-bottom:10px;">
                 
-                <label style="display:flex; align-items:center; gap:10px; padding:10px; background:#eee; border-radius:8px; cursor:pointer; font-size:12px;">
-                    <input type="checkbox" id="refund-policy-check"> I agree to the <b>No Refund</b> (within 7 days) policy and contract.
+                <label style="display:flex; align-items:center; gap:10px; padding:10px; background:#eee; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;">
+                    <input type="checkbox" id="refund-policy-check" style="width:18px; height:18px;"> I agree to the No-Refund policy (within 7 days).
                 </label>
             </div>
 
             <div style="margin-top:30px;">
-                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${refA}', '${refB}')" style="width:100%; background:#ff9f43; color:white; padding:18px; font-weight:bold; cursor:pointer; border-radius:12px; border:none; font-size:16px;">SEND BOOKING REQUEST</button>
+                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${refA}', '${refB}')" 
+                        style="width:100%; background:#ff9f43; color:white; padding:18px; font-weight:bold; cursor:pointer; border-radius:12px; border:none; font-size:18px;">
+                    SEND BOOKING REQUEST
+                </button>
             </div>
         </div>
     `;
@@ -470,25 +544,44 @@ window.showPackageDetails = async function(pEncoded) {
 };
 
 /* =========================================
-   SUPPORTING LOGIC (STRICTLY KEPT)
+   SUPPORTING LOGIC (Price & Inquiry)
    ========================================= */
+
+window.updateLivePrice = () => {
+    let total = 0;
+    document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
+        const id = checkbox.dataset.id;
+        const rate = parseFloat(checkbox.dataset.rate) || 0;
+        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
+        const qty = parseInt(qtyInput.value) || 1;
+        total += (rate * qty);
+    });
+    const display = document.getElementById('live-total-display');
+    if (display) display.innerText = `₹${total.toLocaleString('en-IN')}`;
+};
+
+window.toggleQtyInput = (id) => {
+    const container = document.getElementById(`qty-container-${id}`);
+    const checkbox = document.querySelector(`.book-v-check[data-id="${id}"]`);
+    if (container) container.style.display = checkbox.checked ? 'block' : 'none';
+    updateLivePrice();
+};
 
 window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, refA = '', refB = '') {
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
-    
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
     const travelDate = document.getElementById('cust-travel-date').value;
     const policyAgreed = document.getElementById('refund-policy-check').checked;
 
     if (!address.trim() || !phone.trim() || !travelDate) {
-        alert("❌ Missing Information: Travel Date, Pickup Address, and Phone Number are required."); 
+        alert("❌ Travel Date, Pickup Address and Phone are mandatory!"); 
         return;
     }
 
     if (!policyAgreed) {
-        alert("❌ You must agree to the refund policy.");
+        alert("❌ You must agree to the tour policy first.");
         return;
     }
 
@@ -526,34 +619,22 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
         }]);
 
         if (!error) {
-            alert(`✅ Success! Request sent for ${travelDate}.`);
+            alert(`✅ Success! Request sent. Total: ₹${totalPrice}`);
             document.getElementById('detail-modal').style.display = 'none';
             renderCustomerRequests();
         } else {
-            alert("Booking Error: " + error.message);
+            alert("Error: " + error.message);
         }
     } catch (e) {
-        alert("System error. Please check connection.");
+        alert("Connection error.");
     }
 };
 
-window.toggleQtyInput = (id) => {
-    const container = document.getElementById(`qty-container-${id}`);
-    const checkbox = document.querySelector(`.book-v-check[data-id="${id}"]`);
-    if (container) container.style.display = checkbox.checked ? 'block' : 'none';
-    updateLivePrice();
-};
-
-window.updateLivePrice = () => {
-    let total = 0;
-    document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
-        const id = checkbox.dataset.id;
-        const rate = parseFloat(checkbox.dataset.rate) || 0;
-        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
-        const qty = parseInt(qtyInput.value) || 1;
-        total += (rate * qty);
-    });
-    document.getElementById('live-total-display').innerText = `₹${total.toLocaleString('en-IN')}`;
+window.deleteBookingRequest = async function(id) {
+    if (!confirm("Cancel this trip request?")) return;
+    const client = getClient();
+    const { error } = await client.from('bookings').delete().eq('id', id);
+    if (!error) renderCustomerRequests();
 };
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
