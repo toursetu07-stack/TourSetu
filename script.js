@@ -317,7 +317,7 @@ async function handleAuth() {
     }
 }
 /* =========================================
-   6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
+   6. CUSTOMER HOMEPAGE & BOOKING SYSTEM (UPDATED)
    ========================================= */
 
 function renderCustomerHomepage(user) {
@@ -459,30 +459,25 @@ window.renderCustomerRequests = async () => {
     }).join('');
 };
 
-window.showPackageDetails = function(pEncoded) {
+window.showPackageDetails = async function(pEncoded) {
     const p = JSON.parse(decodeURIComponent(pEncoded));
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
     
-    const historyList = p.updates_history || [];
-    let historyHtml = '';
-    if (historyList.length > 0) {
-        const historyItems = historyList.map((h, i) => `
-            <div style="padding:8px 0; border-bottom:1px solid #eee; margin-bottom:5px;">
-                <div style="display:flex; justify-content:space-between;">
-                    <b>Update #${i+1}</b>
-                    <span style="font-size:10px; color:#999;">${new Date(h.updated_at).toLocaleDateString()}</span>
-                </div>
-                <div style="margin-top:4px;"><b>Title:</b> ${h.title}</div>
-            </div>`).reverse().join('');
-        
-        historyHtml = `<div style="margin-top:20px; border-top: 1px dashed #ddd; padding-top:15px;">
-            <details>
-                <summary style="cursor:pointer; color:#ff9f43; font-size:13px; font-weight:bold;">View Previous Package Updates (${historyList.length})</summary>
-                <div style="margin-top:10px; font-size:12px; color:#636e72; background:#f9f9f9; padding:10px; border-radius:8px;">${historyItems}</div>
-            </details>
-        </div>`;
-    }
+    // --- REFERENCE LINK SYSTEM ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const refA = urlParams.get('refA') || '';
+    const refB = urlParams.get('refB') || '';
+
+    // --- CALENDAR SYSTEM (Min Date: Today + 8 Days) ---
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + 8);
+    const minDateStr = minDate.toISOString().split('T')[0];
+
+    // User Data for Auto-fill
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    const { data: lastBooking } = await client.from('bookings').select('customer_address, customer_phone').eq('customer_id', user.id).limit(1).maybeSingle();
 
     const vehicleListHtml = (p.vehicles || []).map(v => `
         <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
@@ -509,6 +504,7 @@ window.showPackageDetails = function(pEncoded) {
                 <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:24px; color:#999; cursor:pointer;">✕</button>
             </div>
             <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
+            <p style="font-weight:bold; color:#636e72;">Duration: ${p.days || 0} Days / ${p.nights || 0} Nights</p>
             
             <div style="margin:20px 0; padding:15px; background:#f9f9f9; border-radius:12px; font-size:14px;">
                 <h4 style="margin-top:0;">Itinerary / Description</h4>
@@ -517,15 +513,24 @@ window.showPackageDetails = function(pEncoded) {
             
             <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
                 <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
-                <input type="date" id="cust-travel-date" min="${new Date().toISOString().split('T')[0]}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit;">
+                <p style="font-size:11px; color:#d35400; margin-bottom:8px;">Note: Agencies require at least 8 days for coordination.</p>
+                <input type="date" id="cust-travel-date" min="${minDateStr}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit;">
             </div>
 
             <h4>Select Vehicles to Book</h4>
             <div style="display:grid; gap:5px;">${vehicleListHtml}</div>
 
             <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold;">ESTIMATED TOTAL:</span>
+                <span style="font-weight:bold;">TOTAL PRICE:</span>
                 <span id="live-total-display" style="font-size:22px; font-weight:bold; color:#ff9f43;">₹0</span>
+            </div>
+
+            <div style="margin-top:20px; padding:15px; background:#f1f2f6; border-radius:10px; font-size:13px;">
+                <h4 style="margin:0 0 5px 0; color:#2d3436;">Refund & Cancellation Policy</h4>
+                <p style="color:#636e72; margin:0;">• Cancellation 7 days before tour: Full Refund.<br>• Cancellation within 7 days: No Refund.</p>
+                <label style="display:flex; align-items:center; gap:10px; margin-top:10px; cursor:pointer; font-weight:bold; color:#2d3436;">
+                    <input type="checkbox" id="refund-policy-check" style="width:18px; height:18px;"> I agree to the policy and tour contract.
+                </label>
             </div>
 
             <div style="margin-top:25px; border-top: 2px solid #eee; padding-top:20px;">
@@ -533,19 +538,17 @@ window.showPackageDetails = function(pEncoded) {
                 <div style="display:grid; gap:15px;">
                     <div>
                         <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">🏠 FULL PICKUP ADDRESS</label>
-                        <textarea id="cust-address" placeholder="e.g. Flat 101, Sunny Heights, Sector 15, Meerut..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;"></textarea>
+                        <textarea id="cust-address" placeholder="Enter complete address..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;">${lastBooking?.customer_address || ''}</textarea>
                     </div>
                     <div>
                         <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">📞 MOBILE NUMBER</label>
-                        <input type="text" id="cust-phone" placeholder="Enter 10-digit number" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="text" id="cust-phone" value="${lastBooking?.customer_phone || ''}" placeholder="Enter 10-digit number" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     </div>
                 </div>
             </div>
 
-            ${historyHtml}
-
             <div style="margin-top:30px; display:flex; gap:10px;">
-                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:10px; border:none; transition:0.3s; font-size:16px;">SEND BOOKING REQUEST</button>
+                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${refA}', '${refB}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:10px; border:none; transition:0.3s; font-size:16px;">SEND BOOKING REQUEST</button>
                 <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; background:#eee; padding:15px; border-radius:10px; cursor:pointer; border:none; font-weight:bold; color:#666;">BACK</button>
             </div>
         </div>
@@ -576,15 +579,21 @@ window.toggleQtyInput = (id) => {
     updateLivePrice();
 };
 
-window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) {
+window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, refA = '', refB = '') {
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
     const travelDate = document.getElementById('cust-travel-date').value;
+    const policyAgreed = document.getElementById('refund-policy-check').checked;
 
     if (!address.trim() || !phone.trim() || !travelDate) {
         alert("❌ Please provide travel date, pickup address and phone number!"); 
+        return;
+    }
+
+    if (!policyAgreed) {
+        alert("❌ You must agree to the refund policy and contract before booking.");
         return;
     }
 
@@ -615,7 +624,10 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
             selected_vehicles: selectedVehicles.join(', '),
             total_price: totalPrice, 
             status: 'pending',
-            agency_id: agencyId
+            agency_id: agencyId,
+            referrer_a: refA,
+            referrer_b: refB,
+            contract_agreed: true
         }]);
 
         if (!error) {
