@@ -380,8 +380,8 @@ function renderCustomerHomepage(user) {
             </div>
         </div>
 
-        <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:flex-start; overflow-y:auto; padding:40px 20px;">
-            <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin-bottom: 50px;">
+        <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:start; overflow-y:auto; padding:20px;">
+            <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin: 40px auto;">
                 <div id="detail-view-body"></div>
            </div>
         </div>
@@ -506,7 +506,7 @@ window.showPackageDetails = function(pEncoded) {
         <div style="text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:start;">
                 <h2 style="margin:0; color:#2d3436;">${p.title}</h2>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:28px; color:#999; cursor:pointer; line-height:1;">✕</button>
+                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:24px; color:#999; cursor:pointer;">✕</button>
             </div>
             <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
             
@@ -519,8 +519,7 @@ window.showPackageDetails = function(pEncoded) {
                 <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
                 <input type="date" id="cust-travel-date" 
                        min="${new Date().toISOString().split('T')[0]}" 
-                       style="width:100%; padding:15px; border:2px solid #ff9f43; border-radius:10px; font-weight:bold; color:#2d3436; font-family:inherit; font-size:16px; background:white; display:block; appearance: none; -webkit-appearance: none;">
-                <small style="color:#636e72; display:block; margin-top:5px;">Click the icon or the field to open the calendar</small>
+                       style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit; background:white; display:block !important;">
             </div>
 
             <h4>Select Vehicles to Book</h4>
