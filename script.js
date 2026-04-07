@@ -324,6 +324,7 @@ function renderCustomerHomepage(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
     
+    // Get all unique states from locationData
     const stateOptions = Object.keys(locationData).sort().map(state => 
         `<option value="${state}">${state}</option>`
     ).join('');
@@ -336,7 +337,7 @@ function renderCustomerHomepage(user) {
         <div style="font-family:'Inter', sans-serif; background:#f4f7f6; min-height:100vh; margin:-20px;">
             <div style="background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80');
                     height:450px; background-size:cover; background-position:center; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; padding:20px;">
-                <h1 style="font-size:3rem; margin-bottom:10px; text-align:center; color:white;">Find Your Perfect Match</h1>
+                <h1 style="font-size:3rem; margin-bottom:10px; text-align:center;">Find Your Perfect Match</h1>
                 <p style="font-size:1.2rem; margin-bottom:40px; opacity:0.9;">Direct connections with verified local travel agencies</p>
                 
                 <div class="card" style="background:white; padding:30px; border-radius:20px; display:flex; gap:15px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); flex-wrap:wrap;">
@@ -371,12 +372,18 @@ function renderCustomerHomepage(user) {
                       <p id="result-subtitle" style="color:#636e72; margin-top:5px;">Explore tours from all over India</p>
                   </div>
                   <div style="display:flex; gap:10px;">
-                    <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none; width:auto;">My Requests</button>
+                    <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
                     <button onclick="executeLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
                   </div>
               </div>
                <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap:30px;"></div>
             </div>
+        </div>
+
+        <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; overflow-y:auto; padding:20px;">
+            <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin: auto;">
+                <div id="detail-view-body"></div>
+           </div>
         </div>
     `;
     loadAllPackages();
@@ -393,11 +400,90 @@ window.updateCityDropdown = () => {
     citySelect.innerHTML = cities.sort().map(c => `<option value="${c}">${c}</option>`).join('');
 };
 
+window.renderCustomerRequests = async () => {
+    const container = document.getElementById('customer-pkg-list');
+    const resultTitle = document.getElementById('result-title');
+    const resultSubtitle = document.getElementById('result-subtitle');
+    
+    resultTitle.innerText = "My Trip Requests";
+    resultSubtitle.innerText = "Track your inquiries and booking status";
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Loading your requests...</h3></div>`;
+    
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    const { data, error } = await client.from('bookings').select('*').eq('customer_id', user.id).order('created_at', {ascending: false});
+    
+    if(!data || data.length === 0) {
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px;">
+            <p>No requests found. <span onclick="renderCustomerHomepage()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">Search for packages</span></p>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = data.map(b => {
+        const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : '#ff9f43');
+        const isPending = b.status === 'pending';
+        const isPaid = b.status === 'paid';
+        const isApproved = b.status === 'approved';
+
+        return `
+        <div class="card" style="background:white; padding:25px; border-left:5px solid ${statusColor}; position:relative; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+                <div>
+                    <h3 style="margin:0 0 10px 0; color:#2d3436;">${b.package_title}</h3>
+                    <div style="font-size:13px; color:#636e72;">
+                        <div style="margin-bottom:6px; color:#e67e22; font-weight:bold;">📅 Travel Date: ${b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'}) : 'Not Set'}</div>
+                        <div style="margin-bottom:4px;">🚗 Vehicles: ${b.selected_vehicles}</div>
+                        <div style="margin-top:5px;">Status: <span style="padding:2px 8px; border-radius:10px; font-size:11px; background:#f0f0f0; color:${statusColor}; font-weight:bold;">${b.status.toUpperCase()}</span></div>
+                    </div>
+                </div>
+                ${isPending ? `<button onclick="deleteBookingRequest(${b.id})" style="background:none; border:1px solid #ff7675; color:#ff7675; padding:5px 10px; font-size:12px; border-radius:5px; cursor:pointer;">🗑️ Delete</button>` : ''}
+            </div>
+
+            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : '#f8f9fa'}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
+                ${isPaid ? `
+                    <div style="text-align:center;">
+                        <p style="margin:0 0 5px 0; font-size:12px; color:#27ae60; font-weight:bold;">✅ AGENCY CONTACT REVEALED</p>
+                        <h2 style="margin:0; color:#2d3436;">${b.agency_contact || 'Contact info missing'}</h2>
+                        <small style="color:#666;">Call now to coordinate your trip!</small>
+                    </div>
+                ` : `
+                    <div style="text-align:center; color:#636e72;">
+                        <p style="margin:0; font-size:13px;">🔒 Contact Details Locked</p>
+                        <small>Available only after payment is confirmed</small>
+                        ${isApproved ? `<button onclick="simulatePayment(${b.id})" style="margin-top:10px; background:#2ecc71; color:white; width:100%; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">PROCEED TO PAYMENT (₹${b.total_price})</button>` : ''}
+                    </div>
+                `}
+            </div>
+        </div>`;
+    }).join('');
+};
+
 window.showPackageDetails = function(pEncoded) {
     const p = JSON.parse(decodeURIComponent(pEncoded));
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
     
+    const historyList = p.updates_history || [];
+    let historyHtml = '';
+    if (historyList.length > 0) {
+        const historyItems = historyList.map((h, i) => `
+            <div style="padding:8px 0; border-bottom:1px solid #eee; margin-bottom:5px;">
+                <div style="display:flex; justify-content:space-between;">
+                    <b>Update #${i+1}</b>
+                    <span style="font-size:10px; color:#999;">${new Date(h.updated_at).toLocaleDateString()}</span>
+                </div>
+                <div style="margin-top:4px;"><b>Title:</b> ${h.title}</div>
+            </div>`).reverse().join('');
+        
+        historyHtml = `<div style="margin-top:20px; border-top: 1px dashed #ddd; padding-top:15px;">
+            <details>
+                <summary style="cursor:pointer; color:#ff9f43; font-size:13px; font-weight:bold;">View Previous Package Updates (${historyList.length})</summary>
+                <div style="margin-top:10px; font-size:12px; color:#636e72; background:#f9f9f9; padding:10px; border-radius:8px;">${historyItems}</div>
+            </details>
+        </div>`;
+    }
+
     const vehicleListHtml = (p.vehicles || []).map(v => `
         <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -431,11 +517,7 @@ window.showPackageDetails = function(pEncoded) {
             
             <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
                 <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
-                <input type="date" id="cust-travel-date" 
-                       min="${new Date().toISOString().split('T')[0]}" 
-                       onclick="this.showPicker()"
-                       style="width:100%; padding:15px; border:2px solid #ff9f43; border-radius:10px; font-weight:bold; color:#2d3436; font-family:inherit; font-size:16px; background:white; cursor:pointer;">
-                <small style="color:#636e72; display:block; margin-top:5px;">Tap the box above to open the calendar</small>
+                <input type="date" id="cust-travel-date" min="${new Date().toISOString().split('T')[0]}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit;">
             </div>
 
             <h4>Select Vehicles to Book</h4>
@@ -451,7 +533,7 @@ window.showPackageDetails = function(pEncoded) {
                 <div style="display:grid; gap:15px;">
                     <div>
                         <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">🏠 FULL PICKUP ADDRESS</label>
-                        <textarea id="cust-address" placeholder="Pickup location address..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;"></textarea>
+                        <textarea id="cust-address" placeholder="e.g. Flat 101, Sunny Heights, Sector 15, Meerut..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;"></textarea>
                     </div>
                     <div>
                         <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">📞 MOBILE NUMBER</label>
@@ -460,12 +542,7 @@ window.showPackageDetails = function(pEncoded) {
                 </div>
             </div>
 
-            <div class="policy-container" style="margin-top:20px; display:flex; gap:10px; align-items:start;">
-                <input type="checkbox" id="policy-agree" style="width:20px; height:20px; cursor:pointer;">
-                <label for="policy-agree" style="margin:0; font-size:13px; color:#c0392b; line-height:1.4;">
-                    <b>Cancellation Policy:</b> You can cancel and get a refund any time <b>BEFORE</b> your selected tour start date. However, there is <b>NO REFUND</b> and no cancellation option allowed on the day of your tour or after it starts.
-                </label>
-            </div>
+            ${historyHtml}
 
             <div style="margin-top:30px; display:flex; gap:10px;">
                 <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:10px; border:none; transition:0.3s; font-size:16px;">SEND BOOKING REQUEST</button>
@@ -476,18 +553,40 @@ window.showPackageDetails = function(pEncoded) {
     modal.style.display = 'flex';
 };
 
+/* =========================================
+   SUPPORTING LOGIC
+   ========================================= */
+
+window.updateLivePrice = () => {
+    let total = 0;
+    document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
+        const id = checkbox.dataset.id;
+        const rate = parseFloat(checkbox.dataset.rate) || 0;
+        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
+        const qty = parseInt(qtyInput.value) || 1;
+        total += (rate * qty);
+    });
+    document.getElementById('live-total-display').innerText = `₹${total.toLocaleString('en-IN')}`;
+};
+
+window.toggleQtyInput = (id) => {
+    const container = document.getElementById(`qty-container-${id}`);
+    const checkbox = document.querySelector(`.book-v-check[data-id="${id}"]`);
+    if (container) container.style.display = checkbox.checked ? 'block' : 'none';
+    updateLivePrice();
+};
+
 window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) {
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
-    
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
     const travelDate = document.getElementById('cust-travel-date').value;
-    const policyChecked = document.getElementById('policy-agree').checked;
 
-    if (!travelDate) { alert("❌ Please select a Travel Date!"); return; }
-    if (!address.trim() || !phone.trim()) { alert("❌ Please provide pickup address and phone number!"); return; }
-    if (!policyChecked) { alert("❌ You must agree to the Cancellation & Refund Policy to proceed."); return; }
+    if (!address.trim() || !phone.trim() || !travelDate) {
+        alert("❌ Please provide travel date, pickup address and phone number!"); 
+        return;
+    }
 
     let totalPrice = 0;
     const selectedVehicles = Array.from(document.querySelectorAll('.book-v-check:checked')).map(el => {
@@ -499,7 +598,10 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         return `${qty}x vehicle_id:${id}`;
     });
 
-    if (selectedVehicles.length === 0) { alert("❌ Please select at least one vehicle."); return; }
+    if (selectedVehicles.length === 0) { 
+        alert("❌ Please select at least one vehicle to book."); 
+        return; 
+    }
 
     try {
         const { error } = await client.from('bookings').insert([{
@@ -517,35 +619,23 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         }]);
 
         if (!error) {
-            alert(`✅ Request sent for ${new Date(travelDate).toLocaleDateString()}. Total: ₹${totalPrice}`);
+            alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString()}. Total: ₹${totalPrice}`);
             document.getElementById('detail-modal').style.display = 'none';
             renderCustomerRequests();
         } else {
-            alert("Error: " + error.message);
+            alert("Booking Error: " + error.message);
         }
     } catch (e) {
-        alert("An error occurred. Check your connection.");
+        alert("An error occurred. Please check your connection.");
     }
 };
 
-window.updateLivePrice = () => {
-    let total = 0;
-    document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
-        const id = checkbox.dataset.id;
-        const rate = parseFloat(checkbox.dataset.rate) || 0;
-        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
-        const qty = parseInt(qtyInput.value) || 1;
-        total += (rate * qty);
-    });
-    const display = document.getElementById('live-total-display');
-    if (display) display.innerText = `₹${total.toLocaleString('en-IN')}`;
-};
-
-window.toggleQtyInput = (id) => {
-    const container = document.getElementById(`qty-container-${id}`);
-    const checkbox = document.querySelector(`.book-v-check[data-id="${id}"]`);
-    if (container) container.style.display = checkbox.checked ? 'block' : 'none';
-    updateLivePrice();
+window.deleteBookingRequest = async function(id) {
+    if (!confirm("Are you sure you want to cancel this request?")) return;
+    const client = getClient();
+    const { error } = await client.from('bookings').delete().eq('id', id);
+    if (!error) renderCustomerRequests();
+    else alert("Error deleting: " + error.message);
 };
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
