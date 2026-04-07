@@ -42,32 +42,41 @@ input, select {
   box-sizing: border-box;
 }
 
-/* FIX FOR CALENDAR VISIBILITY ON PHONE & LAPTOP */
+/* --- UPDATED CALENDAR FIX --- */
 input[type="date"] {
   position: relative;
-  min-height: 50px; /* Makes it easier to tap on phone */
+  min-height: 50px;
   cursor: pointer;
   background-color: white !important;
-  display: block !important;
-  visibility: visible !important;
+  /* Ensures the native date appearance is active */
+  -webkit-appearance: listbox !important; 
+  appearance: auto !important;
 }
 
-/* This forces the "Calendar Icon" to appear and covers the whole box */
-/* So clicking ANYWHERE in the box opens the calendar */
+/* Forces the clickable calendar area to cover the entire box */
 input[type="date"]::-webkit-calendar-picker-indicator {
-    background: transparent;
-    bottom: 0;
-    color: transparent;
-    cursor: pointer;
-    height: auto;
-    left: 0;
     position: absolute;
-    right: 0;
     top: 0;
-    width: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    background: transparent;
+    color: transparent;
     display: block !important;
-    z-index: 10;
+    opacity: 1;
 }
+
+/* Ensures a calendar icon is visible on the right if the browser hides it */
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-clear-button {
+    display: block !important;
+}
+/* --- END OF FIX --- */
 
 input:focus {
   outline: none;
