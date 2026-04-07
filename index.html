@@ -11,27 +11,36 @@
     <link rel="stylesheet" href="style.css">
 
     <style>
-        /* Calendar Visibility Fix: Force browser to show date picker icon */
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            display: block !important;
-            background: transparent;
-            bottom: 0;
-            color: transparent;
-            cursor: pointer;
-            height: auto;
-            left: 0;
-            position: absolute;
-            right: 0;
-            top: 0;
-            width: auto;
-        }
+        /* FORCE CALENDAR VISIBILITY */
         input[type="date"] {
+            appearance: auto !important; /* Forces system default */
+            -webkit-appearance: listbox !important;
+            min-height: 50px;
+            cursor: pointer;
+            background-color: #ffffff !important;
+            color: #2d3436 !important;
+            font-family: 'Inter', sans-serif;
             position: relative;
-            min-height: 45px;
+            border: 2px solid #ff9f43 !important;
         }
-        /* Modal depth fix */
+
+        /* This ensures the calendar icon is visible and clickable on Chrome/Edge */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            background-color: #ff9f43;
+            padding: 5px;
+            cursor: pointer;
+            border-radius: 3px;
+            display: block !important;
+            opacity: 1 !important;
+        }
+
+        /* Modal specific depth to ensure calendar pop-up is on top */
         #detail-modal {
-            z-index: 99999 !important;
+            z-index: 999999 !important;
+        }
+
+        .modal-content {
+            z-index: 1000000 !important;
         }
     </style>
 </head>
