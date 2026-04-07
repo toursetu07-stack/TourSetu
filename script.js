@@ -317,15 +317,12 @@ async function handleAuth() {
     }
 }
 /* =========================================
-   6. CUSTOMER HOMEPAGE & BOOKING SYSTEM (UPDATED)
+   6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
    ========================================= */
 
 function renderCustomerHomepage(user) {
     const app = document.getElementById('app');
-    // Important: Override the 400px CSS limit so the dashboard can be full-width
     app.style.maxWidth = "100%";
-    app.style.width = "100%";
-    app.style.padding = "0";
     
     // Get all unique states from locationData
     const stateOptions = Object.keys(locationData).sort().map(state => 
@@ -337,34 +334,34 @@ function renderCustomerHomepage(user) {
     ).join('');
 
     app.innerHTML = `
-        <div style="font-family:'Inter', sans-serif; background:#f4f7f6; min-height:100vh; margin:0; width:100%;">
+        <div style="font-family:'Inter', sans-serif; background:#f4f7f6; min-height:100vh; margin:-20px;">
             <div style="background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80');
                     height:450px; background-size:cover; background-position:center; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; padding:20px;">
-                <h1 style="font-size:3rem; margin-bottom:10px; text-align:center; color:white;">Find Your Perfect Match</h1>
+                <h1 style="font-size:3rem; margin-bottom:10px; text-align:center;">Find Your Perfect Match</h1>
                 <p style="font-size:1.2rem; margin-bottom:40px; opacity:0.9;">Direct connections with verified local travel agencies</p>
                 
                 <div class="card" style="background:white; padding:30px; border-radius:20px; display:flex; gap:15px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); flex-wrap:wrap;">
                   <div style="flex:1; min-width:200px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px; margin-bottom:5px; display:block;">SELECT STATE</label>
-                      <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; width:100%; height:45px; border-radius:8px; background:white;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
+                      <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
                          <option value="">Select State</option>
                          ${stateOptions}
                       </select>
                    </div>
                    <div style="flex:1; min-width:200px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px; margin-bottom:5px; display:block;">SELECT CITY</label>
-                      <select id="search-start" style="border: 2px solid #eee; width:100%; height:45px; border-radius:8px; background:white;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT CITY</label>
+                      <select id="search-start" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
                          <option value="">Select City First</option>
                       </select>
                    </div>
                   <div style="flex:1; min-width:250px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px; margin-bottom:5px; display:block;">TOUR DESTINATION</label>
-                      <select id="search-dest" style="border: 2px solid #eee; width:100%; height:45px; border-radius:8px; background:white;">
+                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">TOUR DESTINATION</label>
+                      <select id="search-dest" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
                           <option value="">Select Destination</option>
                           ${destOptions}
                       </select>
                   </div>
-                  <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 40px; border-radius:12px; font-weight:bold; cursor:pointer; height:55px; margin-top:20px; font-size:16px; width:auto;">FIND AGENCIES</button>
+                  <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 40px; border-radius:12px; font-weight:bold; cursor:pointer; height:55px; margin-top:22px; font-size:16px;">FIND AGENCIES</button>
               </div>
            </div>
 
@@ -375,7 +372,7 @@ function renderCustomerHomepage(user) {
                       <p id="result-subtitle" style="color:#636e72; margin-top:5px;">Explore tours from all over India</p>
                   </div>
                   <div style="display:flex; gap:10px;">
-                    <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none; width:auto;">My Requests</button>
+                    <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
                     <button onclick="executeLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
                   </div>
               </div>
@@ -383,8 +380,8 @@ function renderCustomerHomepage(user) {
             </div>
         </div>
 
-        <div id="detail-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:99999; justify-content:center; align-items:center; overflow-y:auto; padding:20px;">
-            <div class="card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+        <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:flex-start; overflow-y:auto; padding:40px 20px;">
+            <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin-bottom: 50px;">
                 <div id="detail-view-body"></div>
            </div>
         </div>
@@ -440,7 +437,7 @@ window.renderCustomerRequests = async () => {
                         <div style="margin-top:5px;">Status: <span style="padding:2px 8px; border-radius:10px; font-size:11px; background:#f0f0f0; color:${statusColor}; font-weight:bold;">${b.status.toUpperCase()}</span></div>
                     </div>
                 </div>
-                ${isPending ? `<button onclick="deleteBookingRequest(${b.id})" style="background:none; border:1px solid #ff7675; color:#ff7675; padding:5px 10px; font-size:12px; border-radius:5px; cursor:pointer; width:auto;">🗑️ Delete</button>` : ''}
+                ${isPending ? `<button onclick="deleteBookingRequest(${b.id})" style="background:none; border:1px solid #ff7675; color:#ff7675; padding:5px 10px; font-size:12px; border-radius:5px; cursor:pointer;">🗑️ Delete</button>` : ''}
             </div>
 
             <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : '#f8f9fa'}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
@@ -462,27 +459,33 @@ window.renderCustomerRequests = async () => {
     }).join('');
 };
 
-window.showPackageDetails = async function(pEncoded) {
+window.showPackageDetails = function(pEncoded) {
     const p = JSON.parse(decodeURIComponent(pEncoded));
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
     
-    // --- REFERENCE LINK SYSTEM ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const refA = urlParams.get('refA') || '';
-    const refB = urlParams.get('refB') || '';
-
-    // --- CALENDAR SYSTEM (Min Date: Today + 8 Days) ---
-    const minDate = new Date();
-    minDate.setDate(minDate.getDate() + 8);
-    const minDateStr = minDate.toISOString().split('T')[0];
-
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-    const { data: lastBooking } = await client.from('bookings').select('customer_address, customer_phone').eq('customer_id', user.id).limit(1).maybeSingle();
+    const historyList = p.updates_history || [];
+    let historyHtml = '';
+    if (historyList.length > 0) {
+        const historyItems = historyList.map((h, i) => `
+            <div style="padding:8px 0; border-bottom:1px solid #eee; margin-bottom:5px;">
+                <div style="display:flex; justify-content:space-between;">
+                    <b>Update #${i+1}</b>
+                    <span style="font-size:10px; color:#999;">${new Date(h.updated_at).toLocaleDateString()}</span>
+                </div>
+                <div style="margin-top:4px;"><b>Title:</b> ${h.title}</div>
+            </div>`).reverse().join('');
+        
+        historyHtml = `<div style="margin-top:20px; border-top: 1px dashed #ddd; padding-top:15px;">
+            <details>
+                <summary style="cursor:pointer; color:#ff9f43; font-size:13px; font-weight:bold;">View Previous Package Updates (${historyList.length})</summary>
+                <div style="margin-top:10px; font-size:12px; color:#636e72; background:#f9f9f9; padding:10px; border-radius:8px;">${historyItems}</div>
+            </details>
+        </div>`;
+    }
 
     const vehicleListHtml = (p.vehicles || []).map(v => `
-        <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:#fff; margin-bottom:10px;">
+        <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')" style="width:20px; height:20px; cursor:pointer;">
@@ -491,7 +494,7 @@ window.showPackageDetails = async function(pEncoded) {
                 <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
             </div>
             <div id="qty-container-${v.id}" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid #f0f0f0;">
-                <label style="font-size:12px; color:#636e72; display:block; margin-bottom:5px;">Quantity:</label>
+                <label style="font-size:12px; color:#636e72; display:block; margin-bottom:5px;">Quantity (Max: ${v.max_cars || 1})</label>
                 <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:80px; padding:8px; border:2px solid #ff9f43; border-radius:5px;">
             </div>
         </div>`).join('');
@@ -502,41 +505,51 @@ window.showPackageDetails = async function(pEncoded) {
     body.innerHTML = `
         <div style="text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:start;">
-                <h2 style="margin:0; color:#2d3436; font-size:1.8rem;">${p.title}</h2>
+                <h2 style="margin:0; color:#2d3436;">${p.title}</h2>
                 <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:28px; color:#999; cursor:pointer; line-height:1;">✕</button>
             </div>
             <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
             
-            <div style="background:#fff4e6; padding:20px; border-radius:15px; border:2px solid #ff9f43; margin:20px 0; display:block !important; visibility:visible !important;">
-                <h4 style="margin:0 0 10px 0; color:#e67e22; display:flex; align-items:center; gap:8px;">📅 SELECT TRAVEL DATE</h4>
-                <input type="date" id="cust-travel-date" min="${minDateStr}" 
-                       style="display:block !important; visibility:visible !important; width:100% !important; padding:15px !important; border:1px solid #ddd !important; border-radius:10px !important; font-weight:bold !important; background:white !important; cursor:pointer !important; font-size:16px !important; box-sizing:border-box !important;">
-                <p style="font-size:11px; color:#d35400; margin-top:8px;">*Note: Please select a date at least 8 days from today.</p>
+            <div style="margin:20px 0; padding:15px; background:#f9f9f9; border-radius:12px; font-size:14px;">
+                <h4 style="margin-top:0;">Itinerary / Description</h4>
+                <p style="white-space: pre-line; color:#636e72; line-height:1.6;">${p.description || 'No description provided.'}</p>
+            </div>
+            
+            <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
+                <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
+                <input type="date" id="cust-travel-date" 
+                       min="${new Date().toISOString().split('T')[0]}" 
+                       style="width:100%; padding:15px; border:2px solid #ff9f43; border-radius:10px; font-weight:bold; color:#2d3436; font-family:inherit; font-size:16px; background:white; display:block; appearance: none; -webkit-appearance: none;">
+                <small style="color:#636e72; display:block; margin-top:5px;">Click the icon or the field to open the calendar</small>
             </div>
 
-            <h4 style="margin-bottom:10px;">Select Vehicles</h4>
+            <h4>Select Vehicles to Book</h4>
             <div style="display:grid; gap:5px;">${vehicleListHtml}</div>
 
-            <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold;">TOTAL QUOTATION:</span>
-                <span id="live-total-display" style="font-size:24px; font-weight:bold; color:#ff9f43;">₹0</span>
+            <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold;">ESTIMATED TOTAL:</span>
+                <span id="live-total-display" style="font-size:22px; font-weight:bold; color:#ff9f43;">₹0</span>
             </div>
 
-            <div style="margin-top:20px; padding:15px; background:#f8f9fa; border-radius:12px; border:1px solid #eee;">
-                <h4 style="margin-top:0;">Pickup & Contact</h4>
-                <textarea id="cust-address" placeholder="Enter Full Pickup Address..." style="width:100%; height:70px; margin-bottom:10px; padding:12px; border-radius:8px; border:1px solid #ddd;">${lastBooking?.customer_address || ''}</textarea>
-                <input type="text" id="cust-phone" value="${lastBooking?.customer_phone || ''}" placeholder="Contact Mobile Number" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; margin-bottom:10px;">
-                
-                <label style="display:flex; align-items:center; gap:10px; padding:10px; background:#eee; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;">
-                    <input type="checkbox" id="refund-policy-check" style="width:18px; height:18px;"> I agree to the No-Refund policy (within 7 days).
-                </label>
+            <div style="margin-top:25px; border-top: 2px solid #eee; padding-top:20px;">
+                <h4 style="margin-top:0; color:#2d3436;">Pickup & Contact Details</h4>
+                <div style="display:grid; gap:15px;">
+                    <div>
+                        <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">🏠 FULL PICKUP ADDRESS</label>
+                        <textarea id="cust-address" placeholder="e.g. Flat 101, Sunny Heights, Sector 15, Meerut..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;"></textarea>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">📞 MOBILE NUMBER</label>
+                        <input type="text" id="cust-phone" placeholder="Enter 10-digit number" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    </div>
+                </div>
             </div>
 
-            <div style="margin-top:30px;">
-                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${refA}', '${refB}')" 
-                        style="width:100%; background:#ff9f43; color:white; padding:18px; font-weight:bold; cursor:pointer; border-radius:12px; border:none; font-size:18px;">
-                    SEND BOOKING REQUEST
-                </button>
+            ${historyHtml}
+
+            <div style="margin-top:30px; display:flex; gap:10px;">
+                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:10px; border:none; transition:0.3s; font-size:16px;">SEND BOOKING REQUEST</button>
+                <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; background:#eee; padding:15px; border-radius:10px; cursor:pointer; border:none; font-weight:bold; color:#666;">BACK</button>
             </div>
         </div>
     `;
@@ -544,7 +557,7 @@ window.showPackageDetails = async function(pEncoded) {
 };
 
 /* =========================================
-   SUPPORTING LOGIC (Price & Inquiry)
+   SUPPORTING LOGIC
    ========================================= */
 
 window.updateLivePrice = () => {
@@ -556,8 +569,7 @@ window.updateLivePrice = () => {
         const qty = parseInt(qtyInput.value) || 1;
         total += (rate * qty);
     });
-    const display = document.getElementById('live-total-display');
-    if (display) display.innerText = `₹${total.toLocaleString('en-IN')}`;
+    document.getElementById('live-total-display').innerText = `₹${total.toLocaleString('en-IN')}`;
 };
 
 window.toggleQtyInput = (id) => {
@@ -567,21 +579,15 @@ window.toggleQtyInput = (id) => {
     updateLivePrice();
 };
 
-window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, refA = '', refB = '') {
+window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) {
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
     const travelDate = document.getElementById('cust-travel-date').value;
-    const policyAgreed = document.getElementById('refund-policy-check').checked;
 
     if (!address.trim() || !phone.trim() || !travelDate) {
-        alert("❌ Travel Date, Pickup Address and Phone are mandatory!"); 
-        return;
-    }
-
-    if (!policyAgreed) {
-        alert("❌ You must agree to the tour policy first.");
+        alert("❌ Please provide travel date, pickup address and phone number!"); 
         return;
     }
 
@@ -596,7 +602,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     });
 
     if (selectedVehicles.length === 0) { 
-        alert("❌ Please select at least one vehicle."); 
+        alert("❌ Please select at least one vehicle to book."); 
         return; 
     }
 
@@ -612,29 +618,27 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             selected_vehicles: selectedVehicles.join(', '),
             total_price: totalPrice, 
             status: 'pending',
-            agency_id: agencyId,
-            referrer_a: refA,
-            referrer_b: refB,
-            contract_agreed: true
+            agency_id: agencyId
         }]);
 
         if (!error) {
-            alert(`✅ Success! Request sent. Total: ₹${totalPrice}`);
+            alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString()}. Total: ₹${totalPrice}`);
             document.getElementById('detail-modal').style.display = 'none';
             renderCustomerRequests();
         } else {
-            alert("Error: " + error.message);
+            alert("Booking Error: " + error.message);
         }
     } catch (e) {
-        alert("Connection error.");
+        alert("An error occurred. Please check your connection.");
     }
 };
 
 window.deleteBookingRequest = async function(id) {
-    if (!confirm("Cancel this trip request?")) return;
+    if (!confirm("Are you sure you want to cancel this request?")) return;
     const client = getClient();
     const { error } = await client.from('bookings').delete().eq('id', id);
     if (!error) renderCustomerRequests();
+    else alert("Error deleting: " + error.message);
 };
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
