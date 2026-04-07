@@ -464,40 +464,20 @@ window.showPackageDetails = async function(pEncoded) {
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
     
-    // Referral Check from URL
+    // Referral Check
     const urlParams = new URLSearchParams(window.location.search);
     const refA = urlParams.get('refA') || '';
     const refB = urlParams.get('refB') || '';
 
-    // Calculate Min Date (Today + 8 Days)
+    // Min Date (Today + 8 Days)
     const minDate = new Date();
     minDate.setDate(minDate.getDate() + 8);
     const minDateStr = minDate.toISOString().split('T')[0];
 
-    // Fetch user's last address/phone if available
+    // User Data
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
-    const { data: lastBooking } = await client.from('bookings').select('customer_address, customer_phone').eq('customer_id', user.id).limit(1).single();
-
-    const historyList = p.updates_history || [];
-    let historyHtml = '';
-    if (historyList.length > 0) {
-        const historyItems = historyList.map((h, i) => `
-            <div style="padding:8px 0; border-bottom:1px solid #eee; margin-bottom:5px;">
-                <div style="display:flex; justify-content:space-between;">
-                    <b>Update #${i+1}</b>
-                    <span style="font-size:10px; color:#999;">${new Date(h.updated_at).toLocaleDateString()}</span>
-                </div>
-                <div style="margin-top:4px;"><b>Title:</b> ${h.title}</div>
-            </div>`).reverse().join('');
-        
-        historyHtml = `<div style="margin-top:20px; border-top: 1px dashed #ddd; padding-top:15px;">
-            <details>
-                <summary style="cursor:pointer; color:#ff9f43; font-size:13px; font-weight:bold;">View Previous Package Updates (${historyList.length})</summary>
-                <div style="margin-top:10px; font-size:12px; color:#636e72; background:#f9f9f9; padding:10px; border-radius:8px;">${historyItems}</div>
-            </details>
-        </div>`;
-    }
+    const { data: lastBooking } = await client.from('bookings').select('customer_address, customer_phone').eq('customer_id', user.id).limit(1).maybeSingle();
 
     const vehicleListHtml = (p.vehicles || []).map(v => `
         <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
@@ -524,6 +504,7 @@ window.showPackageDetails = async function(pEncoded) {
                 <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:24px; color:#999; cursor:pointer;">✕</button>
             </div>
             <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
+            <p style="font-weight:bold; color:#636e72;">Duration: ${p.days || 0} Days / ${p.nights || 0} Nights</p>
             
             <div style="margin:20px 0; padding:15px; background:#f9f9f9; border-radius:12px; font-size:14px;">
                 <h4 style="margin-top:0;">Itinerary / Description</h4>
@@ -532,7 +513,7 @@ window.showPackageDetails = async function(pEncoded) {
             
             <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
                 <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
-                <p style="font-size:11px; color:#d35400; margin-bottom:8px;">Note: Agencies require at least 8 days to prepare for your trip.</p>
+                <p style="font-size:11px; color:#d35400; margin-bottom:8px;">Note: Agencies require at least 8 days for coordination.</p>
                 <input type="date" id="cust-travel-date" min="${minDateStr}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit;">
             </div>
 
@@ -540,7 +521,7 @@ window.showPackageDetails = async function(pEncoded) {
             <div style="display:grid; gap:5px;">${vehicleListHtml}</div>
 
             <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold;">ESTIMATED TOTAL:</span>
+                <span style="font-weight:bold;">TOTAL PRICE:</span>
                 <span id="live-total-display" style="font-size:22px; font-weight:bold; color:#ff9f43;">₹0</span>
             </div>
 
@@ -557,7 +538,7 @@ window.showPackageDetails = async function(pEncoded) {
                 <div style="display:grid; gap:15px;">
                     <div>
                         <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">🏠 FULL PICKUP ADDRESS</label>
-                        <textarea id="cust-address" placeholder="e.g. Flat 101, Sunny Heights..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;">${lastBooking?.customer_address || ''}</textarea>
+                        <textarea id="cust-address" placeholder="Enter complete address..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;">${lastBooking?.customer_address || ''}</textarea>
                     </div>
                     <div>
                         <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">📞 MOBILE NUMBER</label>
@@ -565,8 +546,6 @@ window.showPackageDetails = async function(pEncoded) {
                     </div>
                 </div>
             </div>
-
-            ${historyHtml}
 
             <div style="margin-top:30px; display:flex; gap:10px;">
                 <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${refA}', '${refB}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:10px; border:none; transition:0.3s; font-size:16px;">SEND BOOKING REQUEST</button>
