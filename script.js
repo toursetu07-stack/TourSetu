@@ -712,19 +712,33 @@ window.showPackageDetails = function(pEncoded) {
     const vehicleList = p.vehicles || [];
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
 
+    // --- THREE-BOX SELECTION SYSTEM LOGIC ---
+    const today = new Date();
+    const currentMonthLabel = today.toLocaleString('default', { month: 'long' });
+    const currentYearLabel = today.getFullYear();
+
+    let dayOptions = "";
+    for (let i = 0; i <= 7; i++) {
+        let futureDate = new Date();
+        futureDate.setDate(today.getDate() + i);
+        const dayVal = futureDate.getDate();
+        const fullISODate = futureDate.toISOString().split('T')[0];
+        dayOptions += `<option value="${fullISODate}">${dayVal}</option>`;
+    }
+
     // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
         <div style="padding:12px; border:1px solid #eee; border-radius:10px; margin-bottom:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')">
-                    <b>${v.name}</b>
+                    <span><b>${v.name}</b> <br> <small style="color:#666;">Available: ${v.max_cars || 1}</small></span>
                 </div>
                 <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
             </div>
-            <div id="qty-container-${v.id}" style="display:none; margin-top:10px;">
-                <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:60px;">
-                <small>Max: ${v.max_cars || 1}</small>
+            <div id="qty-container-${v.id}" style="display:none; margin-top:10px; border-top:1px solid #f0f0f0; padding-top:10px;">
+                <label style="font-size:11px; color:#666;">Quantity:</label>
+                <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:60px; padding:5px; border:1px solid #ddd; border-radius:4px;">
             </div>
         </div>`).join('');
 
@@ -739,18 +753,38 @@ window.showPackageDetails = function(pEncoded) {
             <div style="margin:15px 0; padding:10px; background:#f9f9f9; border-radius:8px;">
                 <p style="white-space: pre-line; font-size:14px;">${p.description || 'No description.'}</p>
             </div>
+
+            <div style="background:#fff4e6; padding:15px; border-radius:12px; border:1px solid #ffd8a8; margin-bottom:20px;">
+                <h4 style="margin-top:0; color:#e67e22; font-size:13px;">📅 SELECT TRAVEL DATE</h4>
+                <div style="display:flex; gap:8px;">
+                    <div style="flex:1;">
+                        <label style="font-size:10px; color:#666; font-weight:bold;">DAY</label>
+                        <select id="cust-travel-date" style="width:100%; padding:8px; border:2px solid #ff9f43; border-radius:6px; font-weight:bold;">
+                            ${dayOptions}
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:10px; color:#666; font-weight:bold;">MONTH</label>
+                        <input type="text" value="${currentMonthLabel}" disabled style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; background:#f0f0f0; text-align:center;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:10px; color:#666; font-weight:bold;">YEAR</label>
+                        <input type="text" value="${currentYearLabel}" disabled style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; background:#f0f0f0; text-align:center;">
+                    </div>
+                </div>
+            </div>
             
             <h4>Select Vehicles</h4>
             ${vehicleHtml}
 
-            <div style="background:#2d3436; color:white; padding:15px; border-radius:8px; margin-top:15px; display:flex; justify-content:space-between;">
-                <span>TOTAL:</span>
-                <span id="live-total-display" style="color:#ff9f43; font-weight:bold;">₹0</span>
+            <div style="background:#2d3436; color:white; padding:15px; border-radius:8px; margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold;">TOTAL:</span>
+                <span id="live-total-display" style="color:#ff9f43; font-weight:bold; font-size:1.2rem;">₹0</span>
             </div>
 
-            <div style="margin-top:20px;">
-                <input type="text" id="cust-phone" placeholder="Phone Number" style="width:100%; margin-bottom:10px; padding:10px;">
-                <textarea id="cust-address" placeholder="Pickup Address" style="width:100%; height:60px; padding:10px;"></textarea>
+            <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
+                <input type="text" id="cust-phone" placeholder="Mobile Number" style="width:100%; margin-bottom:10px; padding:12px; border:1px solid #ddd; border-radius:8px;">
+                <textarea id="cust-address" placeholder="Full Pickup Address" style="width:100%; height:60px; padding:12px; border:1px solid #ddd; border-radius:8px;"></textarea>
             </div>
 
             <div style="margin-top:20px; display:flex; gap:10px;">
@@ -759,22 +793,20 @@ window.showPackageDetails = function(pEncoded) {
                     data-pkg-title="${p.title}" 
                     data-agency-id="${p.agency_id}"
                     onclick="initiateBooking(this)" 
-                    style="flex:2; background:#ff9f43; color:white; border:none; padding:15px; font-weight:bold; border-radius:8px; cursor:pointer;">
+                    style="flex:2; background:#ff9f43; color:white; border:none; padding:15px; font-weight:bold; border-radius:10px; cursor:pointer; font-size:15px;">
                     SEND BOOKING REQUEST
                 </button>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; border:none; border-radius:8px; cursor:pointer;">BACK</button>
+                <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; border:none; background:#eee; border-radius:10px; cursor:pointer; font-weight:bold; color:#666;">BACK</button>
             </div>
         </div>`;
     modal.style.display = 'flex';
 };
 
-// THE BOOKING INITIATOR (Uses the button's data attributes)
+// THE BOOKING INITIATOR
 window.initiateBooking = function(btnElement) {
     const packageId = btnElement.getAttribute('data-pkg-id');
     const packageTitle = btnElement.getAttribute('data-pkg-title');
     const agencyId = btnElement.getAttribute('data-agency-id');
-    
-    // Now call your logic function
     handleBookingInquiry(packageId, packageTitle, agencyId);
 };
 
@@ -783,16 +815,18 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     const { data: { user } } = await client.auth.getUser();
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
+    const travelDate = document.getElementById('cust-travel-date').value;
 
-    if (!address.trim() || !phone.trim()) {
-        alert("Enter phone and address!"); return;
+    if (!address.trim() || !phone.trim() || !travelDate) {
+        alert("Enter travel date, phone, and address!"); return;
     }
 
     let totalPrice = 0;
     const selectedVehicles = Array.from(document.querySelectorAll('.book-v-check:checked')).map(el => {
         const id = el.dataset.id;
         const rate = parseFloat(el.dataset.rate) || 0;
-        const qty = parseInt(document.querySelector(`.book-v-qty[data-id="${id}"]`).value) || 1;
+        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
+        const qty = parseInt(qtyInput.value) || 1;
         totalPrice += (rate * qty);
         return `${qty}x vehicle_id:${id}`;
     });
@@ -806,6 +840,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         customer_email: user.email,
         customer_address: address, 
         customer_phone: phone,
+        travel_date: travelDate, // Saved from the Three-Box dropdown
         selected_vehicles: selectedVehicles.join(', '),
         total_price: totalPrice, 
         status: 'pending',
@@ -813,7 +848,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     }]);
 
     if (!error) {
-        alert("Booking Sent!");
+        alert("Booking Sent Successfully!");
         document.getElementById('detail-modal').style.display = 'none';
         renderCustomerRequests();
     } else {
