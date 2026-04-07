@@ -517,7 +517,10 @@ window.showPackageDetails = function(pEncoded) {
             
             <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
                 <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
-                <input type="date" id="cust-travel-date" min="${new Date().toISOString().split('T')[0]}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit;">
+                <input type="date" id="cust-travel-date" 
+                       min="${new Date().toISOString().split('T')[0]}" 
+                       onclick="this.showPicker()"
+                       style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit; cursor:pointer;">
             </div>
 
             <h4>Select Vehicles to Book</h4>
@@ -554,7 +557,7 @@ window.showPackageDetails = function(pEncoded) {
 };
 
 /* =========================================
-   SUPPORTING LOGIC
+    SUPPORTING LOGIC
    ========================================= */
 
 window.updateLivePrice = () => {
