@@ -712,14 +712,14 @@ window.showPackageDetails = function(pEncoded) {
     const vehicleList = p.vehicles || [];
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
 
-    // --- CALENDAR 7-DAY SYSTEM LOGIC ---
+    // --- CALENDAR SYSTEM LOGIC (7 DAYS ONLY) ---
     const today = new Date();
-    const futureLimit = new Date();
-    futureLimit.setDate(today.getDate() + 7);
+    const maxDate = new Date();
+    maxDate.setDate(today.getDate() + 7);
 
-    // Format dates to YYYY-MM-DD for the input attributes
-    const minDate = today.toISOString().split('T')[0];
-    const maxDate = futureLimit.toISOString().split('T')[0];
+    // Format for HTML input (YYYY-MM-DD)
+    const minStr = today.toISOString().split('T')[0];
+    const maxStr = maxDate.toISOString().split('T')[0];
 
     // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
@@ -751,12 +751,15 @@ window.showPackageDetails = function(pEncoded) {
 
             <div style="background:#fff4e6; padding:15px; border-radius:12px; border:1px solid #ffd8a8; margin-bottom:20px;">
                 <h4 style="margin-top:0; color:#e67e22; font-size:13px;">📅 SELECT TRAVEL DATE</h4>
-                <input type="date" id="cust-travel-date" 
-                    min="${minDate}" 
-                    max="${maxDate}" 
-                    value="${minDate}"
-                    style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; font-family:inherit;">
-                <small style="color:#666; font-size:10px; margin-top:5px; display:block;">* You can book for dates between ${minDate} and ${maxDate}</small>
+                <div style="display:grid; gap:5px;">
+                    <label style="font-size:10px; color:#666; font-weight:bold;">CHOOSE DATE (DD-MM-YYYY)</label>
+                    <input type="date" id="cust-travel-date" 
+                        min="${minStr}" 
+                        max="${maxStr}" 
+                        value="${minStr}"
+                        style="width:100%; padding:10px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; font-family:inherit;">
+                    <small style="color:#e67e22; font-size:10px;">* Only dates within the next 7 days are allowed.</small>
+                </div>
             </div>
             
             <h4>Select Vehicles</h4>
@@ -800,11 +803,15 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     const { data: { user } } = await client.auth.getUser();
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
-    const travelDate = document.getElementById('cust-travel-date').value;
+    const rawDate = document.getElementById('cust-travel-date').value; // YYYY-MM-DD
 
-    if (!address.trim() || !phone.trim() || !travelDate) {
+    if (!address.trim() || !phone.trim() || !rawDate) {
         alert("Enter travel date, phone, and address!"); return;
     }
+
+    // Convert YYYY-MM-DD to DD-MM-YYYY for display/storage preference
+    const dateParts = rawDate.split('-');
+    const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
 
     let totalPrice = 0;
     const selectedVehicles = Array.from(document.querySelectorAll('.book-v-check:checked')).map(el => {
@@ -825,7 +832,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         customer_email: user.email,
         customer_address: address, 
         customer_phone: phone,
-        travel_date: travelDate, 
+        travel_date: formattedDate, // Now sending as DD-MM-YYYY
         selected_vehicles: selectedVehicles.join(', '),
         total_price: totalPrice, 
         status: 'pending',
