@@ -433,7 +433,9 @@ window.showPackageDetails = function(pEncoded) {
                 <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
                 <input type="date" id="cust-travel-date" 
                        min="${new Date().toISOString().split('T')[0]}" 
-                       style="display:block !important; visibility:visible !important; width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit; background:white;">
+                       onclick="this.showPicker()"
+                       style="width:100%; padding:15px; border:2px solid #ff9f43; border-radius:10px; font-weight:bold; color:#2d3436; font-family:inherit; font-size:16px; background:white; cursor:pointer;">
+                <small style="color:#636e72; display:block; margin-top:5px;">Tap the box above to open the calendar</small>
             </div>
 
             <h4>Select Vehicles to Book</h4>
@@ -458,8 +460,8 @@ window.showPackageDetails = function(pEncoded) {
                 </div>
             </div>
 
-            <div class="policy-container">
-                <input type="checkbox" id="policy-agree">
+            <div class="policy-container" style="margin-top:20px; display:flex; gap:10px; align-items:start;">
+                <input type="checkbox" id="policy-agree" style="width:20px; height:20px; cursor:pointer;">
                 <label for="policy-agree" style="margin:0; font-size:13px; color:#c0392b; line-height:1.4;">
                     <b>Cancellation Policy:</b> You can cancel and get a refund any time <b>BEFORE</b> your selected tour start date. However, there is <b>NO REFUND</b> and no cancellation option allowed on the day of your tour or after it starts.
                 </label>
@@ -535,7 +537,8 @@ window.updateLivePrice = () => {
         const qty = parseInt(qtyInput.value) || 1;
         total += (rate * qty);
     });
-    document.getElementById('live-total-display').innerText = `₹${total.toLocaleString('en-IN')}`;
+    const display = document.getElementById('live-total-display');
+    if (display) display.innerText = `₹${total.toLocaleString('en-IN')}`;
 };
 
 window.toggleQtyInput = (id) => {
