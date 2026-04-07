@@ -712,19 +712,14 @@ window.showPackageDetails = function(pEncoded) {
     const vehicleList = p.vehicles || [];
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
 
-    // --- THREE-BOX SELECTION SYSTEM LOGIC ---
+    // --- CALENDAR 7-DAY SYSTEM LOGIC ---
     const today = new Date();
-    const currentMonthLabel = today.toLocaleString('default', { month: 'long' });
-    const currentYearLabel = today.getFullYear();
+    const futureLimit = new Date();
+    futureLimit.setDate(today.getDate() + 7);
 
-    let dayOptions = "";
-    for (let i = 0; i <= 7; i++) {
-        let futureDate = new Date();
-        futureDate.setDate(today.getDate() + i);
-        const dayVal = futureDate.getDate();
-        const fullISODate = futureDate.toISOString().split('T')[0];
-        dayOptions += `<option value="${fullISODate}">${dayVal}</option>`;
-    }
+    // Format dates to YYYY-MM-DD for the input attributes
+    const minDate = today.toISOString().split('T')[0];
+    const maxDate = futureLimit.toISOString().split('T')[0];
 
     // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
@@ -756,22 +751,12 @@ window.showPackageDetails = function(pEncoded) {
 
             <div style="background:#fff4e6; padding:15px; border-radius:12px; border:1px solid #ffd8a8; margin-bottom:20px;">
                 <h4 style="margin-top:0; color:#e67e22; font-size:13px;">📅 SELECT TRAVEL DATE</h4>
-                <div style="display:flex; gap:8px;">
-                    <div style="flex:1;">
-                        <label style="font-size:10px; color:#666; font-weight:bold;">DAY</label>
-                        <select id="cust-travel-date" style="width:100%; padding:8px; border:2px solid #ff9f43; border-radius:6px; font-weight:bold;">
-                            ${dayOptions}
-                        </select>
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:10px; color:#666; font-weight:bold;">MONTH</label>
-                        <input type="text" value="${currentMonthLabel}" disabled style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; background:#f0f0f0; text-align:center;">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:10px; color:#666; font-weight:bold;">YEAR</label>
-                        <input type="text" value="${currentYearLabel}" disabled style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; background:#f0f0f0; text-align:center;">
-                    </div>
-                </div>
+                <input type="date" id="cust-travel-date" 
+                    min="${minDate}" 
+                    max="${maxDate}" 
+                    value="${minDate}"
+                    style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; font-family:inherit;">
+                <small style="color:#666; font-size:10px; margin-top:5px; display:block;">* You can book for dates between ${minDate} and ${maxDate}</small>
             </div>
             
             <h4>Select Vehicles</h4>
@@ -840,7 +825,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         customer_email: user.email,
         customer_address: address, 
         customer_phone: phone,
-        travel_date: travelDate, // Saved from the Three-Box dropdown
+        travel_date: travelDate, 
         selected_vehicles: selectedVehicles.join(', '),
         total_price: totalPrice, 
         status: 'pending',
