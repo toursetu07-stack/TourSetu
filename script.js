@@ -243,7 +243,7 @@ async function handleAuth() {
     }
 }
 /* =========================================
-   5. AUTHENTICATION (The "handleAuth" Function)
+   5. AUTHENTICATION & SESSION LOGIC
    ========================================= */
 
 async function handleAuth() {
@@ -274,7 +274,12 @@ async function handleAuth() {
             // LOGIN LOGIC
             const { data, error } = await client.auth.signInWithPassword({ email, password });
             if (error) throw error;
+            
+            // Login successful
             showDashboard(data.user);
+            // Optional: refresh page to clear any old state
+            window.location.reload(); 
+
         } else {
             // SIGNUP LOGIC
             const role = document.getElementById('role').value;
@@ -292,21 +297,18 @@ async function handleAuth() {
                 password, 
                 options: { 
                     data: metadata,
-                    // FIX: Removed the double "emailRedirectTo:" and replaced with your actual link
                     emailRedirectTo: "https://toursetu-app.netlify.app"
                 } 
             });
 
             if (error) throw error;
             
-            // Success UI for Email Confirmation
             status.innerHTML = `
                 <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
                     <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
-                    A link was sent to <b>${email}</b>. You must verify your email before you can log in to TourSetu.
+                    A link was sent to <b>${email}</b>. You must verify your email before you can log in.
                 </div>`;
             
-            // Clear inputs for security and better UI
             emailInput.value = "";
             passwordInput.value = "";
         }
@@ -316,6 +318,43 @@ async function handleAuth() {
         btn.disabled = false;
     }
 }
+
+/* --- LOGOUT SYSTEM FUNCTIONS --- */
+
+// 1. Show the Logout Modal
+window.confirmLogout = function() {
+    const modal = document.getElementById('logout-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    } else {
+        // Simple alert fallback if modal element is not found
+        if (confirm("Are you sure you want to logout?")) {
+            executeLogout();
+        }
+    }
+};
+
+// 2. Perform the actual logout
+window.executeLogout = async function() {
+    const client = getClient();
+    try {
+        const { error } = await client.auth.signOut();
+        if (error) throw error;
+
+        // Clear session data
+        localStorage.clear();
+        
+        // Hide modal and refresh page to show login screen
+        const modal = document.getElementById('logout-modal');
+        if (modal) modal.style.display = 'none';
+        
+        window.location.reload();
+
+    } catch (err) {
+        console.error("Logout Error:", err.message);
+        alert("Logout failed: " + err.message);
+    }
+};
 /* =========================================
    6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
    ========================================= */
