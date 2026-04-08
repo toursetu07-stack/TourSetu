@@ -243,7 +243,7 @@ async function handleAuth() {
     }
 }
 /* =========================================
-   5. AUTHENTICATION & SESSION LOGIC
+   5. AUTHENTICATION (The "handleAuth" Function)
    ========================================= */
 
 async function handleAuth() {
@@ -274,12 +274,7 @@ async function handleAuth() {
             // LOGIN LOGIC
             const { data, error } = await client.auth.signInWithPassword({ email, password });
             if (error) throw error;
-            
-            // Login successful
             showDashboard(data.user);
-            // Optional: refresh page to clear any old state
-            window.location.reload(); 
-
         } else {
             // SIGNUP LOGIC
             const role = document.getElementById('role').value;
@@ -297,18 +292,21 @@ async function handleAuth() {
                 password, 
                 options: { 
                     data: metadata,
+                    // FIX: Removed the double "emailRedirectTo:" and replaced with your actual link
                     emailRedirectTo: "https://toursetu-app.netlify.app"
                 } 
             });
 
             if (error) throw error;
             
+            // Success UI for Email Confirmation
             status.innerHTML = `
                 <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
                     <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
-                    A link was sent to <b>${email}</b>. You must verify your email before you can log in.
+                    A link was sent to <b>${email}</b>. You must verify your email before you can log in to TourSetu.
                 </div>`;
             
+            // Clear inputs for security and better UI
             emailInput.value = "";
             passwordInput.value = "";
         }
@@ -318,43 +316,6 @@ async function handleAuth() {
         btn.disabled = false;
     }
 }
-
-/* --- LOGOUT SYSTEM FUNCTIONS --- */
-
-// 1. Show the Logout Modal
-window.confirmLogout = function() {
-    const modal = document.getElementById('logout-modal');
-    if (modal) {
-        modal.style.display = 'flex';
-    } else {
-        // Simple alert fallback if modal element is not found
-        if (confirm("Are you sure you want to logout?")) {
-            executeLogout();
-        }
-    }
-};
-
-// 2. Perform the actual logout
-window.executeLogout = async function() {
-    const client = getClient();
-    try {
-        const { error } = await client.auth.signOut();
-        if (error) throw error;
-
-        // Clear session data
-        localStorage.clear();
-        
-        // Hide modal and refresh page to show login screen
-        const modal = document.getElementById('logout-modal');
-        if (modal) modal.style.display = 'none';
-        
-        window.location.reload();
-
-    } catch (err) {
-        console.error("Logout Error:", err.message);
-        alert("Logout failed: " + err.message);
-    }
-};
 /* =========================================
    6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
    ========================================= */
@@ -419,8 +380,8 @@ function renderCustomerHomepage(user) {
             </div>
         </div>
 
-        <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; overflow-y:auto; padding:20px;">
-            <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin: auto;">
+        <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:flex-start; overflow-y:auto; padding:40px 20px;">
+            <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin-bottom: 50px;">
                 <div id="detail-view-body"></div>
            </div>
         </div>
@@ -545,7 +506,7 @@ window.showPackageDetails = function(pEncoded) {
         <div style="text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:start;">
                 <h2 style="margin:0; color:#2d3436;">${p.title}</h2>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:24px; color:#999; cursor:pointer;">✕</button>
+                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:28px; color:#999; cursor:pointer; line-height:1;">✕</button>
             </div>
             <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
             
@@ -556,7 +517,10 @@ window.showPackageDetails = function(pEncoded) {
             
             <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
                 <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
-                <input type="date" id="cust-travel-date" min="${new Date().toISOString().split('T')[0]}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit;">
+                <input type="date" id="cust-travel-date" 
+                       min="${new Date().toISOString().split('T')[0]}" 
+                       style="width:100%; padding:15px; border:2px solid #ff9f43; border-radius:10px; font-weight:bold; color:#2d3436; font-family:inherit; font-size:16px; background:white; display:block; appearance: none; -webkit-appearance: none;">
+                <small style="color:#636e72; display:block; margin-top:5px;">Click the icon or the field to open the calendar</small>
             </div>
 
             <h4>Select Vehicles to Book</h4>
@@ -747,17 +711,9 @@ window.showPackageDetails = function(pEncoded) {
     const body = document.getElementById('detail-view-body');
     
     // Calculate values outside the string to prevent SyntaxErrors
+    const historyList = p.updates_history || [];
     const vehicleList = p.vehicles || [];
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
-
-    // --- CALENDAR SYSTEM LOGIC (7 DAYS ONLY) ---
-    const today = new Date();
-    const maxDate = new Date();
-    maxDate.setDate(today.getDate() + 7);
-
-    // Format for HTML input (YYYY-MM-DD)
-    const minStr = today.toISOString().split('T')[0];
-    const maxStr = maxDate.toISOString().split('T')[0];
 
     // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
@@ -765,13 +721,13 @@ window.showPackageDetails = function(pEncoded) {
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')">
-                    <span><b>${v.name}</b> <br> <small style="color:#666;">Available: ${v.max_cars || 1}</small></span>
+                    <b>${v.name}</b>
                 </div>
                 <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
             </div>
-            <div id="qty-container-${v.id}" style="display:none; margin-top:10px; border-top:1px solid #f0f0f0; padding-top:10px;">
-                <label style="font-size:11px; color:#666;">Quantity:</label>
-                <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:60px; padding:5px; border:1px solid #ddd; border-radius:4px;">
+            <div id="qty-container-${v.id}" style="display:none; margin-top:10px;">
+                <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:60px;">
+                <small>Max: ${v.max_cars || 1}</small>
             </div>
         </div>`).join('');
 
@@ -786,31 +742,18 @@ window.showPackageDetails = function(pEncoded) {
             <div style="margin:15px 0; padding:10px; background:#f9f9f9; border-radius:8px;">
                 <p style="white-space: pre-line; font-size:14px;">${p.description || 'No description.'}</p>
             </div>
-
-            <div style="background:#fff4e6; padding:15px; border-radius:12px; border:1px solid #ffd8a8; margin-bottom:20px;">
-                <h4 style="margin-top:0; color:#e67e22; font-size:13px;">📅 SELECT TRAVEL DATE</h4>
-                <div style="display:grid; gap:5px;">
-                    <label style="font-size:10px; color:#666; font-weight:bold;">CHOOSE DATE (DD-MM-YYYY)</label>
-                    <input type="date" id="cust-travel-date" 
-                        min="${minStr}" 
-                        max="${maxStr}" 
-                        value="${minStr}"
-                        style="width:100%; padding:10px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; font-family:inherit;">
-                    <small style="color:#e67e22; font-size:10px;">* Only dates within the next 7 days are allowed.</small>
-                </div>
-            </div>
             
             <h4>Select Vehicles</h4>
             ${vehicleHtml}
 
-            <div style="background:#2d3436; color:white; padding:15px; border-radius:8px; margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold;">TOTAL:</span>
-                <span id="live-total-display" style="color:#ff9f43; font-weight:bold; font-size:1.2rem;">₹0</span>
+            <div style="background:#2d3436; color:white; padding:15px; border-radius:8px; margin-top:15px; display:flex; justify-content:space-between;">
+                <span>TOTAL:</span>
+                <span id="live-total-display" style="color:#ff9f43; font-weight:bold;">₹0</span>
             </div>
 
-            <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
-                <input type="text" id="cust-phone" placeholder="Mobile Number" style="width:100%; margin-bottom:10px; padding:12px; border:1px solid #ddd; border-radius:8px;">
-                <textarea id="cust-address" placeholder="Full Pickup Address" style="width:100%; height:60px; padding:12px; border:1px solid #ddd; border-radius:8px;"></textarea>
+            <div style="margin-top:20px;">
+                <input type="text" id="cust-phone" placeholder="Phone Number" style="width:100%; margin-bottom:10px; padding:10px;">
+                <textarea id="cust-address" placeholder="Pickup Address" style="width:100%; height:60px; padding:10px;"></textarea>
             </div>
 
             <div style="margin-top:20px; display:flex; gap:10px;">
@@ -819,50 +762,46 @@ window.showPackageDetails = function(pEncoded) {
                     data-pkg-title="${p.title}" 
                     data-agency-id="${p.agency_id}"
                     onclick="initiateBooking(this)" 
-                    style="flex:2; background:#ff9f43; color:white; border:none; padding:15px; font-weight:bold; border-radius:10px; cursor:pointer; font-size:15px;">
+                    style="flex:2; background:#ff9f43; color:white; border:none; padding:15px; font-weight:bold; border-radius:8px; cursor:pointer;">
                     SEND BOOKING REQUEST
                 </button>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; border:none; background:#eee; border-radius:10px; cursor:pointer; font-weight:bold; color:#666;">BACK</button>
+                <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; border:none; border-radius:8px; cursor:pointer;">BACK</button>
             </div>
         </div>`;
     modal.style.display = 'flex';
 };
 
-// THE BOOKING INITIATOR
+// THE BOOKING INITIATOR (Uses the button's data attributes)
 window.initiateBooking = function(btnElement) {
     const packageId = btnElement.getAttribute('data-pkg-id');
     const packageTitle = btnElement.getAttribute('data-pkg-title');
     const agencyId = btnElement.getAttribute('data-agency-id');
+    
+    // Now call your logic function
     handleBookingInquiry(packageId, packageTitle, agencyId);
 };
 
 window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) {
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
-    if (!user) { alert("Please login first!"); return; }
-
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
-    const rawDate = document.getElementById('cust-travel-date').value; // This is YYYY-MM-DD
 
-    if (!address.trim() || !phone.trim() || !rawDate) {
-        alert("Enter travel date, phone, and address!"); return;
+    if (!address.trim() || !phone.trim()) {
+        alert("Enter phone and address!"); return;
     }
 
     let totalPrice = 0;
     const selectedVehicles = Array.from(document.querySelectorAll('.book-v-check:checked')).map(el => {
         const id = el.dataset.id;
         const rate = parseFloat(el.dataset.rate) || 0;
-        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
-        const qty = parseInt(qtyInput.value) || 1;
+        const qty = parseInt(document.querySelector(`.book-v-qty[data-id="${id}"]`).value) || 1;
         totalPrice += (rate * qty);
         return `${qty}x vehicle_id:${id}`;
     });
 
     if (selectedVehicles.length === 0) { alert("Select a vehicle!"); return; }
 
-    // --- FIX: SEND DATE AS YYYY-MM-DD TO SUPABASE ---
-    // This prevents the "date/time field value out of range" error
     const { error } = await client.from('bookings').insert([{
         package_id: packageId, 
         package_title: packageTitle,
@@ -870,7 +809,6 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         customer_email: user.email,
         customer_address: address, 
         customer_phone: phone,
-        travel_date: rawDate, // Supabase/Postgres needs YYYY-MM-DD
         selected_vehicles: selectedVehicles.join(', '),
         total_price: totalPrice, 
         status: 'pending',
@@ -878,36 +816,12 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     }]);
 
     if (!error) {
-        alert("✅ Booking Request Sent Successfully!");
+        alert("Booking Sent!");
         document.getElementById('detail-modal').style.display = 'none';
-        if (typeof renderCustomerRequests === 'function') renderCustomerRequests();
+        renderCustomerRequests();
     } else {
-        console.error("Booking Error:", error);
-        alert("❌ Error: " + error.message);
+        alert("Error: " + error.message);
     }
-};
-
-// Helper function to update total price live
-window.updateLivePrice = function() {
-    let total = 0;
-    document.querySelectorAll('.book-v-check:checked').forEach(el => {
-        const id = el.dataset.id;
-        const rate = parseFloat(el.dataset.rate) || 0;
-        const qty = parseInt(document.querySelector(`.book-v-qty[data-id="${id}"]`).value) || 1;
-        total += (rate * qty);
-    });
-    const display = document.getElementById('live-total-display');
-    if (display) display.innerText = `₹${total.toLocaleString('en-IN')}`;
-};
-
-// Helper function to toggle quantity inputs
-window.toggleQtyInput = function(id) {
-    const container = document.getElementById(`qty-container-${id}`);
-    const checkbox = document.querySelector(`.book-v-check[data-id="${id}"]`);
-    if (container && checkbox) {
-        container.style.display = checkbox.checked ? 'block' : 'none';
-    }
-    updateLivePrice();
 };
 // 9. AGENCY DASHBOARD
 function renderAgencyDashboard(user) {
@@ -1205,96 +1119,120 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
     }
 };
 /* =========================================
-   10. PACKAGE FORM & SAVE LOGIC (WITH DATE FIX)
+   10 & 11. PACKAGE FORM & SAVE LOGIC (FIXED)
    ========================================= */
 
-window.processSave = async function(pkgId) {
-    const btn = document.getElementById('save-btn');
-    if (btn) { btn.disabled = true; btn.innerText = "Saving..."; }
-    
-    const client = getClient();
-    
-    try {
-        const { data: { user } } = await client.auth.getUser();
-        const title = document.getElementById('p-title').value;
-        const city = document.getElementById('p-city').value;
-        const desc = document.getElementById('p-desc').value;
+// 10A. HELPER: Populates the City dropdown based on selected State
+window.updateCities = function() {
+    const stateSelect = document.getElementById('p-state');
+    const citySelect = document.getElementById('p-city');
+    if (!stateSelect || !citySelect) return;
 
-        // Collect inputs
-        const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(cb => cb.value);
-        const vehicleData = Array.from(document.querySelectorAll('.v-enable:checked')).map(cb => {
-            const id = cb.getAttribute('data-id');
-            return {
-                id: id,
-                rate: parseFloat(document.querySelector(`.v-rate[data-id="${id}"]`).value) || 0,
-                max_cars: parseInt(document.querySelector(`.v-max[data-id="${id}"]`).value) || 1
-            };
+    const selectedState = stateSelect.value;
+    citySelect.innerHTML = '<option value="">Select City</option>';
+
+    if (selectedState && locationData[selectedState]) {
+        locationData[selectedState].forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.innerText = city;
+            citySelect.appendChild(opt);
         });
-
-        if (!title || !city || selectedDests.length === 0 || vehicleData.length === 0) {
-            throw new Error("Missing required fields (Title, City, Destinations, or Vehicles).");
-        }
-
-        const pkgPayload = {
-            title,
-            starting_location: city,
-            destinations: selectedDests,
-            vehicles: vehicleData,
-            description: desc,
-            agency_id: user.id,
-            agency_email: user.email
-        };
-
-        let res;
-        if (pkgId && pkgId !== "undefined" && pkgId !== "") {
-            res = await client.from('packages').update(pkgPayload).eq('id', pkgId);
-        } else {
-            res = await client.from('packages').insert([pkgPayload]);
-        }
-
-        if (res.error) throw res.error;
-        
-        alert("✅ Package saved successfully!");
-        window.showTab('packages'); 
-
-    } catch (err) {
-        alert("❌ Error: " + err.message);
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE";
-        }
     }
 };
 
-// Helper for Package Tab Rendering
-async function renderPackagesTab(container, user, client) {
-    container.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-            <h1>My Packages</h1>
-            <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+ Create New Package</button>
-        </div>
-        <div id="pkg-list-container"><p style="color:#999;">Loading...</p></div>`;
-
-    const pkgList = document.getElementById('pkg-list-container');
-    const { data: myPackages } = await client.from('packages').select('*').eq('agency_id', user.id).order('created_at', { ascending: false });
-
-    if (!myPackages || myPackages.length === 0) {
-        pkgList.innerHTML = `<div style="text-align:center; padding:60px; background:white; border-radius:15px; border:2px dashed #ccc; color:#999;">No packages published yet. Start by creating one!</div>`;
-    } else {
-        pkgList.innerHTML = myPackages.map(p => {
-            const encoded = encodeURIComponent(JSON.stringify(p));
-            return `
-            <div style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 6px rgba(0,0,0,0.03); border-left:5px solid #ff9f43;">
-                <div>
-                    <h3 style="margin:0; color:#2d3436;">${p.title}</h3>
-                    <p style="margin:5px 0; color:#666; font-size:14px;">📍 From ${p.starting_location}</p>
-                </div>
-                <button onclick="showPackageForm('${encoded}')" style="background:#ff9f43; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">Edit Details</button>
-            </div>`;
-        }).join('');
+// 10B. RENDER FORM: Shows the Create/Edit UI
+window.showPackageForm = function(pEncoded = null) {
+    let pkg = null;
+    try {
+        pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
+    } catch (e) { 
+        console.error("Decoding error:", e); 
     }
-}
+    
+    const isEdit = (pkg && pkg.id);
+    const area = document.getElementById('main-content');
+    if (!area) return;
+    
+    // Support both naming conventions for safety
+    const pkgDestinations = isEdit ? (pkg.destinations || pkg.destination || []) : [];
+    const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
+    
+    let selectedState = "";
+    if (isEdit && pkg.starting_location) {
+        for (let s in locationData) {
+            if (locationData[s].includes(pkg.starting_location)) { 
+                selectedState = s; 
+                break; 
+            }
+        }
+    }
+
+    const stateOptions = Object.keys(locationData).map(s => 
+        `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`
+    ).join('');
+
+    const destHtml = tourDestinations.map(d => `
+        <label style="display:flex; align-items:center; gap:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px; cursor:pointer;">
+            <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}
+        </label>
+    `).join('');
+
+    const vehicleHtml = vehicleTypes.map(v => {
+        const existing = pkgVehicles.find(ev => ev.id === v.id);
+        return `
+        <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:10px; border-radius:10px; border:1px solid #ffeaa7; margin-bottom:8px;">
+            <input type="checkbox" class="v-enable" data-id="${v.id}" ${existing ? 'checked' : ''}>
+            <span style="font-size:20px;">${v.icon || '🚗'}</span>
+            <b style="flex:1;">${v.name}</b>
+            <input type="number" class="v-rate" data-id="${v.id}" placeholder="Rate" style="width:80px; padding:5px;" value="${existing ? existing.rate : ''}">
+            <input type="number" class="v-max" data-id="${v.id}" placeholder="Max" style="width:60px; padding:5px;" value="${existing ? existing.max_cars : '1'}">
+        </div>`;
+    }).join('');
+
+    area.innerHTML = `
+        <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
+            <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🚀 Create New Package'}</h3>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                <div>
+                    <label style="font-size:11px; font-weight:bold; color:#666;">PACKAGE TITLE</label>
+                    <input type="text" id="p-title" placeholder="e.g. 3 Days Kedarnath Trip" value="${isEdit ? pkg.title : ''}">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:bold; color:#666;">PICKUP STATE</label>
+                    <select id="p-state" onchange="window.updateCities()">
+                        <option value="">Select State</option>
+                        ${stateOptions}
+                    </select>
+                </div>
+            </div>
+
+            <label style="font-size:11px; font-weight:bold; color:#666;">STARTING CITY</label>
+            <select id="p-city">
+                ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
+            </select>
+            
+            <p><b>Destinations:</b></p>
+            <div style="background:#f9f9f9; padding:15px; border-radius:10px; max-height:150px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:8px; border:1px solid #eee; margin-bottom:20px;">
+                ${destHtml}
+            </div>
+
+            <p><b>Vehicle Pricing:</b></p>
+            <div style="margin-bottom:20px;">${vehicleHtml}</div>
+
+            <label style="font-size:11px; font-weight:bold; color:#666;">ITINERARY DETAILS</label>
+            <textarea id="p-desc" style="height:120px;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
+            
+            <div style="display:flex; gap:10px; margin-top:25px;">
+                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold;">
+                    ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
+                </button>
+                <button onclick="window.showTab('packages')" style="background:#eee; flex:1;">Cancel</button>
+            </div>
+        </div>`;
+};
+
 // 11. SAVE LOGIC: Sends data to Supabase (FIXED COLUMN NAMES)
 window.processSave = async function(pkgId) {
     const btn = document.getElementById('save-btn');
