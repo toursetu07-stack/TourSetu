@@ -711,9 +711,21 @@ window.showPackageDetails = function(pEncoded) {
     const body = document.getElementById('detail-view-body');
     
     // Calculate values outside the string to prevent SyntaxErrors
-    const historyList = p.updates_history || [];
     const vehicleList = p.vehicles || [];
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
+
+    // --- CALENDAR SYSTEM LOGIC (7 DAYS ONLY) ---
+    const today = new Date();
+    const maxDate = new Date();
+    maxDate.setDate(today.getDate() + 7);
+
+    // Format for HTML input (YYYY-MM-DD)
+    const minStr = today.toISOString().split('T')[0];
+    const maxStr = maxDate.setDate(today.getDate() + 7) && new Date(maxDate).toISOString().split('T')[0]; 
+    // Re-calculating correctly for the string
+    const limitDate = new Date();
+    limitDate.setDate(today.getDate() + 7);
+    const limitStr = limitDate.toISOString().split('T')[0];
 
     // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
@@ -742,6 +754,11 @@ window.showPackageDetails = function(pEncoded) {
             <div style="margin:15px 0; padding:10px; background:#f9f9f9; border-radius:8px;">
                 <p style="white-space: pre-line; font-size:14px;">${p.description || 'No description.'}</p>
             </div>
+
+            <div style="margin-bottom:15px;">
+                <label style="font-size:12px; font-weight:bold; color:#666;">SELECT TRAVEL DATE (Within 7 Days):</label>
+                <input type="date" id="cust-travel-date" min="${minStr}" max="${limitStr}" value="${minStr}" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-top:5px;">
+            </div>
             
             <h4>Select Vehicles</h4>
             ${vehicleHtml}
@@ -753,7 +770,14 @@ window.showPackageDetails = function(pEncoded) {
 
             <div style="margin-top:20px;">
                 <input type="text" id="cust-phone" placeholder="Phone Number" style="width:100%; margin-bottom:10px; padding:10px;">
-                <textarea id="cust-address" placeholder="Pickup Address" style="width:100%; height:60px; padding:10px;"></textarea>
+                <textarea id="cust-address" placeholder="Pickup Address" style="width:100%; height:60px; padding:10px; margin-bottom:10px;"></textarea>
+                
+                <div style="background: #fff4e6; padding: 10px; border-radius: 8px; border: 1px solid #ffd8a8;">
+                    <label style="display:flex; gap:10px; cursor:pointer; align-items:start;">
+                        <input type="checkbox" id="policy-consent" style="margin-top:4px;">
+                        <span style="font-size:12px; color:#444;">I agree to the <b>Cancellation & Refund Policy</b>. I understand that in case of cancellation, a non-refundable amount of <b>9%</b> (2% Gateway + 7% Service & Facilitation Fee) will be deducted from my total refund.</span>
+                    </label>
+                </div>
             </div>
 
             <div style="margin-top:20px; display:flex; gap:10px;">
@@ -771,24 +795,29 @@ window.showPackageDetails = function(pEncoded) {
     modal.style.display = 'flex';
 };
 
-// THE BOOKING INITIATOR (Uses the button's data attributes)
+// THE BOOKING INITIATOR
 window.initiateBooking = function(btnElement) {
     const packageId = btnElement.getAttribute('data-pkg-id');
     const packageTitle = btnElement.getAttribute('data-pkg-title');
     const agencyId = btnElement.getAttribute('data-agency-id');
-    
-    // Now call your logic function
     handleBookingInquiry(packageId, packageTitle, agencyId);
 };
 
 window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) {
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
+    
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
+    const travelDate = document.getElementById('cust-travel-date').value;
+    const policyAccepted = document.getElementById('policy-consent').checked;
 
-    if (!address.trim() || !phone.trim()) {
-        alert("Enter phone and address!"); return;
+    if (!address.trim() || !phone.trim() || !travelDate) {
+        alert("Enter travel date, phone and address!"); return;
+    }
+
+    if (!policyAccepted) {
+        alert("You must agree to the Cancellation & Refund Policy to proceed."); return;
     }
 
     let totalPrice = 0;
@@ -809,10 +838,13 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         customer_email: user.email,
         customer_address: address, 
         customer_phone: phone,
+        travel_date: travelDate,
         selected_vehicles: selectedVehicles.join(', '),
         total_price: totalPrice, 
         status: 'pending',
-        agency_id: agencyId
+        agency_id: agencyId,
+        consent_9_percent_policy: true,
+        policy_version: 'v1_9_percent_deduction'
     }]);
 
     if (!error) {
