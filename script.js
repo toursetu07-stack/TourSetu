@@ -887,7 +887,9 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("Error: " + error.message);
     }
 };
-// 9. AGENCY DASHBOARD
+/* =========================================
+   9. AGENCY DASHBOARD (UPDATED)
+   ========================================= */
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
@@ -954,9 +956,7 @@ window.showTab = async function(tabName) {
     let pendingCount = 0;
     let totalRevenue = 0;
     if (myPkgIds.length > 0) {
-        // Get all bookings to calculate revenue and pending count
         const { data: allBookings } = await client.from('bookings').select('status, total_price').in('package_id', myPkgIds);
-        
         if (allBookings) {
             pendingCount = allBookings.filter(b => b.status === 'pending').length;
             totalRevenue = allBookings
@@ -997,6 +997,7 @@ window.showTab = async function(tabName) {
             return;
         }
 
+        // Feature: Automatic Updates (Sorted by created_at descending)
         const { data: bookingsData } = await client.from('bookings').select('*').in('package_id', myPkgIds).order('created_at', { ascending: false });
 
         if (!bookingsData || bookingsData.length === 0) {
@@ -1007,14 +1008,15 @@ window.showTab = async function(tabName) {
         listArea.innerHTML = bookingsData.map(b => {
             const isPaid = b.status === 'paid';
             const isPending = b.status === 'pending';
+            const isCancelled = b.status === 'cancelled';
             const displayPhone = isPaid ? b.customer_phone : "Locked (Unlocks after Payment)";
             const phoneColor = isPaid ? "#ff9f43" : "#999";
             
             let statusColor = '#ff9f43';
-            if (b.status === 'cancelled' || b.status === 'denied') statusColor = '#ff7675';
+            if (isCancelled || b.status === 'denied') statusColor = '#ff7675';
             if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
 
-            // Format travel date for display
+            // Feature: Travel Date Visibility
             const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
 
             return `
@@ -1024,7 +1026,7 @@ window.showTab = async function(tabName) {
                         <h3 style="margin:0; color:#2d3436;">${b.package_title}</h3>
                         <div style="margin-top:5px; display:flex; gap:15px; font-size:12px; color:#636e72;">
                              <span>📩 Requested: ${new Date(b.created_at).toLocaleDateString()}</span>
-                             <span style="color:#e67e22; font-weight:bold;">📅 TRAVEL DATE: ${travelDateStr}</span>
+                             <span style="background:#fff4e6; color:#e67e22; font-weight:bold; padding:2px 8px; border-radius:4px; border:1px solid #ffeaa7;">📅 TRAVEL DATE: ${travelDateStr}</span>
                         </div>
                     </div>
                     <div style="text-align:right;">
@@ -1048,17 +1050,32 @@ window.showTab = async function(tabName) {
                     </div>
                 </div>
 
-                <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px;">
-                    <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
-                    <p style="font-size:12px; margin-top:5px; color:#999;">Customer Email: ${b.customer_email}</p>
+                <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
+                        <p style="font-size:12px; margin-top:5px; color:#999;">Customer Email: ${b.customer_email}</p>
+                    </div>
+                    ${b.consent_9_percent_policy ? `
+                        <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:5px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71;">
+                            🛡️ 9% DEDUCTION POLICY AGREED
+                        </div>
+                    ` : ''}
                 </div>
 
-                ${isPending ? `
-                    <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
-                        <button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
-                        <button onclick="openActionModal('${b.id}', 'denied')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
-                    </div>
-                ` : ''}
+                <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px;">
+                    ${isCancelled ? `
+                        <div style="background:#fff5f5; color:#ff7675; padding:12px; border-radius:8px; text-align:center; font-weight:bold; border:1px solid #ffa8a8;">
+                            🚫 CUSTOMER HAS CANCELLED THIS REQUEST
+                        </div>
+                    ` : (isPending ? `
+                        <div style="display:flex; gap:12px;">
+                            <button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
+                            <button onclick="openActionModal('${b.id}', 'denied')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
+                        </div>
+                    ` : `
+                        <div style="font-size:13px; color:#666; font-style:italic;">No further actions required for this status.</div>
+                    `)}
+                </div>
             </div>`;
         }).join('');
     }
