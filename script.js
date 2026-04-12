@@ -421,10 +421,19 @@ window.renderCustomerRequests = async () => {
     }
 
     container.innerHTML = data.map(b => {
-        const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : '#ff9f43');
+        const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43'));
         const isPending = b.status === 'pending';
         const isPaid = b.status === 'paid';
         const isApproved = b.status === 'approved';
+        const isCancelled = b.status === 'cancelled';
+
+        // Date Check Logic: Show Cancel button ONLY if current date <= travel date
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const travelDateObj = b.travel_date ? new Date(b.travel_date) : null;
+        if(travelDateObj) travelDateObj.setHours(0,0,0,0);
+        
+        const canCancel = travelDateObj && today <= travelDateObj && !isCancelled;
 
         return `
         <div class="card" style="background:white; padding:25px; border-left:5px solid ${statusColor}; position:relative; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius:15px;">
@@ -437,15 +446,20 @@ window.renderCustomerRequests = async () => {
                         <div style="margin-top:5px;">Status: <span style="padding:2px 8px; border-radius:10px; font-size:11px; background:#f0f0f0; color:${statusColor}; font-weight:bold;">${b.status.toUpperCase()}</span></div>
                     </div>
                 </div>
-                ${isPending ? `<button onclick="deleteBookingRequest(${b.id})" style="background:none; border:1px solid #ff7675; color:#ff7675; padding:5px 10px; font-size:12px; border-radius:5px; cursor:pointer;">🗑️ Delete</button>` : ''}
+                ${canCancel ? `<button onclick="cancelBookingWithPenalty(${b.id})" style="background:#ff7675; color:white; border:none; padding:8px 15px; font-size:12px; border-radius:8px; cursor:pointer; font-weight:bold;">✕ Cancel Booking</button>` : ''}
             </div>
 
-            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : '#f8f9fa'}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
+            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : (isCancelled ? '#f1f2f6' : '#f8f9fa')}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
                 ${isPaid ? `
                     <div style="text-align:center;">
                         <p style="margin:0 0 5px 0; font-size:12px; color:#27ae60; font-weight:bold;">✅ AGENCY CONTACT REVEALED</p>
                         <h2 style="margin:0; color:#2d3436;">${b.agency_contact || 'Contact info missing'}</h2>
                         <small style="color:#666;">Call now to coordinate your trip!</small>
+                    </div>
+                ` : (isCancelled ? `
+                    <div style="text-align:center; color:#636e72;">
+                        <p style="margin:0; font-weight:bold; color:#ff7675;">🚫 BOOKING CANCELLED</p>
+                        <small>You cancelled this trip request.</small>
                     </div>
                 ` : `
                     <div style="text-align:center; color:#636e72;">
@@ -453,10 +467,36 @@ window.renderCustomerRequests = async () => {
                         <small>Available only after payment is confirmed</small>
                         ${isApproved ? `<button onclick="simulatePayment(${b.id})" style="margin-top:10px; background:#2ecc71; color:white; width:100%; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">PROCEED TO PAYMENT (₹${b.total_price})</button>` : ''}
                     </div>
-                `}
+                `)}
             </div>
         </div>`;
     }).join('');
+};
+
+window.cancelBookingWithPenalty = async function(id) {
+    const disclaimer = "In case of cancellation, a non-refundable amount of 9% (2% Gateway + 7% Service & Facilitation Fee) will be deducted from your total fund.\n\nDo you agree to proceed with the cancellation?";
+    
+    if (!confirm(disclaimer)) return;
+
+    const client = getClient();
+    try {
+        // Update status to 'cancelled' so it stays in history but looks cancelled for both parties
+        const { error } = await client
+            .from('bookings')
+            .update({ status: 'cancelled' })
+            .eq('id', id);
+
+        if (!error) {
+            alert("Booking Cancelled successfully.");
+            renderCustomerRequests();
+            // Note: On the Agency Side, their dashboard should filter for .neq('status', 'cancelled') 
+            // OR display "Customer has cancelled this booking" based on this status change.
+        } else {
+            throw error;
+        }
+    } catch (e) {
+        alert("Error during cancellation: " + e.message);
+    }
 };
 
 window.showPackageDetails = function(pEncoded) {
@@ -631,14 +671,6 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     } catch (e) {
         alert("An error occurred. Please check your connection.");
     }
-};
-
-window.deleteBookingRequest = async function(id) {
-    if (!confirm("Are you sure you want to cancel this request?")) return;
-    const client = getClient();
-    const { error } = await client.from('bookings').delete().eq('id', id);
-    if (!error) renderCustomerRequests();
-    else alert("Error deleting: " + error.message);
 };
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
