@@ -1135,14 +1135,14 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
 window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
 window.executeLogout = async () => { await getClient().auth.signOut(); location.reload(); };
 /* =========================================
-   10 & 11. PACKAGE FORM & SAVE LOGIC (UPDATED)
+   10 & 11. PACKAGE FORM & SAVE LOGIC (ENHANCED)
    ========================================= */
 
 // 10A. HELPER: Populates the City dropdown based on selected State
 window.updateCities = function() {
     const stateSelect = document.getElementById('p-state');
     const citySelect = document.getElementById('p-city');
-    if (!stateSelect || !citySelect) return;
+    if (!stateSelect || citySelect === null) return;
 
     const selectedState = stateSelect.value;
     citySelect.innerHTML = '<option value="">Select City</option>';
@@ -1170,7 +1170,7 @@ window.showPackageForm = function(pEncoded = null) {
     const area = document.getElementById('main-content');
     if (!area) return;
     
-    const pkgDestinations = isEdit ? (pkg.destination || pkg.destinations || []) : [];
+    const pkgDestinations = isEdit ? (pkg.destinations || pkg.destination || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
     
     let selectedState = "";
@@ -1212,11 +1212,11 @@ window.showPackageForm = function(pEncoded = null) {
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
                 <div>
                     <label style="font-size:11px; font-weight:bold; color:#666;">PACKAGE TITLE</label>
-                    <input type="text" id="p-title" placeholder="e.g. 3 Days Kedarnath Trip" value="${isEdit ? pkg.title : ''}" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ddd;">
+                    <input type="text" id="p-title" placeholder="e.g. 3 Days Kedarnath Trip" value="${isEdit ? pkg.title : ''}" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
                 </div>
                 <div>
                     <label style="font-size:11px; font-weight:bold; color:#666;">PICKUP STATE</label>
-                    <select id="p-state" onchange="window.updateCities()" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ddd;">
+                    <select id="p-state" onchange="window.updateCities()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
                         <option value="">Select State</option>
                         ${stateOptions}
                     </select>
@@ -1224,7 +1224,7 @@ window.showPackageForm = function(pEncoded = null) {
             </div>
 
             <label style="font-size:11px; font-weight:bold; color:#666;">STARTING CITY</label>
-            <select id="p-city" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ddd; margin-bottom:15px;">
+            <select id="p-city" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-bottom:15px;">
                 ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
             </select>
             
@@ -1237,17 +1237,136 @@ window.showPackageForm = function(pEncoded = null) {
             <div style="margin-bottom:20px;">${vehicleHtml}</div>
 
             <label style="font-size:11px; font-weight:bold; color:#666;">ITINERARY DETAILS</label>
-            <textarea id="p-desc" style="width:100%; height:120px; padding:10px; border-radius:5px; border:1px solid #ddd;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
+            <textarea id="p-desc" style="height:120px; width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
             
             <div style="display:flex; gap:10px; margin-top:25px;">
-                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; border:none; border-radius:8px; flex:2; height:50px; font-weight:bold; cursor:pointer;">
+                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold; border:none; border-radius:8px; cursor:pointer;">
                     ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
                 </button>
-                <button onclick="window.showTab('packages')" style="background:#eee; border:none; border-radius:8px; flex:1; cursor:pointer;">Cancel</button>
+                <button onclick="window.showTab('packages')" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
             </div>
         </div>`;
 };
 
+// 11. SAVE LOGIC: Sends data to Supabase
+window.processSave = async function(pkgId) {
+    const btn = document.getElementById('save-btn');
+    if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
+
+    try {
+        const client = getClient();
+        const { data: { user } } = await client.auth.getUser();
+        if (!user) throw new Error("User session not found. Please logout and login again.");
+
+        const title = document.getElementById('p-title').value.trim();
+        const city = document.getElementById('p-city').value;
+        const desc = document.getElementById('p-desc').value;
+
+        if (!title || !city) throw new Error("Title and Starting City are required!");
+
+        const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
+        if (selectedDests.length === 0) throw new Error("Select at least one destination!");
+
+        const selectedVehicles = [];
+        document.querySelectorAll('.v-enable:checked').forEach(el => {
+            const vId = el.dataset.id;
+            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`).value) || 0;
+            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`).value) || 1;
+            const vType = vehicleTypes.find(vt => vt.id === vId);
+            if (rate > 0) {
+                selectedVehicles.push({ id: vId, name: vType.name, rate: rate, max_cars: max, icon: vType.icon });
+            }
+        });
+
+        if (selectedVehicles.length === 0) throw new Error("Set a price for at least one vehicle!");
+
+        const pkgData = {
+            title: title,
+            starting_location: city,
+            destination: selectedDests, 
+            vehicles: selectedVehicles,
+            description: desc,
+            agency_id: user.id
+        };
+
+        let result;
+        if (pkgId && pkgId !== "undefined" && pkgId !== "null" && pkgId !== "") {
+            result = await client.from('packages').update(pkgData).eq('id', pkgId);
+        } else {
+            result = await client.from('packages').insert([pkgData]);
+        }
+
+        if (result.error) throw result.error;
+
+        alert("✅ Success! Package saved.");
+        window.showTab('packages'); 
+
+    } catch (err) {
+        console.error("Save Error:", err);
+        alert("❌ Error: " + err.message);
+        if (btn) {
+            btn.innerText = (pkgId && pkgId !== "undefined" && pkgId !== "null") ? "SAVE CHANGES" : "PUBLISH PACKAGE";
+            btn.disabled = false;
+        }
+    }
+};
+
+/* =========================================
+   12. BOOKING RENDER LOGIC (FIXED FOR VISIBILITY)
+   ========================================= */
+window.renderAgencyBookings = function(bookings) {
+    const container = document.getElementById('main-content');
+    if (!container) return;
+
+    if (!bookings || bookings.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:50px; color:#666;">
+            <h3>No Booking Requests Found</h3>
+            <p>New and old requests will appear here once customers book your packages.</p>
+        </div>`;
+        return;
+    }
+
+    const html = bookings.map(b => {
+        // Cancellation Indicator logic
+        const isCancelled = b.status === 'cancelled';
+        const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
+        
+        return `
+        <div class="card" style="border-left: 5px solid ${statusColor}; margin-bottom:15px; position:relative; opacity: ${isCancelled ? '0.7' : '1'}">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                    <h4 style="margin:0 0 5px 0;">${b.package_title || 'Package Booking'}</h4>
+                    <p style="font-size:12px; color:#666; margin:0;">Request ID: ${b.id}</p>
+                </div>
+                <div style="background:#d1f2eb; color:#16a085; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold;">
+                    🛡️ Policy Verified
+                </div>
+            </div>
+            
+            <hr style="border:0; border-top:1px solid #eee; margin:10px 0;">
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:13px;">
+                <div>👤 <b>Customer:</b> ${b.customer_name}</div>
+                <div>📞 <b>Contact:</b> ${b.customer_phone}</div>
+                <div>📅 <b>Travel Date:</b> ${b.travel_date}</div>
+                <div>🚗 <b>Vehicle:</b> ${b.vehicle_name}</div>
+            </div>
+
+            ${isCancelled ? `
+                <div style="margin-top:15px; padding:10px; background:#fdedec; color:#c0392b; border-radius:8px; text-align:center; font-weight:bold;">
+                    ⚠️ CANCELLATION INDICATOR: Customer has cancelled this request.
+                </div>
+            ` : `
+                <div style="margin-top:15px; display:flex; gap:10px;">
+                    <button onclick="updateStatus('${b.id}', 'confirmed')" style="background:#2ecc71; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">Accept</button>
+                    <button onclick="updateStatus('${b.id}', 'rejected')" style="background:#eee; color:#333; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">Decline</button>
+                </div>
+            `}
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `<h3>Booking Requests</h3>` + html;
+};
 // 11. SAVE LOGIC: Sends data to Supabase (FIXED COLUMN NAMES)
 window.processSave = async function(pkgId) {
     const btn = document.getElementById('save-btn');
