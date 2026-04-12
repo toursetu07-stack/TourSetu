@@ -1135,7 +1135,7 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
 window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
 window.executeLogout = async () => { await getClient().auth.signOut(); location.reload(); };
 /* =========================================
-   10 & 11. PACKAGE FORM & SAVE LOGIC (FIXED)
+   10 & 11. PACKAGE FORM & SAVE LOGIC (UPDATED)
    ========================================= */
 
 // 10A. HELPER: Populates the City dropdown based on selected State
@@ -1170,8 +1170,7 @@ window.showPackageForm = function(pEncoded = null) {
     const area = document.getElementById('main-content');
     if (!area) return;
     
-    // Support both naming conventions for safety
-    const pkgDestinations = isEdit ? (pkg.destinations || pkg.destination || []) : [];
+    const pkgDestinations = isEdit ? (pkg.destination || pkg.destinations || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
     
     let selectedState = "";
@@ -1213,11 +1212,11 @@ window.showPackageForm = function(pEncoded = null) {
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
                 <div>
                     <label style="font-size:11px; font-weight:bold; color:#666;">PACKAGE TITLE</label>
-                    <input type="text" id="p-title" placeholder="e.g. 3 Days Kedarnath Trip" value="${isEdit ? pkg.title : ''}">
+                    <input type="text" id="p-title" placeholder="e.g. 3 Days Kedarnath Trip" value="${isEdit ? pkg.title : ''}" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ddd;">
                 </div>
                 <div>
                     <label style="font-size:11px; font-weight:bold; color:#666;">PICKUP STATE</label>
-                    <select id="p-state" onchange="window.updateCities()">
+                    <select id="p-state" onchange="window.updateCities()" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ddd;">
                         <option value="">Select State</option>
                         ${stateOptions}
                     </select>
@@ -1225,7 +1224,7 @@ window.showPackageForm = function(pEncoded = null) {
             </div>
 
             <label style="font-size:11px; font-weight:bold; color:#666;">STARTING CITY</label>
-            <select id="p-city">
+            <select id="p-city" style="width:100%; padding:10px; border-radius:5px; border:1px solid #ddd; margin-bottom:15px;">
                 ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
             </select>
             
@@ -1238,13 +1237,13 @@ window.showPackageForm = function(pEncoded = null) {
             <div style="margin-bottom:20px;">${vehicleHtml}</div>
 
             <label style="font-size:11px; font-weight:bold; color:#666;">ITINERARY DETAILS</label>
-            <textarea id="p-desc" style="height:120px;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
+            <textarea id="p-desc" style="width:100%; height:120px; padding:10px; border-radius:5px; border:1px solid #ddd;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
             
             <div style="display:flex; gap:10px; margin-top:25px;">
-                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold;">
+                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; border:none; border-radius:8px; flex:2; height:50px; font-weight:bold; cursor:pointer;">
                     ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
                 </button>
-                <button onclick="window.showTab('packages')" style="background:#eee; flex:1;">Cancel</button>
+                <button onclick="window.showTab('packages')" style="background:#eee; border:none; border-radius:8px; flex:1; cursor:pointer;">Cancel</button>
             </div>
         </div>`;
 };
@@ -1257,7 +1256,7 @@ window.processSave = async function(pkgId) {
     try {
         const client = getClient();
         const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("User session not found. Please logout and login again.");
+        if (!user) throw new Error("User session not found.");
 
         const title = document.getElementById('p-title').value.trim();
         const city = document.getElementById('p-city').value;
@@ -1281,18 +1280,16 @@ window.processSave = async function(pkgId) {
 
         if (selectedVehicles.length === 0) throw new Error("Set a price for at least one vehicle!");
 
-        // FIXED: Changed 'destinations' to 'destination' to match your Supabase schema
         const pkgData = {
             title: title,
             starting_location: city,
             destination: selectedDests, 
             vehicles: selectedVehicles,
             description: desc,
-            agency_id: user.id
+            agency_id: user.id // CRITICAL: This links the package to the agency
         };
 
         let result;
-        // Check if pkgId is a valid string/UUID and not the literal string "null" or "undefined"
         if (pkgId && pkgId !== "undefined" && pkgId !== "null" && pkgId !== "") {
             result = await client.from('packages').update(pkgData).eq('id', pkgId);
         } else {
@@ -1308,10 +1305,26 @@ window.processSave = async function(pkgId) {
         console.error("Save Error:", err);
         alert("❌ Error: " + err.message);
         if (btn) {
-            btn.innerText = (pkgId && pkgId !== "undefined" && pkgId !== "null") ? "SAVE CHANGES" : "PUBLISH PACKAGE";
+            btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE";
             btn.disabled = false;
         }
     }
+};
+
+/* =========================================
+   ADDITIONAL: RE-SYNC BOOKINGS VIEW
+   ========================================= */
+// Add this helper to ensure bookings are fetched using the agency_id
+window.refreshBookings = async function(agencyId) {
+    const client = getClient();
+    // Fetch all bookings where agency_id matches (Old + New)
+    const { data, error } = await client
+        .from('bookings')
+        .select('*')
+        .eq('agency_id', agencyId)
+        .order('created_at', { ascending: false });
+    
+    return data || [];
 };
 // 12. STYLES
 const styleTag = document.createElement('style');
