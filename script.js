@@ -887,55 +887,48 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("Error: " + error.message);
     }
 };
-// 9. AGENCY DASHBOARD (INTEGRATED VERSION)
+// 9. AGENCY DASHBOARD
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
     
     app.innerHTML = `
-        <style>
-            .nav-item { transition: 0.3s; color: #b2bec3; }
-            .nav-item:hover { background: #3d4648; color: white; }
-            .nav-active { background: #ff9f43 !important; color: white !important; font-weight: bold; }
-            .card { transition: transform 0.2s; }
-            .card:hover { transform: translateY(-2px); }
-        </style>
         <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
-            <div style="width:260px; background:#2d3436; color:white; padding:25px; position:relative; flex-shrink:0; box-shadow: 4px 0 10px rgba(0,0,0,0.1);">
+            <div style="width:260px; background:#2d3436; color:white; padding:25px; position:relative; flex-shrink:0;">
                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
-                   <h2 style="color:#ff9f43; margin:0; letter-spacing:1px;">TourSetu</h2>
-                   <div id="notif-bell" onclick="showTab('bookings')" style="position:relative; cursor:pointer; font-size:20px;">
+                   <h2 style="color:#ff9f43; margin:0;">TourSetu</h2>
+                   <div id="notif-bell" onclick="showTab('bookings')" style="position:relative; cursor:pointer; font-size:20px; transition: 0.3s;">
                        🔔
                        <span id="bell-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:2px 6px; border-radius:50%; font-weight:bold; border: 2px solid #2d3436;">0</span>
                    </div>
                </div>
                <nav>
-                   <div onclick="showTab('earnings')" id="nav-earnings" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard Overview</div>
-                   <div onclick="showTab('bookings')" id="nav-bookings" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                       <span>📅 Customer Bookings</span>
+                   <div onclick="showTab('earnings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
+                   <div onclick="showTab('bookings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+                       <span>📅 Bookings</span>
                        <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
                    </div>
-                   <div onclick="showTab('packages')" id="nav-packages" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 Manage Packages</div>
-                   <div onclick="showTab('profile')" id="nav-profile" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
+                   <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 My Packages</div>
+                   <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
                    <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
                </nav>
             </div>
-
             <div id="main-content" style="flex:1; padding:40px; overflow-y:auto; background:#f8f9fa;"></div>
         </div>
 
         <div id="logout-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
             <div style="background:white; padding:30px; border-radius:12px; text-align:center; max-width:350px;">
-               <h2 style="margin:0 0 20px 0;">Sign Out?</h2>
+               <h2 style="margin:0 0 20px 0;">Logout?</h2>
                <div style="display:flex; gap:10px;">
-                   <button onclick="executeLogout()" style="background:#ff7675; color:white; flex:1; padding:12px; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Logout</button>
-                   <button onclick="document.getElementById('logout-modal').style.display='none'" style="background:#eee; flex:1; padding:12px; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Cancel</button>
+                   <button onclick="executeLogout()" style="background:#ff7675; color:white; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Yes</button>
+                   <button onclick="document.getElementById('logout-modal').style.display='none'" style="background:#eee; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">No</button>
                </div>
            </div>
         </div>
 
         <div id="action-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center; padding:20px;">
-            <div id="action-modal-content" style="background:white; padding:30px; border-radius:15px; max-width:400px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);"></div>
+            <div id="action-modal-content" style="background:white; padding:30px; border-radius:15px; max-width:400px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                </div>
         </div>
     `;
     showTab('earnings'); 
@@ -947,63 +940,46 @@ window.showTab = async function(tabName) {
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
-    // UI: Update Nav Active Classes
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('nav-active'));
-    const activeNav = document.getElementById(`nav-${tabName}`);
-    if (activeNav) activeNav.classList.add('nav-active');
-
-    // 1. Fetch Bookings directly by agency_id to ensure visibility of old/new requests
-    const { data: bookingsData, error: bError } = await client
+    // To ensure old and new bookings are visible, we fetch by agency_id 
+    // This is more reliable than fetching by package IDs alone
+    const { data: bookingsData } = await client
         .from('bookings')
         .select('*')
         .eq('agency_id', user.id)
         .order('created_at', { ascending: false });
 
-    // 2. Update Notification Badges
-    const pendingBookings = (bookingsData || []).filter(b => b.status === 'pending');
-    const pendingCount = pendingBookings.length;
+    // Calculate Notification Counts
+    const pendingCount = bookingsData ? bookingsData.filter(b => b.status === 'pending').length : 0;
     const badge = document.getElementById('bell-badge');
     const sideCount = document.getElementById('side-notif-count');
     
-    if (pendingCount > 0) {
-        if(badge) { badge.innerText = pendingCount; badge.style.display = 'block'; }
-        if(sideCount) { sideCount.innerText = pendingCount; sideCount.style.display = 'block'; }
-    } else {
-        if(badge) badge.style.display = 'none';
-        if(sideCount) sideCount.style.display = 'none';
+    if (badge && pendingCount > 0) {
+        badge.innerText = pendingCount; badge.style.display = 'block';
+        sideCount.innerText = pendingCount; sideCount.style.display = 'block';
+    } else if (badge) {
+        badge.style.display = 'none'; sideCount.style.display = 'none';
     }
 
     if (tabName === 'earnings') {
-        const totalRevenue = bookingsData ? bookingsData.filter(b => b.status === 'paid').reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0) : 0;
-        const { count: pkgCount } = await client.from('packages').select('*', { count: 'exact', head: true }).eq('agency_id', user.id);
+        const totalRevenue = bookingsData ? bookingsData
+                .filter(b => b.status === 'paid')
+                .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0) : 0;
 
-        container.innerHTML = `
-            <h1 style="margin-bottom:30px; color:#2d3436;">Overview</h1>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:25px;">
-                <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:30px; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                    <small style="color:#999; font-weight:bold; letter-spacing:1px;">TOTAL REVENUE</small>
-                    <h2 style="margin:10px 0 0 0; font-size:28px;">₹${totalRevenue.toLocaleString('en-IN')}</h2>
-                </div>
-                <div class="card" style="border-top:5px solid #ff9f43; background:white; padding:30px; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                    <small style="color:#999; font-weight:bold; letter-spacing:1px;">PENDING REQUESTS</small>
-                    <h2 style="margin:10px 0 0 0; font-size:28px;">${pendingCount}</h2>
-                </div>
-                <div class="card" style="border-top:5px solid #3498db; background:white; padding:30px; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                    <small style="color:#999; font-weight:bold; letter-spacing:1px;">LIVE PACKAGES</small>
-                    <h2 style="margin:10px 0 0 0; font-size:28px;">${pkgCount || 0}</h2>
-                </div>
-            </div>
-        `;
+        container.innerHTML = `<h1>Overview</h1>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
+                <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>REVENUE (PAID)</small><h2>₹${totalRevenue.toLocaleString('en-IN')}</h2></div>
+                <div class="card" style="border-top:5px solid #ff9f43; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>PENDING BOOKINGS</small><h2>${pendingCount}</h2></div>
+                <div class="card" style="border-top:5px solid #3498db; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>ACTIVE PACKAGES</small><h2 id="act-pkg-count">...</h2></div>
+            </div>`;
+        const { count } = await client.from('packages').select('*', { count: 'exact', head: true }).eq('agency_id', user.id);
+        if(document.getElementById('act-pkg-count')) document.getElementById('act-pkg-count').innerText = count || 0;
     } 
     else if (tabName === 'bookings') {
-        container.innerHTML = `<h1 style="margin-bottom:30px;">Customer Bookings</h1><div id="booking-list-area"></div>`;
+        container.innerHTML = `<h1>Customer Bookings</h1><div id="booking-list-area">Loading...</div>`;
         const listArea = document.getElementById('booking-list-area');
 
         if (!bookingsData || bookingsData.length === 0) {
-            listArea.innerHTML = `
-                <div style="text-align:center; padding:60px; background:white; border-radius:15px; border:2px dashed #ddd;">
-                    <p style="color:#999; font-size:18px;">No booking requests found for your agency yet.</p>
-                </div>`;
+            listArea.innerHTML = `<p style="padding:20px; color:#666;">No booking requests found.</p>`;
             return;
         }
 
@@ -1012,82 +988,105 @@ window.showTab = async function(tabName) {
             const isPending = b.status === 'pending';
             const isCancelled = b.status === 'cancelled';
             const displayPhone = isPaid ? b.customer_phone : "Locked (Unlocks after Payment)";
+            const phoneColor = isPaid ? "#ff9f43" : "#999";
             
-            let statusColor = '#ff9f43';
+            let statusColor = '#ff9f43'; // Default Pending
             if (isCancelled || b.status === 'denied') statusColor = '#ff7675';
             if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
 
-            const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'}) : 'Not Specified';
+            const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
 
             return `
-            <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:6px solid ${statusColor}; border-radius:12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${statusColor}; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <div>
-                        <h3 style="margin:0; color:#2d3436; font-size:20px;">${b.package_title}</h3>
-                        <div style="margin-top:8px; display:flex; gap:20px; font-size:13px; color:#636e72;">
-                             <span>📅 TRAVEL DATE: <b style="color:#e67e22; background:#fff4e6; padding:2px 6px; border-radius:4px;">${travelDateStr}</b></span>
+                        <h3 style="margin:0; color:#2d3436;">${b.package_title}</h3>
+                        <div style="margin-top:5px; display:flex; gap:15px; font-size:12px; color:#636e72;">
                              <span>📩 Requested: ${new Date(b.created_at).toLocaleDateString()}</span>
+                             <span style="color:white; background:#ff9f43; padding:2px 8px; border-radius:4px; font-weight:bold;">📅 TRAVEL DATE: ${travelDateStr}</span>
                         </div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-size:24px; font-weight:bold; color:#2d3436;">₹${(b.total_price || 0).toLocaleString('en-IN')}</div>
-                        <span style="padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold; background:#f1f2f6; color:${statusColor}; letter-spacing:0.5px;">
+                        <div style="font-size:22px; font-weight:bold; color:#2ecc71;">₹${b.total_price || 0}</div>
+                        <span style="padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold; background:#f0f0f0; color:${statusColor};">
                             ${b.status.toUpperCase()}
                         </span>
                     </div>
                 </div>
 
-                <div style="margin-top:20px; padding:20px; background:#f8f9fa; border-radius:10px; display:grid; grid-template-columns: 1.5fr 1fr; gap:20px;">
+                <div style="margin-top:20px; padding:15px; background:#f4f7f6; border-radius:10px; display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                     <div>
-                        <label style="font-size:11px; color:#999; font-weight:bold; letter-spacing:1px;">📍 PICKUP ADDRESS</label>
-                        <p style="margin:8px 0; font-size:14px; color:#2d3436; line-height:1.4;">${b.customer_address || 'Address not provided'}</p>
+                        <label style="font-size:11px; color:#999; font-weight:bold;">📍 PICKUP ADDRESS</label>
+                        <p style="margin:5px 0; font-size:14px; color:#2d3436;">${b.customer_address || 'Not Provided'}</p>
                     </div>
                     <div>
-                        <label style="font-size:11px; color:#999; font-weight:bold; letter-spacing:1px;">📞 CUSTOMER CONTACT</label>
-                        <p style="margin:8px 0; font-size:15px; font-weight:bold; color:${isPaid ? '#2ecc71' : '#636e72'};">
-                            ${isPaid ? `<a href="tel:${displayPhone}" style="text-decoration:none; color:inherit;">📞 ${displayPhone}</a>` : `🔒 ${displayPhone}`}
+                        <label style="font-size:11px; color:#999; font-weight:bold;">📞 CUSTOMER PHONE</label>
+                        <p style="margin:5px 0; font-size:15px; font-weight:bold; color:${phoneColor};">
+                            ${isPaid ? `<a href="tel:${displayPhone}" style="color:inherit;">${displayPhone}</a>` : displayPhone}
                         </p>
                     </div>
                 </div>
 
-                <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:15px; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:13px; color:#636e72;">
-                        <b>Vehicles:</b> ${b.selected_vehicles} <br>
-                        <span style="font-size:12px; color:#999;">User Email: ${b.customer_email}</span>
+                <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
+                        <p style="font-size:12px; margin-top:5px; color:#999;">Customer Email: ${b.customer_email}</p>
                     </div>
-                    ${b.consent_9_percent_policy ? `
-                        <div style="background:#e3faf3; color:#2ecc71; font-size:11px; padding:6px 12px; border-radius:6px; font-weight:bold; border:1px solid #2ecc71; display:flex; align-items:center; gap:5px;">
-                            🛡️ 9% DEDUCTION POLICY AGREED
+                    ${b.policy_agreed ? `
+                        <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:4px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71;">
+                            ✅ 9% DEDUCTION POLICY AGREED
                         </div>
                     ` : ''}
                 </div>
 
-                <div style="margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
-                    ${isCancelled ? `
-                        <div style="background:#fff5f5; color:#ff7675; padding:15px; border-radius:10px; text-align:center; font-weight:bold; border:1px solid #ffa8a8; display:flex; align-items:center; justify-content:center; gap:10px;">
-                            🚫 CUSTOMER HAS CANCELLED THIS TRIP REQUEST
-                        </div>
-                    ` : (isPending ? `
-                        <div style="display:flex; gap:15px;">
-                            <button onclick="openActionModal('${b.id}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 6px rgba(46,204,113,0.2);">Approve & Send Contact</button>
-                            <button onclick="openActionModal('${b.id}', 'denied')" style="flex:1; background:#fff; color:#ff7675; border:1px solid #ff7675; padding:14px; border-radius:8px; cursor:pointer; font-weight:bold;">Decline Request</button>
-                        </div>
-                    ` : `<div style="text-align:center; color:#999; font-size:13px; font-style:italic;">Booking is in ${b.status} state.</div>`)}
+                <div style="margin-top:20px;">
+                ${isCancelled ? `
+                    <div style="background:#fff5f5; color:#ff7675; padding:12px; border-radius:8px; border:1px solid #ff7675; text-align:center; font-weight:bold;">
+                        🚫 CUSTOMER CANCELLED
+                    </div>
+                ` : (isPending ? `
+                    <div style="border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
+                        <button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
+                        <button onclick="openActionModal('${b.id}', 'denied')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
+                    </div>
+                ` : '')}
                 </div>
             </div>`;
         }).join('');
     }
     else if (tabName === 'packages') {
-        // ... Render Package management logic remains the same ...
-        container.innerHTML = `<h1>Manage Packages</h1><p style="color:#666;">Package management content goes here...</p>`;
+        // ... (Keep your existing Packages tab code)
+        container.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h1>My Packages</h1>
+                <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
+            </div>
+            <div id="package-form-area"></div>
+            <div id="pkg-list-container"></div>`;
+        
+        const { data: myPackages } = await client.from('packages').select('*').eq('agency_id', user.id).order('created_at', { ascending: false });
+        document.getElementById('pkg-list-container').innerHTML = (myPackages || []).map(p => {
+             const encoded = encodeURIComponent(JSON.stringify(p));
+             return `<div style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); border-left:5px solid #ff9f43;">
+                <div style="flex:1;">
+                    <h3 style="margin:0; color:#2d3436;">${p.title || 'Untitled'}</h3>
+                    <p style="margin:5px 0; color:#666; font-size:14px;">📍 <b>From:</b> ${p.starting_location || 'N/A'}</p>
+                </div>
+                <button onclick="showPackageForm('${encoded}')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold;">✏️ Edit</button>
+            </div>`;
+        }).join('');
     }
     else if (tabName === 'profile') {
-        // ... Render Profile logic remains the same ...
-        container.innerHTML = `<h1>Agency Profile</h1><p style="color:#666;">Profile settings go here...</p>`;
+        // ... (Keep your existing Profile tab code)
+        const meta = user.user_metadata || {};
+        container.innerHTML = `<h1>Agency Profile</h1><div class="card" style="background:white; padding:30px; border-radius:8px; border-left:5px solid #ff9f43;">
+            <p><b>Email:</b> ${user.email}</p>
+            <p><b>Phone:</b> ${meta.phone || 'N/A'}</p>
+            <p><b>Status:</b> ${meta.is_approved ? '✅ Verified' : '⏳ Pending'}</p>
+        </div>`;
     }
 };
 
-// MODAL & ACTION LOGIC
 window.openActionModal = function(bookingId, type) {
     const modal = document.getElementById('action-modal');
     const content = document.getElementById('action-modal-content');
@@ -1095,25 +1094,24 @@ window.openActionModal = function(bookingId, type) {
 
     if (type === 'approved') {
         content.innerHTML = `
-            <h3 style="color:#2ecc71; margin-top:0;">Approve Request</h3>
-            <p style="font-size:14px; color:#666; line-height:1.5;">Please provide the phone number (GPay/Office) the customer should use for payment.</p>
-            <input type="text" id="modal-contact-input" placeholder="e.g. 98XXXXXXXX" style="width:100%; padding:14px; margin-bottom:20px; border:2px solid #eee; border-radius:8px; font-size:16px; box-sizing:border-box;">
+            <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
+            <p style="font-size:14px; color:#666;">Provide the contact number for payment collection.</p>
+            <input type="text" id="modal-contact-input" placeholder="GPay/Phone Number" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
             <div style="display:flex; gap:10px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:2; background:#2ecc71; color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:bold;">SEND APPROVAL</button>
-                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:14px; border-radius:8px; cursor:pointer;">Back</button>
-            </div>
-        `;
+                <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
+                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
+            </div>`;
     } else {
         content.innerHTML = `
-            <h3 style="color:#ff7675; margin-top:0;">Decline Request?</h3>
-            <p style="font-size:14px; color:#666; margin-bottom:25px;">The customer will be notified that the trip is unavailable.</p>
-            <div style="display:flex; gap:10px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:bold;">YES, DECLINE</button>
-                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:14px; border-radius:8px; cursor:pointer;">No</button>
-            </div>
-        `;
+            <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
+                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
+            </div>`;
     }
 };
+
+window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
 
 window.processStatusUpdate = async function(bookingId, newStatus) {
     const client = getClient();
@@ -1121,26 +1119,21 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
 
     if (newStatus === 'approved') {
         const contact = document.getElementById('modal-contact-input').value;
-        if (!contact.trim()) { alert("Please provide a contact number!"); return; }
+        if (!contact.trim()) { alert("Please enter contact number!"); return; }
         updateData.agency_contact = contact;
     }
 
-    try {
-        const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
-        if (!error) {
-            closeActionModal();
-            showTab('bookings'); 
-        } else {
-            alert("Update Failed: " + error.message);
-        }
-    } catch (e) {
-        alert("System error.");
+    const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
+    if (!error) {
+        closeActionModal();
+        showTab('bookings');
+    } else {
+        alert("Error updating status: " + error.message);
     }
 };
 
-window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
 window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
-window.executeLogout = async () => { await getClient().auth.signOut(); window.location.reload(); };
+window.executeLogout = async () => { await getClient().auth.signOut(); location.reload(); };
 /* =========================================
    10 & 11. PACKAGE FORM & SAVE LOGIC (FIXED)
    ========================================= */
