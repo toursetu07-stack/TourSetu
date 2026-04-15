@@ -1370,25 +1370,8 @@ window.renderAgencyBookings = function(bookings) {
 };
 
 /* =========================================
-   13. DATA FETCHING (ENSURE THIS IS CALLED)
+   11. SAVE LOGIC: Package Management
    ========================================= */
-window.loadAgencyDashboard = async function() {
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-    
-    if (user) {
-        // Fetching all bookings for this agency (Old + New)
-        const { data: bookings, error } = await client
-            .from('bookings')
-            .select('*')
-            .eq('agency_id', user.id) // This uses the agency_id column you mentioned
-            .order('created_at', { ascending: false });
-
-        if (error) console.error("Error loading bookings:", error);
-        window.renderAgencyBookings(bookings || []);
-    }
-};
-// 11. SAVE LOGIC: Sends data to Supabase (FIXED COLUMN NAMES)
 window.processSave = async function(pkgId) {
     const btn = document.getElementById('save-btn');
     if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
@@ -1426,7 +1409,7 @@ window.processSave = async function(pkgId) {
             destination: selectedDests, 
             vehicles: selectedVehicles,
             description: desc,
-            agency_id: user.id // CRITICAL: This links the package to the agency
+            agency_id: user.id 
         };
 
         let result;
@@ -1452,19 +1435,102 @@ window.processSave = async function(pkgId) {
 };
 
 /* =========================================
-   ADDITIONAL: RE-SYNC BOOKINGS VIEW
+   12. BOOKING RENDER LOGIC (FIXED VISIBILITY)
    ========================================= */
-// Add this helper to ensure bookings are fetched using the agency_id
-window.refreshBookings = async function(agencyId) {
+window.renderAgencyBookings = function(bookings) {
+    const container = document.getElementById('main-content');
+    if (!container) return;
+
+    if (!bookings || bookings.length === 0) {
+        container.innerHTML = `
+            <h3>Booking Requests</h3>
+            <div style="text-align:center; padding:50px; color:#666; background:white; border-radius:12px; border:1px dashed #ccc;">
+                <p>No New or Old Booking Requests Found.</p>
+                <p style="font-size:12px; color:#999;">Check if agency_id in Supabase matches your User ID.</p>
+            </div>`;
+        return;
+    }
+
+    const html = bookings.map(b => {
+        const isCancelled = b.status === 'cancelled';
+        const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
+        
+        // Use your specific columns: constant_9_percent_policy
+        const policyTag = b.constant_9_percent_policy ? 
+            `<div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">🛡️ Policy Verified</div>` : 
+            `<div style="background:#eee; color:#777; padding:5px 12px; border-radius:20px; font-size:11px;">Standard Policy</div>`;
+
+        return `
+        <div class="card" style="border-left: 6px solid ${statusColor}; margin-bottom:15px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05); opacity: ${isCancelled ? '0.75' : '1'}">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+                <div>
+                    <h4 style="margin:0 0 5px 0; color:#333;">${b.package_title || 'Package Booking'}</h4>
+                    <p style="font-size:11px; color:#888; margin:0;">Request ID: ${b.id} | Date: ${new Date(b.created_at).toLocaleDateString()}</p>
+                </div>
+                ${policyTag}
+            </div>
+            
+            <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; color:#444;">
+                <div>👤 <b>Customer:</b> ${b.customer_email}</div>
+                <div>📞 <b>Contact:</b> ${b.customer_phone}</div>
+                <div>📅 <b>Travel Date:</b> ${b.travel_date}</div>
+                <div>🚗 <b>Vehicle:</b> ${b.selected_vehicle}</div>
+                <div>💰 <b>Total:</b> ₹${b.total_price}</div>
+                <div>📍 <b>Address:</b> ${b.customer_address || 'N/A'}</div>
+            </div>
+
+            ${isCancelled ? `
+                <div style="margin-top:15px; padding:12px; background:#fdedec; color:#c0392b; border-radius:8px; text-align:center; font-weight:bold; border: 1px solid #fadbd8;">
+                    ⚠️ CANCELLATION INDICATOR: Customer has cancelled this request.
+                </div>
+            ` : `
+                <div style="margin-top:15px; display:flex; gap:10px;">
+                    <button onclick="window.updateBookingStatus('${b.id}', 'confirmed')" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
+                    <button onclick="window.updateBookingStatus('${b.id}', 'rejected')" style="background:#f4f4f4; color:#666; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Decline</button>
+                </div>
+            `}
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `<h3 style="color:#ff9f43; margin-bottom:20px;">Booking Requests (New & Old)</h3>` + html;
+};
+
+/* =========================================
+   13. DATA FETCHING (THE FIX)
+   ========================================= */
+window.loadAgencyDashboard = async function() {
+    const container = document.getElementById('main-content');
+    if (container) container.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Loading your requests...</p>`;
+
+    try {
+        const client = getClient();
+        const { data: { user } } = await client.auth.getUser();
+        
+        if (user) {
+            // This fetch ensures that ALL requests (Old + New) matching your agency_id are pulled
+            const { data: bookings, error } = await client
+                .from('bookings')
+                .select('*')
+                .eq('agency_id', user.id) 
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            window.renderAgencyBookings(bookings || []);
+        }
+    } catch (err) {
+        console.error("Fetch Error:", err);
+        if (container) container.innerHTML = `<p style="color:red;">Error loading bookings: ${err.message}</p>`;
+    }
+};
+
+// Update Helper
+window.updateBookingStatus = async function(bookingId, newStatus) {
     const client = getClient();
-    // Fetch all bookings where agency_id matches (Old + New)
-    const { data, error } = await client
-        .from('bookings')
-        .select('*')
-        .eq('agency_id', agencyId)
-        .order('created_at', { ascending: false });
-    
-    return data || [];
+    const { error } = await client.from('bookings').update({ status: newStatus }).eq('id', bookingId);
+    if (error) alert("Error: " + error.message);
+    else window.loadAgencyDashboard(); // Re-sync view after update
 };
 // 12. STYLES
 const styleTag = document.createElement('style');
