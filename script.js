@@ -1282,17 +1282,55 @@ window.processSave = async function(pkgId) {
 };
 
 /* =========================================
-   12. BOOKING RENDER LOGIC (FIXED FOR VISIBILITY)
+   12. BOOKING RENDER & FETCH LOGIC (SOLVED)
    ========================================= */
+
+// 1. THE FETCH: Gets the data from Supabase
+window.loadAgencyBookings = async function() {
+    const area = document.getElementById('main-content');
+    if (!area) return;
+
+    // Show a small loader so you know it's working
+    area.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Syncing with Database...</p>`;
+
+    try {
+        const client = getClient();
+        const { data: { user } } = await client.auth.getUser();
+
+        if (!user) {
+            area.innerHTML = `<p style="color:red; text-align:center;">Error: User not logged in.</p>`;
+            return;
+        }
+
+        // We fetch ALL bookings where agency_id matches the logged-in user
+        const { data: bookings, error } = await client
+            .from('bookings')
+            .select('*')
+            .eq('agency_id', user.id) // This is the filter that connects customers to YOU
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Pass the data to the render function
+        window.renderAgencyBookings(bookings || []);
+
+    } catch (err) {
+        console.error("Dashboard Fetch Error:", err);
+        area.innerHTML = `<p style="color:red; text-align:center;">❌ Database Error: ${err.message}</p>`;
+    }
+};
+
+// 2. THE RENDER: Draws the data on your screen
 window.renderAgencyBookings = function(bookings) {
     const container = document.getElementById('main-content');
     if (!container) return;
 
     if (!bookings || bookings.length === 0) {
-        container.innerHTML = `<h3>Booking Requests</h3>
-        <div style="text-align:center; padding:50px; color:#666; background:white; border-radius:12px; border:1px solid #ddd;">
-            <p>No New or Old Booking Requests Found.</p>
-        </div>`;
+        container.innerHTML = `
+            <h3>Booking Requests</h3>
+            <div style="text-align:center; padding:50px; color:#666; background:#fff; border:1px dashed #ccc; border-radius:12px;">
+                <p>No requests found. When a customer books your package, it will appear here instantly.</p>
+            </div>`;
         return;
     }
 
@@ -1301,39 +1339,52 @@ window.renderAgencyBookings = function(bookings) {
         const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
         
         return `
-        <div class="card" style="border-left: 5px solid ${statusColor}; margin-bottom:15px; position:relative; background:white; padding:20px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.05); opacity: ${isCancelled ? '0.75' : '1'}">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div class="card" style="border-left: 6px solid ${statusColor}; margin-bottom:15px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.08); opacity: ${isCancelled ? '0.7' : '1'}">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
                 <div>
-                    <h4 style="margin:0 0 5px 0; color:#333;">${b.package_title || 'Package Booking'}</h4>
-                    <p style="font-size:12px; color:#888; margin:0;">Request ID: ${b.id}</p>
+                    <h4 style="margin:0; font-size:18px; color:#2c3e50;">${b.package_title || 'Trip Booking'}</h4>
+                    <span style="font-size:11px; color:#95a5a6;">ID: ${b.id}</span>
                 </div>
-                <div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">
+                <div style="background:#e8f8f5; color:#16a085; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold;">
                     🛡️ Policy Verified
                 </div>
             </div>
-            <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; color:#444;">
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; font-size:13px;">
                 <div>👤 <b>Customer:</b> ${b.customer_name}</div>
                 <div>📞 <b>Contact:</b> ${b.customer_phone}</div>
                 <div>📅 <b>Travel Date:</b> ${b.travel_date}</div>
                 <div>🚗 <b>Vehicle:</b> ${b.vehicle_name}</div>
             </div>
+
             ${isCancelled ? `
-                <div style="margin-top:15px; padding:12px; background:#fdedec; color:#c0392b; border-radius:8px; text-align:center; font-weight:bold; border: 1px solid #fadbd8;">
-                    ⚠️ CANCELLATION INDICATOR: Customer has cancelled this request.
+                <div style="margin-top:15px; padding:10px; background:#fdedec; color:#c0392b; border-radius:8px; text-align:center; font-weight:bold;">
+                    ⚠️ CANCELLATION INDICATOR: Customer has cancelled.
                 </div>
             ` : `
                 <div style="margin-top:15px; display:flex; gap:10px;">
-                    <button onclick="window.updateBookingStatus('${b.id}', 'confirmed')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
-                    <button onclick="window.updateBookingStatus('${b.id}', 'rejected')" style="background:#f4f4f4; color:#666; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; flex:1;">Decline</button>
+                    <button onclick="window.updateStatus('${b.id}', 'confirmed')" style="background:#2ecc71; color:white; flex:1; padding:10px; border-radius:8px; font-weight:bold;">Accept</button>
+                    <button onclick="window.updateStatus('${b.id}', 'rejected')" style="background:#ecf0f1; color:#7f8c8d; flex:1; padding:10px; border-radius:8px; font-weight:bold;">Decline</button>
                 </div>
             `}
         </div>`;
     }).join('');
 
-    container.innerHTML = `<h3 style="color:#ff9f43; margin-bottom:20px;">Booking Requests (New & Old)</h3>` + html;
+    container.innerHTML = `<h3 style="color:#ff9f43;">Booking Requests (Old & New)</h3>` + html;
 };
 
+// 3. THE UPDATE: Changes status and refreshes the view
+window.updateStatus = async function(id, newStatus) {
+    try {
+        const client = getClient();
+        const { error } = await client.from('bookings').update({ status: newStatus }).eq('id', id);
+        if (error) throw error;
+        // Refresh the list immediately after update
+        window.loadAgencyBookings();
+    } catch (err) {
+        alert("Update failed: " + err.message);
+    }
+};
 /* =========================================
    13. THE MISSING PIECE: FETCHING DATA
    ========================================= */
