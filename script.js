@@ -1248,7 +1248,9 @@ window.showPackageForm = function(pEncoded = null) {
         </div>`;
 };
 
-// 11. SAVE LOGIC: Sends data to Supabase
+/* =========================================
+   11. SAVE LOGIC: Package Management
+   ========================================= */
 window.processSave = async function(pkgId) {
     const btn = document.getElementById('save-btn');
     if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
@@ -1312,129 +1314,6 @@ window.processSave = async function(pkgId) {
 };
 
 /* =========================================
-   12. BOOKING RENDER LOGIC (FIXED FOR VISIBILITY)
-   ========================================= */
-window.renderAgencyBookings = function(bookings) {
-    const container = document.getElementById('main-content');
-    if (!container) return;
-
-    // This ensures that even if there are no bookings, the header stays
-    if (!bookings || bookings.length === 0) {
-        container.innerHTML = `<h3>Booking Requests</h3>
-        <div style="text-align:center; padding:50px; color:#666; background:white; border-radius:12px; border:1px solid #ddd;">
-            <p>No New or Old Booking Requests Found.</p>
-        </div>`;
-        return;
-    }
-
-    const html = bookings.map(b => {
-        // 1. Cancellation Indicator logic
-        const isCancelled = b.status === 'cancelled';
-        const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
-        
-        return `
-        <div class="card" style="border-left: 5px solid ${statusColor}; margin-bottom:15px; position:relative; background:white; padding:20px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.05); opacity: ${isCancelled ? '0.75' : '1'}">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                <div>
-                    <h4 style="margin:0 0 5px 0; color:#333;">${b.package_title || 'Package Booking'}</h4>
-                    <p style="font-size:12px; color:#888; margin:0;">Request ID: ${b.id}</p>
-                </div>
-                <div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold; display:flex; align-items:center; gap:4px;">
-                    🛡️ Policy Verified
-                </div>
-            </div>
-            
-            <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; color:#444;">
-                <div>👤 <b>Customer:</b> ${b.customer_name}</div>
-                <div>📞 <b>Contact:</b> ${b.customer_phone}</div>
-                <div>📅 <b>Travel Date:</b> ${b.travel_date}</div>
-                <div>🚗 <b>Vehicle:</b> ${b.vehicle_name}</div>
-            </div>
-
-            ${isCancelled ? `
-                <div style="margin-top:15px; padding:12px; background:#fdedec; color:#c0392b; border-radius:8px; text-align:center; font-weight:bold; border: 1px solid #fadbd8;">
-                    ⚠️ CANCELLATION INDICATOR: Customer has cancelled this request.
-                </div>
-            ` : `
-                <div style="margin-top:15px; display:flex; gap:10px;">
-                    <button onclick="updateStatus('${b.id}', 'confirmed')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
-                    <button onclick="updateStatus('${b.id}', 'rejected')" style="background:#f4f4f4; color:#666; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; flex:1;">Decline</button>
-                </div>
-            `}
-        </div>`;
-    }).join('');
-
-    container.innerHTML = `<h3 style="color:#ff9f43; margin-bottom:20px;">Booking Requests (New & Old)</h3>` + html;
-};
-
-/* =========================================
-   11. SAVE LOGIC: Package Management
-   ========================================= */
-window.processSave = async function(pkgId) {
-    const btn = document.getElementById('save-btn');
-    if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
-
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("User session not found.");
-
-        const title = document.getElementById('p-title').value.trim();
-        const city = document.getElementById('p-city').value;
-        const desc = document.getElementById('p-desc').value;
-
-        if (!title || !city) throw new Error("Title and Starting City are required!");
-
-        const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
-        if (selectedDests.length === 0) throw new Error("Select at least one destination!");
-
-        const selectedVehicles = [];
-        document.querySelectorAll('.v-enable:checked').forEach(el => {
-            const vId = el.dataset.id;
-            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`).value) || 0;
-            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`).value) || 1;
-            const vType = vehicleTypes.find(vt => vt.id === vId);
-            if (rate > 0) {
-                selectedVehicles.push({ id: vId, name: vType.name, rate: rate, max_cars: max, icon: vType.icon });
-            }
-        });
-
-        if (selectedVehicles.length === 0) throw new Error("Set a price for at least one vehicle!");
-
-        const pkgData = {
-            title: title,
-            starting_location: city,
-            destination: selectedDests, 
-            vehicles: selectedVehicles,
-            description: desc,
-            agency_id: user.id 
-        };
-
-        let result;
-        if (pkgId && pkgId !== "undefined" && pkgId !== "null" && pkgId !== "") {
-            result = await client.from('packages').update(pkgData).eq('id', pkgId);
-        } else {
-            result = await client.from('packages').insert([pkgData]);
-        }
-
-        if (result.error) throw result.error;
-
-        alert("✅ Success! Package saved.");
-        window.showTab('packages'); 
-
-    } catch (err) {
-        console.error("Save Error:", err);
-        alert("❌ Error: " + err.message);
-        if (btn) {
-            btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE";
-            btn.disabled = false;
-        }
-    }
-};
-
-/* =========================================
    12. BOOKING RENDER LOGIC (FIXED VISIBILITY)
    ========================================= */
 window.renderAgencyBookings = function(bookings) {
@@ -1446,7 +1325,7 @@ window.renderAgencyBookings = function(bookings) {
             <h3>Booking Requests</h3>
             <div style="text-align:center; padding:50px; color:#666; background:white; border-radius:12px; border:1px dashed #ccc;">
                 <p>No New or Old Booking Requests Found.</p>
-                <p style="font-size:12px; color:#999;">Check if agency_id in Supabase matches your User ID.</p>
+                <p style="font-size:12px; color:#999;">Searching table for column: <b>agency_uuid</b></p>
             </div>`;
         return;
     }
@@ -1455,7 +1334,7 @@ window.renderAgencyBookings = function(bookings) {
         const isCancelled = b.status === 'cancelled';
         const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
         
-        // Use your specific columns: constant_9_percent_policy
+        // Use your specific column: constant_9_percent_policy
         const policyTag = b.constant_9_percent_policy ? 
             `<div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">🛡️ Policy Verified</div>` : 
             `<div style="background:#eee; color:#777; padding:5px 12px; border-radius:20px; font-size:11px;">Standard Policy</div>`;
@@ -1478,7 +1357,7 @@ window.renderAgencyBookings = function(bookings) {
                 <div>📅 <b>Travel Date:</b> ${b.travel_date}</div>
                 <div>🚗 <b>Vehicle:</b> ${b.selected_vehicle}</div>
                 <div>💰 <b>Total:</b> ₹${b.total_price}</div>
-                <div>📍 <b>Address:</b> ${b.customer_address || 'N/A'}</div>
+                <div style="grid-column: span 2;">📍 <b>Address:</b> ${b.customer_address || 'N/A'}</div>
             </div>
 
             ${isCancelled ? `
@@ -1498,22 +1377,22 @@ window.renderAgencyBookings = function(bookings) {
 };
 
 /* =========================================
-   13. DATA FETCHING (THE FIX)
+   13. DATA FETCHING (FIX FOR 400 ERROR)
    ========================================= */
 window.loadAgencyDashboard = async function() {
     const container = document.getElementById('main-content');
-    if (container) container.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Loading your requests...</p>`;
+    if (container) container.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Syncing bookings...</p>`;
 
     try {
         const client = getClient();
         const { data: { user } } = await client.auth.getUser();
         
         if (user) {
-            // This fetch ensures that ALL requests (Old + New) matching your agency_id are pulled
+            // FIX: Using 'agency_uuid' to match your specific Supabase table column
             const { data: bookings, error } = await client
                 .from('bookings')
                 .select('*')
-                .eq('agency_id', user.id) 
+                .eq('agency_uuid', user.id) 
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -1521,7 +1400,11 @@ window.loadAgencyDashboard = async function() {
         }
     } catch (err) {
         console.error("Fetch Error:", err);
-        if (container) container.innerHTML = `<p style="color:red;">Error loading bookings: ${err.message}</p>`;
+        if (container) container.innerHTML = `<div style="color:red; padding:20px; background:white; border-radius:10px;">
+            <h4>❌ Load Error (400)</h4>
+            <p>Database rejected the request. Please verify column <b>agency_uuid</b> exists.</p>
+            <small>${err.message}</small>
+        </div>`;
     }
 };
 
