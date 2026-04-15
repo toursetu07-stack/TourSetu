@@ -1258,7 +1258,7 @@ window.processSave = async function(pkgId) {
     try {
         const client = getClient();
         const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("User session not found. Please logout and login again.");
+        if (!user) throw new Error("User session not found.");
 
         const title = document.getElementById('p-title').value.trim();
         const city = document.getElementById('p-city').value;
@@ -1267,8 +1267,6 @@ window.processSave = async function(pkgId) {
         if (!title || !city) throw new Error("Title and Starting City are required!");
 
         const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
-        if (selectedDests.length === 0) throw new Error("Select at least one destination!");
-
         const selectedVehicles = [];
         document.querySelectorAll('.v-enable:checked').forEach(el => {
             const vId = el.dataset.id;
@@ -1280,15 +1278,13 @@ window.processSave = async function(pkgId) {
             }
         });
 
-        if (selectedVehicles.length === 0) throw new Error("Set a price for at least one vehicle!");
-
         const pkgData = {
             title: title,
             starting_location: city,
             destination: selectedDests, 
             vehicles: selectedVehicles,
             description: desc,
-            agency_id: user.id
+            agency_id: user.id // Note: Check if 'packages' table uses agency_id or agency_uuid
         };
 
         let result;
@@ -1299,22 +1295,17 @@ window.processSave = async function(pkgId) {
         }
 
         if (result.error) throw result.error;
-
         alert("✅ Success! Package saved.");
         window.showTab('packages'); 
 
     } catch (err) {
-        console.error("Save Error:", err);
         alert("❌ Error: " + err.message);
-        if (btn) {
-            btn.innerText = (pkgId && pkgId !== "undefined" && pkgId !== "null") ? "SAVE CHANGES" : "PUBLISH PACKAGE";
-            btn.disabled = false;
-        }
+        if (btn) { btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE"; btn.disabled = false; }
     }
 };
 
 /* =========================================
-   12. BOOKING RENDER LOGIC (FIXED VISIBILITY)
+   12. BOOKING RENDER LOGIC (MATCHED COLUMNS)
    ========================================= */
 window.renderAgencyBookings = function(bookings) {
     const container = document.getElementById('main-content');
@@ -1325,7 +1316,7 @@ window.renderAgencyBookings = function(bookings) {
             <h3>Booking Requests</h3>
             <div style="text-align:center; padding:50px; color:#666; background:white; border-radius:12px; border:1px solid #ddd;">
                 <p>No New or Old Booking Requests Found.</p>
-                <p style="font-size:12px; color:#999;">Verified Column: <b>agency_uuid</b></p>
+                <p style="font-size:11px; color:#999;">Database matched column: <b>agency_uuid</b></p>
             </div>`;
         return;
     }
@@ -1334,7 +1325,6 @@ window.renderAgencyBookings = function(bookings) {
         const isCancelled = b.status === 'cancelled';
         const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
         
-        // Dynamic Badge for your 9% policy column
         const policyTag = b.constant_9_percent_policy ? 
             `<div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">🛡️ 9% Policy Verified</div>` : 
             `<div style="background:#eee; color:#777; padding:5px 12px; border-radius:20px; font-size:11px;">Standard Policy</div>`;
@@ -1377,7 +1367,7 @@ window.renderAgencyBookings = function(bookings) {
 };
 
 /* =========================================
-   13. DATA FETCHING (FIXED FOR 400 ERROR)
+   13. DATA FETCHING (CRITICAL FIX FOR 400)
    ========================================= */
 window.loadAgencyDashboard = async function() {
     const container = document.getElementById('main-content');
@@ -1388,29 +1378,31 @@ window.loadAgencyDashboard = async function() {
         const { data: { user } } = await client.auth.getUser();
         
         if (user) {
-            // WE CHANGED 'agency_id' TO 'agency_uuid' BELOW
-            // This matches your actual Supabase column name
+            // THE FIX: We are now searching for 'agency_uuid' NOT 'agency_id'
             const { data: bookings, error } = await client
                 .from('bookings')
                 .select('*')
-                .eq('agency_uuid', user.id) // Corrected column name
+                .eq('agency_uuid', user.id) 
                 .order('created_at', { ascending: false });
 
-            if (error) {
-                console.error("Supabase Error:", error);
-                throw error;
-            }
-            
-            // This sends the data (Old + New) to your display function
+            if (error) throw error;
             window.renderAgencyBookings(bookings || []);
         }
     } catch (err) {
+        console.error("Fetch Error:", err);
         if (container) container.innerHTML = `<div style="color:red; padding:20px;">
-            <h4>❌ Connection Error (400)</h4>
-            <p>The database does not recognize the column name.</p>
+            <h4>❌ Load Error (400)</h4>
+            <p>Check if column <b>agency_uuid</b> is correctly spelled in Supabase.</p>
             <small>${err.message}</small>
         </div>`;
     }
+};
+
+window.updateBookingStatus = async function(bookingId, newStatus) {
+    const client = getClient();
+    const { error } = await client.from('bookings').update({ status: newStatus }).eq('id', bookingId);
+    if (error) alert("Error: " + error.message);
+    else window.loadAgencyDashboard(); 
 };
 // 12. STYLES
 const styleTag = document.createElement('style');
