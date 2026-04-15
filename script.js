@@ -1323,9 +1323,9 @@ window.renderAgencyBookings = function(bookings) {
     if (!bookings || bookings.length === 0) {
         container.innerHTML = `
             <h3>Booking Requests</h3>
-            <div style="text-align:center; padding:50px; color:#666; background:white; border-radius:12px; border:1px dashed #ccc;">
+            <div style="text-align:center; padding:50px; color:#666; background:white; border-radius:12px; border:1px solid #ddd;">
                 <p>No New or Old Booking Requests Found.</p>
-                <p style="font-size:12px; color:#999;">Searching table for column: <b>agency_uuid</b></p>
+                <p style="font-size:12px; color:#999;">Verified Column: <b>agency_uuid</b></p>
             </div>`;
         return;
     }
@@ -1334,9 +1334,9 @@ window.renderAgencyBookings = function(bookings) {
         const isCancelled = b.status === 'cancelled';
         const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
         
-        // Use your specific column: constant_9_percent_policy
+        // Dynamic Badge for your 9% policy column
         const policyTag = b.constant_9_percent_policy ? 
-            `<div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">🛡️ Policy Verified</div>` : 
+            `<div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">🛡️ 9% Policy Verified</div>` : 
             `<div style="background:#eee; color:#777; padding:5px 12px; border-radius:20px; font-size:11px;">Standard Policy</div>`;
 
         return `
@@ -1381,14 +1381,14 @@ window.renderAgencyBookings = function(bookings) {
    ========================================= */
 window.loadAgencyDashboard = async function() {
     const container = document.getElementById('main-content');
-    if (container) container.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Syncing bookings...</p>`;
+    if (container) container.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Loading your requests...</p>`;
 
     try {
         const client = getClient();
         const { data: { user } } = await client.auth.getUser();
         
         if (user) {
-            // FIX: Using 'agency_uuid' to match your specific Supabase table column
+            // FIX: Changed 'agency_id' to 'agency_uuid' to match your table and fix the 400 error
             const { data: bookings, error } = await client
                 .from('bookings')
                 .select('*')
@@ -1401,19 +1401,18 @@ window.loadAgencyDashboard = async function() {
     } catch (err) {
         console.error("Fetch Error:", err);
         if (container) container.innerHTML = `<div style="color:red; padding:20px; background:white; border-radius:10px;">
-            <h4>❌ Load Error (400)</h4>
-            <p>Database rejected the request. Please verify column <b>agency_uuid</b> exists.</p>
+            <h4>❌ Database Error</h4>
+            <p>Please check if the column <b>agency_uuid</b> exists in your 'bookings' table.</p>
             <small>${err.message}</small>
         </div>`;
     }
 };
 
-// Update Helper
 window.updateBookingStatus = async function(bookingId, newStatus) {
     const client = getClient();
     const { error } = await client.from('bookings').update({ status: newStatus }).eq('id', bookingId);
     if (error) alert("Error: " + error.message);
-    else window.loadAgencyDashboard(); // Re-sync view after update
+    else window.loadAgencyDashboard(); 
 };
 // 12. STYLES
 const styleTag = document.createElement('style');
