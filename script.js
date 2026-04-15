@@ -1135,10 +1135,10 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
 window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
 window.executeLogout = async () => { await getClient().auth.signOut(); location.reload(); };
 /* =========================================
-   10 & 11. PACKAGE FORM & SAVE LOGIC (ENHANCED)
+   10. PACKAGE FORM & HELPER LOGIC
    ========================================= */
 
-// 10A. HELPER: Populates the City dropdown based on selected State
+// Populates the City dropdown based on selected State
 window.updateCities = function() {
     const stateSelect = document.getElementById('p-state');
     const citySelect = document.getElementById('p-city');
@@ -1157,7 +1157,7 @@ window.updateCities = function() {
     }
 };
 
-// 10B. RENDER FORM: Shows the Create/Edit UI
+// RENDER FORM: Shows the Create/Edit UI
 window.showPackageForm = function(pEncoded = null) {
     let pkg = null;
     try {
@@ -1284,28 +1284,36 @@ window.processSave = async function(pkgId) {
             destination: selectedDests, 
             vehicles: selectedVehicles,
             description: desc,
-            agency_id: user.id // Note: Check if 'packages' table uses agency_id or agency_uuid
+            agency_id: user.id 
         };
 
-        let result;
-        if (pkgId && pkgId !== "undefined" && pkgId !== "null" && pkgId !== "") {
-            result = await client.from('packages').update(pkgData).eq('id', pkgId);
+        let error;
+        // Logic to either Update (Edit) or Insert (New)
+        if (pkgId && pkgId !== "" && pkgId !== "undefined") {
+            const result = await client.from('packages').update(pkgData).eq('id', pkgId);
+            error = result.error;
         } else {
-            result = await client.from('packages').insert([pkgData]);
+            const result = await client.from('packages').insert([pkgData]);
+            error = result.error;
         }
 
-        if (result.error) throw result.error;
+        if (error) throw error;
+        
         alert("✅ Success! Package saved.");
-        window.showTab('packages'); 
+        window.showTab('packages'); // Go back to the list
 
     } catch (err) {
+        console.error("Save Error:", err);
         alert("❌ Error: " + err.message);
-        if (btn) { btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE"; btn.disabled = false; }
+        if (btn) {
+            btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE";
+            btn.disabled = false;
+        }
     }
 };
 
 /* =========================================
-   12. BOOKING RENDER LOGIC (MATCHED COLUMNS)
+   12. BOOKING RENDER LOGIC (ALL FEATURES)
    ========================================= */
 window.renderAgencyBookings = function(bookings) {
     const container = document.getElementById('main-content');
@@ -1367,7 +1375,7 @@ window.renderAgencyBookings = function(bookings) {
 };
 
 /* =========================================
-   13. DATA FETCHING (CRITICAL FIX FOR 400)
+   13. DATA FETCHING (400 ERROR FIX INCLUDED)
    ========================================= */
 window.loadAgencyDashboard = async function() {
     const container = document.getElementById('main-content');
@@ -1378,7 +1386,7 @@ window.loadAgencyDashboard = async function() {
         const { data: { user } } = await client.auth.getUser();
         
         if (user) {
-            // THE FIX: We are now searching for 'agency_uuid' NOT 'agency_id'
+            // MATCHED TO YOUR TABLE: agency_uuid
             const { data: bookings, error } = await client
                 .from('bookings')
                 .select('*')
@@ -1392,7 +1400,7 @@ window.loadAgencyDashboard = async function() {
         console.error("Fetch Error:", err);
         if (container) container.innerHTML = `<div style="color:red; padding:20px;">
             <h4>❌ Load Error (400)</h4>
-            <p>Check if column <b>agency_uuid</b> is correctly spelled in Supabase.</p>
+            <p>Ensure column <b>agency_uuid</b> exists in your Supabase 'bookings' table.</p>
             <small>${err.message}</small>
         </div>`;
     }
