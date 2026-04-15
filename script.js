@@ -1135,14 +1135,14 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
 window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
 window.executeLogout = async () => { await getClient().auth.signOut(); location.reload(); };
 /* =========================================
-   10 & 11. PACKAGE FORM & SAVE LOGIC (ENHANCED)
+   10 & 11. PACKAGE FORM & SAVE LOGIC
    ========================================= */
 
-// 10A. HELPER: Populates the City dropdown based on selected State
+// 10A. HELPER: Populates the City dropdown
 window.updateCities = function() {
     const stateSelect = document.getElementById('p-state');
     const citySelect = document.getElementById('p-city');
-    if (!stateSelect || citySelect === null) return;
+    if (!stateSelect || !citySelect) return;
 
     const selectedState = stateSelect.value;
     citySelect.innerHTML = '<option value="">Select City</option>';
@@ -1162,9 +1162,7 @@ window.showPackageForm = function(pEncoded = null) {
     let pkg = null;
     try {
         pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
-    } catch (e) { 
-        console.error("Decoding error:", e); 
-    }
+    } catch (e) { console.error("Decoding error:", e); }
     
     const isEdit = (pkg && pkg.id);
     const area = document.getElementById('main-content');
@@ -1177,8 +1175,7 @@ window.showPackageForm = function(pEncoded = null) {
     if (isEdit && pkg.starting_location) {
         for (let s in locationData) {
             if (locationData[s].includes(pkg.starting_location)) { 
-                selectedState = s; 
-                break; 
+                selectedState = s; break; 
             }
         }
     }
@@ -1208,65 +1205,56 @@ window.showPackageForm = function(pEncoded = null) {
     area.innerHTML = `
         <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
             <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🚀 Create New Package'}</h3>
-            
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
                 <div>
                     <label style="font-size:11px; font-weight:bold; color:#666;">PACKAGE TITLE</label>
-                    <input type="text" id="p-title" placeholder="e.g. 3 Days Kedarnath Trip" value="${isEdit ? pkg.title : ''}" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <input type="text" id="p-title" placeholder="e.g. 3 Days Kedarnath Trip" value="${isEdit ? pkg.title : ''}">
                 </div>
                 <div>
                     <label style="font-size:11px; font-weight:bold; color:#666;">PICKUP STATE</label>
-                    <select id="p-state" onchange="window.updateCities()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <select id="p-state" onchange="window.updateCities()">
                         <option value="">Select State</option>
                         ${stateOptions}
                     </select>
                 </div>
             </div>
-
             <label style="font-size:11px; font-weight:bold; color:#666;">STARTING CITY</label>
-            <select id="p-city" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-bottom:15px;">
+            <select id="p-city">
                 ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
             </select>
-            
             <p><b>Destinations:</b></p>
             <div style="background:#f9f9f9; padding:15px; border-radius:10px; max-height:150px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:8px; border:1px solid #eee; margin-bottom:20px;">
                 ${destHtml}
             </div>
-
             <p><b>Vehicle Pricing:</b></p>
             <div style="margin-bottom:20px;">${vehicleHtml}</div>
-
             <label style="font-size:11px; font-weight:bold; color:#666;">ITINERARY DETAILS</label>
-            <textarea id="p-desc" style="height:120px; width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
-            
+            <textarea id="p-desc" style="height:120px;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
             <div style="display:flex; gap:10px; margin-top:25px;">
-                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold; border:none; border-radius:8px; cursor:pointer;">
+                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; border-radius:8px; flex:2; height:50px; font-weight:bold; cursor:pointer;">
                     ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
                 </button>
-                <button onclick="window.showTab('packages')" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
+                <button onclick="window.showTab('packages')" style="background:#eee; border-radius:8px; flex:1; cursor:pointer;">Cancel</button>
             </div>
         </div>`;
 };
 
-// 11. SAVE LOGIC: Sends data to Supabase
+// 11. SAVE LOGIC: Links to agency_id
 window.processSave = async function(pkgId) {
     const btn = document.getElementById('save-btn');
     if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
-
     try {
         const client = getClient();
         const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("User session not found. Please logout and login again.");
+        if (!user) throw new Error("User session not found.");
 
         const title = document.getElementById('p-title').value.trim();
         const city = document.getElementById('p-city').value;
         const desc = document.getElementById('p-desc').value;
 
-        if (!title || !city) throw new Error("Title and Starting City are required!");
+        if (!title || !city) throw new Error("Title and City are required!");
 
         const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
-        if (selectedDests.length === 0) throw new Error("Select at least one destination!");
-
         const selectedVehicles = [];
         document.querySelectorAll('.v-enable:checked').forEach(el => {
             const vId = el.dataset.id;
@@ -1278,36 +1266,18 @@ window.processSave = async function(pkgId) {
             }
         });
 
-        if (selectedVehicles.length === 0) throw new Error("Set a price for at least one vehicle!");
+        const pkgData = { title, starting_location: city, destination: selectedDests, vehicles: selectedVehicles, description: desc, agency_id: user.id };
 
-        const pkgData = {
-            title: title,
-            starting_location: city,
-            destination: selectedDests, 
-            vehicles: selectedVehicles,
-            description: desc,
-            agency_id: user.id
-        };
-
-        let result;
-        if (pkgId && pkgId !== "undefined" && pkgId !== "null" && pkgId !== "") {
-            result = await client.from('packages').update(pkgData).eq('id', pkgId);
-        } else {
-            result = await client.from('packages').insert([pkgData]);
-        }
+        let result = (pkgId && pkgId !== "null" && pkgId !== "") 
+            ? await client.from('packages').update(pkgData).eq('id', pkgId)
+            : await client.from('packages').insert([pkgData]);
 
         if (result.error) throw result.error;
-
         alert("✅ Success! Package saved.");
         window.showTab('packages'); 
-
     } catch (err) {
-        console.error("Save Error:", err);
         alert("❌ Error: " + err.message);
-        if (btn) {
-            btn.innerText = (pkgId && pkgId !== "undefined" && pkgId !== "null") ? "SAVE CHANGES" : "PUBLISH PACKAGE";
-            btn.disabled = false;
-        }
+        if (btn) { btn.innerText = "PUBLISH PACKAGE"; btn.disabled = false; }
     }
 };
 
@@ -1318,7 +1288,6 @@ window.renderAgencyBookings = function(bookings) {
     const container = document.getElementById('main-content');
     if (!container) return;
 
-    // This ensures that even if there are no bookings, the header stays
     if (!bookings || bookings.length === 0) {
         container.innerHTML = `<h3>Booking Requests</h3>
         <div style="text-align:center; padding:50px; color:#666; background:white; border-radius:12px; border:1px solid #ddd;">
@@ -1328,7 +1297,6 @@ window.renderAgencyBookings = function(bookings) {
     }
 
     const html = bookings.map(b => {
-        // 1. Cancellation Indicator logic
         const isCancelled = b.status === 'cancelled';
         const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
         
@@ -1339,34 +1307,63 @@ window.renderAgencyBookings = function(bookings) {
                     <h4 style="margin:0 0 5px 0; color:#333;">${b.package_title || 'Package Booking'}</h4>
                     <p style="font-size:12px; color:#888; margin:0;">Request ID: ${b.id}</p>
                 </div>
-                <div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold; display:flex; align-items:center; gap:4px;">
+                <div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">
                     🛡️ Policy Verified
                 </div>
             </div>
-            
             <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-            
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; color:#444;">
                 <div>👤 <b>Customer:</b> ${b.customer_name}</div>
                 <div>📞 <b>Contact:</b> ${b.customer_phone}</div>
                 <div>📅 <b>Travel Date:</b> ${b.travel_date}</div>
                 <div>🚗 <b>Vehicle:</b> ${b.vehicle_name}</div>
             </div>
-
             ${isCancelled ? `
                 <div style="margin-top:15px; padding:12px; background:#fdedec; color:#c0392b; border-radius:8px; text-align:center; font-weight:bold; border: 1px solid #fadbd8;">
                     ⚠️ CANCELLATION INDICATOR: Customer has cancelled this request.
                 </div>
             ` : `
                 <div style="margin-top:15px; display:flex; gap:10px;">
-                    <button onclick="updateStatus('${b.id}', 'confirmed')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
-                    <button onclick="updateStatus('${b.id}', 'rejected')" style="background:#f4f4f4; color:#666; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; flex:1;">Decline</button>
+                    <button onclick="window.updateBookingStatus('${b.id}', 'confirmed')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
+                    <button onclick="window.updateBookingStatus('${b.id}', 'rejected')" style="background:#f4f4f4; color:#666; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; flex:1;">Decline</button>
                 </div>
             `}
         </div>`;
     }).join('');
 
     container.innerHTML = `<h3 style="color:#ff9f43; margin-bottom:20px;">Booking Requests (New & Old)</h3>` + html;
+};
+
+/* =========================================
+   13. THE MISSING PIECE: FETCHING DATA
+   ========================================= */
+
+// Ensure your showTab function includes this fetch logic for 'bookings'
+window.loadAgencyBookings = async function() {
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) return;
+
+    // FETCH: Get all bookings where agency_id matches the user
+    const { data, error } = await client
+        .from('bookings')
+        .select('*')
+        .eq('agency_id', user.id)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Fetch error:", error);
+    } else {
+        window.renderAgencyBookings(data || []);
+    }
+};
+
+// Helper for status updates
+window.updateBookingStatus = async function(bookingId, newStatus) {
+    const client = getClient();
+    const { error } = await client.from('bookings').update({ status: newStatus }).eq('id', bookingId);
+    if (error) alert("Error: " + error.message);
+    else window.loadAgencyBookings(); // Refresh the list
 };
 
 /* =========================================
