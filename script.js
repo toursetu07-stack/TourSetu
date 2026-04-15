@@ -380,8 +380,8 @@ function renderCustomerHomepage(user) {
             </div>
         </div>
 
-        <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:flex-start; overflow-y:auto; padding:40px 20px;">
-            <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin-bottom: 50px;">
+        <div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; overflow-y:auto; padding:20px;">
+            <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin: auto;">
                 <div id="detail-view-body"></div>
            </div>
         </div>
@@ -421,19 +421,10 @@ window.renderCustomerRequests = async () => {
     }
 
     container.innerHTML = data.map(b => {
-        const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43'));
+        const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : '#ff9f43');
         const isPending = b.status === 'pending';
         const isPaid = b.status === 'paid';
         const isApproved = b.status === 'approved';
-        const isCancelled = b.status === 'cancelled';
-
-        // Date Check Logic: Show Cancel button ONLY if current date <= travel date
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const travelDateObj = b.travel_date ? new Date(b.travel_date) : null;
-        if(travelDateObj) travelDateObj.setHours(0,0,0,0);
-        
-        const canCancel = travelDateObj && today <= travelDateObj && !isCancelled;
 
         return `
         <div class="card" style="background:white; padding:25px; border-left:5px solid ${statusColor}; position:relative; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius:15px;">
@@ -446,20 +437,15 @@ window.renderCustomerRequests = async () => {
                         <div style="margin-top:5px;">Status: <span style="padding:2px 8px; border-radius:10px; font-size:11px; background:#f0f0f0; color:${statusColor}; font-weight:bold;">${b.status.toUpperCase()}</span></div>
                     </div>
                 </div>
-                ${canCancel ? `<button onclick="cancelBookingWithPenalty(${b.id})" style="background:#ff7675; color:white; border:none; padding:8px 15px; font-size:12px; border-radius:8px; cursor:pointer; font-weight:bold;">✕ Cancel Booking</button>` : ''}
+                ${isPending ? `<button onclick="deleteBookingRequest(${b.id})" style="background:none; border:1px solid #ff7675; color:#ff7675; padding:5px 10px; font-size:12px; border-radius:5px; cursor:pointer;">🗑️ Delete</button>` : ''}
             </div>
 
-            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : (isCancelled ? '#f1f2f6' : '#f8f9fa')}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
+            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : '#f8f9fa'}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
                 ${isPaid ? `
                     <div style="text-align:center;">
                         <p style="margin:0 0 5px 0; font-size:12px; color:#27ae60; font-weight:bold;">✅ AGENCY CONTACT REVEALED</p>
                         <h2 style="margin:0; color:#2d3436;">${b.agency_contact || 'Contact info missing'}</h2>
                         <small style="color:#666;">Call now to coordinate your trip!</small>
-                    </div>
-                ` : (isCancelled ? `
-                    <div style="text-align:center; color:#636e72;">
-                        <p style="margin:0; font-weight:bold; color:#ff7675;">🚫 BOOKING CANCELLED</p>
-                        <small>You cancelled this trip request.</small>
                     </div>
                 ` : `
                     <div style="text-align:center; color:#636e72;">
@@ -467,36 +453,10 @@ window.renderCustomerRequests = async () => {
                         <small>Available only after payment is confirmed</small>
                         ${isApproved ? `<button onclick="simulatePayment(${b.id})" style="margin-top:10px; background:#2ecc71; color:white; width:100%; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">PROCEED TO PAYMENT (₹${b.total_price})</button>` : ''}
                     </div>
-                `)}
+                `}
             </div>
         </div>`;
     }).join('');
-};
-
-window.cancelBookingWithPenalty = async function(id) {
-    const disclaimer = "In case of cancellation, a non-refundable amount of 9% (2% Gateway + 7% Service & Facilitation Fee) will be deducted from your total fund.\n\nDo you agree to proceed with the cancellation?";
-    
-    if (!confirm(disclaimer)) return;
-
-    const client = getClient();
-    try {
-        // Update status to 'cancelled' so it stays in history but looks cancelled for both parties
-        const { error } = await client
-            .from('bookings')
-            .update({ status: 'cancelled' })
-            .eq('id', id);
-
-        if (!error) {
-            alert("Booking Cancelled successfully.");
-            renderCustomerRequests();
-            // Note: On the Agency Side, their dashboard should filter for .neq('status', 'cancelled') 
-            // OR display "Customer has cancelled this booking" based on this status change.
-        } else {
-            throw error;
-        }
-    } catch (e) {
-        alert("Error during cancellation: " + e.message);
-    }
 };
 
 window.showPackageDetails = function(pEncoded) {
@@ -546,7 +506,7 @@ window.showPackageDetails = function(pEncoded) {
         <div style="text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:start;">
                 <h2 style="margin:0; color:#2d3436;">${p.title}</h2>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:28px; color:#999; cursor:pointer; line-height:1;">✕</button>
+                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:24px; color:#999; cursor:pointer;">✕</button>
             </div>
             <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
             
@@ -557,10 +517,7 @@ window.showPackageDetails = function(pEncoded) {
             
             <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
                 <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
-                <input type="date" id="cust-travel-date" 
-                       min="${new Date().toISOString().split('T')[0]}" 
-                       style="width:100%; padding:15px; border:2px solid #ff9f43; border-radius:10px; font-weight:bold; color:#2d3436; font-family:inherit; font-size:16px; background:white; display:block; appearance: none; -webkit-appearance: none;">
-                <small style="color:#636e72; display:block; margin-top:5px;">Click the icon or the field to open the calendar</small>
+                <input type="date" id="cust-travel-date" min="${new Date().toISOString().split('T')[0]}" style="width:100%; padding:12px; border:2px solid #ff9f43; border-radius:8px; font-weight:bold; color:#2d3436; font-family:inherit;">
             </div>
 
             <h4>Select Vehicles to Book</h4>
@@ -672,6 +629,14 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("An error occurred. Please check your connection.");
     }
 };
+
+window.deleteBookingRequest = async function(id) {
+    if (!confirm("Are you sure you want to cancel this request?")) return;
+    const client = getClient();
+    const { error } = await client.from('bookings').delete().eq('id', id);
+    if (!error) renderCustomerRequests();
+    else alert("Error deleting: " + error.message);
+};
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
     const start = document.getElementById('search-start').value;
@@ -743,21 +708,9 @@ window.showPackageDetails = function(pEncoded) {
     const body = document.getElementById('detail-view-body');
     
     // Calculate values outside the string to prevent SyntaxErrors
+    const historyList = p.updates_history || [];
     const vehicleList = p.vehicles || [];
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
-
-    // --- CALENDAR SYSTEM LOGIC (7 DAYS ONLY) ---
-    const today = new Date();
-    const maxDate = new Date();
-    maxDate.setDate(today.getDate() + 7);
-
-    // Format for HTML input (YYYY-MM-DD)
-    const minStr = today.toISOString().split('T')[0];
-    const maxStr = maxDate.setDate(today.getDate() + 7) && new Date(maxDate).toISOString().split('T')[0]; 
-    // Re-calculating correctly for the string
-    const limitDate = new Date();
-    limitDate.setDate(today.getDate() + 7);
-    const limitStr = limitDate.toISOString().split('T')[0];
 
     // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
@@ -786,11 +739,6 @@ window.showPackageDetails = function(pEncoded) {
             <div style="margin:15px 0; padding:10px; background:#f9f9f9; border-radius:8px;">
                 <p style="white-space: pre-line; font-size:14px;">${p.description || 'No description.'}</p>
             </div>
-
-            <div style="margin-bottom:15px;">
-                <label style="font-size:12px; font-weight:bold; color:#666;">SELECT TRAVEL DATE (Within 7 Days):</label>
-                <input type="date" id="cust-travel-date" min="${minStr}" max="${limitStr}" value="${minStr}" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-top:5px;">
-            </div>
             
             <h4>Select Vehicles</h4>
             ${vehicleHtml}
@@ -802,14 +750,7 @@ window.showPackageDetails = function(pEncoded) {
 
             <div style="margin-top:20px;">
                 <input type="text" id="cust-phone" placeholder="Phone Number" style="width:100%; margin-bottom:10px; padding:10px;">
-                <textarea id="cust-address" placeholder="Pickup Address" style="width:100%; height:60px; padding:10px; margin-bottom:10px;"></textarea>
-                
-                <div style="background: #fff4e6; padding: 10px; border-radius: 8px; border: 1px solid #ffd8a8;">
-                    <label style="display:flex; gap:10px; cursor:pointer; align-items:start;">
-                        <input type="checkbox" id="policy-consent" style="margin-top:4px;">
-                        <span style="font-size:12px; color:#444;">I agree to the <b>Cancellation & Refund Policy</b>. I understand that in case of cancellation, a non-refundable amount of <b>9%</b> (2% Gateway + 7% Service & Facilitation Fee) will be deducted from my total refund.</span>
-                    </label>
-                </div>
+                <textarea id="cust-address" placeholder="Pickup Address" style="width:100%; height:60px; padding:10px;"></textarea>
             </div>
 
             <div style="margin-top:20px; display:flex; gap:10px;">
@@ -827,29 +768,24 @@ window.showPackageDetails = function(pEncoded) {
     modal.style.display = 'flex';
 };
 
-// THE BOOKING INITIATOR
+// THE BOOKING INITIATOR (Uses the button's data attributes)
 window.initiateBooking = function(btnElement) {
     const packageId = btnElement.getAttribute('data-pkg-id');
     const packageTitle = btnElement.getAttribute('data-pkg-title');
     const agencyId = btnElement.getAttribute('data-agency-id');
+    
+    // Now call your logic function
     handleBookingInquiry(packageId, packageTitle, agencyId);
 };
 
 window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) {
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
-    
     const address = document.getElementById('cust-address').value;
     const phone = document.getElementById('cust-phone').value;
-    const travelDate = document.getElementById('cust-travel-date').value;
-    const policyAccepted = document.getElementById('policy-consent').checked;
 
-    if (!address.trim() || !phone.trim() || !travelDate) {
-        alert("Enter travel date, phone and address!"); return;
-    }
-
-    if (!policyAccepted) {
-        alert("You must agree to the Cancellation & Refund Policy to proceed."); return;
+    if (!address.trim() || !phone.trim()) {
+        alert("Enter phone and address!"); return;
     }
 
     let totalPrice = 0;
@@ -870,13 +806,10 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         customer_email: user.email,
         customer_address: address, 
         customer_phone: phone,
-        travel_date: travelDate,
         selected_vehicles: selectedVehicles.join(', '),
         total_price: totalPrice, 
         status: 'pending',
-        agency_id: agencyId,
-        consent_9_percent_policy: true,
-        policy_version: 'v1_9_percent_deduction'
+        agency_id: agencyId
     }]);
 
     if (!error) {
@@ -934,37 +867,51 @@ function renderAgencyDashboard(user) {
     showTab('earnings'); 
 }
 
+window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
+window.executeLogout = async () => { 
+    await getClient().auth.signOut(); 
+    if(typeof renderAuthUI === 'function') renderAuthUI(); 
+    else window.location.reload(); 
+};
+
 window.showTab = async function(tabName) {
     const container = document.getElementById('main-content');
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
-    // To ensure old and new bookings are visible, we fetch by agency_id 
-    // This is more reliable than fetching by package IDs alone
-    const { data: bookingsData } = await client
-        .from('bookings')
-        .select('*')
-        .eq('agency_id', user.id)
-        .order('created_at', { ascending: false });
+    // Prefetch for notifications and calculations
+    const { data: myPkgs } = await client.from('packages').select('id').eq('agency_id', user.id);
+    const myPkgIds = (myPkgs || []).map(p => p.id);
 
-    // Calculate Notification Counts
-    const pendingCount = bookingsData ? bookingsData.filter(b => b.status === 'pending').length : 0;
+    let pendingCount = 0;
+    let totalRevenue = 0;
+    if (myPkgIds.length > 0) {
+        // Get all bookings to calculate revenue and pending count
+        const { data: allBookings } = await client.from('bookings').select('status, total_price').in('package_id', myPkgIds);
+        
+        if (allBookings) {
+            pendingCount = allBookings.filter(b => b.status === 'pending').length;
+            totalRevenue = allBookings
+                .filter(b => b.status === 'paid')
+                .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0);
+        }
+    }
+
     const badge = document.getElementById('bell-badge');
     const sideCount = document.getElementById('side-notif-count');
+    const bellIcon = document.getElementById('notif-bell');
     
     if (badge && pendingCount > 0) {
         badge.innerText = pendingCount; badge.style.display = 'block';
         sideCount.innerText = pendingCount; sideCount.style.display = 'block';
+        bellIcon.style.color = '#ff7675';
     } else if (badge) {
         badge.style.display = 'none'; sideCount.style.display = 'none';
+        bellIcon.style.color = 'white';
     }
 
     if (tabName === 'earnings') {
-        const totalRevenue = bookingsData ? bookingsData
-                .filter(b => b.status === 'paid')
-                .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0) : 0;
-
         container.innerHTML = `<h1>Overview</h1>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
                 <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>REVENUE (PAID)</small><h2>₹${totalRevenue.toLocaleString('en-IN')}</h2></div>
@@ -978,6 +925,13 @@ window.showTab = async function(tabName) {
         container.innerHTML = `<h1>Customer Bookings</h1><div id="booking-list-area">Loading...</div>`;
         const listArea = document.getElementById('booking-list-area');
 
+        if (myPkgIds.length === 0) {
+            listArea.innerHTML = `<p style="padding:20px; color:#666;">No packages created yet. Go to 'My Packages' to start.</p>`;
+            return;
+        }
+
+        const { data: bookingsData } = await client.from('bookings').select('*').in('package_id', myPkgIds).order('created_at', { ascending: false });
+
         if (!bookingsData || bookingsData.length === 0) {
             listArea.innerHTML = `<p style="padding:20px; color:#666;">No booking requests found.</p>`;
             return;
@@ -986,14 +940,14 @@ window.showTab = async function(tabName) {
         listArea.innerHTML = bookingsData.map(b => {
             const isPaid = b.status === 'paid';
             const isPending = b.status === 'pending';
-            const isCancelled = b.status === 'cancelled';
             const displayPhone = isPaid ? b.customer_phone : "Locked (Unlocks after Payment)";
             const phoneColor = isPaid ? "#ff9f43" : "#999";
             
-            let statusColor = '#ff9f43'; // Default Pending
-            if (isCancelled || b.status === 'denied') statusColor = '#ff7675';
+            let statusColor = '#ff9f43';
+            if (b.status === 'cancelled' || b.status === 'denied') statusColor = '#ff7675';
             if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
 
+            // Format travel date for display
             const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
 
             return `
@@ -1003,7 +957,7 @@ window.showTab = async function(tabName) {
                         <h3 style="margin:0; color:#2d3436;">${b.package_title}</h3>
                         <div style="margin-top:5px; display:flex; gap:15px; font-size:12px; color:#636e72;">
                              <span>📩 Requested: ${new Date(b.created_at).toLocaleDateString()}</span>
-                             <span style="color:white; background:#ff9f43; padding:2px 8px; border-radius:4px; font-weight:bold;">📅 TRAVEL DATE: ${travelDateStr}</span>
+                             <span style="color:#e67e22; font-weight:bold;">📅 TRAVEL DATE: ${travelDateStr}</span>
                         </div>
                     </div>
                     <div style="text-align:right;">
@@ -1027,63 +981,81 @@ window.showTab = async function(tabName) {
                     </div>
                 </div>
 
-                <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
-                        <p style="font-size:12px; margin-top:5px; color:#999;">Customer Email: ${b.customer_email}</p>
-                    </div>
-                    ${b.policy_agreed ? `
-                        <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:4px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71;">
-                            ✅ 9% DEDUCTION POLICY AGREED
-                        </div>
-                    ` : ''}
+                <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px;">
+                    <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
+                    <p style="font-size:12px; margin-top:5px; color:#999;">Customer Email: ${b.customer_email}</p>
                 </div>
 
-                <div style="margin-top:20px;">
-                ${isCancelled ? `
-                    <div style="background:#fff5f5; color:#ff7675; padding:12px; border-radius:8px; border:1px solid #ff7675; text-align:center; font-weight:bold;">
-                        🚫 CUSTOMER CANCELLED
-                    </div>
-                ` : (isPending ? `
-                    <div style="border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
+                ${isPending ? `
+                    <div style="margin-top:20px; border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
                         <button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
                         <button onclick="openActionModal('${b.id}', 'denied')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
                     </div>
-                ` : '')}
-                </div>
+                ` : ''}
             </div>`;
         }).join('');
     }
     else if (tabName === 'packages') {
-        // ... (Keep your existing Packages tab code)
         container.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h1>My Packages</h1>
                 <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
             </div>
             <div id="package-form-area"></div>
-            <div id="pkg-list-container"></div>`;
-        
-        const { data: myPackages } = await client.from('packages').select('*').eq('agency_id', user.id).order('created_at', { ascending: false });
-        document.getElementById('pkg-list-container').innerHTML = (myPackages || []).map(p => {
-             const encoded = encodeURIComponent(JSON.stringify(p));
-             return `<div style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); border-left:5px solid #ff9f43;">
-                <div style="flex:1;">
-                    <h3 style="margin:0; color:#2d3436;">${p.title || 'Untitled'}</h3>
-                    <p style="margin:5px 0; color:#666; font-size:14px;">📍 <b>From:</b> ${p.starting_location || 'N/A'}</p>
-                </div>
-                <button onclick="showPackageForm('${encoded}')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold;">✏️ Edit</button>
+            <div id="pkg-list-container">
+                <p style="color:#999;">Loading your packages...</p>
             </div>`;
-        }).join('');
+
+        const pkgList = document.getElementById('pkg-list-container');
+        
+        const { data: myPackages, error } = await client
+            .from('packages')
+            .select('*')
+            .eq('agency_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            pkgList.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+        } else if (!myPackages || myPackages.length === 0) {
+            pkgList.innerHTML = `<div style="text-align:center; padding:40px; background:white; border-radius:10px; border:2px dashed #ddd; color:#999;">No packages published yet.</div>`;
+        } else {
+            pkgList.innerHTML = myPackages.map(p => {
+                const destArray = p.destination || p.destinations || [];
+                const destText = Array.isArray(destArray) ? destArray.join(', ') : 'No destinations set';
+                const encoded = encodeURIComponent(JSON.stringify(p));
+
+                return `
+                <div style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); border-left:5px solid #ff9f43;">
+                    <div style="flex:1;">
+                        <h3 style="margin:0; color:#2d3436;">${p.title || 'Untitled'}</h3>
+                        <p style="margin:5px 0; color:#666; font-size:14px;">
+                            📍 <b>From:</b> ${p.starting_location || 'N/A'} <br>
+                            🌍 <b>To:</b> ${destText}
+                        </p>
+                    </div>
+                    <button onclick="showPackageForm('${encoded}')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.3s; box-shadow:0 4px 6px rgba(255,159,67,0.2);">✏️ Edit Package</button>
+                </div>`;
+            }).join('');
+        }
     }
     else if (tabName === 'profile') {
-        // ... (Keep your existing Profile tab code)
         const meta = user.user_metadata || {};
-        container.innerHTML = `<h1>Agency Profile</h1><div class="card" style="background:white; padding:30px; border-radius:8px; border-left:5px solid #ff9f43;">
-            <p><b>Email:</b> ${user.email}</p>
-            <p><b>Phone:</b> ${meta.phone || 'N/A'}</p>
-            <p><b>Status:</b> ${meta.is_approved ? '✅ Verified' : '⏳ Pending'}</p>
-        </div>`;
+        container.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h1>Agency Profile</h1>
+                <button onclick="alert('Profile Editing coming soon!')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 6px rgba(255,159,67,0.2);">✏️ Edit Profile</button>
+            </div>
+            <div class="card" style="background:white; padding:30px; max-width:600px; border-left:5px solid #ff9f43; border-radius:8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">EMAIL</label><h3>${user.email}</h3></div>
+                <div style="margin-bottom:20px;"><label style="color:#666; font-size:11px; font-weight:bold;">CONTACT</label><h3 style="color:#ff9f43;">${meta.phone || 'N/A'}</h3></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                    <div><label style="color:#666; font-size:11px; font-weight:bold;">GST</label><p style="margin:5px 0;">${meta.gst || 'N/A'}</p></div>
+                    <div><label style="color:#666; font-size:11px; font-weight:bold;">REG NO</label><p style="margin:5px 0;">${meta.reg_no || 'N/A'}</p></div>
+                </div>
+                <p style="border-top:1px solid #eee; padding-top:15px; font-size:12px; color:#999;">
+                    Status: ${meta.is_approved ? '✅ Verified' : '⏳ Pending Verification'}
+                </p>
+            </div>`;
     }
 };
 
@@ -1095,19 +1067,23 @@ window.openActionModal = function(bookingId, type) {
     if (type === 'approved') {
         content.innerHTML = `
             <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
-            <p style="font-size:14px; color:#666;">Provide the contact number for payment collection.</p>
-            <input type="text" id="modal-contact-input" placeholder="GPay/Phone Number" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
+            <p style="font-size:14px; color:#666;">The customer will be notified to proceed with payment.</p>
+            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">CONTACT NO. FOR PAYMENT (Reveal on Pay):</label>
+            <input type="text" id="modal-contact-input" placeholder="e.g. +91 9876543210" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
             <div style="display:flex; gap:10px;">
                 <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
-            </div>`;
+            </div>
+        `;
     } else {
         content.innerHTML = `
             <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
+            <p style="font-size:14px; color:#666;">This will cancel the customer's inquiry.</p>
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
-            </div>`;
+            </div>
+        `;
     }
 };
 
@@ -1119,26 +1095,31 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
 
     if (newStatus === 'approved') {
         const contact = document.getElementById('modal-contact-input').value;
-        if (!contact.trim()) { alert("Please enter contact number!"); return; }
+        if (!contact.trim()) { alert("Please enter a contact number!"); return; }
         updateData.agency_contact = contact;
     }
 
-    const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
-    if (!error) {
-        closeActionModal();
-        showTab('bookings');
-    } else {
-        alert("Error updating status: " + error.message);
+    try {
+        const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
+        if (!error) {
+            const content = document.getElementById('action-modal-content');
+            content.innerHTML = `
+                <div style="text-align:center; padding:20px;">
+                    <h3 style="color:${newStatus === 'approved' ? '#2ecc71' : '#ff7675'};">${newStatus === 'approved' ? '✅ Approved' : '🚫 Denied'}</h3>
+                    <button onclick="closeActionModal(); showTab('bookings');" style="background:#2d3436; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; margin-top:10px;">CLOSE</button>
+                </div>`;
+        } else {
+            alert("Database Error: " + error.message);
+        }
+    } catch (e) {
+        alert("System error. Please try again.");
     }
 };
-
-window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
-window.executeLogout = async () => { await getClient().auth.signOut(); location.reload(); };
 /* =========================================
-   10 & 11. PACKAGE FORM & SAVE LOGIC
+   10 & 11. PACKAGE FORM & SAVE LOGIC (FIXED)
    ========================================= */
 
-// 10A. HELPER: Populates the City dropdown
+// 10A. HELPER: Populates the City dropdown based on selected State
 window.updateCities = function() {
     const stateSelect = document.getElementById('p-state');
     const citySelect = document.getElementById('p-city');
@@ -1162,12 +1143,15 @@ window.showPackageForm = function(pEncoded = null) {
     let pkg = null;
     try {
         pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
-    } catch (e) { console.error("Decoding error:", e); }
+    } catch (e) { 
+        console.error("Decoding error:", e); 
+    }
     
     const isEdit = (pkg && pkg.id);
     const area = document.getElementById('main-content');
     if (!area) return;
     
+    // Support both naming conventions for safety
     const pkgDestinations = isEdit ? (pkg.destinations || pkg.destination || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
     
@@ -1175,7 +1159,8 @@ window.showPackageForm = function(pEncoded = null) {
     if (isEdit && pkg.starting_location) {
         for (let s in locationData) {
             if (locationData[s].includes(pkg.starting_location)) { 
-                selectedState = s; break; 
+                selectedState = s; 
+                break; 
             }
         }
     }
@@ -1205,6 +1190,7 @@ window.showPackageForm = function(pEncoded = null) {
     area.innerHTML = `
         <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
             <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🚀 Create New Package'}</h3>
+            
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
                 <div>
                     <label style="font-size:11px; font-weight:bold; color:#666;">PACKAGE TITLE</label>
@@ -1218,224 +1204,32 @@ window.showPackageForm = function(pEncoded = null) {
                     </select>
                 </div>
             </div>
+
             <label style="font-size:11px; font-weight:bold; color:#666;">STARTING CITY</label>
             <select id="p-city">
                 ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
             </select>
+            
             <p><b>Destinations:</b></p>
             <div style="background:#f9f9f9; padding:15px; border-radius:10px; max-height:150px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:8px; border:1px solid #eee; margin-bottom:20px;">
                 ${destHtml}
             </div>
+
             <p><b>Vehicle Pricing:</b></p>
             <div style="margin-bottom:20px;">${vehicleHtml}</div>
+
             <label style="font-size:11px; font-weight:bold; color:#666;">ITINERARY DETAILS</label>
             <textarea id="p-desc" style="height:120px;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
+            
             <div style="display:flex; gap:10px; margin-top:25px;">
-                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; border-radius:8px; flex:2; height:50px; font-weight:bold; cursor:pointer;">
+                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold;">
                     ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
                 </button>
-                <button onclick="window.showTab('packages')" style="background:#eee; border-radius:8px; flex:1; cursor:pointer;">Cancel</button>
+                <button onclick="window.showTab('packages')" style="background:#eee; flex:1;">Cancel</button>
             </div>
         </div>`;
 };
 
-// 11. SAVE LOGIC: Links to agency_id
-window.processSave = async function(pkgId) {
-    const btn = document.getElementById('save-btn');
-    if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("User session not found.");
-
-        const title = document.getElementById('p-title').value.trim();
-        const city = document.getElementById('p-city').value;
-        const desc = document.getElementById('p-desc').value;
-
-        if (!title || !city) throw new Error("Title and City are required!");
-
-        const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
-        const selectedVehicles = [];
-        document.querySelectorAll('.v-enable:checked').forEach(el => {
-            const vId = el.dataset.id;
-            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`).value) || 0;
-            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`).value) || 1;
-            const vType = vehicleTypes.find(vt => vt.id === vId);
-            if (rate > 0) {
-                selectedVehicles.push({ id: vId, name: vType.name, rate: rate, max_cars: max, icon: vType.icon });
-            }
-        });
-
-        const pkgData = { title, starting_location: city, destination: selectedDests, vehicles: selectedVehicles, description: desc, agency_id: user.id };
-
-        let result = (pkgId && pkgId !== "null" && pkgId !== "") 
-            ? await client.from('packages').update(pkgData).eq('id', pkgId)
-            : await client.from('packages').insert([pkgData]);
-
-        if (result.error) throw result.error;
-        alert("✅ Success! Package saved.");
-        window.showTab('packages'); 
-    } catch (err) {
-        alert("❌ Error: " + err.message);
-        if (btn) { btn.innerText = "PUBLISH PACKAGE"; btn.disabled = false; }
-    }
-};
-
-/* =========================================
-   12. BOOKING RENDER & FETCH LOGIC (SOLVED)
-   ========================================= */
-
-// 1. THE FETCH: Gets the data from Supabase
-window.loadAgencyBookings = async function() {
-    const area = document.getElementById('main-content');
-    if (!area) return;
-
-    // Show a small loader so you know it's working
-    area.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Syncing with Database...</p>`;
-
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-
-        if (!user) {
-            area.innerHTML = `<p style="color:red; text-align:center;">Error: User not logged in.</p>`;
-            return;
-        }
-
-        // We fetch ALL bookings where agency_id matches the logged-in user
-        const { data: bookings, error } = await client
-            .from('bookings')
-            .select('*')
-            .eq('agency_id', user.id) // This is the filter that connects customers to YOU
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        // Pass the data to the render function
-        window.renderAgencyBookings(bookings || []);
-
-    } catch (err) {
-        console.error("Dashboard Fetch Error:", err);
-        area.innerHTML = `<p style="color:red; text-align:center;">❌ Database Error: ${err.message}</p>`;
-    }
-};
-
-// 2. THE RENDER: Draws the data on your screen
-window.renderAgencyBookings = function(bookings) {
-    const container = document.getElementById('main-content');
-    if (!container) return;
-
-    if (!bookings || bookings.length === 0) {
-        container.innerHTML = `
-            <h3>Booking Requests</h3>
-            <div style="text-align:center; padding:50px; color:#666; background:#fff; border:1px dashed #ccc; border-radius:12px;">
-                <p>No requests found. When a customer books your package, it will appear here instantly.</p>
-            </div>`;
-        return;
-    }
-
-    const html = bookings.map(b => {
-        const isCancelled = b.status === 'cancelled';
-        const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
-        
-        return `
-        <div class="card" style="border-left: 6px solid ${statusColor}; margin-bottom:15px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.08); opacity: ${isCancelled ? '0.7' : '1'}">
-            <div style="display:flex; justify-content:space-between; align-items:start;">
-                <div>
-                    <h4 style="margin:0; font-size:18px; color:#2c3e50;">${b.package_title || 'Trip Booking'}</h4>
-                    <span style="font-size:11px; color:#95a5a6;">ID: ${b.id}</span>
-                </div>
-                <div style="background:#e8f8f5; color:#16a085; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold;">
-                    🛡️ Policy Verified
-                </div>
-            </div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px; font-size:13px;">
-                <div>👤 <b>Customer:</b> ${b.customer_name}</div>
-                <div>📞 <b>Contact:</b> ${b.customer_phone}</div>
-                <div>📅 <b>Travel Date:</b> ${b.travel_date}</div>
-                <div>🚗 <b>Vehicle:</b> ${b.vehicle_name}</div>
-            </div>
-
-            ${isCancelled ? `
-                <div style="margin-top:15px; padding:10px; background:#fdedec; color:#c0392b; border-radius:8px; text-align:center; font-weight:bold;">
-                    ⚠️ CANCELLATION INDICATOR: Customer has cancelled.
-                </div>
-            ` : `
-                <div style="margin-top:15px; display:flex; gap:10px;">
-                    <button onclick="window.updateStatus('${b.id}', 'confirmed')" style="background:#2ecc71; color:white; flex:1; padding:10px; border-radius:8px; font-weight:bold;">Accept</button>
-                    <button onclick="window.updateStatus('${b.id}', 'rejected')" style="background:#ecf0f1; color:#7f8c8d; flex:1; padding:10px; border-radius:8px; font-weight:bold;">Decline</button>
-                </div>
-            `}
-        </div>`;
-    }).join('');
-
-    container.innerHTML = `<h3 style="color:#ff9f43;">Booking Requests (Old & New)</h3>` + html;
-};
-
-// 3. THE UPDATE: Changes status and refreshes the view
-window.updateStatus = async function(id, newStatus) {
-    try {
-        const client = getClient();
-        const { error } = await client.from('bookings').update({ status: newStatus }).eq('id', id);
-        if (error) throw error;
-        // Refresh the list immediately after update
-        window.loadAgencyBookings();
-    } catch (err) {
-        alert("Update failed: " + err.message);
-    }
-};
-/* =========================================
-   13. THE MISSING PIECE: FETCHING DATA
-   ========================================= */
-
-// Ensure your showTab function includes this fetch logic for 'bookings'
-window.loadAgencyBookings = async function() {
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-    if (!user) return;
-
-    // FETCH: Get all bookings where agency_id matches the user
-    const { data, error } = await client
-        .from('bookings')
-        .select('*')
-        .eq('agency_id', user.id)
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error("Fetch error:", error);
-    } else {
-        window.renderAgencyBookings(data || []);
-    }
-};
-
-// Helper for status updates
-window.updateBookingStatus = async function(bookingId, newStatus) {
-    const client = getClient();
-    const { error } = await client.from('bookings').update({ status: newStatus }).eq('id', bookingId);
-    if (error) alert("Error: " + error.message);
-    else window.loadAgencyBookings(); // Refresh the list
-};
-
-/* =========================================
-   13. DATA FETCHING (ENSURE THIS IS CALLED)
-   ========================================= */
-window.loadAgencyDashboard = async function() {
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-    
-    if (user) {
-        // Fetching all bookings for this agency (Old + New)
-        const { data: bookings, error } = await client
-            .from('bookings')
-            .select('*')
-            .eq('agency_id', user.id) // This uses the agency_id column you mentioned
-            .order('created_at', { ascending: false });
-
-        if (error) console.error("Error loading bookings:", error);
-        window.renderAgencyBookings(bookings || []);
-    }
-};
 // 11. SAVE LOGIC: Sends data to Supabase (FIXED COLUMN NAMES)
 window.processSave = async function(pkgId) {
     const btn = document.getElementById('save-btn');
@@ -1444,7 +1238,7 @@ window.processSave = async function(pkgId) {
     try {
         const client = getClient();
         const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("User session not found.");
+        if (!user) throw new Error("User session not found. Please logout and login again.");
 
         const title = document.getElementById('p-title').value.trim();
         const city = document.getElementById('p-city').value;
@@ -1468,16 +1262,18 @@ window.processSave = async function(pkgId) {
 
         if (selectedVehicles.length === 0) throw new Error("Set a price for at least one vehicle!");
 
+        // FIXED: Changed 'destinations' to 'destination' to match your Supabase schema
         const pkgData = {
             title: title,
             starting_location: city,
             destination: selectedDests, 
             vehicles: selectedVehicles,
             description: desc,
-            agency_id: user.id // CRITICAL: This links the package to the agency
+            agency_id: user.id
         };
 
         let result;
+        // Check if pkgId is a valid string/UUID and not the literal string "null" or "undefined"
         if (pkgId && pkgId !== "undefined" && pkgId !== "null" && pkgId !== "") {
             result = await client.from('packages').update(pkgData).eq('id', pkgId);
         } else {
@@ -1493,26 +1289,10 @@ window.processSave = async function(pkgId) {
         console.error("Save Error:", err);
         alert("❌ Error: " + err.message);
         if (btn) {
-            btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE";
+            btn.innerText = (pkgId && pkgId !== "undefined" && pkgId !== "null") ? "SAVE CHANGES" : "PUBLISH PACKAGE";
             btn.disabled = false;
         }
     }
-};
-
-/* =========================================
-   ADDITIONAL: RE-SYNC BOOKINGS VIEW
-   ========================================= */
-// Add this helper to ensure bookings are fetched using the agency_id
-window.refreshBookings = async function(agencyId) {
-    const client = getClient();
-    // Fetch all bookings where agency_id matches (Old + New)
-    const { data, error } = await client
-        .from('bookings')
-        .select('*')
-        .eq('agency_id', agencyId)
-        .order('created_at', { ascending: false });
-    
-    return data || [];
 };
 // 12. STYLES
 const styleTag = document.createElement('style');
@@ -1529,3 +1309,4 @@ styleTag.innerHTML = `
 `;
 document.head.appendChild(styleTag); 
 initApp();
+
