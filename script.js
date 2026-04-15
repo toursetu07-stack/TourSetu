@@ -1377,42 +1377,40 @@ window.renderAgencyBookings = function(bookings) {
 };
 
 /* =========================================
-   13. DATA FETCHING (FIX FOR 400 ERROR)
+   13. DATA FETCHING (FIXED FOR 400 ERROR)
    ========================================= */
 window.loadAgencyDashboard = async function() {
     const container = document.getElementById('main-content');
-    if (container) container.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Loading your requests...</p>`;
+    if (container) container.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Syncing bookings...</p>`;
 
     try {
         const client = getClient();
         const { data: { user } } = await client.auth.getUser();
         
         if (user) {
-            // FIX: Changed 'agency_id' to 'agency_uuid' to match your table and fix the 400 error
+            // WE CHANGED 'agency_id' TO 'agency_uuid' BELOW
+            // This matches your actual Supabase column name
             const { data: bookings, error } = await client
                 .from('bookings')
                 .select('*')
-                .eq('agency_uuid', user.id) 
+                .eq('agency_uuid', user.id) // Corrected column name
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase Error:", error);
+                throw error;
+            }
+            
+            // This sends the data (Old + New) to your display function
             window.renderAgencyBookings(bookings || []);
         }
     } catch (err) {
-        console.error("Fetch Error:", err);
-        if (container) container.innerHTML = `<div style="color:red; padding:20px; background:white; border-radius:10px;">
-            <h4>❌ Database Error</h4>
-            <p>Please check if the column <b>agency_uuid</b> exists in your 'bookings' table.</p>
+        if (container) container.innerHTML = `<div style="color:red; padding:20px;">
+            <h4>❌ Connection Error (400)</h4>
+            <p>The database does not recognize the column name.</p>
             <small>${err.message}</small>
         </div>`;
     }
-};
-
-window.updateBookingStatus = async function(bookingId, newStatus) {
-    const client = getClient();
-    const { error } = await client.from('bookings').update({ status: newStatus }).eq('id', bookingId);
-    if (error) alert("Error: " + error.message);
-    else window.loadAgencyDashboard(); 
 };
 // 12. STYLES
 const styleTag = document.createElement('style');
