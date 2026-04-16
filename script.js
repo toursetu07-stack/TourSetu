@@ -672,6 +672,33 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("An error occurred. Please check your connection.");
     }
 };
+/* =========================================
+   LOGOUT WITH CONFIRMATION
+   ========================================= */
+window.handleLogout = async function() {
+    // This creates the "Confirm or Not" popup
+    const confirmLogout = confirm("Are you sure you want to log out?");
+    
+    // If they click 'OK' (Confirm)
+    if (confirmLogout) {
+        try {
+            const client = getClient();
+            await client.auth.signOut();
+            
+            // Clear local data
+            localStorage.clear();
+
+            alert("Logged out successfully!");
+            
+            // Refresh to go back to the login screen
+            window.location.reload(); 
+            
+        } catch (err) {
+            alert("Error logging out: " + err.message);
+        }
+    } 
+    // If they click 'Cancel', nothing happens and they stay on the page!
+};
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
     const start = document.getElementById('search-start').value;
