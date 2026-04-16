@@ -1313,7 +1313,7 @@ window.processSave = async function(pkgId) {
 };
 
 /* =========================================
-   12. BOOKING RENDER LOGIC (ALL FEATURES)
+   12. BOOKING RENDER LOGIC (ENHANCED WITH DATE)
    ========================================= */
 window.renderAgencyBookings = function(bookings) {
     const container = document.getElementById('main-content');
@@ -1324,7 +1324,7 @@ window.renderAgencyBookings = function(bookings) {
             <h3>Booking Requests</h3>
             <div style="text-align:center; padding:50px; color:#666; background:white; border-radius:12px; border:1px solid #ddd;">
                 <p>No New or Old Booking Requests Found.</p>
-                <p style="font-size:11px; color:#999;">Database matched column: <b>agency_uuid</b></p>
+                <p style="font-size:11px; color:#999;">Database column: <b>agency_id</b></p>
             </div>`;
         return;
     }
@@ -1333,6 +1333,11 @@ window.renderAgencyBookings = function(bookings) {
         const isCancelled = b.status === 'cancelled';
         const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
         
+        // Formatting the date to be more readable (e.g., "15 April 2026")
+        const travelDate = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'long', year: 'numeric'
+        }) : 'Not Selected';
+
         const policyTag = b.constant_9_percent_policy ? 
             `<div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">🛡️ 9% Policy Verified</div>` : 
             `<div style="background:#eee; color:#777; padding:5px 12px; border-radius:20px; font-size:11px;">Standard Policy</div>`;
@@ -1342,25 +1347,32 @@ window.renderAgencyBookings = function(bookings) {
             <div style="display:flex; justify-content:space-between; align-items:start;">
                 <div>
                     <h4 style="margin:0 0 5px 0; color:#333;">${b.package_title || 'Package Booking'}</h4>
-                    <p style="font-size:11px; color:#888; margin:0;">Request ID: ${b.id} | Date: ${new Date(b.created_at).toLocaleDateString()}</p>
+                    <p style="font-size:11px; color:#888; margin:0;">Request ID: ${b.id}</p>
                 </div>
                 ${policyTag}
             </div>
             
             <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
             
+            <div style="background: #f0f7ff; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #d0e1f9; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 20px;">📅</span>
+                <div>
+                    <small style="color: #576574; font-weight: bold; display: block; font-size: 10px; text-transform: uppercase;">Tour Starting Date</small>
+                    <span style="font-size: 16px; color: #2c3e50; font-weight: 800;">${travelDate}</span>
+                </div>
+            </div>
+
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; color:#444;">
                 <div>👤 <b>Customer:</b> ${b.customer_email}</div>
                 <div>📞 <b>Contact:</b> ${b.customer_phone}</div>
-                <div>📅 <b>Travel Date:</b> ${b.travel_date}</div>
                 <div>🚗 <b>Vehicle:</b> ${b.selected_vehicle}</div>
                 <div>💰 <b>Total:</b> ₹${b.total_price}</div>
-                <div style="grid-column: span 2;">📍 <b>Address:</b> ${b.customer_address || 'N/A'}</div>
+                <div style="grid-column: span 2;">📍 <b>Pickup Address:</b> ${b.customer_address || 'N/A'}</div>
             </div>
 
             ${isCancelled ? `
                 <div style="margin-top:15px; padding:12px; background:#fdedec; color:#c0392b; border-radius:8px; text-align:center; font-weight:bold; border: 1px solid #fadbd8;">
-                    ⚠️ CANCELLATION INDICATOR: Customer has cancelled this request.
+                    ⚠️ CANCELLATION: Customer has cancelled this request.
                 </div>
             ` : `
                 <div style="margin-top:15px; display:flex; gap:10px;">
@@ -1371,60 +1383,33 @@ window.renderAgencyBookings = function(bookings) {
         </div>`;
     }).join('');
 
-    container.innerHTML = `<h3 style="color:#ff9f43; margin-bottom:20px;">Booking Requests (New & Old)</h3>` + html;
+    container.innerHTML = `<h3 style="color:#ff9f43; margin-bottom:20px;">Booking Requests</h3>` + html;
 };
 
 /* =========================================
-   13. DATA FETCHING (400 ERROR FIX INCLUDED)
+   13. DATA FETCHING (MATCHING agency_id)
    ========================================= */
 window.loadAgencyDashboard = async function() {
     const container = document.getElementById('main-content');
-    if (container) {
-        container.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Syncing bookings...</p>`;
-    }
+    if (container) container.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Syncing bookings...</p>`;
 
     try {
         const client = getClient();
         const { data: { user } } = await client.auth.getUser();
         
         if (user) {
-            // FIXED: Changed 'agency_uuid' to 'agency_id' to match your table rename
             const { data: bookings, error } = await client
                 .from('bookings')
                 .select('*')
-                .eq('agency_id', user.id) // This now matches your database column
+                .eq('agency_id', user.id) // Corrected column name
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            
-            // This will render both the fixed old bookings and new bookings
             window.renderAgencyBookings(bookings || []);
         }
     } catch (err) {
         console.error("Fetch Error:", err);
-        if (container) {
-            container.innerHTML = `
-                <div style="color:red; padding:20px; border: 1px solid #ff7675; border-radius: 10px;">
-                    <h4>❌ Load Error (400)</h4>
-                    <p>The code tried to find <b>agency_id</b>. Check your Supabase table names.</p>
-                    <small>${err.message}</small>
-                </div>`;
-        }
-    }
-};
-
-window.updateBookingStatus = async function(bookingId, newStatus) {
-    const client = getClient();
-    // FIXED: Ensure status updates also use the correct column reference if needed
-    const { error } = await client
-        .from('bookings')
-        .update({ status: newStatus })
-        .eq('id', bookingId);
-
-    if (error) {
-        alert("Error: " + error.message);
-    } else {
-        window.loadAgencyDashboard(); 
+        if (container) container.innerHTML = `<div style="color:red; padding:20px;">Load Error: ${err.message}</div>`;
     }
 };
 // 12. STYLES
