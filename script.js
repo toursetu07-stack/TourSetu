@@ -1375,75 +1375,56 @@ window.renderAgencyBookings = function(bookings) {
 };
 
 /* =========================================
-   13. DATA FETCHING (UPDATED FOR agency_id)
+   13. DATA FETCHING (400 ERROR FIX INCLUDED)
    ========================================= */
 window.loadAgencyDashboard = async function() {
     const container = document.getElementById('main-content');
     if (container) {
-        container.innerHTML = `
-            <div style="text-align:center; padding:40px;">
-                <div style="margin-bottom:15px;">🔄</div>
-                <p style="color:#666;">Syncing your booking history...</p>
-            </div>`;
+        container.innerHTML = `<p style="text-align:center; padding:20px;">🔄 Syncing bookings...</p>`;
     }
 
     try {
         const client = getClient();
-        // Get the currently logged-in agency user
-        const { data: { user }, error: authError } = await client.auth.getUser();
+        const { data: { user } } = await client.auth.getUser();
         
-        if (authError) throw authError;
-
         if (user) {
-            // WE UPDATED THIS LINE: Changed 'agency_uuid' to 'agency_id'
-            // This matches your recent database change.
-            const { data: bookings, error: dbError } = await client
+            // FIXED: Changed 'agency_uuid' to 'agency_id' to match your table rename
+            const { data: bookings, error } = await client
                 .from('bookings')
                 .select('*')
-                .eq('agency_id', user.id) // This matches auth.uid()
+                .eq('agency_id', user.id) // This now matches your database column
                 .order('created_at', { ascending: false });
 
-            if (dbError) throw dbError;
-
-            // This will now render both Old (manually fixed) and New (auth.uid default) bookings
+            if (error) throw error;
+            
+            // This will render both the fixed old bookings and new bookings
             window.renderAgencyBookings(bookings || []);
-        } else {
-            if (container) container.innerHTML = `<p style="text-align:center; padding:20px;">Please log in to view bookings.</p>`;
         }
     } catch (err) {
-        console.error("Dashboard Fetch Error:", err);
+        console.error("Fetch Error:", err);
         if (container) {
             container.innerHTML = `
-                <div style="color:#e74c3c; padding:30px; background:#fff5f5; border-radius:12px; border:1px solid #fadbd8;">
-                    <h4 style="margin-top:0;">❌ Data Connection Error (400)</h4>
-                    <p style="font-size:14px;">The app tried to find <b>agency_id</b> but failed. Please check:</p>
-                    <ul style="font-size:13px; text-align:left; display:inline-block;">
-                        <li>Is the column in Supabase named exactly <b>agency_id</b>?</li>
-                        <li>Did you press 'Save' after renaming the column?</li>
-                    </ul>
-                    <p style="font-size:11px; margin-top:10px; color:#999;">Technical Details: ${err.message}</p>
+                <div style="color:red; padding:20px; border: 1px solid #ff7675; border-radius: 10px;">
+                    <h4>❌ Load Error (400)</h4>
+                    <p>The code tried to find <b>agency_id</b>. Check your Supabase table names.</p>
+                    <small>${err.message}</small>
                 </div>`;
         }
     }
 };
 
-/* =========================================
-   STATUS UPDATE LOGIC
-   ========================================= */
 window.updateBookingStatus = async function(bookingId, newStatus) {
-    try {
-        const client = getClient();
-        const { error } = await client
-            .from('bookings')
-            .update({ status: newStatus })
-            .eq('id', bookingId);
+    const client = getClient();
+    // FIXED: Ensure status updates also use the correct column reference if needed
+    const { error } = await client
+        .from('bookings')
+        .update({ status: newStatus })
+        .eq('id', bookingId);
 
-        if (error) throw error;
-        
-        // Refresh the dashboard to show the updated status immediately
+    if (error) {
+        alert("Error: " + error.message);
+    } else {
         window.loadAgencyDashboard(); 
-    } catch (err) {
-        alert("Could not update status: " + err.message);
     }
 };
 // 12. STYLES
