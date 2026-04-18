@@ -405,7 +405,6 @@ window.confirmAndExecuteLogout = async function() {
             alert("Error logging out: " + e.message);
         }
     }
-    // If 'No' is clicked, nothing happens and user stays on the page
 };
 
 window.updateCityDropdown = () => {
@@ -443,7 +442,7 @@ window.renderCustomerRequests = async () => {
         const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43'));
         const isPending = b.status === 'pending';
         const isPaid = b.status === 'paid';
-        const isApproved = b.status === 'approved';
+        const isApproved = b.status === 'confirmed'; // Changed from 'approved' to match your Edge Function logic
         const isCancelled = b.status === 'cancelled';
 
         const today = new Date();
@@ -603,7 +602,7 @@ window.showPackageDetails = function(pEncoded) {
             ${historyHtml}
 
             <div style="margin-top:30px; display:flex; gap:10px;">
-                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:10px; border:none; transition:0.3s; font-size:16px;">SEND BOOKING REQUEST</button>
+                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${p.agency_email}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:10px; border:none; transition:0.3s; font-size:16px;">SEND BOOKING REQUEST</button>
                 <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; background:#eee; padding:15px; border-radius:10px; cursor:pointer; border:none; font-weight:bold; color:#666;">BACK</button>
             </div>
         </div>
@@ -630,7 +629,7 @@ window.toggleQtyInput = (id) => {
     updateLivePrice();
 };
 
-window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) {
+window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, agencyEmail) {
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
     const address = document.getElementById('cust-address').value;
@@ -662,14 +661,15 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
             package_id: packageId, 
             package_title: packageTitle,
             customer_id: user.id, 
-            customer_email: user.email,
+            customer_email: user.email, // Saves email for notifications
             customer_address: address, 
             customer_phone: phone,
             travel_date: travelDate, 
             selected_vehicles: selectedVehicles.join(', '),
             total_price: totalPrice, 
             status: 'pending',
-            agency_id: agencyId
+            agency_id: agencyId,
+            agency_email: agencyEmail   // Saves email to trigger agency alert
         }]);
 
         if (!error) {
@@ -683,7 +683,6 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("An error occurred. Please check your connection.");
     }
 };
-
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
     const start = document.getElementById('search-start').value;
@@ -939,8 +938,7 @@ function renderAgencyDashboard(user) {
         </div>
 
         <div id="action-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center; padding:20px;">
-            <div id="action-modal-content" style="background:white; padding:30px; border-radius:15px; max-width:400px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-                </div>
+            <div id="action-modal-content" style="background:white; padding:30px; border-radius:15px; max-width:400px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);"></div>
         </div>
     `;
     showTab('earnings'); 
@@ -952,15 +950,14 @@ window.showTab = async function(tabName) {
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
-    // To ensure old and new bookings are visible, we fetch by agency_id 
-    // This is more reliable than fetching by package IDs alone
+    // Secure Data Fetching: Filtered by agency_id
     const { data: bookingsData } = await client
         .from('bookings')
         .select('*')
         .eq('agency_id', user.id)
         .order('created_at', { ascending: false });
 
-    // Calculate Notification Counts
+    // Handle Notifications
     const pendingCount = bookingsData ? bookingsData.filter(b => b.status === 'pending').length : 0;
     const badge = document.getElementById('bell-badge');
     const sideCount = document.getElementById('side-notif-count');
@@ -999,10 +996,13 @@ window.showTab = async function(tabName) {
             const isPaid = b.status === 'paid';
             const isPending = b.status === 'pending';
             const isCancelled = b.status === 'cancelled';
-            const displayPhone = isPaid ? b.customer_phone : "Locked (Unlocks after Payment)";
+            
+            // SECURITY: Email and Phone masking for unverified bookings
+            const displayPhone = isPaid ? b.customer_phone : "Locked (Visible after Payment)";
+            const displayEmail = isPaid ? b.customer_email : b.customer_email.replace(/(.{3})(.*)(?=@)/, "$1***");
             const phoneColor = isPaid ? "#ff9f43" : "#999";
             
-            let statusColor = '#ff9f43'; // Default Pending
+            let statusColor = '#ff9f43';
             if (isCancelled || b.status === 'denied') statusColor = '#ff7675';
             if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
 
@@ -1042,7 +1042,7 @@ window.showTab = async function(tabName) {
                 <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
-                        <p style="font-size:12px; margin-top:5px; color:#999;">Customer Email: ${b.customer_email}</p>
+                        <p style="font-size:12px; margin-top:5px; color:#999;">Customer Email: ${displayEmail}</p>
                     </div>
                     ${b.policy_agreed ? `
                         <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:4px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71;">
@@ -1067,7 +1067,6 @@ window.showTab = async function(tabName) {
         }).join('');
     }
     else if (tabName === 'packages') {
-        // ... (Keep your existing Packages tab code)
         container.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h1>My Packages</h1>
@@ -1089,12 +1088,11 @@ window.showTab = async function(tabName) {
         }).join('');
     }
     else if (tabName === 'profile') {
-        // ... (Keep your existing Profile tab code)
         const meta = user.user_metadata || {};
         container.innerHTML = `<h1>Agency Profile</h1><div class="card" style="background:white; padding:30px; border-radius:8px; border-left:5px solid #ff9f43;">
             <p><b>Email:</b> ${user.email}</p>
             <p><b>Phone:</b> ${meta.phone || 'N/A'}</p>
-            <p><b>Status:</b> ${meta.is_approved ? '✅ Verified' : '⏳ Pending'}</p>
+            <p><b>Status:</b> ${meta.is_approved ? '✅ Verified' : '⏳ Pending Approval'}</p>
         </div>`;
     }
 };
@@ -1107,8 +1105,8 @@ window.openActionModal = function(bookingId, type) {
     if (type === 'approved') {
         content.innerHTML = `
             <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
-            <p style="font-size:14px; color:#666;">Provide the contact number for payment collection.</p>
-            <input type="text" id="modal-contact-input" placeholder="GPay/Phone Number" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
+            <p style="font-size:14px; color:#666;">Provide the contact number for payment collection (GPay/PhonePe).</p>
+            <input type="text" id="modal-contact-input" placeholder="Enter Contact Number" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
             <div style="display:flex; gap:10px;">
                 <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
@@ -1116,6 +1114,7 @@ window.openActionModal = function(bookingId, type) {
     } else {
         content.innerHTML = `
             <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
+            <p style="font-size:14px; color:#666;">This action will notify the customer and cancel the request.</p>
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
@@ -1131,7 +1130,7 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
 
     if (newStatus === 'approved') {
         const contact = document.getElementById('modal-contact-input').value;
-        if (!contact.trim()) { alert("Please enter contact number!"); return; }
+        if (!contact.trim()) { alert("Please enter a contact number!"); return; }
         updateData.agency_contact = contact;
     }
 
@@ -1140,12 +1139,15 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
         closeActionModal();
         showTab('bookings');
     } else {
-        alert("Error updating status: " + error.message);
+        alert("Update Error: " + error.message);
     }
 };
 
 window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
-window.executeLogout = async () => { await getClient().auth.signOut(); location.reload(); };
+window.executeLogout = async () => { 
+    await getClient().auth.signOut(); 
+    location.reload(); 
+};
 /* =========================================
    10. PACKAGE FORM & HELPER LOGIC
    ========================================= */
