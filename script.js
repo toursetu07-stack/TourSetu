@@ -363,7 +363,7 @@ function renderCustomerHomepage(user) {
                   </div>
                   <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 40px; border-radius:12px; font-weight:bold; cursor:pointer; height:55px; margin-top:22px; font-size:16px;">FIND AGENCIES</button>
               </div>
-           </div>
+            </div>
 
             <div style="max-width:1200px; margin:auto; padding:50px 20px;">
                <div style="display:flex; justify-content:space-between; align-items:end; margin-bottom:40px; border-bottom:2px solid #eee; padding-bottom:15px;">
@@ -373,7 +373,7 @@ function renderCustomerHomepage(user) {
                   </div>
                   <div style="display:flex; gap:10px;">
                     <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
-                    <button onclick="executeLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
+                    <button onclick="confirmAndExecuteLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
                   </div>
               </div>
                <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap:30px;"></div>
@@ -388,6 +388,25 @@ function renderCustomerHomepage(user) {
     `;
     loadAllPackages();
 }
+
+/**
+ * NEW: Logout Confirmation Logic
+ */
+window.confirmAndExecuteLogout = async function() {
+    const confirmLogout = confirm("Are you sure you want to logout from your account?");
+    if (confirmLogout) {
+        try {
+            const client = getClient();
+            await client.auth.signOut();
+            localStorage.clear();
+            alert("Logged out successfully!");
+            window.location.reload(); 
+        } catch (e) {
+            alert("Error logging out: " + e.message);
+        }
+    }
+    // If 'No' is clicked, nothing happens and user stays on the page
+};
 
 window.updateCityDropdown = () => {
     const state = document.getElementById('search-state').value;
@@ -427,7 +446,6 @@ window.renderCustomerRequests = async () => {
         const isApproved = b.status === 'approved';
         const isCancelled = b.status === 'cancelled';
 
-        // Date Check Logic: Show Cancel button ONLY if current date <= travel date
         const today = new Date();
         today.setHours(0,0,0,0);
         const travelDateObj = b.travel_date ? new Date(b.travel_date) : null;
@@ -480,7 +498,6 @@ window.cancelBookingWithPenalty = async function(id) {
 
     const client = getClient();
     try {
-        // Update status to 'cancelled' so it stays in history but looks cancelled for both parties
         const { error } = await client
             .from('bookings')
             .update({ status: 'cancelled' })
@@ -489,8 +506,6 @@ window.cancelBookingWithPenalty = async function(id) {
         if (!error) {
             alert("Booking Cancelled successfully.");
             renderCustomerRequests();
-            // Note: On the Agency Side, their dashboard should filter for .neq('status', 'cancelled') 
-            // OR display "Customer has cancelled this booking" based on this status change.
         } else {
             throw error;
         }
@@ -596,10 +611,6 @@ window.showPackageDetails = function(pEncoded) {
     modal.style.display = 'flex';
 };
 
-/* =========================================
-   SUPPORTING LOGIC
-   ========================================= */
-
 window.updateLivePrice = () => {
     let total = 0;
     document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
@@ -672,33 +683,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("An error occurred. Please check your connection.");
     }
 };
-/* =========================================
-   LOGOUT WITH CONFIRMATION
-   ========================================= */
-window.handleLogout = async function() {
-    // This creates the "Confirm or Not" popup
-    const confirmLogout = confirm("Are you sure you want to log out?");
-    
-    // If they click 'OK' (Confirm)
-    if (confirmLogout) {
-        try {
-            const client = getClient();
-            await client.auth.signOut();
-            
-            // Clear local data
-            localStorage.clear();
 
-            alert("Logged out successfully!");
-            
-            // Refresh to go back to the login screen
-            window.location.reload(); 
-            
-        } catch (err) {
-            alert("Error logging out: " + err.message);
-        }
-    } 
-    // If they click 'Cancel', nothing happens and they stay on the page!
-};
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
     const start = document.getElementById('search-start').value;
