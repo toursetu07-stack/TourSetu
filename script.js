@@ -274,6 +274,17 @@ async function handleAuth() {
             // LOGIN LOGIC
             const { data, error } = await client.auth.signInWithPassword({ email, password });
             if (error) throw error;
+
+            // --- ONESIGNAL INTEGRATION START ---
+            // This links the Supabase User ID to the OneSignal Notification ID
+            if (data.user) {
+                window.OneSignal = window.OneSignal || [];
+                OneSignal.push(function() {
+                    OneSignal.login(data.user.id);
+                });
+            }
+            // --- ONESIGNAL INTEGRATION END ---
+
             showDashboard(data.user);
         } else {
             // SIGNUP LOGIC
@@ -292,7 +303,6 @@ async function handleAuth() {
                 password, 
                 options: { 
                     data: metadata,
-                    // FIX: Removed the double "emailRedirectTo:" and replaced with your actual link
                     emailRedirectTo: "https://toursetu-app.netlify.app"
                 } 
             });
