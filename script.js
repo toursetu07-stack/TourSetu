@@ -917,21 +917,21 @@ function renderAgencyDashboard(user) {
         <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
             <div style="width:260px; background:#2d3436; color:white; padding:25px; position:relative; flex-shrink:0;">
                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
-                   <h2 style="color:#ff9f43; margin:0;">TourSetu</h2>
-                   <div id="notif-bell" onclick="showTab('bookings')" style="position:relative; cursor:pointer; font-size:20px; transition: 0.3s;">
-                       🔔
-                       <span id="bell-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:2px 6px; border-radius:50%; font-weight:bold; border: 2px solid #2d3436;">0</span>
-                   </div>
+                    <h2 style="color:#ff9f43; margin:0;">TourSetu</h2>
+                    <div id="notif-bell" onclick="showTab('bookings')" style="position:relative; cursor:pointer; font-size:20px; transition: 0.3s;">
+                        🔔
+                        <span id="bell-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:2px 6px; border-radius:50%; font-weight:bold; border: 2px solid #2d3436;">0</span>
+                    </div>
                </div>
                <nav>
-                   <div onclick="showTab('earnings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
-                   <div onclick="showTab('bookings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                       <span>📅 Bookings</span>
-                       <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
-                   </div>
-                   <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 My Packages</div>
-                   <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
-                   <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
+                    <div onclick="showTab('earnings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
+                    <div onclick="showTab('bookings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>📅 Bookings</span>
+                        <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
+                    </div>
+                    <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 My Packages</div>
+                    <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
+                    <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
                </nav>
             </div>
             <div id="main-content" style="flex:1; padding:40px; overflow-y:auto; background:#f8f9fa;"></div>
@@ -941,8 +941,8 @@ function renderAgencyDashboard(user) {
             <div style="background:white; padding:30px; border-radius:12px; text-align:center; max-width:350px;">
                <h2 style="margin:0 0 20px 0;">Logout?</h2>
                <div style="display:flex; gap:10px;">
-                   <button onclick="executeLogout()" style="background:#ff7675; color:white; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Yes</button>
-                   <button onclick="document.getElementById('logout-modal').style.display='none'" style="background:#eee; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">No</button>
+                    <button onclick="executeLogout()" style="background:#ff7675; color:white; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Yes</button>
+                    <button onclick="document.getElementById('logout-modal').style.display='none'" style="background:#eee; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">No</button>
                </div>
            </div>
         </div>
@@ -960,14 +960,12 @@ window.showTab = async function(tabName) {
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
-    // Secure Data Fetching: Filtered by agency_id
     const { data: bookingsData } = await client
         .from('bookings')
         .select('*')
         .eq('agency_id', user.id)
         .order('created_at', { ascending: false });
 
-    // Handle Notifications
     const pendingCount = bookingsData ? bookingsData.filter(b => b.status === 'pending').length : 0;
     const badge = document.getElementById('bell-badge');
     const sideCount = document.getElementById('side-notif-count');
@@ -1007,7 +1005,6 @@ window.showTab = async function(tabName) {
             const isPending = b.status === 'pending';
             const isCancelled = b.status === 'cancelled';
             
-            // SECURITY: Email and Phone masking for unverified bookings
             const displayPhone = isPaid ? b.customer_phone : "Locked (Visible after Payment)";
             const displayEmail = isPaid ? b.customer_email : b.customer_email.replace(/(.{3})(.*)(?=@)/, "$1***");
             const phoneColor = isPaid ? "#ff9f43" : "#999";
@@ -1068,8 +1065,8 @@ window.showTab = async function(tabName) {
                     </div>
                 ` : (isPending ? `
                     <div style="border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
-                        <button onclick="openActionModal('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
-                        <button onclick="openActionModal('${b.id}', 'denied')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
+                        <button onclick="openActionModal('${b.id}', 'approved', '${b.customer_id}', '${b.package_title}')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
+                        <button onclick="openActionModal('${b.id}', 'denied', '${b.customer_id}', '${b.package_title}')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
                     </div>
                 ` : '')}
                 </div>
@@ -1107,7 +1104,7 @@ window.showTab = async function(tabName) {
     }
 };
 
-window.openActionModal = function(bookingId, type) {
+window.openActionModal = function(bookingId, type, customerId, packageTitle) {
     const modal = document.getElementById('action-modal');
     const content = document.getElementById('action-modal-content');
     modal.style.display = 'flex';
@@ -1118,7 +1115,7 @@ window.openActionModal = function(bookingId, type) {
             <p style="font-size:14px; color:#666;">Provide the contact number for payment collection (GPay/PhonePe).</p>
             <input type="text" id="modal-contact-input" placeholder="Enter Contact Number" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
             <div style="display:flex; gap:10px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'approved')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
+                <button onclick="processStatusUpdate('${bookingId}', 'approved', '${customerId}', '${packageTitle}')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
             </div>`;
     } else {
@@ -1126,7 +1123,7 @@ window.openActionModal = function(bookingId, type) {
             <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
             <p style="font-size:14px; color:#666;">This action will notify the customer and cancel the request.</p>
             <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'denied')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
+                <button onclick="processStatusUpdate('${bookingId}', 'denied', '${customerId}', '${packageTitle}')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
             </div>`;
     }
@@ -1134,7 +1131,7 @@ window.openActionModal = function(bookingId, type) {
 
 window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
 
-window.processStatusUpdate = async function(bookingId, newStatus) {
+window.processStatusUpdate = async function(bookingId, newStatus, customerId, packageTitle) {
     const client = getClient();
     let updateData = { status: newStatus };
 
@@ -1146,6 +1143,21 @@ window.processStatusUpdate = async function(bookingId, newStatus) {
 
     const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
     if (!error) {
+        // TRIGGER PUSH NOTIFICATION
+        if (newStatus === 'approved') {
+            sendPushNotification(
+                customerId, 
+                "Booking Approved! ✅", 
+                `Your trip for ${packageTitle} has been confirmed. Check the app for payment details.`
+            );
+        } else if (newStatus === 'denied') {
+            sendPushNotification(
+                customerId, 
+                "Booking Update", 
+                `Your booking request for ${packageTitle} was not accepted.`
+            );
+        }
+
         closeActionModal();
         showTab('bookings');
     } else {
@@ -1158,6 +1170,39 @@ window.executeLogout = async () => {
     await getClient().auth.signOut(); 
     location.reload(); 
 };
+/* =========================================
+   10. NOTIFICATION SYSTEM (OneSignal Trigger)
+   ========================================= */
+
+async function sendPushNotification(targetUserId, messageTitle, messageBody) {
+    const appId = "1d58b571-868b-4b5b-b370-cd417cac6c28";
+    
+    // IMPORTANT: Replace this with your actual REST API Key from OneSignal Settings > Keys & IDs
+    const apiKey = "YOUR_ACTUAL_REST_API_KEY_HERE"; 
+
+    try {
+        const response = await fetch("https://onesignal.com/api/v1/notifications", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json; charset=utf-8",
+                "Authorization": `Basic ${apiKey}`
+            },
+            body: JSON.stringify({
+                app_id: appId,
+                include_external_user_ids: [targetUserId],
+                headings: { "en": messageTitle },
+                contents: { "en": messageBody },
+                url: "https://toursetu.pages.dev" 
+            })
+        });
+        
+        const result = await response.json();
+        console.log("Notification Sent:", result);
+        return result;
+    } catch (error) {
+        console.error("Error sending notification:", error);
+    }
+}
 /* =========================================
    10. PACKAGE FORM & HELPER LOGIC
    ========================================= */
