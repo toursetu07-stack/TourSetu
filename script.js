@@ -1171,36 +1171,33 @@ window.executeLogout = async () => {
     location.reload(); 
 };
 /* =========================================
-   10. NOTIFICATION SYSTEM (OneSignal Trigger)
+   10. SECURE NOTIFICATION SYSTEM (Cloudflare Bridge)
    ========================================= */
 
 async function sendPushNotification(targetUserId, messageTitle, messageBody) {
-    const appId = "1d58b571-868b-4b5b-b370-cd417cac6c28";
-    
-    // IMPORTANT: Replace this with your actual REST API Key from OneSignal Settings > Keys & IDs
-    const apiKey = "YOUR_ACTUAL_REST_API_KEY_HERE"; 
-
     try {
-        const response = await fetch("https://onesignal.com/api/v1/notifications", {
+        // This calls the private function folder you created in GitHub
+        const response = await fetch("/send-notif", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json; charset=utf-8",
-                "Authorization": `Basic ${apiKey}`
+            headers: { 
+                "Content-Type": "application/json" 
             },
             body: JSON.stringify({
-                app_id: appId,
-                include_external_user_ids: [targetUserId],
-                headings: { "en": messageTitle },
-                contents: { "en": messageBody },
-                url: "https://toursetu.pages.dev" 
+                targetUserId,
+                messageTitle,
+                messageBody
             })
         });
         
         const result = await response.json();
-        console.log("Notification Sent:", result);
+        
+        // This confirms if the Cloudflare function successfully talked to OneSignal
+        console.log("Secure Notification Status:", result);
+        
         return result;
     } catch (error) {
-        console.error("Error sending notification:", error);
+        // This will trigger if the Cloudflare function is missing or the network fails
+        console.error("Error sending secure notification:", error);
     }
 }
 /* =========================================
