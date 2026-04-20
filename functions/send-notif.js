@@ -11,7 +11,7 @@ export async function onRequestPost(context) {
         // 2. Pull the secret key from your Cloudflare Environment Variables
         const apiKey = env.ONESIGNAL_REST_KEY; 
 
-        // 3. Safety check: If the key is missing in Cloudflare, show a clear error
+        // 3. Safety check: If the key is missing in Cloudflare settings, return an error
         if (!apiKey) {
             return new Response(JSON.stringify({ 
                 error: "ONESIGNAL_REST_KEY is not defined in Cloudflare Settings." 
@@ -26,7 +26,7 @@ export async function onRequestPost(context) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json; charset=utf-8",
-                "Authorization": `Basic ${apiKey.trim()}` // .trim() removes any accidental spaces
+                "Authorization": `Basic ${apiKey.trim()}` // Clean spaces to avoid "Access Denied"
             },
             body: JSON.stringify({
                 app_id: appId,
@@ -37,20 +37,25 @@ export async function onRequestPost(context) {
             })
         });
 
+        // Parse the response from OneSignal
         const result = await response.json();
 
-        // 5. Return the result back to your script.js
+        // 5. Return the full result back to your script.js for logging
         return new Response(JSON.stringify({
             status: response.status,
+            success: response.ok,
             onesignalResponse: result,
             sentTo: targetUserId
         }), {
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*" // Helps prevent browser blocks
+            },
             status: response.status
         });
 
     } catch (err) {
-        // If something crashes, return the error message
+        // Catch network or code crashes
         return new Response(JSON.stringify({ error: err.message }), { 
             status: 500,
             headers: { "Content-Type": "application/json" }
