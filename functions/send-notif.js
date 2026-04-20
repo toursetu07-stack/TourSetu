@@ -3,7 +3,8 @@ export async function onRequestPost(context) {
     
     try {
         // 1. Get the data from your website
-        const { targetUserId, messageTitle, messageBody } = await request.json();
+        const body = await request.json();
+        const { targetUserId, messageTitle, messageBody } = body;
         
         const appId = "1d58b571-868b-4b5b-b370-cd417cac6c28";
         
@@ -39,7 +40,11 @@ export async function onRequestPost(context) {
         const result = await response.json();
 
         // 5. Return the result back to your script.js
-        return new Response(JSON.stringify(result), {
+        return new Response(JSON.stringify({
+            status: response.status,
+            onesignalResponse: result,
+            sentTo: targetUserId
+        }), {
             headers: { "Content-Type": "application/json" },
             status: response.status
         });
