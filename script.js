@@ -1223,18 +1223,6 @@ window.updateCities = function() {
     }
 };
 
-// HELPER: Checks if any trek area is selected to show/hide the Horse Box
-window.checkTrekStatus = function() {
-    const trekAreas = ["Kedarnath (Uttarakhand)", "Yamunotri (Uttarakhand)", "Vaishno Devi (Katra)"];
-    const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
-    const horseBox = document.getElementById('horse-config-box');
-    
-    if (!horseBox) return;
-
-    const isTrek = selectedDests.some(d => trekAreas.includes(d));
-    horseBox.style.display = isTrek ? 'block' : 'none';
-};
-
 // RENDER FORM: Shows the Create/Edit UI
 window.showPackageForm = function(pEncoded = null) {
     let pkg = null;
@@ -1251,10 +1239,6 @@ window.showPackageForm = function(pEncoded = null) {
     const pkgDestinations = isEdit ? (pkg.destinations || pkg.destination || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
     
-    // Check if horse box should be visible on load (for Edit mode)
-    const trekAreas = ["Kedarnath (Uttarakhand)", "Yamunotri (Uttarakhand)", "Vaishno Devi (Katra)"];
-    const hasTrekOnLoad = pkgDestinations.some(d => trekAreas.includes(d));
-
     let selectedState = "";
     if (isEdit && pkg.starting_location) {
         for (let s in locationData) {
@@ -1271,7 +1255,7 @@ window.showPackageForm = function(pEncoded = null) {
 
     const destHtml = tourDestinations.map(d => `
         <label style="display:flex; align-items:center; gap:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px; cursor:pointer;">
-            <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''} onchange="window.checkTrekStatus()"> ${d}
+            <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}
         </label>
     `).join('');
 
@@ -1315,20 +1299,6 @@ window.showPackageForm = function(pEncoded = null) {
                 ${destHtml}
             </div>
 
-            <div id="horse-config-box" style="display: ${hasTrekOnLoad ? 'block' : 'none'}; background:#fff4e6; padding:15px; border-radius:10px; border:2px dashed #ff9f43; margin-bottom:20px;">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                    <span style="font-size:24px;">🐴</span>
-                    <h4 style="margin:0; color:#e67e22;">Horse/Pony Trek Add-on</h4>
-                </div>
-                <p style="font-size:12px; color:#666; margin-bottom:10px;">Enable advance horse booking for this trek area. Set the total price you want to show the customer.</p>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="flex:1;">
-                        <label style="font-size:10px; font-weight:bold; color:#d35400;">CUSTOMER PRICE (₹)</label>
-                        <input type="number" id="p-horse-price" placeholder="e.g. 5000" value="${isEdit ? (pkg.horse_price || '') : ''}" style="width:100%; padding:10px; border:1px solid #fab1a0; border-radius:6px; font-weight:bold;">
-                    </div>
-                </div>
-            </div>
-
             <p><b>Vehicle Pricing:</b></p>
             <div style="margin-bottom:20px;">${vehicleHtml}</div>
 
@@ -1343,6 +1313,7 @@ window.showPackageForm = function(pEncoded = null) {
             </div>
         </div>`;
 };
+
 /* =========================================
    11. SAVE LOGIC: Package Management
    ========================================= */
@@ -1358,46 +1329,28 @@ window.processSave = async function(pkgId) {
         const title = document.getElementById('p-title').value.trim();
         const city = document.getElementById('p-city').value;
         const desc = document.getElementById('p-desc').value;
-        
-        // --- NEW: Capture Horse Price ---
-        // We check if the element exists first to avoid errors
-        const horsePriceInput = document.getElementById('p-horse-price');
-        const horsePriceValue = horsePriceInput ? parseFloat(horsePriceInput.value) : null;
 
         if (!title || !city) throw new Error("Title and Starting City are required!");
 
         const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
         const selectedVehicles = [];
-        
         document.querySelectorAll('.v-enable:checked').forEach(el => {
             const vId = el.dataset.id;
-            const rateInput = document.querySelector(`.v-rate[data-id="${vId}"]`);
-            const maxInput = document.querySelector(`.v-max[data-id="${vId}"]`);
-            
-            const rate = rateInput ? parseFloat(rateInput.value) : 0;
-            const max = maxInput ? parseInt(maxInput.value) : 1;
-            
+            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`).value) || 0;
+            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`).value) || 1;
             const vType = vehicleTypes.find(vt => vt.id === vId);
             if (rate > 0) {
-                selectedVehicles.push({ 
-                    id: vId, 
-                    name: vType.name, 
-                    rate: rate, 
-                    max_cars: max, 
-                    icon: vType.icon 
-                });
+                selectedVehicles.push({ id: vId, name: vType.name, rate: rate, max_cars: max, icon: vType.icon });
             }
         });
 
-        // --- UPDATED: Add horse_price to pkgData ---
         const pkgData = {
             title: title,
             starting_location: city,
             destination: selectedDests, 
             vehicles: selectedVehicles,
             description: desc,
-            agency_id: user.id,
-            horse_price: horsePriceValue // This saves the price to Supabase
+            agency_id: user.id 
         };
 
         let error;
@@ -1419,11 +1372,10 @@ window.processSave = async function(pkgId) {
         console.error("Save Error:", err);
         alert("❌ Error: " + err.message);
         if (btn) {
-            btn.innerText = (pkgId && pkgId !== "undefined") ? "SAVE CHANGES" : "PUBLISH PACKAGE";
+            btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE";
             btn.disabled = false;
         }
     }
-};
 };
 
 /* =========================================
