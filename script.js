@@ -774,18 +774,21 @@ window.showPackageDetails = function(pEncoded) {
 
     // Format for HTML input (YYYY-MM-DD)
     const minStr = today.toISOString().split('T')[0];
-    const maxStr = maxDate.setDate(today.getDate() + 7) && new Date(maxDate).toISOString().split('T')[0]; 
-    // Re-calculating correctly for the string
     const limitDate = new Date();
     limitDate.setDate(today.getDate() + 7);
     const limitStr = limitDate.toISOString().split('T')[0];
+
+    // Check if the destinations list includes Kedarnath or Vaishno Devi (Excluding Yamunotri)
+    const pkgDestinations = Array.isArray(p.destination) ? p.destination : [p.destination];
+    const allowedTrekAreas = ["Kedarnath (Uttarakhand)", "Vaishno Devi (Katra)"];
+    const showTrekServices = pkgDestinations.some(d => allowedTrekAreas.includes(d));
 
     // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
         <div style="padding:12px; border:1px solid #eee; border-radius:10px; margin-bottom:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')">
+                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}'); updateLivePrice();">
                     <b>${v.name}</b>
                 </div>
                 <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
@@ -795,6 +798,39 @@ window.showPackageDetails = function(pEncoded) {
                 <small>Max: ${v.max_cars || 1}</small>
             </div>
         </div>`).join('');
+
+    // Pre-build Special Trek Services HTML (Only if applicable)
+    let trekServicesHtml = '';
+    if (showTrekServices) {
+        const services = [
+            { id: 'ghoda', name: '🐴 Khachhar / Ghoda (Horse)', price: parseFloat(p.ghoda_price) || 0 },
+            { id: 'dandi', name: '🪑 Dandi (Palanquin)', price: parseFloat(p.dandi_price) || 0 },
+            { id: 'kandi', name: '🧺 Kandi (Wicker Cradle)', price: parseFloat(p.kandi_price) || 0 },
+            { id: 'pitthu', name: '🎒 Pitthu (Porter Service)', price: parseFloat(p.pitthu_price) || 0 }
+        ];
+
+        // Filter out services that the agency didn't provide pricing for
+        const activeServices = services.filter(s => s.price > 0);
+
+        if (activeServices.length > 0) {
+            trekServicesHtml = `<h4>Special Mountain Trek Add-ons</h4>`;
+            trekServicesHtml += activeServices.map(s => `
+                <div style="padding:12px; border:1px solid #ffeaa7; background:#fffdf0; border-radius:10px; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.price}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
+                            <b>${s.name}</b>
+                        </div>
+                        <span style="color:#e67e22; font-weight:bold;">₹${s.price}</span>
+                    </div>
+                    <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
+                        <label style="font-size:11px;">Quantity needed:</label>
+                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" oninput="updateLivePrice()" style="width:60px; padding:4px;">
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
 
     body.innerHTML = `
         <div style="text-align:left;">
@@ -815,6 +851,10 @@ window.showPackageDetails = function(pEncoded) {
             
             <h4>Select Vehicles</h4>
             ${vehicleHtml}
+
+            <div id="trek-addons-section">
+                ${trekServicesHtml}
+            </div>
 
             <div style="background:#2d3436; color:white; padding:15px; border-radius:8px; margin-top:15px; display:flex; justify-content:space-between;">
                 <span>TOTAL:</span>
@@ -846,6 +886,8 @@ window.showPackageDetails = function(pEncoded) {
             </div>
         </div>`;
     modal.style.display = 'flex';
+    // Run price update on load to set initial state to 0
+    if(window.updateLivePrice) window.updateLivePrice();
 };
 
 // THE BOOKING INITIATOR
@@ -854,6 +896,34 @@ window.initiateBooking = function(btnElement) {
     const packageTitle = btnElement.getAttribute('data-pkg-title');
     const agencyId = btnElement.getAttribute('data-agency-id');
     handleBookingInquiry(packageId, packageTitle, agencyId);
+};
+
+// LIVE PRICE CALCULATION ENGINE UPGRADE
+window.updateLivePrice = function() {
+    let grandTotal = 0;
+
+    // Calculate vehicle choices
+    document.querySelectorAll('.book-v-check:checked').forEach(el => {
+        const id = el.dataset.id;
+        const rate = parseFloat(el.dataset.rate) || 0;
+        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
+        const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+        grandTotal += (rate * qty);
+    });
+
+    // Calculate mountain trek service choices
+    document.querySelectorAll('.book-trek-check:checked').forEach(el => {
+        const id = el.dataset.id;
+        const rate = parseFloat(el.dataset.rate) || 0;
+        const qtyInput = document.getElementById(`qty-${id}`);
+        const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+        grandTotal += (rate * qty);
+    });
+
+    const displayElement = document.getElementById('live-total-display');
+    if (displayElement) {
+        displayElement.innerText = `₹${grandTotal}`;
+    }
 };
 
 window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) {
@@ -874,15 +944,35 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     }
 
     let totalPrice = 0;
+    
+    // Process Vehicle selections
     const selectedVehicles = Array.from(document.querySelectorAll('.book-v-check:checked')).map(el => {
         const id = el.dataset.id;
         const rate = parseFloat(el.dataset.rate) || 0;
-        const qty = parseInt(document.querySelector(`.book-v-qty[data-id="${id}"]`).value) || 1;
+        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
+        const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
         totalPrice += (rate * qty);
         return `${qty}x vehicle_id:${id}`;
     });
 
     if (selectedVehicles.length === 0) { alert("Select a vehicle!"); return; }
+
+    // Read special mountain service quantities safely
+    const ghodaChecked = document.getElementById('check-ghoda') && document.getElementById('check-ghoda').checked;
+    const dandiChecked = document.getElementById('check-dandi') && document.getElementById('check-dandi').checked;
+    const kandiChecked = document.getElementById('check-kandi') && document.getElementById('check-kandi').checked;
+    const pitthuChecked = document.getElementById('check-pitthu') && document.getElementById('check-pitthu').checked;
+
+    const ghodaQty = ghodaChecked ? (parseInt(document.getElementById('qty-ghoda').value) || 1) : 0;
+    const dandiQty = dandiChecked ? (parseInt(document.getElementById('qty-dandi').value) || 1) : 0;
+    const kandiQty = kandiChecked ? (parseInt(document.getElementById('qty-kandi').value) || 1) : 0;
+    const pitthuQty = pitthuChecked ? (parseInt(document.getElementById('qty-pitthu').value) || 1) : 0;
+
+    // Add mountain add-on rates to total pricing ledger
+    if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * ghodaQty);
+    if (dandiChecked) totalPrice += (parseFloat(document.getElementById('check-dandi').dataset.rate) * dandiQty);
+    if (kandiChecked) totalPrice += (parseFloat(document.getElementById('check-kandi').dataset.rate) * kandiQty);
+    if (pitthuChecked) totalPrice += (parseFloat(document.getElementById('check-pitthu').dataset.rate) * pitthuQty);
 
     const { error } = await client.from('bookings').insert([{
         package_id: packageId, 
@@ -897,7 +987,13 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         status: 'pending',
         agency_id: agencyId,
         consent_9_percent_policy: true,
-        policy_version: 'v1_9_percent_deduction'
+        policy_version: 'v1_9_percent_deduction',
+        
+        // SAVE QUANTITIES TO YOUR NEW SQL COLUMNS
+        booked_ghoda_qty: ghodaQty,
+        booked_dandi_qty: dandiQty,
+        booked_kandi_qty: kandiQty,
+        booked_pitthu_qty: pitthuQty
     }]);
 
     if (!error) {
