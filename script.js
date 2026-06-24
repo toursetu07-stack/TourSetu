@@ -957,7 +957,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
 
     if (selectedVehicles.length === 0) { alert("Select a vehicle!"); return; }
 
-    // Read special mountain service quantities safely
+    // Read special mountain service quantities safely (with safe element validation checks)
     const ghodaChecked = document.getElementById('check-ghoda') && document.getElementById('check-ghoda').checked;
     const dandiChecked = document.getElementById('check-dandi') && document.getElementById('check-dandi').checked;
     const kandiChecked = document.getElementById('check-kandi') && document.getElementById('check-kandi').checked;
@@ -968,7 +968,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     const kandiQty = kandiChecked ? (parseInt(document.getElementById('qty-kandi').value) || 1) : 0;
     const pitthuQty = pitthuChecked ? (parseInt(document.getElementById('qty-pitthu').value) || 1) : 0;
 
-    // Add mountain add-on rates to total pricing ledger
+    // Add mountain add-on rates to total pricing ledger safely
     if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * ghodaQty);
     if (dandiChecked) totalPrice += (parseFloat(document.getElementById('check-dandi').dataset.rate) * dandiQty);
     if (kandiChecked) totalPrice += (parseFloat(document.getElementById('check-kandi').dataset.rate) * kandiQty);
@@ -999,7 +999,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     if (!error) {
         alert("Booking Sent!");
         document.getElementById('detail-modal').style.display = 'none';
-        renderCustomerRequests();
+        if (window.renderCustomerRequests) renderCustomerRequests();
     } else {
         alert("Error: " + error.message);
     }
