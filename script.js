@@ -1319,6 +1319,32 @@ window.updateCities = function() {
     }
 };
 
+// Dynamically shows/hides Mountain Trek Add-ons based on destination selections
+window.toggleTrekPricingSection = function() {
+    const trekSection = document.getElementById('trek-pricing-section');
+    if (!trekSection) return;
+
+    const targetDestinations = ["Kedarnath (Uttarakhand)", "Vaishno Devi (Katra)", "Char Dham Yatra (Uttarakhand)"];
+    let isTargetSelected = false;
+
+    document.querySelectorAll('.d-check:checked').forEach(cb => {
+        if (targetDestinations.includes(cb.value)) {
+            isTargetSelected = true;
+        }
+    });
+
+    if (isTargetSelected) {
+        trekSection.style.display = 'block';
+    } else {
+        trekSection.style.display = 'none';
+        // Clear inputs if section is hidden to keep data clean
+        document.getElementById('p-ghoda-price').value = '';
+        document.getElementById('p-dandi-price').value = '';
+        document.getElementById('p-kandi-price').value = '';
+        document.getElementById('p-pitthu-price').value = '';
+    }
+};
+
 // RENDER FORM: Shows the Create/Edit UI
 window.showPackageForm = function(pEncoded = null) {
     let pkg = null;
@@ -1334,6 +1360,9 @@ window.showPackageForm = function(pEncoded = null) {
     
     const pkgDestinations = isEdit ? (pkg.destinations || pkg.destination || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
+    
+    // Normalize destinations array for checking
+    const activeDests = Array.isArray(pkgDestinations) ? pkgDestinations : [pkgDestinations];
     
     let selectedState = "";
     if (isEdit && pkg.starting_location) {
@@ -1351,7 +1380,7 @@ window.showPackageForm = function(pEncoded = null) {
 
     const destHtml = tourDestinations.map(d => `
         <label style="display:flex; align-items:center; gap:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px; cursor:pointer;">
-            <input type="checkbox" class="d-check" value="${d}" ${pkgDestinations.includes(d) ? 'checked' : ''}> ${d}
+            <input type="checkbox" class="d-check" value="${d}" ${activeDests.includes(d) ? 'checked' : ''} onchange="window.toggleTrekPricingSection()"> ${d}
         </label>
     `).join('');
 
@@ -1366,6 +1395,10 @@ window.showPackageForm = function(pEncoded = null) {
             <input type="number" class="v-max" data-id="${v.id}" placeholder="Max" style="width:60px; padding:5px;" value="${existing ? existing.max_cars : '1'}">
         </div>`;
     }).join('');
+
+    // Pre-determine if the mountain services section should open visible during an edit
+    const targetDestinations = ["Kedarnath (Uttarakhand)", "Vaishno Devi (Katra)", "Char Dham Yatra (Uttarakhand)"];
+    const shouldShowTrekInitial = activeDests.some(d => targetDestinations.includes(d));
 
     area.innerHTML = `
         <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
@@ -1397,6 +1430,28 @@ window.showPackageForm = function(pEncoded = null) {
 
             <p><b>Vehicle Pricing:</b></p>
             <div style="margin-bottom:20px;">${vehicleHtml}</div>
+
+            <div id="trek-pricing-section" style="display: ${shouldShowTrekInitial ? 'block' : 'none'}; background:#fffdf0; padding:15px; border:1px solid #ffeaa7; border-radius:12px; margin-bottom:20px;">
+                <p style="margin-top:0; color:#e67e22;"><b>⛰️ Mountain Trek Service Pricing (Rates per Service):</b></p>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="font-size:11px; font-weight:bold; color:#555;">🐴 Horse / Mule (Ghoda/Khachhar) Price</label>
+                        <input type="number" id="p-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:bold; color:#555;">🪑 Palanquin (Dandi) Price</label>
+                        <input type="number" id="p-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:bold; color:#555;">🧺 Wicker Cradle (Kandi) Price</label>
+                        <input type="number" id="p-kandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.kandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px; font-weight:bold; color:#555;">🎒 Porter Service (Pitthu) Price</label>
+                        <input type="number" id="p-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                    </div>
+                </div>
+            </div>
 
             <label style="font-size:11px; font-weight:bold; color:#666;">ITINERARY DETAILS</label>
             <textarea id="p-desc" style="height:120px; width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
