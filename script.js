@@ -1495,13 +1495,30 @@ window.processSave = async function(pkgId) {
             }
         });
 
+        // --- NEW: READ MOUNTAIN TREK PRICES SAFELY ---
+        const ghodaPriceInput = document.getElementById('p-ghoda-price');
+        const dandiPriceInput = document.getElementById('p-dandi-price');
+        const kandiPriceInput = document.getElementById('p-kandi-price');
+        const pitthuPriceInput = document.getElementById('p-pitthu-price');
+
+        const ghodaPrice = ghodaPriceInput ? (parseFloat(ghodaPriceInput.value) || 0) : 0;
+        const dandiPrice = dandiPriceInput ? (parseFloat(dandiPriceInput.value) || 0) : 0;
+        const kandiPrice = kandiPriceInput ? (parseFloat(kandiPriceInput.value) || 0) : 0;
+        const pitthuPrice = pitthuPriceInput ? (parseFloat(pitthuPriceInput.value) || 0) : 0;
+
         const pkgData = {
             title: title,
             starting_location: city,
             destination: selectedDests, 
             vehicles: selectedVehicles,
             description: desc,
-            agency_id: user.id 
+            agency_id: user.id,
+            
+            // NEW COLUMNS SAVED TO DATABASE
+            ghoda_price: ghodaPrice,
+            dandi_price: dandiPrice,
+            kandi_price: kandiPrice,
+            pitthu_price: pitthuPrice
         };
 
         let error;
