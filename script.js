@@ -809,8 +809,8 @@ window.showPackageDetails = function(pEncoded) {
             { id: 'pitthu', name: '🎒 Pitthu (Porter Service)', price: parseFloat(p.pitthu_price) || 0 }
         ];
 
-        // Filter out services that the agency didn't provide pricing for
-        const activeServices = services.filter(s => s.price > 0);
+        // FIXED: Filtering removed so options ALWAYS show for Kedarnath / Vaishno Devi
+        const activeServices = services;
 
         if (activeServices.length > 0) {
             trekServicesHtml = `<h4>Special Mountain Trek Add-ons</h4>`;
