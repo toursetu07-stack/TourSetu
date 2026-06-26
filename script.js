@@ -1392,8 +1392,19 @@ window.showPackageForm = function(pEncoded = null) {
     const pkgDestinations = isEdit ? (pkg.destinations || pkg.destination || []) : [];
     const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
     
-    // Normalize destinations array for checking
-    const activeDests = Array.isArray(pkgDestinations) ? pkgDestinations : [pkgDestinations];
+    // --- ROBUST PARSING FOR DESTINATIONS ARRAY ---
+    let activeDests = [];
+    if (typeof pkgDestinations === 'string') {
+        try {
+            activeDests = JSON.parse(pkgDestinations);
+        } catch(e) {
+            activeDests = pkgDestinations.split(',').map(d => d.trim());
+        }
+    } else if (Array.isArray(pkgDestinations)) {
+        activeDests = pkgDestinations;
+    } else {
+        activeDests = [pkgDestinations];
+    }
     
     let selectedState = "";
     if (isEdit && pkg.starting_location) {
