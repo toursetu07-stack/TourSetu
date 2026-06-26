@@ -1347,6 +1347,10 @@ window.toggleTrekPricingSection = function() {
         if(document.getElementById('p-dandi-price')) document.getElementById('p-dandi-price').value = '';
         if(document.getElementById('p-kandi-price')) document.getElementById('p-kandi-price').value = '';
         if(document.getElementById('p-pitthu-price')) document.getElementById('p-pitthu-price').value = '';
+        if(document.getElementById('p-ghoda-max')) document.getElementById('p-ghoda-max').value = '1';
+        if(document.getElementById('p-dandi-max')) document.getElementById('p-dandi-max').value = '1';
+        if(document.getElementById('p-kandi-max')) document.getElementById('p-kandi-max').value = '1';
+        if(document.getElementById('p-pitthu-max')) document.getElementById('p-pitthu-max').value = '1';
     }
 
     // Handle Vaishno Devi View Section
@@ -1357,6 +1361,9 @@ window.toggleTrekPricingSection = function() {
         if(document.getElementById('p-vaishno-ghoda-price')) document.getElementById('p-vaishno-ghoda-price').value = '';
         if(document.getElementById('p-vaishno-dandi-price')) document.getElementById('p-vaishno-dandi-price').value = '';
         if(document.getElementById('p-vaishno-pitthu-price')) document.getElementById('p-vaishno-pitthu-price').value = '';
+        if(document.getElementById('p-vaishno-ghoda-max')) document.getElementById('p-vaishno-ghoda-max').value = '1';
+        if(document.getElementById('p-vaishno-dandi-max')) document.getElementById('p-vaishno-dandi-max').value = '1';
+        if(document.getElementById('p-vaishno-pitthu-max')) document.getElementById('p-vaishno-pitthu-max').value = '1';
     }
 };
 
@@ -1448,40 +1455,82 @@ window.showPackageForm = function(pEncoded = null) {
 
             <div id="trek-pricing-section-kedar" style="display: ${shouldShowKedarInitial ? 'block' : 'none'}; background:#fffdf0; padding:15px; border:1px solid #ffeaa7; border-radius:12px; margin-bottom:20px;">
                 <p style="margin-top:0; color:#e67e22;"><b>⛰️ Mountain Trek Service Pricing (only for kedarnath):</b></p>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div>
-                        <label style="font-size:11px; font-weight:bold; color:#555;">🐴 Horse / Mule (Ghoda/Khachhar) Price</label>
-                        <input type="number" id="p-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                <div style="display:grid; grid-template-columns: 1fr; gap:15px;">
+                    <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="flex:2;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">🐴 Horse / Mule (Ghoda/Khachhar) Price</label>
+                            <input type="number" id="p-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
+                            <input type="number" id="p-ghoda-max" placeholder="Max" value="${isEdit ? (pkg.ghoda_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
                     </div>
-                    <div>
-                        <label style="font-size:11px; font-weight:bold; color:#555;">🪑 Palanquin (Dandi) Price</label>
-                        <input type="number" id="p-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                    <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="flex:2;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">🪑 Palanquin (Dandi) Price</label>
+                            <input type="number" id="p-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
+                            <input type="number" id="p-dandi-max" placeholder="Max" value="${isEdit ? (pkg.dandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
                     </div>
-                    <div>
-                        <label style="font-size:11px; font-weight:bold; color:#555;">🧺 Wicker Cradle (Kandi) Price</label>
-                        <input type="number" id="p-kandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.kandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                    <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="flex:2;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">🧺 Wicker Cradle (Kandi) Price</label>
+                            <input type="number" id="p-kandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.kandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
+                            <input type="number" id="p-kandi-max" placeholder="Max" value="${isEdit ? (pkg.kandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
                     </div>
-                    <div>
-                        <label style="font-size:11px; font-weight:bold; color:#555;">🎒 Porter Service (Pitthu) Price</label>
-                        <input type="number" id="p-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                    <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="flex:2;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">🎒 Porter Service (Pitthu) Price</label>
+                            <input type="number" id="p-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
+                            <input type="number" id="p-pitthu-max" placeholder="Max" value="${isEdit ? (pkg.pitthu_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div id="trek-pricing-section-vaishno" style="display: ${shouldShowVaishnoInitial ? 'block' : 'none'}; background:#f0f7ff; padding:15px; border:1px solid #a7cfff; border-radius:12px; margin-bottom:20px;">
                 <p style="margin-top:0; color:#0066cc;"><b>⛰️ Mountain Trek Service Pricing (only for vaishno devi):</b></p>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div>
-                        <label style="font-size:11px; font-weight:bold; color:#555;">🐴 Horse (Ghora) Price</label>
-                        <input type="number" id="p-vaishno-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_ghoda_price || pkg.ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                <div style="display:grid; grid-template-columns: 1fr; gap:15px;">
+                    <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="flex:2;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">🐴 Horse (Ghora) Price</label>
+                            <input type="number" id="p-vaishno-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_ghoda_price || pkg.ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
+                            <input type="number" id="p-vaishno-ghoda-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_ghoda_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
                     </div>
-                    <div>
-                        <label style="font-size:11px; font-weight:bold; color:#555;">🪑 Palanquin (Palki) Price</label>
-                        <input type="number" id="p-vaishno-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_dandi_price || pkg.dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                    <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="flex:2;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">🪑 Palanquin (Palki) Price</label>
+                            <input type="number" id="p-vaishno-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_dandi_price || pkg.dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
+                            <input type="number" id="p-vaishno-dandi-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_dandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
                     </div>
-                    <div>
-                        <label style="font-size:11px; font-weight:bold; color:#555;">🎒 Porters (Pithoo) Price</label>
-                        <input type="number" id="p-vaishno-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_pitthu_price || pkg.pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                    <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="flex:2;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">🎒 Porters (Pithoo) Price</label>
+                            <input type="number" id="p-vaishno-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_pitthu_price || pkg.pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
+                            <input type="number" id="p-vaishno-pitthu-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_pitthu_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1493,6 +1542,11 @@ window.showPackageForm = function(pEncoded = null) {
                 <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold; border:none; border-radius:8px; cursor:pointer;">
                     ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
                 </button>
+                ${isEdit ? `
+                <button onclick="if(confirm('Are you sure you want to delete this package?')) window.deletePackage('${pkg.id}')" style="background:#e74c3c; color:white; flex:1; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">
+                    🗑️ Delete
+                </button>
+                ` : ''}
                 <button onclick="window.showTab('packages')" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
             </div>
         </div>`;
