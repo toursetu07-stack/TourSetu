@@ -1527,16 +1527,37 @@ window.processSave = async function(pkgId) {
             }
         });
 
-        // --- NEW: READ MOUNTAIN TREK PRICES SAFELY ---
-        const ghodaPriceInput = document.getElementById('p-ghoda-price');
-        const dandiPriceInput = document.getElementById('p-dandi-price');
-        const kandiPriceInput = document.getElementById('p-kandi-price');
-        const pitthuPriceInput = document.getElementById('p-pitthu-price');
+        // --- NEW: DYNAMIC TREK PRICING EXTRACTION BASED ON DESTINATION ---
+        const isKedarSelected = selectedDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
+        const isVaishnoSelected = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
 
-        const ghodaPrice = ghodaPriceInput ? (parseFloat(ghodaPriceInput.value) || 0) : 0;
-        const dandiPrice = dandiPriceInput ? (parseFloat(dandiPriceInput.value) || 0) : 0;
-        const kandiPrice = kandiPriceInput ? (parseFloat(kandiPriceInput.value) || 0) : 0;
-        const pitthuPrice = pitthuPriceInput ? (parseFloat(pitthuPriceInput.value) || 0) : 0;
+        let ghodaPrice = 0;
+        let dandiPrice = 0;
+        let kandiPrice = 0;
+        let pitthuPrice = 0;
+
+        if (isKedarSelected) {
+            // Read fields from Kedarnath Inputs
+            const ghodaPriceInput = document.getElementById('p-ghoda-price');
+            const dandiPriceInput = document.getElementById('p-dandi-price');
+            const kandiPriceInput = document.getElementById('p-kandi-price');
+            const pitthuPriceInput = document.getElementById('p-pitthu-price');
+
+            ghodaPrice = ghodaPriceInput ? (parseFloat(ghodaPriceInput.value) || 0) : 0;
+            dandiPrice = dandiPriceInput ? (parseFloat(dandiPriceInput.value) || 0) : 0;
+            kandiPrice = kandiPriceInput ? (parseFloat(kandiPriceInput.value) || 0) : 0;
+            pitthuPrice = pitthuPriceInput ? (parseFloat(pitthuPriceInput.value) || 0) : 0;
+        } else if (isVaishnoSelected) {
+            // Read fields from Vaishno Devi Inputs and map to global columns safely
+            const vaishnoGhodaInput = document.getElementById('p-vaishno-ghoda-price');
+            const vaishnoDandiInput = document.getElementById('p-vaishno-dandi-price');
+            const vaishnoPitthuInput = document.getElementById('p-vaishno-pitthu-price');
+
+            ghodaPrice = vaishnoGhodaInput ? (parseFloat(vaishnoGhodaInput.value) || 0) : 0;
+            dandiPrice = vaishnoDandiInput ? (parseFloat(vaishnoDandiInput.value) || 0) : 0;
+            pitthuPrice = vaishnoPitthuInput ? (parseFloat(vaishnoPitthuInput.value) || 0) : 0;
+            kandiPrice = 0; // Vaishno Devi has no Kandi service, kept 0 for DB constraint
+        }
 
         const pkgData = {
             title: title,
@@ -1546,7 +1567,7 @@ window.processSave = async function(pkgId) {
             description: desc,
             agency_id: user.id,
             
-            // NEW COLUMNS SAVED TO DATABASE
+            // NEW COLUMNS SAVED TO DATABASE Safely mapped
             ghoda_price: ghodaPrice,
             dandi_price: dandiPrice,
             kandi_price: kandiPrice,
