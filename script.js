@@ -1630,7 +1630,7 @@ window.processSave = async function(pkgId) {
             }
         });
 
-        // --- NEW: DYNAMIC TREK PRICING & MAX MEMBER EXTRACTION BASED ON DESTINATION ---
+        // --- NEW: DYNAMIC TREK PRICING & MAX MEMBER EXTRACTION BASED ON DESTINATION & CHECKBOX ---
         const isKedarSelected = selectedDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
         const isVaishnoSelected = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
 
@@ -1640,44 +1640,66 @@ window.processSave = async function(pkgId) {
         let pitthuPrice = 0, pitthuMax = 1;
 
         if (isKedarSelected) {
-            // Read fields and max members from Kedarnath Inputs
-            const ghodaPriceInput = document.getElementById('p-ghoda-price');
-            const ghodaMaxInput = document.getElementById('p-ghoda-max');
-            const dandiPriceInput = document.getElementById('p-dandi-price');
-            const dandiMaxInput = document.getElementById('p-dandi-max');
-            const kandiPriceInput = document.getElementById('p-kandi-price');
-            const kandiMaxInput = document.getElementById('p-kandi-max');
-            const pitthuPriceInput = document.getElementById('p-pitthu-price');
-            const pitthuMaxInput = document.getElementById('p-pitthu-max');
+            // Read fields only if their specific tick option / checkbox is enabled
+            const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked;
+            const dandiEnabled = document.getElementById('p-dandi-enable')?.checked;
+            const kandiEnabled = document.getElementById('p-kandi-enable')?.checked;
+            const pitthuEnabled = document.getElementById('p-pitthu-enable')?.checked;
 
-            ghodaPrice = ghodaPriceInput ? (parseFloat(ghodaPriceInput.value) || 0) : 0;
-            ghodaMax = ghodaMaxInput ? (parseInt(ghodaMaxInput.value) || 1) : 1;
+            if (ghodaEnabled) {
+                const ghodaPriceInput = document.getElementById('p-ghoda-price');
+                const ghodaMaxInput = document.getElementById('p-ghoda-max');
+                ghodaPrice = ghodaPriceInput ? (parseFloat(ghodaPriceInput.value) || 0) : 0;
+                ghodaMax = ghodaMaxInput ? (parseInt(ghodaMaxInput.value) || 1) : 1;
+            }
 
-            dandiPrice = dandiPriceInput ? (parseFloat(dandiPriceInput.value) || 0) : 0;
-            dandiMax = dandiMaxInput ? (parseInt(dandiMaxInput.value) || 1) : 1;
+            if (dandiEnabled) {
+                const dandiPriceInput = document.getElementById('p-dandi-price');
+                const dandiMaxInput = document.getElementById('p-dandi-max');
+                dandiPrice = dandiPriceInput ? (parseFloat(dandiPriceInput.value) || 0) : 0;
+                dandiMax = dandiMaxInput ? (parseInt(dandiMaxInput.value) || 1) : 1;
+            }
 
-            kandiPrice = kandiPriceInput ? (parseFloat(kandiPriceInput.value) || 0) : 0;
-            kandiMax = kandiMaxInput ? (parseInt(kandiMaxInput.value) || 1) : 1;
+            if (kandiEnabled) {
+                const kandiPriceInput = document.getElementById('p-kandi-price');
+                const kandiMaxInput = document.getElementById('p-kandi-max');
+                kandiPrice = kandiPriceInput ? (parseFloat(kandiPriceInput.value) || 0) : 0;
+                kandiMax = kandiMaxInput ? (parseInt(kandiMaxInput.value) || 1) : 1;
+            }
 
-            pitthuPrice = pitthuPriceInput ? (parseFloat(pitthuPriceInput.value) || 0) : 0;
-            pitthuMax = pitthuMaxInput ? (parseInt(pitthuMaxInput.value) || 1) : 1;
+            if (pitthuEnabled) {
+                const pitthuPriceInput = document.getElementById('p-pitthu-price');
+                const pitthuMaxInput = document.getElementById('p-pitthu-max');
+                pitthuPrice = pitthuPriceInput ? (parseFloat(pitthuPriceInput.value) || 0) : 0;
+                pitthuMax = pitthuMaxInput ? (parseInt(pitthuMaxInput.value) || 1) : 1;
+            }
+
         } else if (isVaishnoSelected) {
-            // Read fields and max members from Vaishno Devi Inputs
-            const vaishnoGhodaInput = document.getElementById('p-vaishno-ghoda-price');
-            const vaishnoGhodaMaxInput = document.getElementById('p-vaishno-ghoda-max');
-            const vaishnoDandiInput = document.getElementById('p-vaishno-dandi-price');
-            const vaishnoDandiMaxInput = document.getElementById('p-vaishno-dandi-max');
-            const vaishnoPitthuInput = document.getElementById('p-vaishno-pitthu-price');
-            const vaishnoPitthuMaxInput = document.getElementById('p-vaishno-pitthu-max');
+            // Read fields only if their specific tick option / checkbox is enabled
+            const vaishnoGhodaEnabled = document.getElementById('p-vaishno-ghoda-enable')?.checked;
+            const vaishnoDandiEnabled = document.getElementById('p-vaishno-dandi-enable')?.checked;
+            const vaishnoPitthuEnabled = document.getElementById('p-vaishno-pitthu-enable')?.checked;
 
-            ghodaPrice = vaishnoGhodaInput ? (parseFloat(vaishnoGhodaInput.value) || 0) : 0;
-            ghodaMax = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
+            if (vaishnoGhodaEnabled) {
+                const vaishnoGhodaInput = document.getElementById('p-vaishno-ghoda-price');
+                const vaishnoGhodaMaxInput = document.getElementById('p-vaishno-ghoda-max');
+                ghodaPrice = vaishnoGhodaInput ? (parseFloat(vaishnoGhodaInput.value) || 0) : 0;
+                ghodaMax = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
+            }
 
-            dandiPrice = vaishnoDandiInput ? (parseFloat(vaishnoDandiInput.value) || 0) : 0;
-            dandiMax = vaishnoDandiMaxInput ? (parseInt(vaishnoDandiMaxInput.value) || 1) : 1;
+            if (vaishnoDandiEnabled) {
+                const vaishnoDandiInput = document.getElementById('p-vaishno-dandi-price');
+                const vaishnoDandiMaxInput = document.getElementById('p-vaishno-dandi-max');
+                dandiPrice = vaishnoDandiInput ? (parseFloat(vaishnoDandiInput.value) || 0) : 0;
+                dandiMax = vaishnoDandiMaxInput ? (parseInt(vaishnoDandiMaxInput.value) || 1) : 1;
+            }
 
-            pitthuPrice = vaishnoPitthuInput ? (parseFloat(vaishnoPitthuInput.value) || 0) : 0;
-            pitthuMax = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
+            if (vaishnoPitthuEnabled) {
+                const vaishnoPitthuInput = document.getElementById('p-vaishno-pitthu-price');
+                const vaishnoPitthuMaxInput = document.getElementById('p-vaishno-pitthu-max');
+                pitthuPrice = vaishnoPitthuInput ? (parseFloat(vaishnoPitthuInput.value) || 0) : 0;
+                pitthuMax = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
+            }
 
             kandiPrice = 0; // Vaishno Devi has no Kandi service
             kandiMax = 1;
