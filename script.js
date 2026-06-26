@@ -1343,6 +1343,11 @@ window.toggleTrekPricingSection = function() {
         kedarSection.style.display = 'block';
     } else {
         kedarSection.style.display = 'none';
+        if(document.getElementById('p-ghoda-enable')) document.getElementById('p-ghoda-enable').checked = false;
+        if(document.getElementById('p-dandi-enable')) document.getElementById('p-dandi-enable').checked = false;
+        if(document.getElementById('p-kandi-enable')) document.getElementById('p-kandi-enable').checked = false;
+        if(document.getElementById('p-pitthu-enable')) document.getElementById('p-pitthu-enable').checked = false;
+
         if(document.getElementById('p-ghoda-price')) document.getElementById('p-ghoda-price').value = '';
         if(document.getElementById('p-dandi-price')) document.getElementById('p-dandi-price').value = '';
         if(document.getElementById('p-kandi-price')) document.getElementById('p-kandi-price').value = '';
@@ -1358,6 +1363,10 @@ window.toggleTrekPricingSection = function() {
         vaishnoSection.style.display = 'block';
     } else {
         vaishnoSection.style.display = 'none';
+        if(document.getElementById('p-vaishno-ghoda-enable')) document.getElementById('p-vaishno-ghoda-enable').checked = false;
+        if(document.getElementById('p-vaishno-dandi-enable')) document.getElementById('p-vaishno-dandi-enable').checked = false;
+        if(document.getElementById('p-vaishno-pitthu-enable')) document.getElementById('p-vaishno-pitthu-enable').checked = false;
+
         if(document.getElementById('p-vaishno-ghoda-price')) document.getElementById('p-vaishno-ghoda-price').value = '';
         if(document.getElementById('p-vaishno-dandi-price')) document.getElementById('p-vaishno-dandi-price').value = '';
         if(document.getElementById('p-vaishno-pitthu-price')) document.getElementById('p-vaishno-pitthu-price').value = '';
@@ -1422,6 +1431,16 @@ window.showPackageForm = function(pEncoded = null) {
     const shouldShowKedarInitial = activeDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
     const shouldShowVaishnoInitial = activeDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
 
+    // Logic to pre-check service tick boxes if values already exist during Edit
+    const hasKedarGhoda = isEdit && (parseFloat(pkg.ghoda_price) > 0);
+    const hasKedarDandi = isEdit && (parseFloat(pkg.dandi_price) > 0);
+    const hasKedarKandi = isEdit && (parseFloat(pkg.kandi_price) > 0);
+    const hasKedarPitthu = isEdit && (parseFloat(pkg.pitthu_price) > 0);
+
+    const hasVaishnoGhoda = isEdit && (parseFloat(pkg.vaishno_ghoda_price || pkg.ghoda_price) > 0);
+    const hasVaishnoDandi = isEdit && (parseFloat(pkg.vaishno_dandi_price || pkg.dandi_price) > 0);
+    const hasVaishnoPitthu = isEdit && (parseFloat(pkg.vaishno_pitthu_price || pkg.pitthu_price) > 0);
+
     area.innerHTML = `
         <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
             <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🚀 Create New Package'}</h3>
@@ -1456,7 +1475,11 @@ window.showPackageForm = function(pEncoded = null) {
             <div id="trek-pricing-section-kedar" style="display: ${shouldShowKedarInitial ? 'block' : 'none'}; background:#fffdf0; padding:15px; border:1px solid #ffeaa7; border-radius:12px; margin-bottom:20px;">
                 <p style="margin-top:0; color:#e67e22;"><b>⛰️ Mountain Trek Service Pricing (only for kedarnath):</b></p>
                 <div style="display:grid; grid-template-columns: 1fr; gap:15px;">
+                    
                     <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                            <input type="checkbox" id="p-ghoda-enable" ${hasKedarGhoda ? 'checked' : ''} style="transform: scale(1.2); cursor: pointer;">
+                        </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🐴 Horse / Mule (Ghoda/Khachhar) Price</label>
                             <input type="number" id="p-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
@@ -1466,7 +1489,11 @@ window.showPackageForm = function(pEncoded = null) {
                             <input type="number" id="p-ghoda-max" placeholder="Max" value="${isEdit ? (pkg.ghoda_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
+
                     <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                            <input type="checkbox" id="p-dandi-enable" ${hasKedarDandi ? 'checked' : ''} style="transform: scale(1.2); cursor: pointer;">
+                        </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🪑 Palanquin (Dandi) Price</label>
                             <input type="number" id="p-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
@@ -1476,7 +1503,11 @@ window.showPackageForm = function(pEncoded = null) {
                             <input type="number" id="p-dandi-max" placeholder="Max" value="${isEdit ? (pkg.dandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
+
                     <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                            <input type="checkbox" id="p-kandi-enable" ${hasKedarKandi ? 'checked' : ''} style="transform: scale(1.2); cursor: pointer;">
+                        </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🧺 Wicker Cradle (Kandi) Price</label>
                             <input type="number" id="p-kandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.kandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
@@ -1486,7 +1517,11 @@ window.showPackageForm = function(pEncoded = null) {
                             <input type="number" id="p-kandi-max" placeholder="Max" value="${isEdit ? (pkg.kandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
+
                     <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                            <input type="checkbox" id="p-pitthu-enable" ${hasKedarPitthu ? 'checked' : ''} style="transform: scale(1.2); cursor: pointer;">
+                        </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🎒 Porter Service (Pitthu) Price</label>
                             <input type="number" id="p-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
@@ -1496,13 +1531,18 @@ window.showPackageForm = function(pEncoded = null) {
                             <input type="number" id="p-pitthu-max" placeholder="Max" value="${isEdit ? (pkg.pitthu_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
+
                 </div>
             </div>
 
             <div id="trek-pricing-section-vaishno" style="display: ${shouldShowVaishnoInitial ? 'block' : 'none'}; background:#f0f7ff; padding:15px; border:1px solid #a7cfff; border-radius:12px; margin-bottom:20px;">
                 <p style="margin-top:0; color:#0066cc;"><b>⛰️ Mountain Trek Service Pricing (only for vaishno devi):</b></p>
                 <div style="display:grid; grid-template-columns: 1fr; gap:15px;">
+                    
                     <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                            <input type="checkbox" id="p-vaishno-ghoda-enable" ${hasVaishnoGhoda ? 'checked' : ''} style="transform: scale(1.2); cursor: pointer;">
+                        </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🐴 Horse (Ghora) Price</label>
                             <input type="number" id="p-vaishno-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_ghoda_price || pkg.ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
@@ -1512,7 +1552,11 @@ window.showPackageForm = function(pEncoded = null) {
                             <input type="number" id="p-vaishno-ghoda-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_ghoda_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
+
                     <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                            <input type="checkbox" id="p-vaishno-dandi-enable" ${hasVaishnoDandi ? 'checked' : ''} style="transform: scale(1.2); cursor: pointer;">
+                        </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🪑 Palanquin (Palki) Price</label>
                             <input type="number" id="p-vaishno-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_dandi_price || pkg.dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
@@ -1522,7 +1566,11 @@ window.showPackageForm = function(pEncoded = null) {
                             <input type="number" id="p-vaishno-dandi-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_dandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
+
                     <div style="display:flex; gap:10px; align-items:flex-end;">
+                        <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                            <input type="checkbox" id="p-vaishno-pitthu-enable" ${hasVaishnoPitthu ? 'checked' : ''} style="transform: scale(1.2); cursor: pointer;">
+                        </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🎒 Porters (Pithoo) Price</label>
                             <input type="number" id="p-vaishno-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_pitthu_price || pkg.pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
@@ -1532,6 +1580,7 @@ window.showPackageForm = function(pEncoded = null) {
                             <input type="number" id="p-vaishno-pitthu-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_pitthu_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
+
                 </div>
             </div>
 
