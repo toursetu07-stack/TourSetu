@@ -780,7 +780,7 @@ window.showPackageDetails = function(pEncoded) {
 
     // Check if the destinations list includes Kedarnath or Vaishno Devi (Excluding Yamunotri)
     const pkgDestinations = Array.isArray(p.destination) ? p.destination : [p.destination];
-    const allowedTrekAreas = ["Kedarnath (Uttarakhand)", "Vaishno Devi (Katra)"];
+    const allowedTrekAreas = ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)", "Vaishno Devi (Katra)"];
     const showTrekServices = pkgDestinations.some(d => allowedTrekAreas.includes(d));
 
     // Pre-build Vehicle HTML
@@ -799,18 +799,21 @@ window.showPackageDetails = function(pEncoded) {
             </div>
         </div>`).join('');
 
-    // Pre-build Special Trek Services HTML (Only if applicable)
+    // Pre-build Special Trek Services HTML (Only if applicable based on Agency selections)
     let trekServicesHtml = '';
     if (showTrekServices) {
+        const isVaishno = pkgDestinations.some(d => d === "Vaishno Devi (Katra)");
+        
+        // Maps rates dynamically based on what the agency specified for the particular location
         const services = [
-            { id: 'ghoda', name: '🐴 Khachhar / Ghoda (Horse)', price: parseFloat(p.ghoda_price) || 0 },
-            { id: 'dandi', name: '🪑 Dandi (Palanquin)', price: parseFloat(p.dandi_price) || 0 },
+            { id: 'ghoda', name: isVaishno ? '🐴 Horse (Ghora)' : '🐴 Khachhar / Ghoda (Horse)', price: parseFloat(isVaishno ? (p.vaishno_ghoda_price || p.ghoda_price) : p.ghoda_price) || 0 },
+            { id: 'dandi', name: isVaishno ? '🪑 Palanquin (Palki)' : '🪑 Dandi (Palanquin)', price: parseFloat(isVaishno ? (p.vaishno_dandi_price || p.dandi_price) : p.dandi_price) || 0 },
             { id: 'kandi', name: '🧺 Kandi (Wicker Cradle)', price: parseFloat(p.kandi_price) || 0 },
-            { id: 'pitthu', name: '🎒 Pitthu (Porter Service)', price: parseFloat(p.pitthu_price) || 0 }
+            { id: 'pitthu', name: isVaishno ? '🎒 Porters (Pithoo)' : '🎒 Pitthu (Porter Service)', price: parseFloat(isVaishno ? (p.vaishno_pitthu_price || p.pitthu_price) : p.pitthu_price) || 0 }
         ];
 
-        // FIXED: Filtering removed so options ALWAYS show for Kedarnath / Vaishno Devi
-        const activeServices = services;
+        // Only show services that the agency actively added a price for (> 0)
+        const activeServices = services.filter(s => s.price > 0);
 
         if (activeServices.length > 0) {
             trekServicesHtml = `<h4>Special Mountain Trek Add-ons</h4>`;
