@@ -824,11 +824,11 @@ window.showPackageDetails = function(pEncoded) {
                             <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.price}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
                             <b>${s.name}</b>
                         </div>
-                        <span style="color:#e67e22; font-weight:bold;">₹${s.price}</span>
+                        <span style="color:#e67e22; font-weight:bold;">₹${s.price} / person</span>
                     </div>
                     <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <label style="font-size:11px;">Quantity needed:</label>
-                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" oninput="updateLivePrice()" style="width:60px; padding:4px;">
+                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
+                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
             `).join('');
