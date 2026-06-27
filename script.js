@@ -452,7 +452,7 @@ window.renderCustomerRequests = async () => {
         const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43'));
         const isPending = b.status === 'pending';
         const isPaid = b.status === 'paid';
-        const isApproved = b.status === 'confirmed'; // Changed from 'approved' to match your Edge Function logic
+        const isApproved = b.status === 'confirmed';
         const isCancelled = b.status === 'cancelled';
 
         const today = new Date();
@@ -566,14 +566,17 @@ window.showPackageDetails = function(pEncoded) {
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
     const escapedTitle = p.title.replace(/'/g, "\\'");
 
-    // Trek Add-ons Setup Engine integration
-    const destinationsArray = Array.isArray(p.destination) ? p.destination : [p.destination];
-    const targetTrekAreas = ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)", "Vaishno Devi (Katra)"];
-    const containsMountainRoute = destinationsArray.some(d => targetTrekAreas.includes(d));
+    // Loose formatting match engine to support string/array flexibility
+    const destString = Array.isArray(p.destination) ? p.destination.join(' ').toLowerCase() : String(p.destination || '').toLowerCase();
+    
+    const isKedarnath = destString.includes("kedarnath");
+    const isCharDham = destString.includes("char dham") || destString.includes("chardham");
+    const isVaishnoDevi = destString.includes("vaishno") || destString.includes("katra");
+
+    const containsMountainRoute = isKedarnath || isCharDham || isVaishnoDevi;
 
     let trekServicesHtml = '';
     if (containsMountainRoute) {
-        const isVaishnoDevi = destinationsArray.some(d => d === "Vaishno Devi (Katra)");
         const items = [
             { id: 'ghoda', label: isVaishnoDevi ? '🐴 Horse (Ghora)' : '🐴 Khachhar / Ghoda (Horse)', cost: parseFloat(isVaishnoDevi ? (p.vaishno_ghoda_price || p.ghoda_price) : p.ghoda_price) || 0 },
             { id: 'dandi', label: isVaishnoDevi ? '🪑 Palanquin (Palki)' : '🪑 Dandi (Palanquin)', cost: parseFloat(isVaishnoDevi ? (p.vaishno_dandi_price || p.dandi_price) : p.dandi_price) || 0 },
@@ -664,7 +667,6 @@ window.showPackageDetails = function(pEncoded) {
 window.updateLivePrice = () => {
     let total = 0;
     
-    // Vehicles live logic calculations
     document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
         const id = checkbox.dataset.id;
         const rate = parseFloat(checkbox.dataset.rate) || 0;
@@ -673,7 +675,6 @@ window.updateLivePrice = () => {
         total += (rate * qty);
     });
 
-    // Mountain Treks dynamic multiplier engine calculation
     document.querySelectorAll('.book-trek-check:checked').forEach(checkbox => {
         const id = checkbox.dataset.id;
         const rate = parseFloat(checkbox.dataset.rate) || 0;
@@ -719,7 +720,6 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
         return; 
     }
 
-    // Capture dynamic checkboxes safely 
     const ghodaChecked = document.getElementById('check-ghoda') && document.getElementById('check-ghoda').checked;
     const dandiChecked = document.getElementById('check-dandi') && document.getElementById('check-dandi').checked;
     const kandiChecked = document.getElementById('check-kandi') && document.getElementById('check-kandi').checked;
@@ -730,7 +730,6 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     const kandiQty = kandiChecked ? (parseInt(document.getElementById('qty-kandi').value) || 1) : 0;
     const pitthuQty = pitthuChecked ? (parseInt(document.getElementById('qty-pitthu').value) || 1) : 0;
 
-    // Database Pricing Integrity injection point addition
     if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * ghodaQty);
     if (dandiChecked) totalPrice += (parseFloat(document.getElementById('check-dandi').dataset.rate) * dandiQty);
     if (kandiChecked) totalPrice += (parseFloat(document.getElementById('check-kandi').dataset.rate) * kandiQty);
@@ -741,7 +740,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             package_id: packageId, 
             package_title: packageTitle,
             customer_id: user.id, 
-            customer_email: user.email, // Saves email for notifications
+            customer_email: user.email, 
             customer_address: address, 
             customer_phone: phone,
             travel_date: travelDate, 
@@ -749,9 +748,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             total_price: totalPrice, 
             status: 'pending',
             agency_id: agencyId,
-            agency_email: agencyEmail,   // Saves email to trigger agency alert
-            
-            // Appending trek services attributes fields mapping data
+            agency_email: agencyEmail,
             booked_ghoda_qty: ghodaQty,
             booked_dandi_qty: dandiQty,
             booked_kandi_qty: kandiQty,
@@ -769,6 +766,71 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
         alert("An error occurred. Please check your connection.");
     }
 };
+
+// 7. MATCHING & CARD RENDERING
+window.searchMatchedAgencies = async function() {
+    const start = document.getElementById('search-start').value;
+    const dest = document.getElementById('search-dest').value;
+    const container = document.getElementById('customer-pkg-list');
+    
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px;"><h3>Searching for Agency Matches...</h3></div>`;
+    
+    const { data, error } = await getClient().from('packages').select('*');
+    if (error) {
+       container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Error loading data.</h3></div>`;
+        return;
+    }
+
+    let matchedData = data || [];
+    if (start) matchedData = matchedData.filter(p => p.starting_location === start);
+    if (dest) {
+        matchedData = matchedData.filter(p => {
+            const pDest = p.destination || [];
+            if (Array.isArray(pDest)) return pDest.includes(dest);
+            if (typeof pDest === 'string') return pDest.includes(dest);
+            return false;
+        });
+    }
+
+    renderPackageCards(matchedData, true);
+};
+
+async function loadAllPackages() {
+    const { data } = await getClient().from('packages').select('*').limit(12);
+    renderPackageCards(data || [], false);
+}
+
+function renderPackageCards(data, isFiltered) {
+    const container = document.getElementById('customer-pkg-list');
+    if (!data || data.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:60px;"><h3>No Matches Found</h3><button onclick="loadAllPackages()" style="width:auto; padding:10px 20px; background:#eee;">View All</button></div>`;
+        return;
+    }
+
+    container.innerHTML = data.map(p => {
+        const vels = p.vehicles || [];
+        const rates = (vels.length > 0) ? vels.map(v => v.rate) : [0];
+        const minPrice = Math.min(...rates);
+        const destDisplay = Array.isArray(p.destination) ? p.destination.slice(0,2).join(', ') : (p.destination || 'N/A');
+        const pString = encodeURIComponent(JSON.stringify(p));
+
+        return `
+        <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; cursor:pointer;" onclick="showPackageDetails('${pString}')">
+            <div style="padding:25px;">
+                <h3 style="margin:0;">${p.title}</h3>
+                <p style="color:#ff9f43; font-weight:bold;">Starts from ₹${minPrice}</p>
+               <div style="font-size:13px; color:#636e72; margin:15px 0;">
+                   <div>🚩 <b>From:</b> ${p.starting_location}</div>
+                   <div style="margin-top:5px;">📍 <b>To:</b> ${destDisplay}...</div>
+               </div>
+               <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:15px;">
+                   ${vels.map(v => `<span style="font-size:10px; background:#f0f0f0; padding:3px 8px; border-radius:4px;">${v.name}</span>`).join('')}
+               </div>
+               <button style="background:#ff9f43; color:white; width:100%; padding:12px;">VIEW DETAILS</button>
+            </div>
+        </div>`;
+    }).join('');
+}
 
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
