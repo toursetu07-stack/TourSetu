@@ -566,6 +566,43 @@ window.showPackageDetails = function(pEncoded) {
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
     const escapedTitle = p.title.replace(/'/g, "\\'");
 
+    // Trek Add-ons Setup Engine integration
+    const destinationsArray = Array.isArray(p.destination) ? p.destination : [p.destination];
+    const targetTrekAreas = ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)", "Vaishno Devi (Katra)"];
+    const containsMountainRoute = destinationsArray.some(d => targetTrekAreas.includes(d));
+
+    let trekServicesHtml = '';
+    if (containsMountainRoute) {
+        const isVaishnoDevi = destinationsArray.some(d => d === "Vaishno Devi (Katra)");
+        const items = [
+            { id: 'ghoda', label: isVaishnoDevi ? '🐴 Horse (Ghora)' : '🐴 Khachhar / Ghoda (Horse)', cost: parseFloat(isVaishnoDevi ? (p.vaishno_ghoda_price || p.ghoda_price) : p.ghoda_price) || 0 },
+            { id: 'dandi', label: isVaishnoDevi ? '🪑 Palanquin (Palki)' : '🪑 Dandi (Palanquin)', cost: parseFloat(isVaishnoDevi ? (p.vaishno_dandi_price || p.dandi_price) : p.dandi_price) || 0 },
+            { id: 'kandi', label: '🧺 Kandi (Wicker Cradle)', cost: parseFloat(p.kandi_price) || 0 },
+            { id: 'pitthu', label: isVaishnoDevi ? '🎒 Porters (Pithoo)' : '🎒 Pitthu (Porter Service)', cost: parseFloat(isVaishnoDevi ? (p.vaishno_pitthu_price || p.pitthu_price) : p.pitthu_price) || 0 }
+        ];
+
+        const activeAddons = items.filter(item => item.cost > 0);
+
+        if (activeAddons.length > 0) {
+            trekServicesHtml = `<h4 style="margin-top:20px;">Special Mountain Trek Add-ons</h4>`;
+            trekServicesHtml += activeAddons.map(s => `
+                <div style="padding:12px; border:1px solid #ffeaa7; background:#fffdf0; border-radius:10px; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.cost}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
+                            <b>${s.label}</b>
+                        </div>
+                        <span style="color:#e67e22; font-weight:bold;">₹${s.cost} / person</span>
+                    </div>
+                    <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
+                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
+                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
     body.innerHTML = `
         <div style="text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -589,6 +626,10 @@ window.showPackageDetails = function(pEncoded) {
 
             <h4>Select Vehicles to Book</h4>
             <div style="display:grid; gap:5px;">${vehicleListHtml}</div>
+
+            <div id="trek-addons-placeholder">
+                ${trekServicesHtml}
+            </div>
 
             <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-weight:bold;">ESTIMATED TOTAL:</span>
@@ -622,6 +663,8 @@ window.showPackageDetails = function(pEncoded) {
 
 window.updateLivePrice = () => {
     let total = 0;
+    
+    // Vehicles live logic calculations
     document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
         const id = checkbox.dataset.id;
         const rate = parseFloat(checkbox.dataset.rate) || 0;
@@ -629,6 +672,16 @@ window.updateLivePrice = () => {
         const qty = parseInt(qtyInput.value) || 1;
         total += (rate * qty);
     });
+
+    // Mountain Treks dynamic multiplier engine calculation
+    document.querySelectorAll('.book-trek-check:checked').forEach(checkbox => {
+        const id = checkbox.dataset.id;
+        const rate = parseFloat(checkbox.dataset.rate) || 0;
+        const qtyInput = document.getElementById(`qty-${id}`);
+        const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+        total += (rate * qty);
+    });
+
     document.getElementById('live-total-display').innerText = `₹${total.toLocaleString('en-IN')}`;
 };
 
@@ -666,6 +719,23 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
         return; 
     }
 
+    // Capture dynamic checkboxes safely 
+    const ghodaChecked = document.getElementById('check-ghoda') && document.getElementById('check-ghoda').checked;
+    const dandiChecked = document.getElementById('check-dandi') && document.getElementById('check-dandi').checked;
+    const kandiChecked = document.getElementById('check-kandi') && document.getElementById('check-kandi').checked;
+    const pitthuChecked = document.getElementById('check-pitthu') && document.getElementById('check-pitthu').checked;
+
+    const ghodaQty = ghodaChecked ? (parseInt(document.getElementById('qty-ghoda').value) || 1) : 0;
+    const dandiQty = dandiChecked ? (parseInt(document.getElementById('qty-dandi').value) || 1) : 0;
+    const kandiQty = kandiChecked ? (parseInt(document.getElementById('qty-kandi').value) || 1) : 0;
+    const pitthuQty = pitthuChecked ? (parseInt(document.getElementById('qty-pitthu').value) || 1) : 0;
+
+    // Database Pricing Integrity injection point addition
+    if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * ghodaQty);
+    if (dandiChecked) totalPrice += (parseFloat(document.getElementById('check-dandi').dataset.rate) * dandiQty);
+    if (kandiChecked) totalPrice += (parseFloat(document.getElementById('check-kandi').dataset.rate) * kandiQty);
+    if (pitthuChecked) totalPrice += (parseFloat(document.getElementById('check-pitthu').dataset.rate) * pitthuQty);
+
     try {
         const { error } = await client.from('bookings').insert([{
             package_id: packageId, 
@@ -679,7 +749,13 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             total_price: totalPrice, 
             status: 'pending',
             agency_id: agencyId,
-            agency_email: agencyEmail   // Saves email to trigger agency alert
+            agency_email: agencyEmail,   // Saves email to trigger agency alert
+            
+            // Appending trek services attributes fields mapping data
+            booked_ghoda_qty: ghodaQty,
+            booked_dandi_qty: dandiQty,
+            booked_kandi_qty: kandiQty,
+            booked_pitthu_qty: pitthuQty
         }]);
 
         if (!error) {
@@ -693,6 +769,71 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
         alert("An error occurred. Please check your connection.");
     }
 };
+
+// 7. MATCHING & CARD RENDERING
+window.searchMatchedAgencies = async function() {
+    const start = document.getElementById('search-start').value;
+    const dest = document.getElementById('search-dest').value;
+    const container = document.getElementById('customer-pkg-list');
+    
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px;"><h3>Searching for Agency Matches...</h3></div>`;
+    
+    const { data, error } = await getClient().from('packages').select('*');
+    if (error) {
+       container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Error loading data.</h3></div>`;
+        return;
+    }
+
+    let matchedData = data || [];
+    if (start) matchedData = matchedData.filter(p => p.starting_location === start);
+    if (dest) {
+        matchedData = matchedData.filter(p => {
+            const pDest = p.destination || [];
+            if (Array.isArray(pDest)) return pDest.includes(dest);
+            if (typeof pDest === 'string') return pDest.includes(dest);
+            return false;
+        });
+    }
+
+    renderPackageCards(matchedData, true);
+};
+
+async function loadAllPackages() {
+    const { data } = await getClient().from('packages').select('*').limit(12);
+    renderPackageCards(data || [], false);
+}
+
+function renderPackageCards(data, isFiltered) {
+    const container = document.getElementById('customer-pkg-list');
+    if (!data || data.length === 0) {
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:60px;"><h3>No Matches Found</h3><button onclick="loadAllPackages()" style="width:auto; padding:10px 20px; background:#eee;">View All</button></div>`;
+        return;
+    }
+
+    container.innerHTML = data.map(p => {
+        const vels = p.vehicles || [];
+        const rates = (vels.length > 0) ? vels.map(v => v.rate) : [0];
+        const minPrice = Math.min(...rates);
+        const destDisplay = Array.isArray(p.destination) ? p.destination.slice(0,2).join(', ') : (p.destination || 'N/A');
+        const pString = encodeURIComponent(JSON.stringify(p));
+
+        return `
+        <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; cursor:pointer;" onclick="showPackageDetails('${pString}')">
+            <div style="padding:25px;">
+                <h3 style="margin:0;">${p.title}</h3>
+                <p style="color:#ff9f43; font-weight:bold;">Starts from ₹${minPrice}</p>
+               <div style="font-size:13px; color:#636e72; margin:15px 0;">
+                   <div>🚩 <b>From:</b> ${p.starting_location}</div>
+                   <div style="margin-top:5px;">📍 <b>To:</b> ${destDisplay}...</div>
+               </div>
+               <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:15px;">
+                   ${vels.map(v => `<span style="font-size:10px; background:#f0f0f0; padding:3px 8px; border-radius:4px;">${v.name}</span>`).join('')}
+               </div>
+               <button style="background:#ff9f43; color:white; width:100%; padding:12px;">VIEW DETAILS</button>
+            </div>
+        </div>`;
+    }).join('');
+}
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
     const start = document.getElementById('search-start').value;
