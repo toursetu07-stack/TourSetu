@@ -400,7 +400,7 @@ function renderCustomerHomepage(user) {
 }
 
 /**
- * NEW: Logout Confirmation Logic
+ * Logout Confirmation Logic
  */
 window.confirmAndExecuteLogout = async function() {
     const confirmLogout = confirm("Are you sure you want to logout from your account?");
@@ -452,7 +452,7 @@ window.renderCustomerRequests = async () => {
         const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43'));
         const isPending = b.status === 'pending';
         const isPaid = b.status === 'paid';
-        const isApproved = b.status === 'confirmed';
+        const isApproved = b.status === 'confirmed'; 
         const isCancelled = b.status === 'cancelled';
 
         const today = new Date();
