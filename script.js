@@ -1007,6 +1007,9 @@ window.showPackageDetails = function(pEncoded) {
     if (showTrekServices) {
         const isVaishno = destStringLower.includes('vaishno');
         
+        // Fetch max limits set by agency from database column or fallback to package dynamic limit
+        const maxTrekLimit = parseInt(p.max_trek_members) || 6; 
+
         // Maps rates dynamically based on what the agency specified for the particular location
         const services = [
             { id: 'ghoda', name: isVaishno ? '🐴 Horse (Ghora)' : '🐴 Khachhar / Ghoda (Horse)', price: parseFloat(isVaishno ? (p.vaishno_ghoda_price || p.ghoda_price) : p.ghoda_price) || 0 },
@@ -1030,8 +1033,11 @@ window.showPackageDetails = function(pEncoded) {
                         <span style="color:#e67e22; font-weight:bold;">₹${s.price} / person</span>
                     </div>
                     <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
-                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
+                            <small style="color:#7f8c8d; font-weight:bold; margin-right:10px;">Allowed Max: ${maxTrekLimit}</small>
+                        </div>
+                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${maxTrekLimit}" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="if(parseInt(this.value) > ${maxTrekLimit}) this.value = ${maxTrekLimit}; updateLivePrice();" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
             `).join('');
