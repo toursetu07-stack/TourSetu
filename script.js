@@ -981,10 +981,10 @@ window.showPackageDetails = function(pEncoded) {
     limitDate.setDate(today.getDate() + 7);
     const limitStr = limitDate.toISOString().split('T')[0];
 
-    // Check if the destinations list includes Kedarnath or Vaishno Devi (Excluding Yamunotri)
+    // Check if the destinations list includes Kedarnath or Vaishno Devi (Robust check to ensure it shows up)
     const pkgDestinations = Array.isArray(p.destination) ? p.destination : [p.destination];
-    const allowedTrekAreas = ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)", "Vaishno Devi (Katra)"];
-    const showTrekServices = pkgDestinations.some(d => allowedTrekAreas.includes(d));
+    const destStringLower = pkgDestinations.join(' ').toLowerCase();
+    const showTrekServices = destStringLower.includes('kedarnath') || destStringLower.includes('char dham') || destStringLower.includes('vaishno');
 
     // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
@@ -1005,7 +1005,7 @@ window.showPackageDetails = function(pEncoded) {
     // Pre-build Special Trek Services HTML (Only if applicable based on Agency selections)
     let trekServicesHtml = '';
     if (showTrekServices) {
-        const isVaishno = pkgDestinations.some(d => d === "Vaishno Devi (Katra)");
+        const isVaishno = destStringLower.includes('vaishno');
         
         // Maps rates dynamically based on what the agency specified for the particular location
         const services = [
