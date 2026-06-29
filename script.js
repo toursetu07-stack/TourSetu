@@ -984,7 +984,9 @@ window.showPackageDetails = function(pEncoded) {
     // Check if the destinations list includes Kedarnath or Vaishno Devi (Robust check to ensure it shows up)
     const pkgDestinations = Array.isArray(p.destination) ? p.destination : [p.destination];
     const destStringLower = pkgDestinations.join(' ').toLowerCase();
-    const showTrekServices = destStringLower.includes('kedarnath') || destStringLower.includes('char dham') || destStringLower.includes('vaishno');
+    const isKedarnath = destStringLower.includes('kedarnath') || destStringLower.includes('char dham');
+    const isVaishno = destStringLower.includes('vaishno');
+    const showTrekServices = isKedarnath || isVaishno;
 
     // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
@@ -1005,8 +1007,6 @@ window.showPackageDetails = function(pEncoded) {
     // Pre-build Special Trek Services HTML (Only if applicable based on Agency selections)
     let trekServicesHtml = '';
     if (showTrekServices) {
-        const isVaishno = destStringLower.includes('vaishno');
-        
         // Fetch max limits set by agency from database column or fallback to package dynamic limit
         const maxTrekLimit = parseInt(p.max_trek_members) || 6; 
 
@@ -1022,7 +1022,15 @@ window.showPackageDetails = function(pEncoded) {
         const activeServices = services.filter(s => s.price > 0);
 
         if (activeServices.length > 0) {
-            trekServicesHtml = `<h4>Special Mountain Trek Add-ons</h4>`;
+            // Set heading style and text dynamically based on location
+            if (isKedarnath) {
+                trekServicesHtml = `<h4>Mountain Trek (Only for Kedarnath)</h4>`;
+            } else if (isVaishno) {
+                trekServicesHtml = `<h4>Mountain Trek Service (Only for Vaishno Devi)</h4>`;
+            } else {
+                trekServicesHtml = `<h4>Special Mountain Trek Add-ons</h4>`;
+            }
+
             trekServicesHtml += activeServices.map(s => `
                 <div style="padding:12px; border:1px solid #ffeaa7; background:#fffdf0; border-radius:10px; margin-bottom:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
