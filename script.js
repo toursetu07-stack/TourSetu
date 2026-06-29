@@ -1861,7 +1861,7 @@ window.processSave = async function(pkgId) {
             }
         });
 
-        // --- NEW: DYNAMIC TREK PRICING & MAX MEMBER EXTRACTION BASED ON DESTINATION & CHECKBOX ---
+        // --- Dynamic Trek Pricing & Max Member Extraction ---
         const isKedarSelected = selectedDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
         const isVaishnoSelected = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
 
@@ -1932,8 +1932,18 @@ window.processSave = async function(pkgId) {
                 pitthuMax = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
             }
 
-            kandiPrice = 0; // Vaishno Devi has no Kandi service
+            kandiPrice = 0; 
             kandiMax = 1;
+        } else {
+            // Fallback: Agar edit mode me bina trek select kiye save ho rha h, toh form fields se direct read karein
+            if (document.getElementById('p-ghoda-max')) ghodaMax = parseInt(document.getElementById('p-ghoda-max').value) || 1;
+            if (document.getElementById('p-dandi-max')) dandiMax = parseInt(document.getElementById('p-dandi-max').value) || 1;
+            if (document.getElementById('p-kandi-max')) kandiMax = parseInt(document.getElementById('p-kandi-max').value) || 1;
+            if (document.getElementById('p-pitthu-max')) pitthuMax = parseInt(document.getElementById('p-pitthu-max').value) || 1;
+            
+            if (document.getElementById('p-vaishno-ghoda-max')) ghodaMax = parseInt(document.getElementById('p-vaishno-ghoda-max').value) || ghodaMax;
+            if (document.getElementById('p-vaishno-dandi-max')) dandiMax = parseInt(document.getElementById('p-vaishno-dandi-max').value) || dandiMax;
+            if (document.getElementById('p-vaishno-pitthu-max')) pitthuMax = parseInt(document.getElementById('p-vaishno-pitthu-max').value) || pitthuMax;
         }
 
         const pkgData = {
