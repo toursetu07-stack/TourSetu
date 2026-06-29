@@ -1979,7 +1979,6 @@ window.processSave = async function(pkgId) {
         }
     }
 };
-
 /* =========================================
    12. BOOKING RENDER LOGIC (ENHANCED WITH DATE)
    ========================================= */
