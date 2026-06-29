@@ -1776,11 +1776,11 @@ window.showPackageForm = function(pEncoded = null) {
                         </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🐴 Horse (Ghora) Price</label>
-                            <input type="number" id="p-vaishno-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_ghoda_price || pkg.ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.ghoda_price || pkg.vaishno_ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                         <div style="flex:1;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
-                            <input type="number" id="p-vaishno-ghoda-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_ghoda_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-ghoda-max" placeholder="Max" value="${isEdit ? (pkg.ghoda_max || pkg.vaishno_ghoda_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
 
@@ -1790,11 +1790,11 @@ window.showPackageForm = function(pEncoded = null) {
                         </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🪑 Palanquin (Palki) Price</label>
-                            <input type="number" id="p-vaishno-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_dandi_price || pkg.dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.dandi_price || pkg.vaishno_dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                         <div style="flex:1;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
-                            <input type="number" id="p-vaishno-dandi-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_dandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-dandi-max" placeholder="Max" value="${isEdit ? (pkg.dandi_max || pkg.vaishno_dandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
 
@@ -1804,11 +1804,11 @@ window.showPackageForm = function(pEncoded = null) {
                         </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🎒 Porters (Pithoo) Price</label>
-                            <input type="number" id="p-vaishno-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_pitthu_price || pkg.pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.pitthu_price || pkg.vaishno_pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                         <div style="flex:1;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
-                            <input type="number" id="p-vaishno-pitthu-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_pitthu_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-pitthu-max" placeholder="Max" value="${isEdit ? (pkg.pitthu_max || pkg.vaishno_pitthu_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
 
