@@ -1749,9 +1749,9 @@ window.showPackageForm = function(pEncoded = null) {
     const hasKedarKandi = isEdit && (parseFloat(pkg.kandi_price) > 0);
     const hasKedarPitthu = isEdit && (parseFloat(pkg.pitthu_price) > 0);
 
-    const hasVaishnoGhoda = isEdit && (parseFloat(pkg.vaishno_ghoda_price || pkg.ghoda_price) > 0);
-    const hasVaishnoDandi = isEdit && (parseFloat(pkg.vaishno_dandi_price || pkg.dandi_price) > 0);
-    const hasVaishnoPitthu = isEdit && (parseFloat(pkg.vaishno_pitthu_price || pkg.pitthu_price) > 0);
+    const hasVaishnoGhoda = isEdit && (parseFloat(pkg.vaishno_ghoda_price) > 0);
+    const hasVaishnoDandi = isEdit && (parseFloat(pkg.vaishno_dandi_price) > 0);
+    const hasVaishnoPitthu = isEdit && (parseFloat(pkg.vaishno_pitthu_price) > 0);
 
     area.innerHTML = `
         <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
@@ -1857,11 +1857,11 @@ window.showPackageForm = function(pEncoded = null) {
                         </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🐴 Horse (Ghora) Price</label>
-                            <input type="number" id="p-vaishno-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.ghoda_price || pkg.vaishno_ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-ghoda-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_ghoda_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                         <div style="flex:1;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
-                            <input type="number" id="p-vaishno-ghoda-max" placeholder="Max" value="${isEdit ? (pkg.ghoda_max || pkg.vaishno_ghoda_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-ghoda-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_ghoda_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
 
@@ -1871,11 +1871,11 @@ window.showPackageForm = function(pEncoded = null) {
                         </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🪑 Palanquin (Palki) Price</label>
-                            <input type="number" id="p-vaishno-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.dandi_price || pkg.vaishno_dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                         <div style="flex:1;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
-                            <input type="number" id="p-vaishno-dandi-max" placeholder="Max" value="${isEdit ? (pkg.dandi_max || pkg.vaishno_dandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-dandi-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_dandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
 
@@ -1885,11 +1885,11 @@ window.showPackageForm = function(pEncoded = null) {
                         </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🎒 Porters (Pithoo) Price</label>
-                            <input type="number" id="p-vaishno-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.pitthu_price || pkg.vaishno_pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-pitthu-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_pitthu_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                         <div style="flex:1;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
-                            <input type="number" id="p-vaishno-pitthu-max" placeholder="Max" value="${isEdit ? (pkg.pitthu_max || pkg.vaishno_pitthu_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-pitthu-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_pitthu_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
 
@@ -1911,6 +1911,145 @@ window.showPackageForm = function(pEncoded = null) {
                 <button onclick="window.showTab('packages')" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
             </div>
         </div>`;
+};
+
+// PROCESS SAVE: Collects form data and updates/inserts into Supabase 'packages' table
+window.processSave = async function(packageId = '') {
+    const saveBtn = document.getElementById('save-btn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerText = "Saving...";
+    }
+
+    try {
+        const title = document.getElementById('p-title').value.trim();
+        const city = document.getElementById('p-city').value;
+        const desc = document.getElementById('p-desc').value.trim();
+
+        if (!title || !city) {
+            alert("Please fill Package Title and Starting City.");
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'; }
+            return;
+        }
+
+        // Gather Destinations
+        const selectedDests = [];
+        document.querySelectorAll('.d-check:checked').forEach(cb => {
+            selectedDests.push(cb.value);
+        });
+
+        if (selectedDests.length === 0) {
+            alert("Please select at least one destination.");
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'; }
+            return;
+        }
+
+        // Gather Vehicles
+        const vehicles = [];
+        document.querySelectorAll('.v-enable:checked').forEach(cb => {
+            const vid = cb.getAttribute('data-id');
+            const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
+            const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
+            vehicles.push({
+                id: vid,
+                rate: parseFloat(rateInput.value) || 0,
+                max_cars: parseInt(maxInput.value) || 1
+            });
+        });
+
+        // 1. GATHER KEDARNATH RATES
+        const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked || false;
+        const dandiEnabled = document.getElementById('p-dandi-enable')?.checked || false;
+        const kandiEnabled = document.getElementById('p-kandi-enable')?.checked || false;
+        const pitthuEnabled = document.getElementById('p-pitthu-enable')?.checked || false;
+
+        const ghoda_price = ghodaEnabled ? (parseFloat(document.getElementById('p-ghoda-price').value) || 0) : 0;
+        const dandi_price = dandiEnabled ? (parseFloat(document.getElementById('p-dandi-price').value) || 0) : 0;
+        const kandi_price = kandiEnabled ? (parseFloat(document.getElementById('p-kandi-price').value) || 0) : 0;
+        const pitthu_price = pitthuEnabled ? (parseFloat(document.getElementById('p-pitthu-price').value) || 0) : 0;
+
+        const ghoda_max = ghodaEnabled ? (parseInt(document.getElementById('p-ghoda-max').value) || 1) : 1;
+        const dandi_max = dandiEnabled ? (parseInt(document.getElementById('p-dandi-max').value) || 1) : 1;
+        const kandi_max = kandiEnabled ? (parseInt(document.getElementById('p-kandi-max').value) || 1) : 1;
+        const pitthu_max = pitthuEnabled ? (parseInt(document.getElementById('p-pitthu-max').value) || 1) : 1;
+
+        // 2. GATHER VAISHNO DEVI RATES
+        const vaishnoGhodaEnabled = document.getElementById('p-vaishno-ghoda-enable')?.checked || false;
+        const vaishnoDandiEnabled = document.getElementById('p-vaishno-dandi-enable')?.checked || false;
+        const vaishnoPitthuEnabled = document.getElementById('p-vaishno-pitthu-enable')?.checked || false;
+
+        const vaishno_ghoda_price = vaishnoGhodaEnabled ? (parseFloat(document.getElementById('p-vaishno-ghoda-price').value) || 0) : 0;
+        const vaishno_dandi_price = vaishnoDandiEnabled ? (parseFloat(document.getElementById('p-vaishno-dandi-price').value) || 0) : 0;
+        const vaishno_pitthu_price = vaishnoPitthuEnabled ? (parseFloat(document.getElementById('p-vaishno-pitthu-price').value) || 0) : 0;
+
+        const vaishno_ghoda_max = vaishnoGhodaEnabled ? (parseInt(document.getElementById('p-vaishno-ghoda-max').value) || 1) : 1;
+        const vaishno_dandi_max = vaishnoDandiEnabled ? (parseInt(document.getElementById('p-vaishno-dandi-max').value) || 1) : 1;
+        const vaishno_pitthu_max = vaishnoPitthuEnabled ? (parseInt(document.getElementById('p-vaishno-pitthu-max').value) || 1) : 1;
+
+        // Get Agency Session Data
+        const sessionStr = localStorage.getItem('agency_session');
+        if (!sessionStr) throw new Error("No active session found.");
+        const session = JSON.parse(sessionStr);
+
+        // Map payload exactly to database columns
+        const payload = {
+            title: title,
+            starting_location: city,
+            destinations: selectedDests, // Saved as array/JSON
+            vehicles: vehicles,           // Saved as JSON
+            description: desc,
+            agency_id: session.id,
+            
+            // Kedarnath Fields mapping
+            ghoda_price,
+            dandi_price,
+            kandi_price,
+            pitthu_price,
+            ghoda_max,
+            dandi_max,
+            kandi_max,
+            pitthu_max,
+
+            // Vaishno Devi Fields mapping
+            vaishno_ghoda_price,
+            vaishno_dandi_price,
+            vaishno_pitthu_price,
+            vaishno_ghoda_max,
+            vaishno_dandi_max,
+            vaishno_pitthu_max
+        };
+
+        let resultError = null;
+
+        if (packageId) {
+            // Update Existing Package
+            const { error } = await _supabase
+                .from('packages')
+                .update(payload)
+                .eq('id', packageId);
+            resultError = error;
+        } else {
+            // Insert New Package
+            const { error } = await _supabase
+                .from('packages')
+                .insert([payload]);
+            resultError = error;
+        }
+
+        if (resultError) throw resultError;
+
+        alert(packageId ? "Package updated successfully!" : "Package published successfully!");
+        window.showTab('packages'); // Go back to listings and auto refresh
+
+    } catch (err) {
+        console.error("Save Error:", err);
+        alert("Error saving package: " + err.message);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
+        }
+    }
 };
 /* =========================================
    11. SAVE LOGIC: Package Management
