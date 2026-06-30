@@ -1004,72 +1004,77 @@ window.showPackageDetails = function(pEncoded) {
             </div>
         </div>`).join('');
 
-    // Pre-build Special Trek Services HTML (Only if applicable based on Agency selections)
+    // Pre-build Special Trek Services HTML (Separated by destination blocks)
     let trekServicesHtml = '';
     if (showTrekServices) {
-        // Maps rates & max limits dynamically based on fallback database columns
-        const services = [
-            { 
-                id: 'ghoda', 
-                name: (isVaishno && !isKedarnath) ? '🐴 Horse (Ghora)' : '🐴 Khachhar / Ghoda (Horse)', 
-                price: parseFloat(p.ghoda_price || p.vaishno_ghoda_price) || 0,
-                maxLimit: parseInt(p.ghoda_max) || 1 
-            },
-            { 
-                id: 'dandi', 
-                name: (isVaishno && !isKedarnath) ? '🪑 Palanquin (Palki)' : '🪑 Dandi (Palanquin)', 
-                price: parseFloat(p.dandi_price || p.vaishno_dandi_price) || 0,
-                maxLimit: parseInt(p.dandi_max) || 1 
-            },
-            { 
-                id: 'kandi', 
-                name: '🧺 Kandi (Wicker Cradle)', 
-                // Fix 1: Ensure Kandi shows up if Kedarnath is part of the destination, regardless of Vaishno Devi status
-                price: isKedarnath ? (parseFloat(p.kandi_price) || 0) : 0,
-                maxLimit: parseInt(p.kandi_max) || 1 
-            },
-            { 
-                id: 'pitthu', 
-                name: (isVaishno && !isKedarnath) ? '🎒 Porters (Pithoo)' : '🎒 Pitthu (Porter Service)', 
-                price: parseFloat(p.pitthu_price || p.vaishno_pitthu_price) || 0,
-                maxLimit: parseInt(p.pitthu_max) || 1 
-            }
-        ];
+        
+        // 1. KEDARNATH SERVICES BLOCK
+        let kedaHtmlBlock = '';
+        if (isKedarnath) {
+            const kedarnathServices = [
+                { id: 'ghoda', name: '🐴 Khachhar / Ghoda (Horse)', price: parseFloat(p.ghoda_price) || 0, maxLimit: parseInt(p.ghoda_max) || 1 },
+                { id: 'dandi', name: '🪑 Dandi (Palanquin)', price: parseFloat(p.dandi_price) || 0, maxLimit: parseInt(p.dandi_max) || 1 },
+                { id: 'kandi', name: '🧺 Kandi (Wicker Cradle)', price: parseFloat(p.kandi_price) || 0, maxLimit: parseInt(p.kandi_max) || 1 },
+                { id: 'pitthu', name: '🎒 Pitthu (Porter Service)', price: parseFloat(p.pitthu_price) || 0, maxLimit: parseInt(p.pitthu_max) || 1 }
+            ].filter(s => s.price > 0);
 
-        // Only show services that the agency actively added a price for (> 0)
-        const activeServices = services.filter(s => s.price > 0);
-
-        if (activeServices.length > 0) {
-            // Fix 2: Handle heading text dynamically when both destinations are present inside one package
-            if (isKedarnath && isVaishno) {
-                trekServicesHtml = `<h4>Mountain Trek Service (Kedarnath & Vaishno Devi)</h4>`;
-            } else if (isKedarnath) {
-                trekServicesHtml = `<h4>Mountain Trek (Only for Kedarnath)</h4>`;
-            } else if (isVaishno) {
-                trekServicesHtml = `<h4>Mountain Trek Service (Only for Vaishno Devi)</h4>`;
-            } else {
-                trekServicesHtml = `<h4>Special Mountain Trek Add-ons</h4>`;
-            }
-
-            trekServicesHtml += activeServices.map(s => `
-                <div style="padding:12px; border:1px solid #ffeaa7; background:#fffdf0; border-radius:10px; margin-bottom:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.price}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
-                            <b>${s.name}</b>
+            if (kedarnathServices.length > 0) {
+                kedaHtmlBlock = `<h4>Mountain Trek Services (Only for Kedarnath)</h4>`;
+                kedaHtmlBlock += kedarnathServices.map(s => `
+                    <div style="padding:12px; border:1px solid #ffeaa7; background:#fffdf0; border-radius:10px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.price}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
+                                <b>${s.name}</b>
+                            </div>
+                            <span style="color:#e67e22; font-weight:bold;">₹${s.price} / person</span>
                         </div>
-                        <span style="color:#e67e22; font-weight:bold;">₹${s.price} / person</span>
-                    </div>
-                    <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <div style="display:flex; align-items:center; justify-content:space-between;">
-                            <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
-                            <small style="color:#7f8c8d; font-weight:bold; margin-right:10px;">Allowed Max: ${s.maxLimit}</small>
+                        <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
+                                <small style="color:#7f8c8d; font-weight:bold; margin-right:10px;">Allowed Max: ${s.maxLimit}</small>
+                            </div>
+                            <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.maxLimit}" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="if(parseInt(this.value) > ${s.maxLimit}) this.value = ${s.maxLimit}; if(parseInt(this.value) < 1 || isNaN(parseInt(this.value))) this.value = 1; updateLivePrice();" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                         </div>
-                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.maxLimit}" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="if(parseInt(this.value) > ${s.maxLimit}) this.value = ${s.maxLimit}; if(parseInt(this.value) < 1 || isNaN(parseInt(this.value))) this.value = 1; updateLivePrice();" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
         }
+
+        // 2. VAISHNO DEVI SERVICES BLOCK
+        let vaishnoHtmlBlock = '';
+        if (isVaishno) {
+            const vaishnoServices = [
+                { id: 'vaishno_ghoda', name: '🐴 Horse (Ghora)', price: parseFloat(p.vaishno_ghoda_price) || 0, maxLimit: parseInt(p.ghoda_max || p.vaishno_ghoda_max) || 1 },
+                { id: 'vaishno_dandi', name: '🪑 Palanquin (Palki)', price: parseFloat(p.vaishno_dandi_price) || 0, maxLimit: parseInt(p.dandi_max || p.vaishno_dandi_max) || 1 },
+                { id: 'vaishno_pitthu', name: '🎒 Porters (Pithoo)', price: parseFloat(p.vaishno_pitthu_price) || 0, maxLimit: parseInt(p.pitthu_max || p.vaishno_pitthu_max) || 1 }
+            ].filter(s => s.price > 0);
+
+            if (vaishnoServices.length > 0) {
+                vaishnoHtmlBlock = `<h4>Mountain Trek Services (Only for Vaishno Devi)</h4>`;
+                vaishnoHtmlBlock += vaishnoServices.map(s => `
+                    <div style="padding:12px; border:1px solid #b2bec3; background:#f5f6fa; border-radius:10px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.price}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
+                                <b>${s.name}</b>
+                            </div>
+                            <span style="color:#2980b9; font-weight:bold;">₹${s.price} / person</span>
+                        </div>
+                        <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
+                                <small style="color:#7f8c8d; font-weight:bold; margin-right:10px;">Allowed Max: ${s.maxLimit}</small>
+                            </div>
+                            <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.maxLimit}" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="if(parseInt(this.value) > ${s.maxLimit}) this.value = ${s.maxLimit}; if(parseInt(this.value) < 1 || isNaN(parseInt(this.value))) this.value = 1; updateLivePrice();" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Combine both separate blocks inside the main variable
+        trekServicesHtml = kedaHtmlBlock + vaishnoHtmlBlock;
     }
 
     body.innerHTML = `
@@ -1197,22 +1202,31 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
 
     if (selectedVehicles.length === 0) { alert("Select a vehicle!"); return; }
 
-    // Read special mountain service quantities safely (with safe element validation checks)
+    // Read special mountain service quantities safely (with safe element validation checks for both separate structures)
     const ghodaChecked = document.getElementById('check-ghoda') && document.getElementById('check-ghoda').checked;
     const dandiChecked = document.getElementById('check-dandi') && document.getElementById('check-dandi').checked;
     const kandiChecked = document.getElementById('check-kandi') && document.getElementById('check-kandi').checked;
     const pitthuChecked = document.getElementById('check-pitthu') && document.getElementById('check-pitthu').checked;
 
-    const ghodaQty = ghodaChecked ? (parseInt(document.getElementById('qty-ghoda').value) || 1) : 0;
-    const dandiQty = dandiChecked ? (parseInt(document.getElementById('qty-dandi').value) || 1) : 0;
-    const kandiQty = kandiChecked ? (parseInt(document.getElementById('qty-kandi').value) || 1) : 0;
-    const pitthuQty = pitthuChecked ? (parseInt(document.getElementById('qty-pitthu').value) || 1) : 0;
+    const vGhodaChecked = document.getElementById('check-vaishno_ghoda') && document.getElementById('check-vaishno_ghoda').checked;
+    const vDandiChecked = document.getElementById('check-vaishno_dandi') && document.getElementById('check-vaishno_dandi').checked;
+    const vPitthuChecked = document.getElementById('check-vaishno_pitthu') && document.getElementById('check-vaishno_pitthu').checked;
+
+    // Resolve final quantities for saving (Merge quantities if they checked elements in separate categories)
+    const finalGhodaQty = (ghodaChecked ? (parseInt(document.getElementById('qty-ghoda').value) || 1) : 0) + (vGhodaChecked ? (parseInt(document.getElementById('qty-vaishno_ghoda').value) || 1) : 0);
+    const finalDandiQty = (dandiChecked ? (parseInt(document.getElementById('qty-dandi').value) || 1) : 0) + (vDandiChecked ? (parseInt(document.getElementById('qty-vaishno_dandi').value) || 1) : 0);
+    const finalKandiQty = kandiChecked ? (parseInt(document.getElementById('qty-kandi').value) || 1) : 0;
+    const finalPitthuQty = (pitthuChecked ? (parseInt(document.getElementById('qty-pitthu').value) || 1) : 0) + (vPitthuChecked ? (parseInt(document.getElementById('qty-vaishno_pitthu').value) || 1) : 0);
 
     // Add mountain add-on rates to total pricing ledger safely
-    if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * ghodaQty);
-    if (dandiChecked) totalPrice += (parseFloat(document.getElementById('check-dandi').dataset.rate) * dandiQty);
-    if (kandiChecked) totalPrice += (parseFloat(document.getElementById('check-kandi').dataset.rate) * kandiQty);
-    if (pitthuChecked) totalPrice += (parseFloat(document.getElementById('check-pitthu').dataset.rate) * pitthuQty);
+    if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * (parseInt(document.getElementById('qty-ghoda').value) || 1));
+    if (dandiChecked) totalPrice += (parseFloat(document.getElementById('check-dandi').dataset.rate) * (parseInt(document.getElementById('qty-dandi').value) || 1));
+    if (kandiChecked) totalPrice += (parseFloat(document.getElementById('check-kandi').dataset.rate) * (parseInt(document.getElementById('qty-kandi').value) || 1));
+    if (pitthuChecked) totalPrice += (parseFloat(document.getElementById('check-pitthu').dataset.rate) * (parseInt(document.getElementById('qty-pitthu').value) || 1));
+
+    if (vGhodaChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_ghoda').dataset.rate) * (parseInt(document.getElementById('qty-vaishno_ghoda').value) || 1));
+    if (vDandiChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_dandi').dataset.rate) * (parseInt(document.getElementById('qty-vaishno_dandi').value) || 1));
+    if (vPitthuChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_pitthu').dataset.rate) * (parseInt(document.getElementById('qty-vaishno_pitthu').value) || 1));
 
     const { error } = await client.from('bookings').insert([{
         package_id: packageId, 
@@ -1230,10 +1244,10 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         policy_version: 'v1_9_percent_deduction',
         
         // SAVE QUANTITIES TO YOUR NEW SQL COLUMNS
-        booked_ghoda_qty: ghodaQty,
-        booked_dandi_qty: dandiQty,
-        booked_kandi_qty: kandiQty,
-        booked_pitthu_qty: pitthuQty
+        booked_ghoda_qty: finalGhodaQty,
+        booked_dandi_qty: finalDandiQty,
+        booked_kandi_qty: finalKandiQty,
+        booked_pitthu_qty: finalPitthuQty
     }]);
 
     if (!error) {
