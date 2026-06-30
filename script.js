@@ -960,7 +960,9 @@ function renderPackageCards(data, isFiltered) {
         </div>`;
     }).join('');
 }
-// 8. PACKAGE DETAIL VIEW (CODEPEN SYNTAX-SAFE VERSION)
+// =========================================================================
+// 8. PACKAGE DETAIL VIEW (CODEPEN SYNTAX-SAFE VERSION) - MULTI-DEST ADDONS FIXED
+// =========================================================================
 window.showPackageDetails = function(pEncoded) {
     const p = JSON.parse(decodeURIComponent(pEncoded));
     const modal = document.getElementById('detail-modal');
@@ -1019,7 +1021,7 @@ window.showPackageDetails = function(pEncoded) {
             ].filter(s => s.price > 0);
 
             if (kedarnathServices.length > 0) {
-                kedaHtmlBlock = `<h4>Mountain Trek Services (Only for Kedarnath)</h4>`;
+                kedaHtmlBlock = `<h4 style="margin-top:15px; color:#e67e22;">Mountain Trek Services (Only for Kedarnath)</h4>`;
                 kedaHtmlBlock += kedarnathServices.map(s => `
                     <div style="padding:12px; border:1px solid #ffeaa7; background:#fffdf0; border-radius:10px; margin-bottom:8px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1045,13 +1047,13 @@ window.showPackageDetails = function(pEncoded) {
         let vaishnoHtmlBlock = '';
         if (isVaishno) {
             const vaishnoServices = [
-                { id: 'vaishno_ghoda', name: '🐴 Horse (Ghora)', price: parseFloat(p.vaishno_ghoda_price) || 0, maxLimit: parseInt(p.ghoda_max || p.vaishno_ghoda_max) || 1 },
-                { id: 'vaishno_dandi', name: '🪑 Palanquin (Palki)', price: parseFloat(p.vaishno_dandi_price) || 0, maxLimit: parseInt(p.dandi_max || p.vaishno_dandi_max) || 1 },
-                { id: 'vaishno_pitthu', name: '🎒 Porters (Pithoo)', price: parseFloat(p.vaishno_pitthu_price) || 0, maxLimit: parseInt(p.pitthu_max || p.vaishno_pitthu_max) || 1 }
+                { id: 'vaishno_ghoda', name: '🐴 Horse (Ghora) - Vaishno Devi', price: parseFloat(p.vaishno_ghoda_price) || 0, maxLimit: parseInt(p.vaishno_ghoda_max || p.ghoda_max) || 1 },
+                { id: 'vaishno_dandi', name: '🪑 Palanquin (Palki) - Vaishno Devi', price: parseFloat(p.vaishno_dandi_price) || 0, maxLimit: parseInt(p.vaishno_dandi_max || p.dandi_max) || 1 },
+                { id: 'vaishno_pitthu', name: '🎒 Porters (Pithoo) - Vaishno Devi', price: parseFloat(p.vaishno_pitthu_price) || 0, maxLimit: parseInt(p.vaishno_pitthu_max || p.pitthu_max) || 1 }
             ].filter(s => s.price > 0);
 
             if (vaishnoServices.length > 0) {
-                vaishnoHtmlBlock = `<h4>Mountain Trek Services (Only for Vaishno Devi)</h4>`;
+                vaishnoHtmlBlock = `<h4 style="margin-top:15px; color:#2980b9;">Mountain Trek Services (Only for Vaishno Devi)</h4>`;
                 vaishnoHtmlBlock += vaishnoServices.map(s => `
                     <div style="padding:12px; border:1px solid #b2bec3; background:#f5f6fa; border-radius:10px; margin-bottom:8px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1073,7 +1075,7 @@ window.showPackageDetails = function(pEncoded) {
             }
         }
 
-        // Combine both separate blocks inside the main variable
+        // Combine both separate blocks inside the main variable seamlessly
         trekServicesHtml = kedaHtmlBlock + vaishnoHtmlBlock;
     }
 
@@ -1218,7 +1220,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
     const finalKandiQty = kandiChecked ? (parseInt(document.getElementById('qty-kandi').value) || 1) : 0;
     const finalPitthuQty = (pitthuChecked ? (parseInt(document.getElementById('qty-pitthu').value) || 1) : 0) + (vPitthuChecked ? (parseInt(document.getElementById('qty-vaishno_pitthu').value) || 1) : 0);
 
-    // Add mountain add-on rates to total pricing ledger safely
+    // Add mountain add-on rates to total pricing ledger safely (Reading respective specific rates properly)
     if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * (parseInt(document.getElementById('qty-ghoda').value) || 1));
     if (dandiChecked) totalPrice += (parseFloat(document.getElementById('check-dandi').dataset.rate) * (parseInt(document.getElementById('qty-dandi').value) || 1));
     if (kandiChecked) totalPrice += (parseFloat(document.getElementById('check-kandi').dataset.rate) * (parseInt(document.getElementById('qty-kandi').value) || 1));
