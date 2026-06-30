@@ -492,7 +492,6 @@ window.renderCustomerRequests = async () => {
                     <div style="text-align:center; color:#636e72;">
                         <p style="margin:0; font-size:13px;">🔒 Contact Details Locked</p>
                         <small>Available only after payment is confirmed</small>
-                        <small style="color:#666;">Available only after payment is confirmed</small>
                         ${isApproved ? `<button onclick="simulatePayment(${b.id})" style="margin-top:10px; background:#2ecc71; color:white; width:100%; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">PROCEED TO PAYMENT (₹${b.total_price})</button>` : ''}
                     </div>
                 `)}
@@ -698,7 +697,7 @@ window.updateLivePrice = () => {
         const id = checkbox.dataset.id;
         const rate = parseFloat(checkbox.dataset.rate) || 0;
         const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
-        const qty = parseInt(qtyInput.value) || 1;
+        const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
         total += (rate * qty);
     });
 
@@ -706,7 +705,7 @@ window.updateLivePrice = () => {
         const id = checkbox.dataset.id;
         const rate = parseFloat(checkbox.dataset.rate) || 0;
         const qtyInput = document.getElementById(`qty-${id}`);
-        const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+        const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
         total += (rate * qty);
     });
 
