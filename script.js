@@ -2085,10 +2085,16 @@ window.processSave = async function(pkgId) {
         const isKedarSelected = selectedDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
         const isVaishnoSelected = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
 
+        // Kedarnath Variables
         let ghodaPrice = 0, ghodaMax = 1;
         let dandiPrice = 0, dandiMax = 1;
         let kandiPrice = 0, kandiMax = 1;
         let pitthuPrice = 0, pitthuMax = 1;
+
+        // Vaishno Devi Variables
+        let vaishnoGhodaPrice = 0, vaishnoGhodaQty = 1;
+        let vaishnoDandiPrice = 0, vaishnoDandiQty = 1;
+        let vaishnoPitthuPrice = 0, vaishnoPitthuQty = 1;
 
         if (isKedarSelected) {
             const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked;
@@ -2096,7 +2102,6 @@ window.processSave = async function(pkgId) {
             const kandiEnabled = document.getElementById('p-kandi-enable')?.checked;
             const pitthuEnabled = document.getElementById('p-pitthu-enable')?.checked;
 
-            // CRITICAL FIX: Extract Max fields independently of the checkbox tick to ensure edits are never lost
             const ghodaMaxInput = document.getElementById('p-ghoda-max');
             const dandiMaxInput = document.getElementById('p-dandi-max');
             const kandiMaxInput = document.getElementById('p-kandi-max');
@@ -2107,37 +2112,29 @@ window.processSave = async function(pkgId) {
             kandiMax = kandiMaxInput ? (parseInt(kandiMaxInput.value) || 1) : 1;
             pitthuMax = pitthuMaxInput ? (parseInt(pitthuMaxInput.value) || 1) : 1;
 
-            // Extract price only if explicitly enabled
             if (ghodaEnabled) ghodaPrice = parseFloat(document.getElementById('p-ghoda-price')?.value) || 0;
             if (dandiEnabled) dandiPrice = parseFloat(document.getElementById('p-dandi-price')?.value) || 0;
             if (kandiEnabled) kandiPrice = parseFloat(document.getElementById('p-kandi-price')?.value) || 0;
             if (pitthuEnabled) pitthuPrice = parseFloat(document.getElementById('p-pitthu-price')?.value) || 0;
 
-        } else if (isVaishnoSelected) {
+        } 
+        
+        if (isVaishnoSelected) {
             const vaishnoGhodaEnabled = document.getElementById('p-vaishno-ghoda-enable')?.checked;
             const vaishnoDandiEnabled = document.getElementById('p-vaishno-dandi-enable')?.checked;
             const vaishnoPitthuEnabled = document.getElementById('p-vaishno-pitthu-enable')?.checked;
 
-            // CRITICAL FIX: Extract Vaishno Max fields independently
             const vaishnoGhodaMaxInput = document.getElementById('p-vaishno-ghoda-max');
             const vaishnoDandiMaxInput = document.getElementById('p-vaishno-dandi-max');
             const vaishnoPitthuMaxInput = document.getElementById('p-vaishno-pitthu-max');
 
-            ghodaMax = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
-            dandiMax = vaishnoDandiMaxInput ? (parseInt(vaishnoDandiMaxInput.value) || 1) : 1;
-            pitthuMax = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
-            kandiMax = 1; // Vaishno Devi doesn't have Kandi operations
+            vaishnoGhodaQty = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
+            vaishnoDandiQty = vaishnoDandiMaxInput ? (parseInt(vaishnoDandiMaxInput.value) || 1) : 1;
+            vaishnoPitthuQty = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
 
-            if (vaishnoGhodaEnabled) ghodaPrice = parseFloat(document.getElementById('p-vaishno-ghoda-price')?.value) || 0;
-            if (vaishnoDandiEnabled) dandiPrice = parseFloat(document.getElementById('p-vaishno-dandi-price')?.value) || 0;
-            if (vaishnoPitthuEnabled) pitthuPrice = parseFloat(document.getElementById('p-vaishno-pitthu-price')?.value) || 0;
-            kandiPrice = 0;
-        } else {
-            // General Fallback for non-trek packages or dynamic manual adjustments
-            ghodaMax = parseInt(document.getElementById('p-ghoda-max')?.value || document.getElementById('p-vaishno-ghoda-max')?.value) || 1;
-            dandiMax = parseInt(document.getElementById('p-dandi-max')?.value || document.getElementById('p-vaishno-dandi-max')?.value) || 1;
-            kandiMax = parseInt(document.getElementById('p-kandi-max')?.value) || 1;
-            pitthuMax = parseInt(document.getElementById('p-pitthu-max')?.value || document.getElementById('p-vaishno-pitthu-max')?.value) || 1;
+            if (vaishnoGhodaEnabled) vaishnoGhodaPrice = parseFloat(document.getElementById('p-vaishno-ghoda-price')?.value) || 0;
+            if (vaishnoDandiEnabled) vaishnoDandiPrice = parseFloat(document.getElementById('p-vaishno-dandi-price')?.value) || 0;
+            if (vaishnoPitthuEnabled) vaishnoPitthuPrice = parseFloat(document.getElementById('p-vaishno-pitthu-price')?.value) || 0;
         }
 
         const pkgData = {
@@ -2148,7 +2145,7 @@ window.processSave = async function(pkgId) {
             description: desc,
             agency_id: user.id,
             
-            // MAPPED PRICING & MAX MEMBERS COLUMNS SAVED TO DATABASE
+            // KEDARNATH DATABASE MAPPING
             ghoda_price: ghodaPrice,
             ghoda_max: ghodaMax,
             dandi_price: dandiPrice,
@@ -2156,12 +2153,20 @@ window.processSave = async function(pkgId) {
             kandi_price: kandiPrice,
             kandi_max: kandiMax,
             pitthu_price: pitthuPrice,
-            pitthu_max: pitthuMax
+            pitthu_max: pitthuMax,
+
+            // VAISHNO DEVI DATABASE MAPPING (CRITICAL FIX)
+            vaishno_ghoda_price: vaishnoGhodaPrice,
+            vaishno_ghora_qty: vaishnoGhodaQty, // Mapped to vaishno_ghora_qty
+            vaishno_dandi_price: vaishnoDandiPrice,
+            vaishno_dandi_qty: vaishnoDandiQty,
+            vaishno_pitthu_price: vaishnoPitthuPrice,
+            vaishno_pitthu_qty: vaishnoPitthuQty
         };
 
         let error;
         // Logic to either Update (Edit) or Insert (New)
-        if (pkgId && pkgId !== "" && pkgId !== "undefined") {
+        if (pkgId && pkgId !== "" && pkgId !== "undefined" && pkgId !== null) {
             const result = await client.from('packages').update(pkgData).eq('id', pkgId);
             error = result.error;
         } else {
