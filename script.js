@@ -598,7 +598,7 @@ window.showPackageDetails = function(pEncoded) {
                         <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
-            `).join('');
+             `).join('');
         }
     }
 
@@ -626,7 +626,7 @@ window.showPackageDetails = function(pEncoded) {
                         <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
-            `).join('');
+             `).join('');
         }
     }
 
@@ -764,11 +764,6 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     const vDandiQty = vDandiChecked ? (parseInt(document.getElementById('qty-vaishno_dandi').value) || 1) : 0;
     const vPitthuQty = vPitthuChecked ? (parseInt(document.getElementById('qty-vaishno_pitthu').value) || 1) : 0;
 
-    const finalGhodaQty = ghodaQty + vGhodaQty;
-    const finalDandiQty = dandiQty + vDandiQty;
-    const finalKandiQty = kandiQty;
-    const finalPitthuQty = pitthuQty + vPitthuQty;
-
     if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * ghodaQty);
     if (dandiChecked) totalPrice += (parseFloat(document.getElementById('check-dandi').dataset.rate) * dandiQty);
     if (kandiChecked) totalPrice += (parseFloat(document.getElementById('check-kandi').dataset.rate) * kandiQty);
@@ -792,10 +787,17 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             status: 'pending',
             agency_id: agencyId,
             agency_email: agencyEmail,
-            booked_ghoda_qty: finalGhodaQty,
-            booked_dandi_qty: finalDandiQty,
-            booked_kandi_qty: finalKandiQty,
-            booked_pitthu_qty: finalPitthuQty
+            
+            // Kedarnath columns me quantitative values separate ki
+            keda_ghoda_qty: ghodaQty,
+            keda_dandi_qty: dandiQty,
+            keda_kandi_qty: kandiQty,
+            keda_pitthu_qty: pitthuQty,
+
+            // Vaishno Devi columns me quantities completely alag map ki
+            vaishno_ghoda_qty: vGhodaQty,
+            vaishno_dandi_qty: vDandiQty,
+            vaishno_pitthu_qty: vPitthuQty
         }]);
 
         if (!error) {
