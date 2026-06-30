@@ -985,7 +985,7 @@ window.showPackageDetails = function(pEncoded) {
     const pkgDestinations = Array.isArray(p.destination) ? p.destination : [p.destination];
     const destStringLower = pkgDestinations.join(' ').toLowerCase();
     const isKedarnath = destStringLower.includes('kedarnath') || destStringLower.includes('char dham');
-    const isVaishno = destStringLower.includes('vaishno');
+    const isVaishno = destStringLower.includes('vaishno') || destStringLower.includes('katra');
     const showTrekServices = isKedarnath || isVaishno;
 
     // Pre-build Vehicle HTML
@@ -1007,7 +1007,7 @@ window.showPackageDetails = function(pEncoded) {
     // Pre-build Special Trek Services HTML (Only if applicable based on Agency selections)
     let trekServicesHtml = '';
     if (showTrekServices) {
-        // Maps rates & max limits dynamically based on database keys
+        // Maps rates & max limits dynamically based on fallback database columns
         const services = [
             { 
                 id: 'ghoda', 
