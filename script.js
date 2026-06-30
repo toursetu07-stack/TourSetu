@@ -1007,15 +1007,32 @@ window.showPackageDetails = function(pEncoded) {
     // Pre-build Special Trek Services HTML (Only if applicable based on Agency selections)
     let trekServicesHtml = '';
     if (showTrekServices) {
-        // Fetch max limits set by agency from database column or fallback to package dynamic limit
-        const maxTrekLimit = parseInt(p.max_trek_members) || 6; 
-
-        // Maps rates dynamically based on what the agency specified for the particular location
+        // Maps rates & max limits dynamically based on what the agency specified in database columns
         const services = [
-            { id: 'ghoda', name: isVaishno ? '🐴 Horse (Ghora)' : '🐴 Khachhar / Ghoda (Horse)', price: parseFloat(isVaishno ? (p.vaishno_ghoda_price || p.ghoda_price) : p.ghoda_price) || 0 },
-            { id: 'dandi', name: isVaishno ? '🪑 Palanquin (Palki)' : '🪑 Dandi (Palanquin)', price: parseFloat(isVaishno ? (p.vaishno_dandi_price || p.dandi_price) : p.dandi_price) || 0 },
-            { id: 'kandi', name: '🧺 Kandi (Wicker Cradle)', price: parseFloat(p.kandi_price) || 0 },
-            { id: 'pitthu', name: isVaishno ? '🎒 Porters (Pithoo)' : '🎒 Pitthu (Porter Service)', price: parseFloat(isVaishno ? (p.vaishno_pitthu_price || p.pitthu_price) : p.pitthu_price) || 0 }
+            { 
+                id: 'ghoda', 
+                name: isVaishno ? '🐴 Horse (Ghora)' : '🐴 Khachhar / Ghoda (Horse)', 
+                price: parseFloat(isVaishno ? (p.vaishno_ghoda_price || p.ghoda_price) : p.ghoda_price) || 0,
+                maxLimit: parseInt(p.ghoda_max) || 1 
+            },
+            { 
+                id: 'dandi', 
+                name: isVaishno ? '🪑 Palanquin (Palki)' : '🪑 Dandi (Palanquin)', 
+                price: parseFloat(isVaishno ? (p.vaishno_dandi_price || p.dandi_price) : p.dandi_price) || 0,
+                maxLimit: parseInt(p.dandi_max) || 1 
+            },
+            { 
+                id: 'kandi', 
+                name: '🧺 Kandi (Wicker Cradle)', 
+                price: parseFloat(p.kandi_price) || 0,
+                maxLimit: parseInt(p.kandi_max) || 1 
+            },
+            { 
+                id: 'pitthu', 
+                name: isVaishno ? '🎒 Porters (Pithoo)' : '🎒 Pitthu (Porter Service)', 
+                price: parseFloat(isVaishno ? (p.vaishno_pitthu_price || p.pitthu_price) : p.pitthu_price) || 0,
+                maxLimit: parseInt(p.pitthu_max) || 1 
+            }
         ];
 
         // Only show services that the agency actively added a price for (> 0)
@@ -1043,9 +1060,9 @@ window.showPackageDetails = function(pEncoded) {
                     <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
                         <div style="display:flex; align-items:center; justify-content:space-between;">
                             <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
-                            <small style="color:#7f8c8d; font-weight:bold; margin-right:10px;">Allowed Max: ${maxTrekLimit}</small>
+                            <small style="color:#7f8c8d; font-weight:bold; margin-right:10px;">Allowed Max: ${s.maxLimit}</small>
                         </div>
-                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${maxTrekLimit}" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="if(parseInt(this.value) > ${maxTrekLimit}) this.value = ${maxTrekLimit}; updateLivePrice();" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
+                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.maxLimit}" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="if(parseInt(this.value) > ${s.maxLimit}) this.value = ${s.maxLimit}; updateLivePrice();" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
             `).join('');
