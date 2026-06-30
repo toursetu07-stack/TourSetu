@@ -492,6 +492,7 @@ window.renderCustomerRequests = async () => {
                     <div style="text-align:center; color:#636e72;">
                         <p style="margin:0; font-size:13px;">🔒 Contact Details Locked</p>
                         <small>Available only after payment is confirmed</small>
+                        <small style="color:#666;">Available only after payment is confirmed</small>
                         ${isApproved ? `<button onclick="simulatePayment(${b.id})" style="margin-top:10px; background:#2ecc71; color:white; width:100%; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">PROCEED TO PAYMENT (₹${b.total_price})</button>` : ''}
                     </div>
                 `)}
@@ -569,26 +570,22 @@ window.showPackageDetails = function(pEncoded) {
     // Loose formatting match engine to support string/array flexibility
     const destString = Array.isArray(p.destination) ? p.destination.join(' ').toLowerCase() : String(p.destination || '').toLowerCase();
     
-    const isKedarnath = destString.includes("kedarnath");
-    const isCharDham = destString.includes("char dham") || destString.includes("chardham");
+    const isKedarnath = destString.includes("kedarnath") || destString.includes("char dham") || destString.includes("chardham");
     const isVaishnoDevi = destString.includes("vaishno") || destString.includes("katra");
 
-    const containsMountainRoute = isKedarnath || isCharDham || isVaishnoDevi;
-
-    let trekServicesHtml = '';
-    if (containsMountainRoute) {
-        const items = [
-            { id: 'ghoda', label: isVaishnoDevi ? '🐴 Horse (Ghora)' : '🐴 Khachhar / Ghoda (Horse)', cost: parseFloat(isVaishnoDevi ? (p.vaishno_ghoda_price || p.ghoda_price) : p.ghoda_price) || 0 },
-            { id: 'dandi', label: isVaishnoDevi ? '🪑 Palanquin (Palki)' : '🪑 Dandi (Palanquin)', cost: parseFloat(isVaishnoDevi ? (p.vaishno_dandi_price || p.dandi_price) : p.dandi_price) || 0 },
+    // PRE-BUILD SEPARATE TREK ADDONS SECTIONS
+    let kedaHtmlBlock = '';
+    if (isKedarnath) {
+        const kedarnathServices = [
+            { id: 'ghoda', label: '🐴 Khachhar / Ghoda (Horse)', cost: parseFloat(p.ghoda_price) || 0 },
+            { id: 'dandi', label: '🪑 Dandi (Palanquin)', cost: parseFloat(p.dandi_price) || 0 },
             { id: 'kandi', label: '🧺 Kandi (Wicker Cradle)', cost: parseFloat(p.kandi_price) || 0 },
-            { id: 'pitthu', label: isVaishnoDevi ? '🎒 Porters (Pithoo)' : '🎒 Pitthu (Porter Service)', cost: parseFloat(isVaishnoDevi ? (p.vaishno_pitthu_price || p.pitthu_price) : p.pitthu_price) || 0 }
-        ];
+            { id: 'pitthu', label: '🎒 Pitthu (Porter Service)', cost: parseFloat(p.pitthu_price) || 0 }
+        ].filter(s => s.cost > 0);
 
-        const activeAddons = items.filter(item => item.cost > 0);
-
-        if (activeAddons.length > 0) {
-            trekServicesHtml = `<h4 style="margin-top:20px;">Special Mountain Trek Add-ons</h4>`;
-            trekServicesHtml += activeAddons.map(s => `
+        if (kedarnathServices.length > 0) {
+            kedaHtmlBlock = `<h4 style="margin-top:20px; color:#e67e22;">Mountain Trek Services (Only for Kedarnath)</h4>`;
+            kedaHtmlBlock += kedarnathServices.map(s => `
                 <div style="padding:12px; border:1px solid #ffeaa7; background:#fffdf0; border-radius:10px; margin-bottom:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div style="display:flex; align-items:center; gap:8px;">
@@ -605,6 +602,36 @@ window.showPackageDetails = function(pEncoded) {
             `).join('');
         }
     }
+
+    let vaishnoHtmlBlock = '';
+    if (isVaishnoDevi) {
+        const vaishnoServices = [
+            { id: 'vaishno_ghoda', label: '🐴 Horse (Ghora) - Vaishno Devi', cost: parseFloat(p.vaishno_ghoda_price || p.ghoda_price) || 0 },
+            { id: 'vaishno_dandi', label: '🪑 Palanquin (Palki) - Vaishno Devi', cost: parseFloat(p.vaishno_dandi_price || p.dandi_price) || 0 },
+            { id: 'vaishno_pitthu', label: '🎒 Porters (Pithoo) - Vaishno Devi', cost: parseFloat(p.vaishno_pitthu_price || p.pitthu_price) || 0 }
+        ].filter(s => s.cost > 0);
+
+        if (vaishnoServices.length > 0) {
+            vaishnoHtmlBlock = `<h4 style="margin-top:20px; color:#2980b9;">Mountain Trek Services (Only for Vaishno Devi)</h4>`;
+            vaishnoHtmlBlock += vaishnoServices.map(s => `
+                <div style="padding:12px; border:1px solid #b2bec3; background:#f5f6fa; border-radius:10px; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.cost}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
+                            <b>${s.label}</b>
+                        </div>
+                        <span style="color:#2980b9; font-weight:bold;">₹${s.cost} / person</span>
+                    </div>
+                    <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
+                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
+                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    const trekServicesHtml = kedaHtmlBlock + vaishnoHtmlBlock;
 
     body.innerHTML = `
         <div style="text-align:left;">
@@ -725,15 +752,32 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     const kandiChecked = document.getElementById('check-kandi') && document.getElementById('check-kandi').checked;
     const pitthuChecked = document.getElementById('check-pitthu') && document.getElementById('check-pitthu').checked;
 
+    const vGhodaChecked = document.getElementById('check-vaishno_ghoda') && document.getElementById('check-vaishno_ghoda').checked;
+    const vDandiChecked = document.getElementById('check-vaishno_dandi') && document.getElementById('check-vaishno_dandi').checked;
+    const vPitthuChecked = document.getElementById('check-vaishno_pitthu') && document.getElementById('check-vaishno_pitthu').checked;
+
     const ghodaQty = ghodaChecked ? (parseInt(document.getElementById('qty-ghoda').value) || 1) : 0;
     const dandiQty = dandiChecked ? (parseInt(document.getElementById('qty-dandi').value) || 1) : 0;
     const kandiQty = kandiChecked ? (parseInt(document.getElementById('qty-kandi').value) || 1) : 0;
     const pitthuQty = pitthuChecked ? (parseInt(document.getElementById('qty-pitthu').value) || 1) : 0;
 
+    const vGhodaQty = vGhodaChecked ? (parseInt(document.getElementById('qty-vaishno_ghoda').value) || 1) : 0;
+    const vDandiQty = vDandiChecked ? (parseInt(document.getElementById('qty-vaishno_dandi').value) || 1) : 0;
+    const vPitthuQty = vPitthuChecked ? (parseInt(document.getElementById('qty-vaishno_pitthu').value) || 1) : 0;
+
+    const finalGhodaQty = ghodaQty + vGhodaQty;
+    const finalDandiQty = dandiQty + vDandiQty;
+    const finalKandiQty = kandiQty;
+    const finalPitthuQty = pitthuQty + vPitthuQty;
+
     if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * ghodaQty);
     if (dandiChecked) totalPrice += (parseFloat(document.getElementById('check-dandi').dataset.rate) * dandiQty);
     if (kandiChecked) totalPrice += (parseFloat(document.getElementById('check-kandi').dataset.rate) * kandiQty);
     if (pitthuChecked) totalPrice += (parseFloat(document.getElementById('check-pitthu').dataset.rate) * pitthuQty);
+
+    if (vGhodaChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_ghoda').dataset.rate) * vGhodaQty);
+    if (vDandiChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_dandi').dataset.rate) * vDandiQty);
+    if (vPitthuChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_pitthu').dataset.rate) * vPitthuQty);
 
     try {
         const { error } = await client.from('bookings').insert([{
@@ -749,10 +793,10 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             status: 'pending',
             agency_id: agencyId,
             agency_email: agencyEmail,
-            booked_ghoda_qty: ghodaQty,
-            booked_dandi_qty: dandiQty,
-            booked_kandi_qty: kandiQty,
-            booked_pitthu_qty: pitthuQty
+            booked_ghoda_qty: finalGhodaQty,
+            booked_dandi_qty: finalDandiQty,
+            booked_kandi_qty: finalKandiQty,
+            booked_pitthu_qty: finalPitthuQty
         }]);
 
         if (!error) {
