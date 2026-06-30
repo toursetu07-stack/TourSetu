@@ -1011,25 +1011,26 @@ window.showPackageDetails = function(pEncoded) {
         const services = [
             { 
                 id: 'ghoda', 
-                name: isVaishno ? '🐴 Horse (Ghora)' : '🐴 Khachhar / Ghoda (Horse)', 
+                name: (isVaishno && !isKedarnath) ? '🐴 Horse (Ghora)' : '🐴 Khachhar / Ghoda (Horse)', 
                 price: parseFloat(p.ghoda_price || p.vaishno_ghoda_price) || 0,
                 maxLimit: parseInt(p.ghoda_max) || 1 
             },
             { 
                 id: 'dandi', 
-                name: isVaishno ? '🪑 Palanquin (Palki)' : '🪑 Dandi (Palanquin)', 
+                name: (isVaishno && !isKedarnath) ? '🪑 Palanquin (Palki)' : '🪑 Dandi (Palanquin)', 
                 price: parseFloat(p.dandi_price || p.vaishno_dandi_price) || 0,
                 maxLimit: parseInt(p.dandi_max) || 1 
             },
             { 
                 id: 'kandi', 
                 name: '🧺 Kandi (Wicker Cradle)', 
-                price: isVaishno ? 0 : (parseFloat(p.kandi_price) || 0),
+                // Fix 1: Ensure Kandi shows up if Kedarnath is part of the destination, regardless of Vaishno Devi status
+                price: isKedarnath ? (parseFloat(p.kandi_price) || 0) : 0,
                 maxLimit: parseInt(p.kandi_max) || 1 
             },
             { 
                 id: 'pitthu', 
-                name: isVaishno ? '🎒 Porters (Pithoo)' : '🎒 Pitthu (Porter Service)', 
+                name: (isVaishno && !isKedarnath) ? '🎒 Porters (Pithoo)' : '🎒 Pitthu (Porter Service)', 
                 price: parseFloat(p.pitthu_price || p.vaishno_pitthu_price) || 0,
                 maxLimit: parseInt(p.pitthu_max) || 1 
             }
@@ -1039,8 +1040,10 @@ window.showPackageDetails = function(pEncoded) {
         const activeServices = services.filter(s => s.price > 0);
 
         if (activeServices.length > 0) {
-            // Set heading style and text dynamically based on location
-            if (isKedarnath) {
+            // Fix 2: Handle heading text dynamically when both destinations are present inside one package
+            if (isKedarnath && isVaishno) {
+                trekServicesHtml = `<h4>Mountain Trek Service (Kedarnath & Vaishno Devi)</h4>`;
+            } else if (isKedarnath) {
                 trekServicesHtml = `<h4>Mountain Trek (Only for Kedarnath)</h4>`;
             } else if (isVaishno) {
                 trekServicesHtml = `<h4>Mountain Trek Service (Only for Vaishno Devi)</h4>`;
