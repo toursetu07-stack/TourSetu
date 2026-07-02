@@ -2186,7 +2186,8 @@ window.processSave = async function(pkgId) {
             btn.disabled = false;
         }
     }
-};/* =========================================
+};
+/* =========================================
    11. SAVE LOGIC: Package Management
    ========================================= */
 window.processSave = async function(pkgId) {
@@ -2274,7 +2275,7 @@ window.processSave = async function(pkgId) {
         const pkgData = {
             title: title,
             starting_location: city,
-            destinations: selectedDests, 
+            destination: selectedDests, 
             vehicles: selectedVehicles,
             description: desc,
             agency_id: user.id,
@@ -2289,8 +2290,8 @@ window.processSave = async function(pkgId) {
             pitthu_price: pitthuPrice,
             pitthu_max: pitthuMax,
 
-            // VAISHNO DEVI DATABASE MAPPING (CRITICAL FIX)
-            vaishno_ghoda_price: vaishnoGhodaPrice,
+            // VAISHNO DEVI DATABASE MAPPING (FIXED DATABASE COLUMN COUPLING)
+            vaishno_ghora_price: vaishnoGhodaPrice, // Sahi Column Name mapping
             vaishno_ghora_qty: vaishnoGhodaQty, 
             vaishno_dandi_price: vaishnoDandiPrice,
             vaishno_dandi_qty: vaishnoDandiQty,
@@ -2299,6 +2300,7 @@ window.processSave = async function(pkgId) {
         };
 
         let error;
+        // Logic to either Update (Edit) or Insert (New)
         if (pkgId && pkgId !== "" && pkgId !== "undefined" && pkgId !== null) {
             const result = await client.from('packages').update(pkgData).eq('id', pkgId);
             error = result.error;
@@ -2310,14 +2312,13 @@ window.processSave = async function(pkgId) {
         if (error) throw error;
         
         alert("✅ Success! Package saved.");
-        window.showTab('packages'); 
+        window.showTab('packages'); // Go back to the list
 
     } catch (err) {
         console.error("Save Error:", err);
         alert("❌ Error: " + err.message);
-    } finally {
         if (btn) {
-            btn.innerText = (pkgId && pkgId !== "undefined" && pkgId !== "") ? "SAVE CHANGES" : "PUBLISH PACKAGE";
+            btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE";
             btn.disabled = false;
         }
     }
