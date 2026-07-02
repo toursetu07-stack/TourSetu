@@ -2290,8 +2290,8 @@ window.processSave = async function(pkgId) {
             pitthu_price: pitthuPrice,
             pitthu_max: pitthuMax,
 
-            // VAISHNO DEVI DATABASE MAPPING (FIXED DATABASE COLUMN COUPLING)
-            vaishno_ghora_price: vaishnoGhodaPrice, // Sahi Column Name mapping
+            // VAISHNO DEVI DATABASE MAPPING
+            vaishno_ghora_price: vaishnoGhodaPrice, 
             vaishno_ghora_qty: vaishnoGhodaQty, 
             vaishno_dandi_price: vaishnoDandiPrice,
             vaishno_dandi_qty: vaishnoDandiQty,
