@@ -381,9 +381,10 @@ function renderCustomerHomepage(user) {
                       <h2 id="result-title" style="margin:0; color:#2d3436; font-size:2rem;">Popular Packages</h2>
                       <p id="result-subtitle" style="color:#636e72; margin-top:5px;">Explore tours from all over India</p>
                   </div>
-                  <div style="display:flex; gap:10px;">
+                  <div style="display:flex; gap:10px; align-items:center;">
                     <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
                     <button onclick="confirmAndExecuteLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
+                    <button onclick="triggerDeactivateModalPopup()" style="background:#ff7675; color:white; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
                   </div>
               </div>
                <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap:30px;"></div>
@@ -398,6 +399,43 @@ function renderCustomerHomepage(user) {
     `;
     loadAllPackages();
 }
+
+/**
+ * Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
+ */
+window.triggerDeactivateModalPopup = function() {
+    let modal = document.getElementById('deactivate-confirmation-modal');
+    if(!modal) {
+        modal = document.createElement('div');
+        modal.id = 'deactivate-confirmation-modal';
+        modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); display:flex; justify-content:center; align-items:center; z-index:100000;";
+        modal.innerHTML = `
+            <div style="background:white; padding:30px; border-radius:16px; text-align:center; max-width:420px; width:90%; box-shadow: 0 10px 30px rgba(0,0,0,0.25); font-family:'Inter',sans-serif;">
+                <h3 style="margin-top:0; color:#d63031; font-size:20px;">⚠️ Deactivate Account?</h3>
+                <p style="color:#636e72; font-size:14px; line-height:1.5; margin:15px 0;">Kya aap sach me apna account deactivate karna chate hai? Isse aapka Google/Gmail account disconnect ho jayega aur aapko fir se sign in karna padega.</p>
+                <div style="margin-top:25px; display:flex; gap:12px; justify-content:center;">
+                    <button onclick="executeGlobalDisconnect()" style="background:#d63031; color:white; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">Confirm</button>
+                    <button onclick="document.getElementById('deactivate-confirmation-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">Not</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
+};
+
+window.executeGlobalDisconnect = async function() {
+    try {
+        const client = getClient();
+        await client.auth.signOut();
+        localStorage.clear();
+        document.getElementById('deactivate-confirmation-modal').style.display = 'none';
+        alert("Account session deactivated & disconnected successfully. Saara data admin panels (Supabase) me safe hai.");
+        window.location.reload();
+    } catch(err) {
+        alert("Deactivation Error: " + err.message);
+    }
+};
 
 /**
  * Logout Confirmation Logic
@@ -439,6 +477,8 @@ window.renderCustomerRequests = async () => {
     
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
+    
+    // Problem 2 Fix: Freshly fetch everything directly from database to avoid caching/sync issues
     const { data, error } = await client.from('bookings').select('*').eq('customer_id', user.id).order('created_at', {ascending: false});
     
     if(!data || data.length === 0) {
@@ -449,18 +489,28 @@ window.renderCustomerRequests = async () => {
     }
 
     container.innerHTML = data.map(b => {
-        const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'denied' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43'));
+        // Dynamic evaluation matching real-time updates from agency status changes
+        const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'confirmed' ? '#3498db' : (b.status === 'denied' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43')));
         const isPending = b.status === 'pending';
         const isPaid = b.status === 'paid';
         const isApproved = b.status === 'confirmed'; 
         const isCancelled = b.status === 'cancelled';
+        const isDenied = b.status === 'denied';
 
         const today = new Date();
         today.setHours(0,0,0,0);
         const travelDateObj = b.travel_date ? new Date(b.travel_date) : null;
         if(travelDateObj) travelDateObj.setHours(0,0,0,0);
         
-        const canCancel = travelDateObj && today <= travelDateObj && !isCancelled;
+        const canCancel = travelDateObj && today <= travelDateObj && !isCancelled && !isDenied;
+
+        // Trekking labels render directly inside consumer view elements (Problem 1 context display)
+        let trackingDetailsInfo = '';
+        if (b.keda_ghoda_qty > 0 || b.keda_dandi_qty > 0 || b.keda_kandi_qty > 0 || b.keda_pitthu_qty > 0) {
+            trackingDetailsInfo = `<div style="margin-top:5px; color:#e67e22; font-size:12px;">⛰️ Kedarnath Trek Selected: ${b.keda_ghoda_qty ? '🐴 Ghoda ('+b.keda_ghoda_qty+') ' : ''}${b.keda_dandi_qty ? '🪑 Dandi ('+b.keda_dandi_qty+') ' : ''}${b.keda_kandi_qty ? ' baskets ('+b.keda_kandi_qty+') ' : ''}${b.keda_pitthu_qty ? '🎒 Pitthu ('+b.keda_pitthu_qty+') ' : ''}</div>`;
+        } else if (b.vaishno_ghoda_qty > 0 || b.vaishno_dandi_qty > 0 || b.vaishno_pitthu_qty > 0) {
+            trackingDetailsInfo = `<div style="margin-top:5px; color:#2980b9; font-size:12px;">⛰️ Vaishno Devi Trek Selected: ${b.vaishno_ghoda_qty ? '🐴 Ghoda ('+b.vaishno_ghoda_qty+') ' : ''}${b.vaishno_dandi_qty ? '🪑 Palki ('+b.vaishno_dandi_qty+') ' : ''}${b.vaishno_pitthu_qty ? '🎒 Pithoo ('+b.vaishno_pitthu_qty+') ' : ''}</div>`;
+        }
 
         return `
         <div class="card" style="background:white; padding:25px; border-left:5px solid ${statusColor}; position:relative; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius:15px;">
@@ -470,13 +520,14 @@ window.renderCustomerRequests = async () => {
                     <div style="font-size:13px; color:#636e72;">
                         <div style="margin-bottom:6px; color:#e67e22; font-weight:bold;">📅 Travel Date: ${b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'}) : 'Not Set'}</div>
                         <div style="margin-bottom:4px;">🚗 Vehicles: ${b.selected_vehicles}</div>
+                        ${trackingDetailsInfo}
                         <div style="margin-top:5px;">Status: <span style="padding:2px 8px; border-radius:10px; font-size:11px; background:#f0f0f0; color:${statusColor}; font-weight:bold;">${b.status.toUpperCase()}</span></div>
                     </div>
                 </div>
                 ${canCancel ? `<button onclick="cancelBookingWithPenalty(${b.id})" style="background:#ff7675; color:white; border:none; padding:8px 15px; font-size:12px; border-radius:8px; cursor:pointer; font-weight:bold;">✕ Cancel Booking</button>` : ''}
             </div>
 
-            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : (isCancelled ? '#f1f2f6' : '#f8f9fa')}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
+            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : (isCancelled ? '#f1f2f6' : (isDenied ? '#ffeaa7' : '#f8f9fa'))}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
                 ${isPaid ? `
                     <div style="text-align:center;">
                         <p style="margin:0 0 5px 0; font-size:12px; color:#27ae60; font-weight:bold;">✅ AGENCY CONTACT REVEALED</p>
@@ -488,13 +539,18 @@ window.renderCustomerRequests = async () => {
                         <p style="margin:0; font-weight:bold; color:#ff7675;">🚫 BOOKING CANCELLED</p>
                         <small>You cancelled this trip request.</small>
                     </div>
+                ` : (isDenied ? `
+                    <div style="text-align:center; color:#d63031;">
+                        <p style="margin:0; font-weight:bold;">❌ REQUEST DECLINED</p>
+                        <small>The travel agency has denied this booking request.</small>
+                    </div>
                 ` : `
                     <div style="text-align:center; color:#636e72;">
                         <p style="margin:0; font-size:13px;">🔒 Contact Details Locked</p>
                         <small>Available only after payment is confirmed</small>
                         ${isApproved ? `<button onclick="simulatePayment(${b.id})" style="margin-top:10px; background:#2ecc71; color:white; width:100%; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">PROCEED TO PAYMENT (₹${b.total_price})</button>` : ''}
                     </div>
-                `)}
+                `))}
             </div>
         </div>`;
     }).join('');
@@ -774,6 +830,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     if (vPitthuChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_pitthu').dataset.rate) * vPitthuQty);
 
     try {
+        // Problem 1 Fix: Explicitly mapped exact column names requested by your schema specifications
         const { error } = await client.from('bookings').insert([{
             package_id: packageId, 
             package_title: packageTitle,
@@ -788,13 +845,13 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             agency_id: agencyId,
             agency_email: agencyEmail,
             
-            // Kedarnath columns me quantitative values separate ki
+            // Kedarnath dynamic parameters
             keda_ghoda_qty: ghodaQty,
             keda_dandi_qty: dandiQty,
             keda_kandi_qty: kandiQty,
             keda_pitthu_qty: pitthuQty,
 
-            // Vaishno Devi columns me quantities completely alag map ki
+            // Vaishno Devi accurate mappings
             vaishno_ghoda_qty: vGhodaQty,
             vaishno_dandi_qty: vDandiQty,
             vaishno_pitthu_qty: vPitthuQty
@@ -811,7 +868,6 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
         alert("An error occurred. Please check your connection.");
     }
 };
-
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
     const start = document.getElementById('search-start').value;
