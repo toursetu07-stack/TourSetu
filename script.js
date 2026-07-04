@@ -605,9 +605,9 @@ window.showPackageDetails = function(pEncoded) {
     let vaishnoHtmlBlock = '';
     if (isVaishnoDevi) {
         const vaishnoServices = [
-            { id: 'vaishno_ghoda', label: '🐴 Horse (Ghora) - Vaishno Devi', cost: parseFloat(p.vaishno_ghoda_price || p.ghoda_price) || 0 },
-            { id: 'vaishno_dandi', label: '🪑 Palanquin (Palki) - Vaishno Devi', cost: parseFloat(p.vaishno_dandi_price || p.dandi_price) || 0 },
-            { id: 'vaishno_pitthu', label: '🎒 Porters (Pithoo) - Vaishno Devi', cost: parseFloat(p.vaishno_pitthu_price || p.pitthu_price) || 0 }
+            { id: 'vaishno_ghoda', label: '🐴 Horse (Ghora) - Vaishno Devi', cost: parseFloat(p.vaishno_ghoda_price) || 0 },
+            { id: 'vaishno_dandi', label: '🪑 Palanquin (Palki) - Vaishno Devi', cost: parseFloat(p.vaishno_dandi_price) || 0 },
+            { id: 'vaishno_pitthu', label: '🎒 Porters (Pithoo) - Vaishno Devi', cost: parseFloat(p.vaishno_pitthu_price) || 0 }
         ].filter(s => s.cost > 0);
 
         if (vaishnoServices.length > 0) {
