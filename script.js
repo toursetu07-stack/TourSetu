@@ -2154,11 +2154,10 @@ window.processSave = async function(pkgId) {
             pitthu_price: pitthuPrice,
             pitthu_max: pitthuMax,
 
-            // VAISHNO DEVI DATABASE MAPPING (FIXED TO AVOID SCHEMA CACHE ERROR)
-            // Storing both price and quantity safely inside the existing 3 columns as JSON stringified data
-            vaishno_ghora_price: JSON.stringify({ rate: vaishnoGhodaPrice, max_person: vaishnoGhodaQty }),
-            vaishno_dandi_price: JSON.stringify({ rate: vaishnoDandiPrice, max_person: vaishnoDandiQty }),
-            vaishno_pitthu_price: JSON.stringify({ rate: vaishnoPitthuPrice, max_person: vaishnoPitthuQty })
+            // VAISHNO DEVI DATABASE MAPPING (EXACT SCHEMA MATCH - NO EXTRA QTY COLUMNS)
+            vaishno_ghoda_price: vaishnoGhodaPrice, 
+            vaishno_dandi_price: vaishnoDandiPrice,
+            vaishno_pitthu_price: vaishnoPitthuPrice
         };
 
         let error;
