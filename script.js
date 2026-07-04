@@ -2139,142 +2139,6 @@ window.processSave = async function(pkgId) {
         const pkgData = {
             title: title,
             starting_location: city,
-            destinations: selectedDests, 
-            vehicles: selectedVehicles,
-            description: desc,
-            agency_id: user.id,
-            
-            // KEDARNATH DATABASE MAPPING
-            ghoda_price: ghodaPrice,
-            ghoda_max: ghodaMax,
-            dandi_price: dandiPrice,
-            dandi_max: dandiMax,
-            kandi_price: kandiPrice,
-            kandi_max: kandiMax,
-            pitthu_price: pitthuPrice,
-            pitthu_max: pitthuMax,
-
-            // VAISHNO DEVI DATABASE MAPPING (CRITICAL FIX)
-            vaishno_ghoda_price: vaishnoGhodaPrice,
-            vaishno_ghora_qty: vaishnoGhodaQty, 
-            vaishno_dandi_price: vaishnoDandiPrice,
-            vaishno_dandi_qty: vaishnoDandiQty,
-            vaishno_pitthu_price: vaishnoPitthuPrice,
-            vaishno_pitthu_qty: vaishnoPitthuQty
-        };
-
-        let error;
-        if (pkgId && pkgId !== "" && pkgId !== "undefined" && pkgId !== null) {
-            const result = await client.from('packages').update(pkgData).eq('id', pkgId);
-            error = result.error;
-        } else {
-            const result = await client.from('packages').insert([pkgData]);
-            error = result.error;
-        }
-
-        if (error) throw error;
-        
-        alert("✅ Success! Package saved.");
-        window.showTab('packages'); 
-
-    } catch (err) {
-        console.error("Save Error:", err);
-        alert("❌ Error: " + err.message);
-    } finally {
-        if (btn) {
-            btn.innerText = (pkgId && pkgId !== "undefined" && pkgId !== "") ? "SAVE CHANGES" : "PUBLISH PACKAGE";
-            btn.disabled = false;
-        }
-    }
-};
-/* =========================================
-   11. SAVE LOGIC: Package Management
-   ========================================= */
-window.processSave = async function(pkgId) {
-    const btn = document.getElementById('save-btn');
-    if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
-
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("User session not found.");
-
-        const title = document.getElementById('p-title').value.trim();
-        const city = document.getElementById('p-city').value;
-        const desc = document.getElementById('p-desc').value;
-
-        if (!title || !city) throw new Error("Title and Starting City are required!");
-
-        const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
-        const selectedVehicles = [];
-        document.querySelectorAll('.v-enable:checked').forEach(el => {
-            const vId = el.dataset.id;
-            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`).value) || 0;
-            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`).value) || 1;
-            const vType = vehicleTypes.find(vt => vt.id === vId);
-            if (rate > 0) {
-                selectedVehicles.push({ id: vId, name: vType.name, rate: rate, max_cars: max, icon: vType.icon });
-            }
-        });
-
-        // --- Dynamic Trek Pricing & Max Member Extraction ---
-        const isKedarSelected = selectedDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
-        const isVaishnoSelected = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
-
-        // Kedarnath Variables
-        let ghodaPrice = 0, ghodaMax = 1;
-        let dandiPrice = 0, dandiMax = 1;
-        let kandiPrice = 0, kandiMax = 1;
-        let pitthuPrice = 0, pitthuMax = 1;
-
-        // Vaishno Devi Variables
-        let vaishnoGhodaPrice = 0, vaishnoGhodaQty = 1;
-        let vaishnoDandiPrice = 0, vaishnoDandiQty = 1;
-        let vaishnoPitthuPrice = 0, vaishnoPitthuQty = 1;
-
-        if (isKedarSelected) {
-            const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked;
-            const dandiEnabled = document.getElementById('p-dandi-enable')?.checked;
-            const kandiEnabled = document.getElementById('p-kandi-enable')?.checked;
-            const pitthuEnabled = document.getElementById('p-pitthu-enable')?.checked;
-
-            const ghodaMaxInput = document.getElementById('p-ghoda-max');
-            const dandiMaxInput = document.getElementById('p-dandi-max');
-            const kandiMaxInput = document.getElementById('p-kandi-max');
-            const pitthuMaxInput = document.getElementById('p-pitthu-max');
-
-            ghodaMax = ghodaMaxInput ? (parseInt(ghodaMaxInput.value) || 1) : 1;
-            dandiMax = dandiMaxInput ? (parseInt(dandiMaxInput.value) || 1) : 1;
-            kandiMax = kandiMaxInput ? (parseInt(kandiMaxInput.value) || 1) : 1;
-            pitthuMax = pitthuMaxInput ? (parseInt(pitthuMaxInput.value) || 1) : 1;
-
-            if (ghodaEnabled) ghodaPrice = parseFloat(document.getElementById('p-ghoda-price')?.value) || 0;
-            if (dandiEnabled) dandiPrice = parseFloat(document.getElementById('p-dandi-price')?.value) || 0;
-            if (kandiEnabled) kandiPrice = parseFloat(document.getElementById('p-kandi-price')?.value) || 0;
-            if (pitthuEnabled) pitthuPrice = parseFloat(document.getElementById('p-pitthu-price')?.value) || 0;
-        } 
-        
-        if (isVaishnoSelected) {
-            const vaishnoGhodaEnabled = document.getElementById('p-vaishno-ghoda-enable')?.checked;
-            const vaishnoDandiEnabled = document.getElementById('p-vaishno-dandi-enable')?.checked;
-            const vaishnoPitthuEnabled = document.getElementById('p-vaishno-pitthu-enable')?.checked;
-
-            const vaishnoGhodaMaxInput = document.getElementById('p-vaishno-ghoda-max');
-            const vaishnoDandiMaxInput = document.getElementById('p-vaishno-dandi-max');
-            const vaishnoPitthuMaxInput = document.getElementById('p-vaishno-pitthu-max');
-
-            vaishnoGhodaQty = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
-            vaishnoDandiQty = vaishnoDandiMaxInput ? (parseInt(vaishnoDandiMaxInput.value) || 1) : 1;
-            vaishnoPitthuQty = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
-
-            if (vaishnoGhodaEnabled) vaishnoGhodaPrice = parseFloat(document.getElementById('p-vaishno-ghoda-price')?.value) || 0;
-            if (vaishnoDandiEnabled) vaishnoDandiPrice = parseFloat(document.getElementById('p-vaishno-dandi-price')?.value) || 0;
-            if (vaishnoPitthuEnabled) vaishnoPitthuPrice = parseFloat(document.getElementById('p-vaishno-pitthu-price')?.value) || 0;
-        }
-
-        const pkgData = {
-            title: title,
-            starting_location: city,
             destination: selectedDests, 
             vehicles: selectedVehicles,
             description: desc,
@@ -2290,13 +2154,11 @@ window.processSave = async function(pkgId) {
             pitthu_price: pitthuPrice,
             pitthu_max: pitthuMax,
 
-            // VAISHNO DEVI DATABASE MAPPING
-            vaishno_ghora_price: vaishnoGhodaPrice, 
-            vaishno_ghora_qty: vaishnoGhodaQty, 
-            vaishno_dandi_price: vaishnoDandiPrice,
-            vaishno_dandi_qty: vaishnoDandiQty,
-            vaishno_pitthu_price: vaishnoPitthuPrice,
-            vaishno_pitthu_qty: vaishnoPitthuQty
+            // VAISHNO DEVI DATABASE MAPPING (FIXED TO AVOID SCHEMA CACHE ERROR)
+            // Storing both price and quantity safely inside the existing 3 columns as JSON stringified data
+            vaishno_ghora_price: JSON.stringify({ rate: vaishnoGhodaPrice, max_person: vaishnoGhodaQty }),
+            vaishno_dandi_price: JSON.stringify({ rate: vaishnoDandiPrice, max_person: vaishnoDandiQty }),
+            vaishno_pitthu_price: JSON.stringify({ rate: vaishnoPitthuPrice, max_person: vaishnoPitthuQty })
         };
 
         let error;
