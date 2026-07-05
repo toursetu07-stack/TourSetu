@@ -1470,6 +1470,25 @@ window.showTab = async function(tabName) {
 
             const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
 
+            // --- FIXED: Trekking services addon data display layout ---
+            let trekDetailsHtml = '';
+            if ((b.booked_ghoda_qty && b.booked_ghoda_qty > 0) || 
+                (b.booked_dandi_qty && b.booked_dandi_qty > 0) || 
+                (b.booked_kandi_qty && b.booked_kandi_qty > 0) || 
+                (b.booked_pitthu_qty && b.booked_pitthu_qty > 0)) {
+                
+                trekDetailsHtml = `
+                <div style="margin-top: 10px; padding: 12px; background: #fffdf0; border: 1px solid #ffeaa7; border-radius: 8px; font-size: 13px;">
+                    <b style="color: #e67e22; display:block; margin-bottom:6px;">⛰️ Selected Mountain Trek Services:</b>
+                    <ul style="margin: 0; padding-left: 20px; color: #2d3436; line-height: 1.6;">
+                        ${b.booked_ghoda_qty > 0 ? `<li>Horse / Ghoda: <b>${b.booked_ghoda_qty} Members</b></li>` : ''}
+                        ${b.booked_dandi_qty > 0 ? `<li>Palanquin / Dandi: <b>${b.booked_dandi_qty} Members</b></li>` : ''}
+                        ${b.booked_kandi_qty > 0 ? `<li>Basket / Kandi: <b>${b.booked_kandi_qty} Members</b></li>` : ''}
+                        ${b.booked_pitthu_qty > 0 ? `<li>Porter / Pitthu: <b>${b.booked_pitthu_qty} Members</b></li>` : ''}
+                    </ul>
+                </div>`;
+            }
+
             return `
             <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${statusColor}; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -1502,8 +1521,9 @@ window.showTab = async function(tabName) {
                 </div>
 
                 <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <div>
+                    <div style="width: 100%;">
                         <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
+                        ${trekDetailsHtml}
                         <p style="font-size:12px; margin-top:5px; color:#999;">Customer Email: ${displayEmail}</p>
                     </div>
                     ${b.policy_agreed ? `
@@ -1598,7 +1618,6 @@ window.processStatusUpdate = async function(bookingId, newStatus, customerId, pa
 
     const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
     if (!error) {
-        // TRIGGER PUSH NOTIFICATION
         if (newStatus === 'approved') {
             sendPushNotification(
                 customerId, 
