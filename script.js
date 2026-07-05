@@ -1470,10 +1470,10 @@ window.showTab = async function(tabName) {
 
             const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
 
-            // --- BREAKDOWN GENERATION FOR KEDARNATH AND VAISHNO DEVI TREKKING SERVICES ---
+            // --- TREKKING SERVICES BREAKDOWN LOGIC ---
             let trekkingHtml = '';
             
-            // 1. Kedarnath Section Check
+            // 1. Kedarnath Service Breakdown
             const kGhoda = parseInt(b.kedar_ghoda_Qty) || 0;
             const kDandi = parseInt(b.kedar_dandi_Qty) || 0;
             const kPitthu = parseInt(b.kedar_pitthu_Qty) || 0;
@@ -1481,31 +1481,31 @@ window.showTab = async function(tabName) {
 
             if (kGhoda > 0 || kDandi > 0 || kPitthu > 0 || kKandi > 0) {
                 trekkingHtml += `
-                <div style="margin-top: 10px; padding: 12px; background: #f0f7ff; border: 1px solid #badc58; border-radius: 8px; font-size: 13px;">
-                    <b style="color: #2980b9; display:block; margin-bottom:5px;">⛰️ Trekking Service Only For Kedarnath:</b>
-                    <ul style="margin: 0; padding-left: 20px; color: #2d3436;">
-                        ${kGhoda > 0 ? `<li>🐴 Ghoda/Horse: <b>${kGhoda} Members</b></li>` : ''}
-                        ${kDandi > 0 ? `<li>🪑 Dandi/Palanquin: <b>${kDandi} Members</b></li>` : ''}
-                        ${kPitthu > 0 ? `<li>🎒 Pitthu/Porter: <b>${kPitthu} Members</b></li>` : ''}
-                        ${kKandi > 0 ? `<li>🧺 Kandi/Basket: <b>${kKandi} Members</b></li>` : ''}
-                    </ul>
+                <div style="margin-top: 8px; padding: 10px 15px; background: #f0faf7; border-left: 3px solid #badc58; border-radius: 4px; font-size: 13px;">
+                    <span style="color: #27ae60; font-weight: bold; display: block; margin-bottom: 4px;">⛰️ Trekking Service Only For Kedarnath:</span>
+                    <span style="color: #555;">
+                        ${kGhoda > 0 ? `Ghoda: <b>${kGhoda} Members</b>${kDandi > 0 || kPitthu > 0 || kKandi > 0 ? ' | ' : ''}` : ''}
+                        ${kDandi > 0 ? `Dandi: <b>${kDandi} Members</b>${kPitthu > 0 || kKandi > 0 ? ' | ' : ''}` : ''}
+                        ${kPitthu > 0 ? `Pitthu: <b>${kPitthu} Members</b>${kKandi > 0 ? ' | ' : ''}` : ''}
+                        ${kKandi > 0 ? `Kandi: <b>${kKandi} Members</b>` : ''}
+                    </span>
                 </div>`;
             }
 
-            // 2. Vaishno Devi Section Check (Reading from columns as named by you)
+            // 2. Vaishno Devi Service Breakdown
             const vGhoda = parseInt(b.vaishno_ghoda_price) || 0;
             const vDandi = parseInt(b.vaishno_dandi_price) || 0;
             const vPitthu = parseInt(b.vaishno_pitthu_price) || 0;
 
             if (vGhoda > 0 || vDandi > 0 || vPitthu > 0) {
                 trekkingHtml += `
-                <div style="margin-top: 10px; padding: 12px; background: #fffdf0; border: 1px solid #ffeaa7; border-radius: 8px; font-size: 13px;">
-                    <b style="color: #e67e22; display:block; margin-bottom:5px;">⛰️ Trekking Service Only For Vaishno Devi:</b>
-                    <ul style="margin: 0; padding-left: 20px; color: #2d3436;">
-                        ${vGhoda > 0 ? `<li>🐴 Ghoda/Horse: <b>${vGhoda} Members</b></li>` : ''}
-                        ${vDandi > 0 ? `<li>🪑 Dandi/Palanquin: <b>${vDandi} Members</b></li>` : ''}
-                        ${vPitthu > 0 ? `<li>🎒 Pitthu/Porter: <b>${vPitthu} Members</b></li>` : ''}
-                    </ul>
+                <div style="margin-top: 8px; padding: 10px 15px; background: #fffcf0; border-left: 3px solid #f1c40f; border-radius: 4px; font-size: 13px;">
+                    <span style="color: #d35400; font-weight: bold; display: block; margin-bottom: 4px;">⛰️ Trekking Service Only For Vaishno Devi:</span>
+                    <span style="color: #555;">
+                        ${vGhoda > 0 ? `Ghoda: <b>${vGhoda} Members</b>${vDandi > 0 || vPitthu > 0 ? ' | ' : ''}` : ''}
+                        ${vDandi > 0 ? `Dandi: <b>${vDandi} Members</b>${vPitthu > 0 ? ' | ' : ''}` : ''}
+                        ${vPitthu > 0 ? `Pitthu: <b>${vPitthu} Members</b>` : ''}
+                    </span>
                 </div>`;
             }
 
@@ -1543,10 +1543,11 @@ window.showTab = async function(tabName) {
                 <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="width: 100%;">
                         <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
+                        
                         ${trekkingHtml} <p style="font-size:12px; margin-top:8px; color:#999;">Customer Email: ${displayEmail}</p>
                     </div>
                     ${b.policy_agreed ? `
-                        <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:4px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71;">
+                        <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:4px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71; flex-shrink:0;">
                             ✅ 9% DEDUCTION POLICY AGREED
                         </div>
                     ` : ''}
