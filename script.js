@@ -489,28 +489,32 @@ window.renderCustomerRequests = async () => {
     }
 
     container.innerHTML = data.map(b => {
-        // Dynamic evaluation matching real-time updates from agency status changes
-        const statusColor = b.status === 'paid' ? '#2ecc71' : (b.status === 'confirmed' ? '#3498db' : (b.status === 'denied' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43')));
+        // Problem 2 Fix: Handle both 'confirmed' and 'approved' values cleanly for styling and buttons
+        const isApprovedOrConfirmed = b.status === 'confirmed' || b.status === 'approved';
+        const statusColor = b.status === 'paid' ? '#2ecc71' : (isApprovedOrConfirmed ? '#3498db' : (b.status === 'denied' || b.status === 'rejected' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43')));
         const isPending = b.status === 'pending';
         const isPaid = b.status === 'paid';
-        const isApproved = b.status === 'confirmed'; 
+        const isApproved = isApprovedOrConfirmed; 
         const isCancelled = b.status === 'cancelled';
-        const isDenied = b.status === 'denied';
+        const isDenied = b.status === 'denied' || b.status === 'rejected';
 
         const today = new Date();
         today.setHours(0,0,0,0);
         const travelDateObj = b.travel_date ? new Date(b.travel_date) : null;
         if(travelDateObj) travelDateObj.setHours(0,0,0,0);
         
-        const canCancel = travelDateObj && today <= travelDateObj && !isCancelled && !isDenied;
+        const canCancel = travelDateObj && today <= travelDateObj && !isCancelled && !isDenied && !isPaid;
 
-        // Trekking labels render directly inside consumer view elements (Problem 1 context display)
+        // Problem 1 Fix: Changed database property targets to match exactly: vaishno_ghoda_price, vaishno_dandi_price, vaishno_pitthu_price
         let trackingDetailsInfo = '';
         if (b.keda_ghoda_qty > 0 || b.keda_dandi_qty > 0 || b.keda_kandi_qty > 0 || b.keda_pitthu_qty > 0) {
             trackingDetailsInfo = `<div style="margin-top:5px; color:#e67e22; font-size:12px;">⛰️ Kedarnath Trek Selected: ${b.keda_ghoda_qty ? '🐴 Ghoda ('+b.keda_ghoda_qty+') ' : ''}${b.keda_dandi_qty ? '🪑 Dandi ('+b.keda_dandi_qty+') ' : ''}${b.keda_kandi_qty ? ' baskets ('+b.keda_kandi_qty+') ' : ''}${b.keda_pitthu_qty ? '🎒 Pitthu ('+b.keda_pitthu_qty+') ' : ''}</div>`;
-        } else if (b.vaishno_ghoda_qty > 0 || b.vaishno_dandi_qty > 0 || b.vaishno_pitthu_qty > 0) {
-            trackingDetailsInfo = `<div style="margin-top:5px; color:#2980b9; font-size:12px;">⛰️ Vaishno Devi Trek Selected: ${b.vaishno_ghoda_qty ? '🐴 Ghoda ('+b.vaishno_ghoda_qty+') ' : ''}${b.vaishno_dandi_qty ? '🪑 Palki ('+b.vaishno_dandi_qty+') ' : ''}${b.vaishno_pitthu_qty ? '🎒 Pithoo ('+b.vaishno_pitthu_qty+') ' : ''}</div>`;
+        } else if (b.vaishno_ghoda_price > 0 || b.vaishno_dandi_price > 0 || b.vaishno_pitthu_price > 0) {
+            trackingDetailsInfo = `<div style="margin-top:5px; color:#2980b9; font-size:12px;">⛰️ Vaishno Devi Trek Selected: ${b.vaishno_ghoda_price ? '🐴 Ghoda ('+b.vaishno_ghoda_price+') ' : ''}${b.vaishno_dandi_price ? '🪑 Palki ('+b.vaishno_dandi_price+') ' : ''}${b.vaishno_pitthu_price ? '🎒 Pithoo ('+b.vaishno_pitthu_price+') ' : ''}</div>`;
         }
+
+        let friendlyStatus = b.status.toUpperCase();
+        if(friendlyStatus === 'APPROVED') friendlyStatus = 'CONFIRMED (PENDING PAYMENT)';
 
         return `
         <div class="card" style="background:white; padding:25px; border-left:5px solid ${statusColor}; position:relative; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius:15px;">
@@ -521,7 +525,7 @@ window.renderCustomerRequests = async () => {
                         <div style="margin-bottom:6px; color:#e67e22; font-weight:bold;">📅 Travel Date: ${b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'}) : 'Not Set'}</div>
                         <div style="margin-bottom:4px;">🚗 Vehicles: ${b.selected_vehicles}</div>
                         ${trackingDetailsInfo}
-                        <div style="margin-top:5px;">Status: <span style="padding:2px 8px; border-radius:10px; font-size:11px; background:#f0f0f0; color:${statusColor}; font-weight:bold;">${b.status.toUpperCase()}</span></div>
+                        <div style="margin-top:5px;">Status: <span style="padding:2px 8px; border-radius:10px; font-size:11px; background:#f0f0f0; color:${statusColor}; font-weight:bold;">${friendlyStatus}</span></div>
                     </div>
                 </div>
                 ${canCancel ? `<button onclick="cancelBookingWithPenalty(${b.id})" style="background:#ff7675; color:white; border:none; padding:8px 15px; font-size:12px; border-radius:8px; cursor:pointer; font-weight:bold;">✕ Cancel Booking</button>` : ''}
@@ -622,13 +626,11 @@ window.showPackageDetails = function(pEncoded) {
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
     const escapedTitle = p.title.replace(/'/g, "\\'");
 
-    // Loose formatting match engine to support string/array flexibility
     const destString = Array.isArray(p.destination) ? p.destination.join(' ').toLowerCase() : String(p.destination || '').toLowerCase();
     
     const isKedarnath = destString.includes("kedarnath") || destString.includes("char dham") || destString.includes("chardham");
     const isVaishnoDevi = destString.includes("vaishno") || destString.includes("katra");
 
-    // PRE-BUILD SEPARATE TREK ADDONS SECTIONS
     let kedaHtmlBlock = '';
     if (isKedarnath) {
         const kedarnathServices = [
@@ -830,7 +832,6 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     if (vPitthuChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_pitthu').dataset.rate) * vPitthuQty);
 
     try {
-        // Corrected Column Mappings for Database Synchronization
         const { error } = await client.from('bookings').insert([{
             package_id: packageId, 
             package_title: packageTitle,
@@ -845,13 +846,11 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             agency_id: agencyId,
             agency_email: agencyEmail,
             
-            // Kedarnath dynamic parameters
             keda_ghoda_qty: ghodaQty,
             keda_dandi_qty: dandiQty,
             keda_kandi_qty: kandiQty,
             keda_pitthu_qty: pitthuQty,
 
-            // Fixed Vaishno Devi Mappings (Changed from _price to _qty)
             vaishno_ghoda_qty: vGhodaQty,
             vaishno_dandi_qty: vDandiQty,
             vaishno_pitthu_qty: vPitthuQty,
@@ -861,7 +860,6 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString()}. Total: ₹${totalPrice}`);
             document.getElementById('detail-modal').style.display = 'none';
             
-            // Problem 2 Fix: Safe call using window context
             if (typeof window.renderCustomerRequests === 'function') {
                 window.renderCustomerRequests();
             }
@@ -2263,7 +2261,8 @@ window.renderAgencyBookings = function(bookings) {
 
     const html = bookings.map(b => {
         const isCancelled = b.status === 'cancelled';
-        const statusColor = isCancelled ? '#e74c3c' : (b.status === 'confirmed' ? '#2ecc71' : '#f39c12');
+        const isApprovedOrConfirmed = b.status === 'confirmed' || b.status === 'approved';
+        const statusColor = isCancelled ? '#e74c3c' : (isApprovedOrConfirmed ? '#2ecc71' : '#f39c12');
         
         // Formatting the date to be more readable (e.g., "15 April 2026")
         const travelDate = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-GB', {
@@ -2274,12 +2273,14 @@ window.renderAgencyBookings = function(bookings) {
             `<div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">🛡️ 9% Policy Verified</div>` : 
             `<div style="background:#eee; color:#777; padding:5px 12px; border-radius:20px; font-size:11px;">Standard Policy</div>`;
 
-        // Problem 1 Fix: Dynamically create trekking details HTML if selected by customer
+        // Problem 1 Fix: Dynamically track quantities using precise database columns
         let trekkingDetailsHtml = '';
+        
+        // 1. Kedarnath Details Rendering
         if (b.keda_ghoda_qty > 0 || b.keda_dandi_qty > 0 || b.keda_kandi_qty > 0 || b.keda_pitthu_qty > 0) {
-            trekkingDetailsHtml = `
+            trekkingDetailsHtml += `
                 <div style="grid-column: span 2; background: #fffcf0; padding: 8px 12px; border-radius: 8px; border: 1px dashed #f39c12; margin-top: 5px;">
-                    <span style="font-weight:bold; color:#e67e22;">🏔️ Kedarnath Trekking Services:</span>
+                    <span style="font-weight:bold; color:#e67e22;">🏔️ Trekking with Kedarnath:</span>
                     <span style="font-size:12px; color:#555; margin-left:5px;">
                         ${b.keda_ghoda_qty ? `🐴 Ghoda: ${b.keda_ghoda_qty}x ` : ''}
                         ${b.keda_dandi_qty ? `🪑 Dandi: ${b.keda_dandi_qty}x ` : ''}
@@ -2287,14 +2288,17 @@ window.renderAgencyBookings = function(bookings) {
                         ${b.keda_pitthu_qty ? `👤 Pitthu: ${b.keda_pitthu_qty}x ` : ''}
                     </span>
                 </div>`;
-        } else if (b.vaishno_ghoda_qty > 0 || b.vaishno_dandi_qty > 0 || b.vaishno_pitthu_qty > 0) {
-            trekkingDetailsHtml = `
+        }
+
+        // 2. Vaishno Devi Details Rendering (Using exact vaishno_*_price columns)
+        if (b.vaishno_ghoda_price > 0 || b.vaishno_dandi_price > 0 || b.vaishno_pitthu_price > 0) {
+            trekkingDetailsHtml += `
                 <div style="grid-column: span 2; background: #f0faff; padding: 8px 12px; border-radius: 8px; border: 1px dashed #2980b9; margin-top: 5px;">
-                    <span style="font-weight:bold; color:#2980b9;">🏔️ Vaishno Devi Trekking Services:</span>
+                    <span style="font-weight:bold; color:#2980b9;">🏔️ Trekking with Vaishno Devi:</span>
                     <span style="font-size:12px; color:#555; margin-left:5px;">
-                        ${b.vaishno_ghoda_qty ? `🐴 Ghoda: ${b.vaishno_ghoda_qty}x ` : ''}
-                        ${b.vaishno_dandi_qty ? `🪑 Dandi/Palki: ${b.vaishno_dandi_qty}x ` : ''}
-                        ${b.vaishno_pitthu_qty ? `👤 Pitthu: ${b.vaishno_pitthu_qty}x ` : ''}
+                        ${b.vaishno_ghoda_price ? `🐴 Ghoda: ${b.vaishno_ghoda_price}x ` : ''}
+                        ${b.vaishno_dandi_price ? `🪑 Dandi/Palki: ${b.vaishno_dandi_price}x ` : ''}
+                        ${b.vaishno_pitthu_price ? `👤 Pitthu: ${b.vaishno_pitthu_price}x ` : ''}
                     </span>
                 </div>`;
         }
@@ -2332,12 +2336,16 @@ window.renderAgencyBookings = function(bookings) {
                 <div style="margin-top:15px; padding:12px; background:#fdedec; color:#c0392b; border-radius:8px; text-align:center; font-weight:bold; border: 1px solid #fadbd8;">
                     ⚠️ CANCELLATION: Customer has cancelled this request.
                 </div>
+            ` : (isApprovedOrConfirmed ? `
+                <div style="margin-top:15px; padding:12px; background:#e8f8f5; color:#2ecc71; border-radius:8px; text-align:center; font-weight:bold; border: 1px solid #d1f2eb;">
+                    ✅ APPROVED: This request is accepted and sent for customer payment.
+                </div>
             ` : `
                 <div style="margin-top:15px; display:flex; gap:10px;">
-                    <button onclick="window.updateBookingStatus('${b.id}', 'confirmed')" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
+                    <button onclick="window.updateBookingStatus('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
                     <button onclick="window.updateBookingStatus('${b.id}', 'rejected')" style="background:#f4f4f4; color:#666; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Decline</button>
                 </div>
-            `}
+            `)}
         </div>`;
     }).join('');
 
