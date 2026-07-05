@@ -1470,21 +1470,41 @@ window.showTab = async function(tabName) {
 
             const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
 
-            // --- FIXED: Trekking services addon data display layout ---
-            let trekDetailsHtml = '';
-            if ((b.booked_ghoda_qty && b.booked_ghoda_qty > 0) || 
-                (b.booked_dandi_qty && b.booked_dandi_qty > 0) || 
-                (b.booked_kandi_qty && b.booked_kandi_qty > 0) || 
-                (b.booked_pitthu_qty && b.booked_pitthu_qty > 0)) {
-                
-                trekDetailsHtml = `
+            // --- BREAKDOWN GENERATION FOR KEDARNATH AND VAISHNO DEVI TREKKING SERVICES ---
+            let trekkingHtml = '';
+            
+            // 1. Kedarnath Section Check
+            const kGhoda = parseInt(b.kedar_ghoda_Qty) || 0;
+            const kDandi = parseInt(b.kedar_dandi_Qty) || 0;
+            const kPitthu = parseInt(b.kedar_pitthu_Qty) || 0;
+            const kKandi = parseInt(b.kedar_kandi_Qty) || 0;
+
+            if (kGhoda > 0 || kDandi > 0 || kPitthu > 0 || kKandi > 0) {
+                trekkingHtml += `
+                <div style="margin-top: 10px; padding: 12px; background: #f0f7ff; border: 1px solid #badc58; border-radius: 8px; font-size: 13px;">
+                    <b style="color: #2980b9; display:block; margin-bottom:5px;">⛰️ Trekking Service Only For Kedarnath:</b>
+                    <ul style="margin: 0; padding-left: 20px; color: #2d3436;">
+                        ${kGhoda > 0 ? `<li>🐴 Ghoda/Horse: <b>${kGhoda} Members</b></li>` : ''}
+                        ${kDandi > 0 ? `<li>🪑 Dandi/Palanquin: <b>${kDandi} Members</b></li>` : ''}
+                        ${kPitthu > 0 ? `<li>🎒 Pitthu/Porter: <b>${kPitthu} Members</b></li>` : ''}
+                        ${kKandi > 0 ? `<li>🧺 Kandi/Basket: <b>${kKandi} Members</b></li>` : ''}
+                    </ul>
+                </div>`;
+            }
+
+            // 2. Vaishno Devi Section Check (Reading from columns as named by you)
+            const vGhoda = parseInt(b.vaishno_ghoda_price) || 0;
+            const vDandi = parseInt(b.vaishno_dandi_price) || 0;
+            const vPitthu = parseInt(b.vaishno_pitthu_price) || 0;
+
+            if (vGhoda > 0 || vDandi > 0 || vPitthu > 0) {
+                trekkingHtml += `
                 <div style="margin-top: 10px; padding: 12px; background: #fffdf0; border: 1px solid #ffeaa7; border-radius: 8px; font-size: 13px;">
-                    <b style="color: #e67e22; display:block; margin-bottom:6px;">⛰️ Selected Mountain Trek Services:</b>
-                    <ul style="margin: 0; padding-left: 20px; color: #2d3436; line-height: 1.6;">
-                        ${b.booked_ghoda_qty > 0 ? `<li>Horse / Ghoda: <b>${b.booked_ghoda_qty} Members</b></li>` : ''}
-                        ${b.booked_dandi_qty > 0 ? `<li>Palanquin / Dandi: <b>${b.booked_dandi_qty} Members</b></li>` : ''}
-                        ${b.booked_kandi_qty > 0 ? `<li>Basket / Kandi: <b>${b.booked_kandi_qty} Members</b></li>` : ''}
-                        ${b.booked_pitthu_qty > 0 ? `<li>Porter / Pitthu: <b>${b.booked_pitthu_qty} Members</b></li>` : ''}
+                    <b style="color: #e67e22; display:block; margin-bottom:5px;">⛰️ Trekking Service Only For Vaishno Devi:</b>
+                    <ul style="margin: 0; padding-left: 20px; color: #2d3436;">
+                        ${vGhoda > 0 ? `<li>🐴 Ghoda/Horse: <b>${vGhoda} Members</b></li>` : ''}
+                        ${vDandi > 0 ? `<li>🪑 Dandi/Palanquin: <b>${vDandi} Members</b></li>` : ''}
+                        ${vPitthu > 0 ? `<li>🎒 Pitthu/Porter: <b>${vPitthu} Members</b></li>` : ''}
                     </ul>
                 </div>`;
             }
@@ -1523,8 +1543,7 @@ window.showTab = async function(tabName) {
                 <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="width: 100%;">
                         <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
-                        ${trekDetailsHtml}
-                        <p style="font-size:12px; margin-top:5px; color:#999;">Customer Email: ${displayEmail}</p>
+                        ${trekkingHtml} <p style="font-size:12px; margin-top:8px; color:#999;">Customer Email: ${displayEmail}</p>
                     </div>
                     ${b.policy_agreed ? `
                         <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:4px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71;">
