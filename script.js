@@ -830,7 +830,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     if (vPitthuChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_pitthu').dataset.rate) * vPitthuQty);
 
     try {
-        // Problem 1 Fix: Explicitly mapped exact column names requested by your schema specifications
+        // Corrected Column Mappings for Database Synchronization
         const { error } = await client.from('bookings').insert([{
             package_id: packageId, 
             package_title: packageTitle,
@@ -851,16 +851,20 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             keda_kandi_qty: kandiQty,
             keda_pitthu_qty: pitthuQty,
 
-            // Vaishno Devi accurate mappings
+            // Fixed Vaishno Devi Mappings (Changed from _price to _qty)
             vaishno_ghoda_qty: vGhodaQty,
             vaishno_dandi_qty: vDandiQty,
-            vaishno_pitthu_qty: vPitthuQty
+            vaishno_pitthu_qty: vPitthuQty,
         }]);
 
         if (!error) {
             alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString()}. Total: ₹${totalPrice}`);
             document.getElementById('detail-modal').style.display = 'none';
-            renderCustomerRequests();
+            
+            // Problem 2 Fix: Safe call using window context
+            if (typeof window.renderCustomerRequests === 'function') {
+                window.renderCustomerRequests();
+            }
         } else {
             alert("Booking Error: " + error.message);
         }
@@ -2270,6 +2274,31 @@ window.renderAgencyBookings = function(bookings) {
             `<div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">🛡️ 9% Policy Verified</div>` : 
             `<div style="background:#eee; color:#777; padding:5px 12px; border-radius:20px; font-size:11px;">Standard Policy</div>`;
 
+        // Problem 1 Fix: Dynamically create trekking details HTML if selected by customer
+        let trekkingDetailsHtml = '';
+        if (b.keda_ghoda_qty > 0 || b.keda_dandi_qty > 0 || b.keda_kandi_qty > 0 || b.keda_pitthu_qty > 0) {
+            trekkingDetailsHtml = `
+                <div style="grid-column: span 2; background: #fffcf0; padding: 8px 12px; border-radius: 8px; border: 1px dashed #f39c12; margin-top: 5px;">
+                    <span style="font-weight:bold; color:#e67e22;">🏔️ Kedarnath Trekking Services:</span>
+                    <span style="font-size:12px; color:#555; margin-left:5px;">
+                        ${b.keda_ghoda_qty ? `🐴 Ghoda: ${b.keda_ghoda_qty}x ` : ''}
+                        ${b.keda_dandi_qty ? `🪑 Dandi: ${b.keda_dandi_qty}x ` : ''}
+                        ${b.keda_kandi_qty ? `🎒 Kandi: ${b.keda_kandi_qty}x ` : ''}
+                        ${b.keda_pitthu_qty ? `👤 Pitthu: ${b.keda_pitthu_qty}x ` : ''}
+                    </span>
+                </div>`;
+        } else if (b.vaishno_ghoda_qty > 0 || b.vaishno_dandi_qty > 0 || b.vaishno_pitthu_qty > 0) {
+            trekkingDetailsHtml = `
+                <div style="grid-column: span 2; background: #f0faff; padding: 8px 12px; border-radius: 8px; border: 1px dashed #2980b9; margin-top: 5px;">
+                    <span style="font-weight:bold; color:#2980b9;">🏔️ Vaishno Devi Trekking Services:</span>
+                    <span style="font-size:12px; color:#555; margin-left:5px;">
+                        ${b.vaishno_ghoda_qty ? `🐴 Ghoda: ${b.vaishno_ghoda_qty}x ` : ''}
+                        ${b.vaishno_dandi_qty ? `🪑 Dandi/Palki: ${b.vaishno_dandi_qty}x ` : ''}
+                        ${b.vaishno_pitthu_qty ? `👤 Pitthu: ${b.vaishno_pitthu_qty}x ` : ''}
+                    </span>
+                </div>`;
+        }
+
         return `
         <div class="card" style="border-left: 6px solid ${statusColor}; margin-bottom:15px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05); opacity: ${isCancelled ? '0.75' : '1'}">
             <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -2293,9 +2322,10 @@ window.renderAgencyBookings = function(bookings) {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; color:#444;">
                 <div>👤 <b>Customer:</b> ${b.customer_email}</div>
                 <div>📞 <b>Contact:</b> ${b.customer_phone}</div>
-                <div>🚗 <b>Vehicle:</b> ${b.selected_vehicle}</div>
+                <div>🚗 <b>Vehicle:</b> ${b.selected_vehicle || b.selected_vehicles || 'None'}</div>
                 <div>💰 <b>Total:</b> ₹${b.total_price}</div>
                 <div style="grid-column: span 2;">📍 <b>Pickup Address:</b> ${b.customer_address || 'N/A'}</div>
+                ${trekkingDetailsHtml}
             </div>
 
             ${isCancelled ? `
