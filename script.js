@@ -1544,7 +1544,9 @@ window.showTab = async function(tabName) {
                     <div style="width: 100%;">
                         <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
                         
-                        ${trekkingHtml} <p style="font-size:12px; margin-top:8px; color:#999;">Customer Email: ${displayEmail}</p>
+                        ${trekkingHtml} 
+                        
+                        <p style="font-size:12px; margin-top:8px; color:#999;">Customer Email: ${displayEmail}</p>
                     </div>
                     ${b.policy_agreed ? `
                         <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:4px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71; flex-shrink:0;">
