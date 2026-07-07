@@ -1473,7 +1473,7 @@ window.showTab = async function(tabName) {
             // --- DEEP SETUP FOR TREKKING SERVICES SECTIONS ---
             let trekkingHtml = '';
             
-            // 1. Kedarnath Service Setup (Using: kedar_ghoda_Qty, kedar_dandi_Qty, kedar_pitthu_Qty, kedar_kandi_Qty)
+            // 1. Kedarnath Service Setup (Using correct DB columns)
             const kGhoda = parseInt(b.kedar_ghoda_Qty) || 0;
             const kDandi = parseInt(b.kedar_dandi_Qty) || 0;
             const kPitthu = parseInt(b.kedar_pitthu_Qty) || 0;
@@ -1493,7 +1493,7 @@ window.showTab = async function(tabName) {
                 </div>`;
             }
 
-            // 2. Vaishno Devi Service Setup (Using: vaishno_ghoda_price, vaishno_dandi_price, vaishno_pitthu_price)
+            // 2. Vaishno Devi Service Setup (Using exact requested DB columns)
             const vGhoda = parseInt(b.vaishno_ghoda_price) || 0;
             const vDandi = parseInt(b.vaishno_dandi_price) || 0;
             const vPitthu = parseInt(b.vaishno_pitthu_price) || 0;
