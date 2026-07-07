@@ -1470,42 +1470,44 @@ window.showTab = async function(tabName) {
 
             const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
 
-            // --- TREKKING SERVICES BREAKDOWN LOGIC ---
+            // --- DEEP SETUP FOR TREKKING SERVICES SECTIONS ---
             let trekkingHtml = '';
             
-            // 1. Kedarnath Service Breakdown
+            // 1. Kedarnath Service Setup (Using: kedar_ghoda_Qty, kedar_dandi_Qty, kedar_pitthu_Qty, kedar_kandi_Qty)
             const kGhoda = parseInt(b.kedar_ghoda_Qty) || 0;
             const kDandi = parseInt(b.kedar_dandi_Qty) || 0;
             const kPitthu = parseInt(b.kedar_pitthu_Qty) || 0;
             const kKandi = parseInt(b.kedar_kandi_Qty) || 0;
 
             if (kGhoda > 0 || kDandi > 0 || kPitthu > 0 || kKandi > 0) {
+                let items = [];
+                if (kGhoda > 0) items.push(`Ghoda: <b>${kGhoda} Members</b>`);
+                if (kDandi > 0) items.push(`Dandi: <b>${kDandi} Members</b>`);
+                if (kPitthu > 0) items.push(`Pitthu: <b>${kPitthu} Members</b>`);
+                if (kKandi > 0) items.push(`Kandi: <b>${kKandi} Members</b>`);
+
                 trekkingHtml += `
                 <div style="margin-top: 8px; padding: 10px 15px; background: #f0faf7; border-left: 3px solid #badc58; border-radius: 4px; font-size: 13px;">
                     <span style="color: #27ae60; font-weight: bold; display: block; margin-bottom: 4px;">⛰️ Trekking Service Only For Kedarnath:</span>
-                    <span style="color: #555;">
-                        ${kGhoda > 0 ? `Ghoda: <b>${kGhoda} Members</b>${kDandi > 0 || kPitthu > 0 || kKandi > 0 ? ' | ' : ''}` : ''}
-                        ${kDandi > 0 ? `Dandi: <b>${kDandi} Members</b>${kPitthu > 0 || kKandi > 0 ? ' | ' : ''}` : ''}
-                        ${kPitthu > 0 ? `Pitthu: <b>${kPitthu} Members</b>${kKandi > 0 ? ' | ' : ''}` : ''}
-                        ${kKandi > 0 ? `Kandi: <b>${kKandi} Members</b>` : ''}
-                    </span>
+                    <span style="color: #555;">${items.join(' | ')}</span>
                 </div>`;
             }
 
-            // 2. Vaishno Devi Service Breakdown
+            // 2. Vaishno Devi Service Setup (Using: vaishno_ghoda_price, vaishno_dandi_price, vaishno_pitthu_price)
             const vGhoda = parseInt(b.vaishno_ghoda_price) || 0;
             const vDandi = parseInt(b.vaishno_dandi_price) || 0;
             const vPitthu = parseInt(b.vaishno_pitthu_price) || 0;
 
             if (vGhoda > 0 || vDandi > 0 || vPitthu > 0) {
+                let items = [];
+                if (vGhoda > 0) items.push(`Ghoda: <b>${vGhoda} Members</b>`);
+                if (vDandi > 0) items.push(`Dandi: <b>${vDandi} Members</b>`);
+                if (vPitthu > 0) items.push(`Pitthu: <b>${vPitthu} Members</b>`);
+
                 trekkingHtml += `
                 <div style="margin-top: 8px; padding: 10px 15px; background: #fffcf0; border-left: 3px solid #f1c40f; border-radius: 4px; font-size: 13px;">
                     <span style="color: #d35400; font-weight: bold; display: block; margin-bottom: 4px;">⛰️ Trekking Service Only For Vaishno Devi:</span>
-                    <span style="color: #555;">
-                        ${vGhoda > 0 ? `Ghoda: <b>${vGhoda} Members</b>${vDandi > 0 || vPitthu > 0 ? ' | ' : ''}` : ''}
-                        ${vDandi > 0 ? `Dandi: <b>${vDandi} Members</b>${vPitthu > 0 ? ' | ' : ''}` : ''}
-                        ${vPitthu > 0 ? `Pitthu: <b>${vPitthu} Members</b>` : ''}
-                    </span>
+                    <span style="color: #555;">${items.join(' | ')}</span>
                 </div>`;
             }
 
