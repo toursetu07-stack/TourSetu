@@ -1500,19 +1500,19 @@ window.showTab = async function(tabName) {
             }
 
             // 2. VAISHNO DEVI TREKKING SERVICE SELECTION
-            // Prices coming from: vaishno_*_price | Members coming from SQL match: vaishno_*_max_members or fallback ghoda_max/dandi_max
+            // Prices coming from: vaishno_*_price | Members coming from updated explicit SQL match columns
             const vGhodaPrice = parseFloat(b.vaishno_ghoda_price) || 0;
             const vDandiPrice = parseFloat(b.vaishno_dandi_price) || 0;
             const vPitthuPrice = parseFloat(b.vaishno_pitthu_price) || 0;
 
-            const vGhodaMax = parseInt(b.vaishno_ghoda_max_members || b.ghoda_max) || 0;
-            const vDandiMax = parseInt(b.vaishno_dandi_max_members || b.dandi_max) || 0;
-            const vPitthuMax = parseInt(b.vaishno_pitthu_max_members || b.pitthu_max) || 0;
+            const vGhodaMax = parseInt(b.vaishno_ghoda_max_member) || 0;
+            const vDandiMax = parseInt(b.vaishno_palki_max_member) || 0;
+            const vPitthuMax = parseInt(b.vaishno_pitthu_max_member) || 0;
 
             if (vGhodaPrice > 0 || vDandiPrice > 0 || vPitthuPrice > 0) {
                 let items = [];
                 if (vGhodaPrice > 0) items.push(`Ghoda: <b>₹${vGhodaPrice}</b> (${vGhodaMax} Person)`);
-                if (vDandiPrice > 0) items.push(`Dandi: <b>₹${vDandiPrice}</b> (${vDandiMax} Person)`);
+                if (vDandiPrice > 0) items.push(`Palki: <b>₹${vDandiPrice}</b> (${vDandiMax} Person)`);
                 if (vPitthuPrice > 0) items.push(`Pitthu: <b>₹${vPitthuPrice}</b> (${vPitthuMax} Person)`);
 
                 trekkingHtml += `
