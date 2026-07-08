@@ -1473,50 +1473,52 @@ window.showTab = async function(tabName) {
             // --- FIXED SETUP FOR TREKKING SERVICES SECTIONS ---
             let trekkingHtml = '';
             
-            // 1. Kedarnath Trekking Service (Qty & Max Members)
-            const kGhoda = parseInt(b.kedar_ghoda_Qty) || 0;
-            const kDandi = parseInt(b.kedar_dandi_Qty) || 0;
-            const kPitthu = parseInt(b.kedar_pitthu_Qty) || 0;
-            const kKandi = parseInt(b.kedar_kandi_Qty) || 0;
+            // 1. KEDARNATH TREKKING SERVICE SELECTION
+            // Prices coming from: kedar_*_Qty | Members coming from SQL match: kedar_*_max_members or fallback ghoda_max
+            const kGhodaPrice = parseFloat(b.kedar_ghoda_Qty) || 0;
+            const kDandiPrice = parseFloat(b.kedar_dandi_Qty) || 0;
+            const kPitthuPrice = parseFloat(b.kedar_pitthu_Qty) || 0;
+            const kKandiPrice = parseFloat(b.kedar_kandi_Qty) || 0;
 
-            const kGhodaMax = parseInt(b.kedar_ghoda_max_members) || 0;
-            const kDandiMax = parseInt(b.kedar_dandi_max_members) || 0;
-            const kPitthuMax = parseInt(b.kedar_pitthu_max_members) || 0;
-            const kKandiMax = parseInt(b.kedar_kandi_max_members) || 0;
+            const kGhodaMax = parseInt(b.kedar_ghoda_max_members || b.ghoda_max) || 0;
+            const kDandiMax = parseInt(b.kedar_dandi_max_members || b.dandi_max) || 0;
+            const kPitthuMax = parseInt(b.kedar_pitthu_max_members || b.pitthu_max) || 0;
+            const kKandiMax = parseInt(b.kedar_kandi_max_members || b.kandi_max) || 0;
 
-            if (kGhoda > 0 || kDandi > 0 || kPitthu > 0 || kKandi > 0 || kGhodaMax > 0 || kDandiMax > 0 || kPitthuMax > 0 || kKandiMax > 0) {
+            if (kGhodaPrice > 0 || kDandiPrice > 0 || kPitthuPrice > 0 || kKandiPrice > 0) {
                 let items = [];
-                if (kGhoda > 0 || kGhodaMax > 0) items.push(`Ghoda: <b>${kGhoda} Qty</b> (Max: ${kGhodaMax})`);
-                if (kDandi > 0 || kDandiMax > 0) items.push(`Dandi: <b>${kDandi} Qty</b> (Max: ${kDandiMax})`);
-                if (kPitthu > 0 || kPitthuMax > 0) items.push(`Pitthu: <b>${kPitthu} Qty</b> (Max: ${kPitthuMax})`);
-                if (kKandi > 0 || kKandiMax > 0) items.push(`Kandi: <b>${kKandi} Qty</b> (Max: ${kKandiMax})`);
+                if (kGhodaPrice > 0) items.push(`Ghoda: <b>₹${kGhodaPrice}</b> (${kGhodaMax} Person)`);
+                if (kDandiPrice > 0) items.push(`Dandi: <b>₹${kDandiPrice}</b> (${kDandiMax} Person)`);
+                if (kPitthuPrice > 0) items.push(`Pitthu: <b>₹${kPitthuPrice}</b> (${kPitthuMax} Person)`);
+                if (kKandiPrice > 0) items.push(`Kandi: <b>₹${kKandiPrice}</b> (${kKandiMax} Person)`);
 
                 trekkingHtml += `
-                <div style="margin-top: 8px; padding: 10px 15px; background: #f0faf7; border-left: 3px solid #badc58; border-radius: 4px; font-size: 13px;">
-                    <span style="color: #27ae60; font-weight: bold; display: block; margin-bottom: 4px;">⛰️ Trekking Service Only For Kedarnath:</span>
-                    <span style="color: #555;">${items.join(' | ')}</span>
+                <div style="margin-top: 10px; padding: 12px 15px; background: #f0faf7; border-left: 4px solid #badc58; border-radius: 6px; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                    <span style="color: #27ae60; font-weight: bold; display: block; margin-bottom: 5px; font-size:14px;">⛰️ Trekking Service Only For Kedarnath:</span>
+                    <span style="color: #444; line-height: 1.6;">${items.join(' | ')}</span>
                 </div>`;
             }
 
-            // 2. Vaishno Devi Trekking Service (Price & Max Members)
-            const vGhoda = parseInt(b.vaishno_ghoda_price) || 0;
-            const vDandi = parseInt(b.vaishno_dandi_price) || 0;
-            const vPitthu = parseInt(b.vaishno_pitthu_price) || 0;
+            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION
+            // Prices coming from: vaishno_*_price | Members coming from SQL match: vaishno_*_max_members or fallback ghoda_max/dandi_max
+            const vGhodaPrice = parseFloat(b.vaishno_ghoda_price) || 0;
+            const vDandiPrice = parseFloat(b.vaishno_dandi_price) || 0;
+            const vPitthuPrice = parseFloat(b.vaishno_pitthu_price) || 0;
 
-            const vGhodaMax = parseInt(b.vaishno_ghoda_max_members) || 0;
-            const vDandiMax = parseInt(b.vaishno_dandi_max_members) || 0;
-            const vPitthuMax = parseInt(b.vaishno_pitthu_max_members) || 0;
+            const vGhodaMax = parseInt(b.vaishno_ghoda_max_members || b.ghoda_max) || 0;
+            const vDandiMax = parseInt(b.vaishno_dandi_max_members || b.dandi_max) || 0;
+            const vPitthuMax = parseInt(b.vaishno_pitthu_max_members || b.pitthu_max) || 0;
 
-            if (vGhoda > 0 || vDandi > 0 || vPitthu > 0 || vGhodaMax > 0 || vDandiMax > 0 || vPitthuMax > 0) {
+            if (vGhodaPrice > 0 || vDandiPrice > 0 || vPitthuPrice > 0) {
                 let items = [];
-                if (vGhoda > 0 || vGhodaMax > 0) items.push(`Ghoda Price: <b>₹${vGhoda}</b> (Max: ${vGhodaMax})`);
-                if (vDandi > 0 || vDandiMax > 0) items.push(`Dandi Price: <b>₹${vDandi}</b> (Max: ${vDandiMax})`);
-                if (vPitthu > 0 || vPitthuMax > 0) items.push(`Pitthu Price: <b>₹${vPitthu}</b> (Max: ${vPitthuMax})`);
+                if (vGhodaPrice > 0) items.push(`Ghoda: <b>₹${vGhodaPrice}</b> (${vGhodaMax} Person)`);
+                if (vDandiPrice > 0) items.push(`Dandi: <b>₹${vDandiPrice}</b> (${vDandiMax} Person)`);
+                if (vPitthuPrice > 0) items.push(`Pitthu: <b>₹${vPitthuPrice}</b> (${vPitthuMax} Person)`);
 
                 trekkingHtml += `
-                <div style="margin-top: 8px; padding: 10px 15px; background: #fffcf0; border-left: 3px solid #f1c40f; border-radius: 4px; font-size: 13px;">
-                    <span style="color: #d35400; font-weight: bold; display: block; margin-bottom: 4px;">⛰️ Trekking Service Only For Vaishno Devi:</span>
-                    <span style="color: #555;">${items.join(' | ')}</span>
+                <div style="margin-top: 10px; padding: 12px 15px; background: #fffcf0; border-left: 4px solid #f1c40f; border-radius: 6px; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                    <span style="color: #d35400; font-weight: bold; display: block; margin-bottom: 5px; font-size:14px;">⛰️ Trekking Service Only For Vaishno Devi:</span>
+                    <span style="color: #444; line-height: 1.6;">${items.join(' | ')}</span>
                 </div>`;
             }
 
