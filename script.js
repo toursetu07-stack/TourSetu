@@ -2802,6 +2802,7 @@ window.processSave = async function(packageId = '') {
         const vaishno_dandi_price = vaishnoDandiEnabled ? (parseFloat(document.getElementById('p-vaishno-dandi-price').value) || 0) : 0;
         const vaishno_pitthu_price = vaishnoPitthuEnabled ? (parseFloat(document.getElementById('p-vaishno-pitthu-price').value) || 0) : 0;
 
+        // EXACTLY matching SQL columns from previous query
         const vaishno_ghoda_max = vaishnoGhodaEnabled ? (parseInt(document.getElementById('p-vaishno-ghoda-max').value) || 1) : 1;
         const vaishno_dandi_max = vaishnoDandiEnabled ? (parseInt(document.getElementById('p-vaishno-dandi-max').value) || 1) : 1;
         const vaishno_pitthu_max = vaishnoPitthuEnabled ? (parseInt(document.getElementById('p-vaishno-pitthu-max').value) || 1) : 1;
@@ -2830,7 +2831,7 @@ window.processSave = async function(packageId = '') {
             kandi_max,
             pitthu_max,
 
-            // Vaishno Devi Fields mapping
+            // Vaishno Devi Fields mapping (Ab exact SQL schema ke mutabik sync ho gaya)
             vaishno_ghoda_price,
             vaishno_dandi_price,
             vaishno_pitthu_price,
