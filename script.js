@@ -2975,11 +2975,11 @@ window.processSave = async function(pkgId) {
             pitthu_price: pitthuPrice,
             pitthu_max: pitthuMax,
 
-            // VAISHNO DEVI DATABASE MAPPING (FIXED AS REQUESTED)
+            // VAISHNO DEVI DATABASE MAPPING (FIXED TO MATCH SQL EXACTLY)
             vaishno_ghoda_price: vaishnoGhodaPrice, 
             vaishno_ghoda_max: vaishnoGhodaMax,
-            vaishno_palki_max: vaishnoDandiMax,
             vaishno_dandi_price: vaishnoDandiPrice, 
+            vaishno_dandi_max: vaishnoDandiMax, // Fixed key name mismatch here
             vaishno_pitthu_price: vaishnoPitthuPrice,
             vaishno_pitthu_max: vaishnoPitthuMax
         };
