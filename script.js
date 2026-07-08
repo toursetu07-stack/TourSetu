@@ -1470,21 +1470,26 @@ window.showTab = async function(tabName) {
 
             const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
 
-            // --- DEEP SETUP FOR TREKKING SERVICES SECTIONS ---
+            // --- FIXED SETUP FOR TREKKING SERVICES SECTIONS ---
             let trekkingHtml = '';
             
-            // 1. Kedarnath Service Setup (Using correct DB columns)
+            // 1. Kedarnath Trekking Service (Qty & Max Members)
             const kGhoda = parseInt(b.kedar_ghoda_Qty) || 0;
             const kDandi = parseInt(b.kedar_dandi_Qty) || 0;
             const kPitthu = parseInt(b.kedar_pitthu_Qty) || 0;
             const kKandi = parseInt(b.kedar_kandi_Qty) || 0;
 
-            if (kGhoda > 0 || kDandi > 0 || kPitthu > 0 || kKandi > 0) {
+            const kGhodaMax = parseInt(b.kedar_ghoda_max_members) || 0;
+            const kDandiMax = parseInt(b.kedar_dandi_max_members) || 0;
+            const kPitthuMax = parseInt(b.kedar_pitthu_max_members) || 0;
+            const kKandiMax = parseInt(b.kedar_kandi_max_members) || 0;
+
+            if (kGhoda > 0 || kDandi > 0 || kPitthu > 0 || kKandi > 0 || kGhodaMax > 0 || kDandiMax > 0 || kPitthuMax > 0 || kKandiMax > 0) {
                 let items = [];
-                if (kGhoda > 0) items.push(`Ghoda: <b>${kGhoda} Members</b>`);
-                if (kDandi > 0) items.push(`Dandi: <b>${kDandi} Members</b>`);
-                if (kPitthu > 0) items.push(`Pitthu: <b>${kPitthu} Members</b>`);
-                if (kKandi > 0) items.push(`Kandi: <b>${kKandi} Members</b>`);
+                if (kGhoda > 0 || kGhodaMax > 0) items.push(`Ghoda: <b>${kGhoda} Qty</b> (Max: ${kGhodaMax})`);
+                if (kDandi > 0 || kDandiMax > 0) items.push(`Dandi: <b>${kDandi} Qty</b> (Max: ${kDandiMax})`);
+                if (kPitthu > 0 || kPitthuMax > 0) items.push(`Pitthu: <b>${kPitthu} Qty</b> (Max: ${kPitthuMax})`);
+                if (kKandi > 0 || kKandiMax > 0) items.push(`Kandi: <b>${kKandi} Qty</b> (Max: ${kKandiMax})`);
 
                 trekkingHtml += `
                 <div style="margin-top: 8px; padding: 10px 15px; background: #f0faf7; border-left: 3px solid #badc58; border-radius: 4px; font-size: 13px;">
@@ -1493,16 +1498,20 @@ window.showTab = async function(tabName) {
                 </div>`;
             }
 
-            // 2. Vaishno Devi Service Setup (Using exact requested DB columns)
+            // 2. Vaishno Devi Trekking Service (Price & Max Members)
             const vGhoda = parseInt(b.vaishno_ghoda_price) || 0;
             const vDandi = parseInt(b.vaishno_dandi_price) || 0;
             const vPitthu = parseInt(b.vaishno_pitthu_price) || 0;
 
-            if (vGhoda > 0 || vDandi > 0 || vPitthu > 0) {
+            const vGhodaMax = parseInt(b.vaishno_ghoda_max_members) || 0;
+            const vDandiMax = parseInt(b.vaishno_dandi_max_members) || 0;
+            const vPitthuMax = parseInt(b.vaishno_pitthu_max_members) || 0;
+
+            if (vGhoda > 0 || vDandi > 0 || vPitthu > 0 || vGhodaMax > 0 || vDandiMax > 0 || vPitthuMax > 0) {
                 let items = [];
-                if (vGhoda > 0) items.push(`Ghoda: <b>${vGhoda} Members</b>`);
-                if (vDandi > 0) items.push(`Dandi: <b>${vDandi} Members</b>`);
-                if (vPitthu > 0) items.push(`Pitthu: <b>${vPitthu} Members</b>`);
+                if (vGhoda > 0 || vGhodaMax > 0) items.push(`Ghoda Price: <b>₹${vGhoda}</b> (Max: ${vGhodaMax})`);
+                if (vDandi > 0 || vDandiMax > 0) items.push(`Dandi Price: <b>₹${vDandi}</b> (Max: ${vDandiMax})`);
+                if (vPitthu > 0 || vPitthuMax > 0) items.push(`Pitthu Price: <b>₹${vPitthu}</b> (Max: ${vPitthuMax})`);
 
                 trekkingHtml += `
                 <div style="margin-top: 8px; padding: 10px 15px; background: #fffcf0; border-left: 3px solid #f1c40f; border-radius: 4px; font-size: 13px;">
