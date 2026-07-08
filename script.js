@@ -2265,10 +2265,13 @@ window.processSave = async function(pkgId) {
             pitthu_price: pitthuPrice,
             pitthu_max: pitthuMax,
 
-            // VAISHNO DEVI DATABASE MAPPING (EXACT SCHEMA MATCH - NO EXTRA QTY COLUMNS)
+            // VAISHNO DEVI DATABASE MAPPING (FIXED: NOW SAVES MAX MEMBERS TO THE CORRECT COLUMNS)
             vaishno_ghoda_price: vaishnoGhodaPrice, 
+            vaishno_ghoda_max_members: vaishnoGhodaQty,
             vaishno_dandi_price: vaishnoDandiPrice,
-            vaishno_pitthu_price: vaishnoPitthuPrice
+            vaishno_dandi_max_members: vaishnoDandiQty,
+            vaishno_pitthu_price: vaishnoPitthuPrice,
+            vaishno_pitthu_max_members: vaishnoPitthuQty
         };
 
         let error;
