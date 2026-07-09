@@ -1498,13 +1498,14 @@ window.showTab = async function(tabName) {
                 </div>`;
             }
 
-            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION
+            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION (FIXED TO READ VAISHNO SPECIFIC COLUMNS)
             const vGhodaPrice = parseFloat(b.vaishno_ghoda_price) || 0;
             const vDandiPrice = parseFloat(b.vaishno_dandi_price) || 0;
             const vPitthuPrice = parseFloat(b.vaishno_pitthu_price) || 0;
 
+            // यहाँ पहले फ़ॉलबैक में ghoda_max (केदारनाथ वाला) आ रहा था, इसे पूरी तरह अलग कर के सिर्फ वैष्णो देवी के कॉलम से मैप कर दिया गया है।
             const vGhodaMax = parseInt(b.vaishno_ghoda_max_members || b.vaishno_ghoda_max) || 0;
-            const vDandiMax = parseInt(b.vaishno_dandi_max_members || b.vaishno_palki_max) || 0;
+            const vDandiMax = parseInt(b.vaishno_dandi_max_members || b.vaishno_dandi_max) || 0;
             const vPitthuMax = parseInt(b.vaishno_pitthu_max_members || b.vaishno_pitthu_max) || 0;
 
             if (vGhodaPrice > 0 || vDandiPrice > 0 || vPitthuPrice > 0) {
@@ -1585,9 +1586,9 @@ window.showTab = async function(tabName) {
         container.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h1>My Packages</h1>
-                <button onclick="window.renderPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
+                <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
             </div>
-            <div id="dashboard-content"></div>
+            <div id="package-form-area"></div>
             <div id="pkg-list-container"></div>`;
         
         const { data: myPackages } = await client.from('packages').select('*').eq('agency_id', user.id).order('created_at', { ascending: false });
@@ -1598,7 +1599,7 @@ window.showTab = async function(tabName) {
                     <h3 style="margin:0; color:#2d3436;">${p.title || 'Untitled'}</h3>
                     <p style="margin:5px 0; color:#666; font-size:14px;">📍 <b>From:</b> ${p.starting_location || 'N/A'}</p>
                 </div>
-                <button onclick="window.renderPackageForm(JSON.parse(decodeURIComponent('${encoded}')))" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold;">✏️ Edit</button>
+                <button onclick="showPackageForm('${encoded}')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold;">✏️ Edit</button>
             </div>`;
         }).join('');
     }
@@ -2202,9 +2203,9 @@ window.processSave = async function(pkgId) {
         let pitthuPrice = 0, pitthuMax = 1;
 
         // Vaishno Devi Variables
-        let vaishnoGhodaPrice = 0, vaishnoGhodaMax = 1;
-        let vaishnoDandiPrice = 0, vaishnoDandiMax = 1;
-        let vaishnoPitthuPrice = 0, vaishnoPitthuMax = 1;
+        let vaishnoGhodaPrice = 0, vaishnoGhodaQty = 1;
+        let vaishnoDandiPrice = 0, vaishnoDandiQty = 1;
+        let vaishnoPitthuPrice = 0, vaishnoPitthuQty = 1;
 
         if (isKedarSelected) {
             const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked;
@@ -2237,9 +2238,9 @@ window.processSave = async function(pkgId) {
             const vaishnoDandiMaxInput = document.getElementById('p-vaishno-dandi-max');
             const vaishnoPitthuMaxInput = document.getElementById('p-vaishno-pitthu-max');
 
-            vaishnoGhodaMax = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
-            vaishnoDandiMax = vaishnoDandiMaxInput ? (parseInt(vaishnoDandiMaxInput.value) || 1) : 1;
-            vaishnoPitthuMax = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
+            vaishnoGhodaQty = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
+            vaishnoDandiQty = vaishnoDandiMaxInput ? (parseInt(vaishnoDandiMaxInput.value) || 1) : 1;
+            vaishnoPitthuQty = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
 
             if (vaishnoGhodaEnabled) vaishnoGhodaPrice = parseFloat(document.getElementById('p-vaishno-ghoda-price')?.value) || 0;
             if (vaishnoDandiEnabled) vaishnoDandiPrice = parseFloat(document.getElementById('p-vaishno-dandi-price')?.value) || 0;
@@ -2264,13 +2265,13 @@ window.processSave = async function(pkgId) {
             pitthu_price: pitthuPrice,
             pitthu_max: pitthuMax,
 
-            // VAISHNO DEVI DATABASE MAPPING (FIXED AS REQUESTED)
+            // VAISHNO DEVI DATABASE MAPPING (FIXED: NOW SAVES MAX MEMBERS TO THE CORRECT COLUMNS)
             vaishno_ghoda_price: vaishnoGhodaPrice, 
-            vaishno_ghoda_max: vaishnoGhodaMax,
-            vaishno_palki_max: vaishnoDandiMax,
-            vaishno_dandi_price: vaishnoDandiPrice, 
+            vaishno_ghoda_max_members: vaishnoGhodaQty,
+            vaishno_dandi_price: vaishnoDandiPrice,
+            vaishno_dandi_max_members: vaishnoDandiQty,
             vaishno_pitthu_price: vaishnoPitthuPrice,
-            vaishno_pitthu_max: vaishnoPitthuMax
+            vaishno_pitthu_max_members: vaishnoPitthuQty
         };
 
         let error;
