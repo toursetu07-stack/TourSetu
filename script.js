@@ -1776,14 +1776,14 @@ window.toggleTrekPricingSection = function() {
     } else {
         vaishnoSection.style.display = 'none';
         if(document.getElementById('p-vaishno-ghoda-enable')) document.getElementById('p-vaishno-ghoda-enable').checked = false;
-        if(document.getElementById('p-vaishno-dandi-enable')) document.getElementById('p-vaishno-dandi-enable').checked = false;
+        if(document.getElementById('p-vaishno-palki-enable')) document.getElementById('p-vaishno-palki-enable').checked = false;
         if(document.getElementById('p-vaishno-pitthu-enable')) document.getElementById('p-vaishno-pitthu-enable').checked = false;
 
         if(document.getElementById('p-vaishno-ghoda-price')) document.getElementById('p-vaishno-ghoda-price').value = '';
-        if(document.getElementById('p-vaishno-dandi-price')) document.getElementById('p-vaishno-dandi-price').value = '';
+        if(document.getElementById('p-vaishno-palki-price')) document.getElementById('p-vaishno-palki-price').value = '';
         if(document.getElementById('p-vaishno-pitthu-price')) document.getElementById('p-vaishno-pitthu-price').value = '';
         if(document.getElementById('p-vaishno-ghoda-max')) document.getElementById('p-vaishno-ghoda-max').value = '1';
-        if(document.getElementById('p-vaishno-dandi-max')) document.getElementById('p-vaishno-dandi-max').value = '1';
+        if(document.getElementById('p-vaishno-palki-max')) document.getElementById('p-vaishno-palki-max').value = '1';
         if(document.getElementById('p-vaishno-pitthu-max')) document.getElementById('p-vaishno-pitthu-max').value = '1';
     }
 };
@@ -1861,7 +1861,7 @@ window.showPackageForm = function(pEncoded = null) {
     const hasKedarPitthu = isEdit && (parseFloat(pkg.pitthu_price) > 0);
 
     const hasVaishnoGhoda = isEdit && (parseFloat(pkg.vaishno_ghoda_price) > 0);
-    const hasVaishnoDandi = isEdit && (parseFloat(pkg.vaishno_dandi_price) > 0);
+    const hasVaishnoPalki = isEdit && (parseFloat(pkg.vaishno_palki_price) > 0);
     const hasVaishnoPitthu = isEdit && (parseFloat(pkg.vaishno_pitthu_price) > 0);
 
     area.innerHTML = `
@@ -1978,15 +1978,15 @@ window.showPackageForm = function(pEncoded = null) {
 
                     <div style="display:flex; gap:10px; align-items:flex-end;">
                         <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                            <input type="checkbox" id="p-vaishno-dandi-enable" ${hasVaishnoDandi ? 'checked' : ''} style="transform: scale(1.2); cursor: pointer;">
+                            <input type="checkbox" id="p-vaishno-palki-enable" ${hasVaishnoPalki ? 'checked' : ''} style="transform: scale(1.2); cursor: pointer;">
                         </div>
                         <div style="flex:2;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">🪑 Palanquin (Palki) Price</label>
-                            <input type="number" id="p-vaishno-dandi-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_dandi_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-palki-price" placeholder="₹ Rate" value="${isEdit ? (pkg.vaishno_palki_price || '') : ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                         <div style="flex:1;">
                             <label style="font-size:11px; font-weight:bold; color:#555;">Max Member</label>
-                            <input type="number" id="p-vaishno-dandi-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_dandi_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
+                            <input type="number" id="p-vaishno-palki-max" placeholder="Max" value="${isEdit ? (pkg.vaishno_palki_max || '1') : '1'}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; margin-top:3px;">
                         </div>
                     </div>
 
@@ -2068,34 +2068,48 @@ window.processSave = async function(packageId = '') {
             });
         });
 
-        // 1. GATHER KEDARNATH RATES
-        const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked || false;
-        const dandiEnabled = document.getElementById('p-dandi-enable')?.checked || false;
-        const kandiEnabled = document.getElementById('p-kandi-enable')?.checked || false;
-        const pitthuEnabled = document.getElementById('p-pitthu-enable')?.checked || false;
+        // Track changes conditions
+        const isKedarActive = selectedDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
+        const isVaishnoActive = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
 
-        const ghoda_price = ghodaEnabled ? (parseFloat(document.getElementById('p-ghoda-price').value) || 0) : 0;
-        const dandi_price = dandiEnabled ? (parseFloat(document.getElementById('p-dandi-price').value) || 0) : 0;
-        const kandi_price = kandiEnabled ? (parseFloat(document.getElementById('p-kandi-price').value) || 0) : 0;
-        const pitthu_price = pitthuEnabled ? (parseFloat(document.getElementById('p-pitthu-price').value) || 0) : 0;
+        // 1. GATHER KEDARNATH RATES (Exclusively saves if Kedarnath destination is active)
+        let ghoda_price = 0, dandi_price = 0, kandi_price = 0, pitthu_price = 0;
+        let ghoda_max = 1, dandi_max = 1, kandi_max = 1, pitthu_max = 1;
 
-        const ghoda_max = ghodaEnabled ? (parseInt(document.getElementById('p-ghoda-max').value) || 1) : 1;
-        const dandi_max = dandiEnabled ? (parseInt(document.getElementById('p-dandi-max').value) || 1) : 1;
-        const kandi_max = kandiEnabled ? (parseInt(document.getElementById('p-kandi-max').value) || 1) : 1;
-        const pitthu_max = pitthuEnabled ? (parseInt(document.getElementById('p-pitthu-max').value) || 1) : 1;
+        if (isKedarActive) {
+            const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked || false;
+            const dandiEnabled = document.getElementById('p-dandi-enable')?.checked || false;
+            const kandiEnabled = document.getElementById('p-kandi-enable')?.checked || false;
+            const pitthuEnabled = document.getElementById('p-pitthu-enable')?.checked || false;
 
-        // 2. GATHER VAISHNO DEVI RATES
-        const vaishnoGhodaEnabled = document.getElementById('p-vaishno-ghoda-enable')?.checked || false;
-        const vaishnoDandiEnabled = document.getElementById('p-vaishno-dandi-enable')?.checked || false;
-        const vaishnoPitthuEnabled = document.getElementById('p-vaishno-pitthu-enable')?.checked || false;
+            ghoda_price = ghodaEnabled ? (parseFloat(document.getElementById('p-ghoda-price').value) || 0) : 0;
+            dandi_price = dandiEnabled ? (parseFloat(document.getElementById('p-dandi-price').value) || 0) : 0;
+            kandi_price = kandiEnabled ? (parseFloat(document.getElementById('p-kandi-price').value) || 0) : 0;
+            pitthu_price = pitthuEnabled ? (parseFloat(document.getElementById('p-pitthu-price').value) || 0) : 0;
 
-        const vaishno_ghoda_price = vaishnoGhodaEnabled ? (parseFloat(document.getElementById('p-vaishno-ghoda-price').value) || 0) : 0;
-        const vaishno_dandi_price = vaishnoDandiEnabled ? (parseFloat(document.getElementById('p-vaishno-dandi-price').value) || 0) : 0;
-        const vaishno_pitthu_price = vaishnoPitthuEnabled ? (parseFloat(document.getElementById('p-vaishno-pitthu-price').value) || 0) : 0;
+            ghoda_max = ghodaEnabled ? (parseInt(document.getElementById('p-ghoda-max').value) || 1) : 1;
+            dandi_max = dandiEnabled ? (parseInt(document.getElementById('p-dandi-max').value) || 1) : 1;
+            kandi_max = kandiEnabled ? (parseInt(document.getElementById('p-kandi-max').value) || 1) : 1;
+            pitthu_max = pitthuEnabled ? (parseInt(document.getElementById('p-pitthu-max').value) || 1) : 1;
+        }
 
-        const vaishno_ghoda_max = vaishnoGhodaEnabled ? (parseInt(document.getElementById('p-vaishno-ghoda-max').value) || 1) : 1;
-        const vaishno_dandi_max = vaishnoDandiEnabled ? (parseInt(document.getElementById('p-vaishno-dandi-max').value) || 1) : 1;
-        const vaishno_pitthu_max = vaishnoPitthuEnabled ? (parseInt(document.getElementById('p-vaishno-pitthu-max').value) || 1) : 1;
+        // 2. GATHER VAISHNO DEVI RATES (Exclusively saves if Vaishno Devi destination is active)
+        let vaishno_ghoda_price = 0, vaishno_palki_price = 0, vaishno_pitthu_price = 0;
+        let vaishno_ghoda_max = 1, vaishno_palki_max = 1, vaishno_pitthu_max = 1;
+
+        if (isVaishnoActive) {
+            const vaishnoGhodaEnabled = document.getElementById('p-vaishno-ghoda-enable')?.checked || false;
+            const vaishnoPalkiEnabled = document.getElementById('p-vaishno-palki-enable')?.checked || false;
+            const vaishnoPitthuEnabled = document.getElementById('p-vaishno-pitthu-enable')?.checked || false;
+
+            vaishno_ghoda_price = vaishnoGhodaEnabled ? (parseFloat(document.getElementById('p-vaishno-ghoda-price').value) || 0) : 0;
+            vaishno_palki_price = vaishnoPalkiEnabled ? (parseFloat(document.getElementById('p-vaishno-palki-price').value) || 0) : 0;
+            vaishno_pitthu_price = vaishnoPitthuEnabled ? (parseFloat(document.getElementById('p-vaishno-pitthu-price').value) || 0) : 0;
+
+            vaishno_ghoda_max = vaishnoGhodaEnabled ? (parseInt(document.getElementById('p-vaishno-ghoda-max').value) || 1) : 1;
+            vaishno_palki_max = vaishnoPalkiEnabled ? (parseInt(document.getElementById('p-vaishno-palki-max').value) || 1) : 1;
+            vaishno_pitthu_max = vaishnoPitthuEnabled ? (parseInt(document.getElementById('p-vaishno-pitthu-max').value) || 1) : 1;
+        }
 
         // Get Agency Session Data
         const sessionStr = localStorage.getItem('agency_session');
@@ -2106,8 +2120,8 @@ window.processSave = async function(packageId = '') {
         const payload = {
             title: title,
             starting_location: city,
-            destinations: selectedDests, // Saved as array/JSON
-            vehicles: vehicles,           // Saved as JSON
+            destinations: selectedDests, 
+            vehicles: vehicles,           
             description: desc,
             agency_id: session.id,
             
@@ -2121,12 +2135,12 @@ window.processSave = async function(packageId = '') {
             kandi_max,
             pitthu_max,
 
-            // Vaishno Devi Fields mapping
+            // Vaishno Devi Fields mapping (Matching table structure)
             vaishno_ghoda_price,
-            vaishno_dandi_price,
+            vaishno_palki_price,
             vaishno_pitthu_price,
             vaishno_ghoda_max,
-            vaishno_dandi_max,
+            vaishno_palki_max,
             vaishno_pitthu_max
         };
 
@@ -2150,7 +2164,7 @@ window.processSave = async function(packageId = '') {
         if (resultError) throw resultError;
 
         alert(packageId ? "Package updated successfully!" : "Package published successfully!");
-        window.showTab('packages'); // Go back to listings and auto refresh
+        window.showTab('packages'); 
 
     } catch (err) {
         console.error("Save Error:", err);
