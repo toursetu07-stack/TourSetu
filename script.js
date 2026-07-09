@@ -2217,9 +2217,9 @@ window.processSave = async function(pkgId) {
         let pitthuPrice = 0, pitthuMax = 1;
 
         // Vaishno Devi Variables
-        let vaishnoGhodaPrice = 0, vaishnoGhodaQty = 1;
-        let vaishnoDandiPrice = 0, vaishnoDandiQty = 1;
-        let vaishnoPitthuPrice = 0, vaishnoPitthuQty = 1;
+        let vaishnoGhodaPrice = 0, vaishnoGhodaMax = 1;
+        let vaishnoPalkiPrice = 0, vaishnoPalkiMax = 1;
+        let vaishnoPitthuPrice = 0, vaishnoPitthuMax = 1;
 
         if (isKedarSelected) {
             const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked;
@@ -2245,19 +2245,19 @@ window.processSave = async function(pkgId) {
         
         if (isVaishnoSelected) {
             const vaishnoGhodaEnabled = document.getElementById('p-vaishno-ghoda-enable')?.checked;
-            const vaishnoDandiEnabled = document.getElementById('p-vaishno-dandi-enable')?.checked;
+            const vaishnoPalkiEnabled = document.getElementById('p-vaishno-palki-enable')?.checked;
             const vaishnoPitthuEnabled = document.getElementById('p-vaishno-pitthu-enable')?.checked;
 
             const vaishnoGhodaMaxInput = document.getElementById('p-vaishno-ghoda-max');
-            const vaishnoDandiMaxInput = document.getElementById('p-vaishno-dandi-max');
+            const vaishnoPalkiMaxInput = document.getElementById('p-vaishno-palki-max');
             const vaishnoPitthuMaxInput = document.getElementById('p-vaishno-pitthu-max');
 
-            vaishnoGhodaQty = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
-            vaishnoDandiQty = vaishnoDandiMaxInput ? (parseInt(vaishnoDandiMaxInput.value) || 1) : 1;
-            vaishnoPitthuQty = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
+            vaishnoGhodaMax = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
+            vaishnoPalkiMax = vaishnoPalkiMaxInput ? (parseInt(vaishnoPalkiMaxInput.value) || 1) : 1;
+            vaishnoPitthuMax = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
 
             if (vaishnoGhodaEnabled) vaishnoGhodaPrice = parseFloat(document.getElementById('p-vaishno-ghoda-price')?.value) || 0;
-            if (vaishnoDandiEnabled) vaishnoDandiPrice = parseFloat(document.getElementById('p-vaishno-dandi-price')?.value) || 0;
+            if (vaishnoPalkiEnabled) vaishnoPalkiPrice = parseFloat(document.getElementById('p-vaishno-palki-price')?.value) || 0;
             if (vaishnoPitthuEnabled) vaishnoPitthuPrice = parseFloat(document.getElementById('p-vaishno-pitthu-price')?.value) || 0;
         }
 
@@ -2279,13 +2279,13 @@ window.processSave = async function(pkgId) {
             pitthu_price: pitthuPrice,
             pitthu_max: pitthuMax,
 
-            // VAISHNO DEVI DATABASE MAPPING (FIXED: NOW SAVES MAX MEMBERS TO THE CORRECT COLUMNS)
+            // VAISHNO DEVI DATABASE MAPPING (EXACT MATCHES TO YOUR SQL SCHEMA)
             vaishno_ghoda_price: vaishnoGhodaPrice, 
-            vaishno_ghoda_max_members: vaishnoGhodaQty,
-            vaishno_dandi_price: vaishnoDandiPrice,
-            vaishno_dandi_max_members: vaishnoDandiQty,
+            vaishno_ghoda_max: vaishnoGhodaMax,
+            vaishno_palki_price: vaishnoPalkiPrice,
+            vaishno_palki_max: vaishnoPalkiMax,
             vaishno_pitthu_price: vaishnoPitthuPrice,
-            vaishno_pitthu_max_members: vaishnoPitthuQty
+            vaishno_pitthu_max: vaishnoPitthuMax
         };
 
         let error;
