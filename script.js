@@ -1363,7 +1363,9 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("Error: " + error.message);
     }
 };
-// 9. AGENCY DASHBOARD
+// =========================================================================
+// 9. AGENCY DASHBOARD & ACTIONS (UPDATED WITH AUTOMATIC QR CODE UPLOAD)
+// =========================================================================
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
@@ -1484,7 +1486,9 @@ window.showTab = async function(tabName) {
             const kPitthuMax = parseInt(b.kedar_pitthu_max_members || b.pitthu_max) || 0;
             const kKandiMax = parseInt(b.kedar_kandi_max_members || b.kandi_max) || 0;
 
-            if (kGhodaPrice > 0 || kDandiPrice > 0 || kPitthuPrice > 0 || kKandiPrice > 0) {
+            const hasKedarTrek = (kGhodaPrice > 0 || kDandiPrice > 0 || kPitthuPrice > 0 || kKandiPrice > 0);
+
+            if (hasKedarTrek) {
                 let items = [];
                 if (kGhodaPrice > 0) items.push(`Ghoda: <b>₹${kGhodaPrice}</b> (${kGhodaMax} Person)`);
                 if (kDandiPrice > 0) items.push(`Dandi: <b>₹${kDandiPrice}</b> (${kDandiMax} Person)`);
@@ -1498,17 +1502,18 @@ window.showTab = async function(tabName) {
                 </div>`;
             }
 
-            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION (FIXED TO READ VAISHNO SPECIFIC COLUMNS)
+            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION
             const vGhodaPrice = parseFloat(b.vaishno_ghoda_price) || 0;
             const vDandiPrice = parseFloat(b.vaishno_dandi_price) || 0;
             const vPitthuPrice = parseFloat(b.vaishno_pitthu_price) || 0;
 
-            // यहाँ पहले फ़ॉलबैक में ghoda_max (केदारनाथ वाला) आ रहा था, इसे पूरी तरह अलग कर के सिर्फ वैष्णो देवी के कॉलम से मैप कर दिया गया है।
             const vGhodaMax = parseInt(b.vaishno_ghoda_max_members || b.vaishno_ghoda_max) || 0;
             const vDandiMax = parseInt(b.vaishno_dandi_max_members || b.vaishno_dandi_max) || 0;
             const vPitthuMax = parseInt(b.vaishno_pitthu_max_members || b.vaishno_pitthu_max) || 0;
 
-            if (vGhodaPrice > 0 || vDandiPrice > 0 || vPitthuPrice > 0) {
+            const hasVaishnoTrek = (vGhodaPrice > 0 || vDandiPrice > 0 || vPitthuPrice > 0);
+
+            if (hasVaishnoTrek) {
                 let items = [];
                 if (vGhodaPrice > 0) items.push(`Ghoda: <b>₹${vGhodaPrice}</b> (${vGhodaMax} Person)`);
                 if (vDandiPrice > 0) items.push(`Dandi: <b>₹${vDandiPrice}</b> (${vDandiMax} Person)`);
@@ -1520,6 +1525,11 @@ window.showTab = async function(tabName) {
                     <span style="color: #444; line-height: 1.6;">${items.join(' | ')}</span>
                 </div>`;
             }
+
+            // QR Routing Match Engine Logic
+            const titleLower = (b.package_title || "").toLowerCase();
+            const isTargetRoute = titleLower.includes("kedarnath") || titleLower.includes("char dham") || titleLower.includes("vaishno devi");
+            const trekkingTriggered = isTargetRoute && (hasKedarTrek || hasVaishnoTrek);
 
             return `
             <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${statusColor}; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
@@ -1574,8 +1584,8 @@ window.showTab = async function(tabName) {
                     </div>
                 ` : (isPending ? `
                     <div style="border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
-                        <button onclick="openActionModal('${b.id}', 'approved', '${b.customer_id}', '${b.package_title}')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
-                        <button onclick="openActionModal('${b.id}', 'denied', '${b.customer_id}', '${b.package_title}')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
+                        <button onclick="openActionModal('${b.id}', 'approved', '${b.customer_id}', '${b.package_title}', ${trekkingTriggered})" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
+                        <button onclick="openActionModal('${b.id}', 'denied', '${b.customer_id}', '${b.package_title}', false)" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
                     </div>
                 ` : '')}
                 </div>
@@ -1613,18 +1623,43 @@ window.showTab = async function(tabName) {
     }
 };
 
-window.openActionModal = function(bookingId, type, customerId, packageTitle) {
+window.openActionModal = function(bookingId, type, customerId, packageTitle, trekkingTriggered) {
     const modal = document.getElementById('action-modal');
     const content = document.getElementById('action-modal-content');
     modal.style.display = 'flex';
 
+    // Global variable inside memory to track currently chosen single file
+    window.currentQRSlipFile = null;
+
     if (type === 'approved') {
+        let qrUploadHtml = '';
+        if (trekkingTriggered) {
+            qrUploadHtml = `
+                <div style="margin: 15px 0; padding:15px; border:2px dashed #ff9f43; background:#fffaf5; border-radius:10px; text-align:center;" id="qr-upload-container">
+                    <p style="margin:0 0 10px 0; font-weight:bold; color:#d35400; font-size:14px;">⚠️ Action Required: Upload your QR Code / Booking Slip</p>
+                    
+                    <div id="qr-input-wrapper">
+                        <button onclick="document.getElementById('qr-file-selector').click()" style="background:#ff9f43; color:white; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold;">Upload Image</button>
+                        <input type="file" id="qr-file-selector" accept="image/*" style="display:none;" onchange="handleQRFilePreview(event)">
+                    </div>
+
+                    <div id="qr-preview-wrapper" style="display:none; position:relative; margin-top:10px; display:inline-block;">
+                        <img id="qr-img-preview" src="" style="max-width:100%; max-height:160px; border-radius:6px; border:1px solid #ddd;">
+                        <span onclick="removeQRFilePreview()" style="position:absolute; top:-10px; right:-10px; background:#ff7675; color:white; width:22px; height:22px; border-radius:50%; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">✕</span>
+                    </div>
+                </div>
+            `;
+        }
+
         content.innerHTML = `
             <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
             <p style="font-size:14px; color:#666;">Provide the contact number for payment collection (GPay/PhonePe).</p>
-            <input type="text" id="modal-contact-input" placeholder="Enter Contact Number" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
-            <div style="display:flex; gap:10px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'approved', '${customerId}', '${packageTitle}')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
+            <input type="text" id="modal-contact-input" placeholder="Enter Contact Number" style="width:100%; padding:12px; margin-bottom:15px; border:1px solid #ddd; border-radius:5px;">
+            
+            ${qrUploadHtml}
+
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button id="modal-confirm-btn" onclick="processStatusUpdate('${bookingId}', 'approved', '${customerId}', '${packageTitle}', ${trekkingTriggered})" ${trekkingTriggered ? 'disabled' : ''} style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold; transition:0.3s; ${trekkingTriggered ? 'opacity:0.5; cursor:not-allowed;' : ''}">CONFIRM</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
             </div>`;
     } else {
@@ -1632,15 +1667,60 @@ window.openActionModal = function(bookingId, type, customerId, packageTitle) {
             <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
             <p style="font-size:14px; color:#666;">This action will notify the customer and cancel the request.</p>
             <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'denied', '${customerId}', '${packageTitle}')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
+                <button onclick="processStatusUpdate('${bookingId}', 'denied', '${customerId}', '${packageTitle}', false)" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
             </div>`;
     }
 };
 
+// Handle QR File Selection Preview
+window.handleQRFilePreview = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    window.currentQRSlipFile = file;
+
+    const wrapper = document.getElementById('qr-preview-wrapper');
+    const inputWrapper = document.getElementById('qr-input-wrapper');
+    const previewImg = document.getElementById('qr-img-preview');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+
+    previewImg.src = URL.createObjectURL(file);
+    wrapper.style.display = 'inline-block';
+    inputWrapper.style.display = 'none';
+
+    // Unlock confirmation button
+    if (confirmBtn) {
+        confirmBtn.removeAttribute('disabled');
+        confirmBtn.style.opacity = '1';
+        confirmBtn.style.cursor = 'pointer';
+    }
+};
+
+// Reset Image File back to Empty Input State
+window.removeQRFilePreview = function() {
+    window.currentQRSlipFile = null;
+
+    const wrapper = document.getElementById('qr-preview-wrapper');
+    const inputWrapper = document.getElementById('qr-input-wrapper');
+    const selector = document.getElementById('qr-file-selector');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+
+    if (selector) selector.value = '';
+    if (wrapper) wrapper.style.display = 'none';
+    if (inputWrapper) inputWrapper.style.display = 'block';
+
+    // Lock confirm button back
+    if (confirmBtn) {
+        confirmBtn.setAttribute('disabled', 'true');
+        confirmBtn.style.opacity = '0.5';
+        confirmBtn.style.cursor = 'not-allowed';
+    }
+};
+
 window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
 
-window.processStatusUpdate = async function(bookingId, newStatus, customerId, packageTitle) {
+window.processStatusUpdate = async function(bookingId, newStatus, customerId, packageTitle, trekkingTriggered) {
     const client = getClient();
     let updateData = { status: newStatus };
 
@@ -1648,6 +1728,40 @@ window.processStatusUpdate = async function(bookingId, newStatus, customerId, pa
         const contact = document.getElementById('modal-contact-input').value;
         if (!contact.trim()) { alert("Please enter a contact number!"); return; }
         updateData.agency_contact = contact;
+
+        // Handler logic for Supabase public bucket integration
+        if (trekkingTriggered) {
+            if (!window.currentQRSlipFile) {
+                alert("Please upload the QR Code image to proceed confirmation!");
+                return;
+            }
+
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            if (confirmBtn) confirmBtn.innerText = "UPLOADING...";
+
+            const file = window.currentQRSlipFile;
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${bookingId}_${Date.now()}.${fileExt}`;
+            const filePath = `slips/${fileName}`;
+
+            // Storage Upload Operation
+            const { data: uploadData, error: uploadError } = await client.storage
+                .from('booking-slips')
+                .upload(filePath, file);
+
+            if (uploadError) {
+                alert("Failed uploading QR Code image: " + uploadError.message);
+                if (confirmBtn) confirmBtn.innerText = "CONFIRM";
+                return;
+            }
+
+            // Public URI Generation Engine
+            const { data: { publicUrl } } = client.storage
+                .from('booking-slips')
+                .getPublicUrl(filePath);
+
+            updateData.qr_code_url = publicUrl;
+        }
     }
 
     const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
