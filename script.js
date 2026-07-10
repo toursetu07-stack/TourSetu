@@ -634,10 +634,10 @@ window.showPackageDetails = function(pEncoded) {
     let kedaHtmlBlock = '';
     if (isKedarnath) {
         const kedarnathServices = [
-            { id: 'ghoda', label: '🐴 Khachhar / Ghoda (Horse)', cost: parseFloat(p.ghoda_price) || 0 },
-            { id: 'dandi', label: '🪑 Dandi (Palanquin)', cost: parseFloat(p.dandi_price) || 0 },
-            { id: 'kandi', label: '🧺 Kandi (Wicker Cradle)', cost: parseFloat(p.kandi_price) || 0 },
-            { id: 'pitthu', label: '🎒 Pitthu (Porter Service)', cost: parseFloat(p.pitthu_price) || 0 }
+            { id: 'ghoda', label: '🐴 Khachhar / Ghoda (Horse)', cost: parseFloat(p.ghoda_price) || 0, max: parseInt(p.ghoda_max) || 1 },
+            { id: 'dandi', label: '🪑 Dandi (Palanquin)', cost: parseFloat(p.dandi_price) || 0, max: parseInt(p.dandi_max) || 1 },
+            { id: 'kandi', label: '🧺 Kandi (Wicker Cradle)', cost: parseFloat(p.kandi_price) || 0, max: parseInt(p.kandi_max) || 1 },
+            { id: 'pitthu', label: '🎒 Pitthu (Porter Service)', cost: parseFloat(p.pitthu_price) || 0, max: parseInt(p.pitthu_max) || 1 }
         ].filter(s => s.cost > 0);
 
         if (kedarnathServices.length > 0) {
@@ -652,8 +652,8 @@ window.showPackageDetails = function(pEncoded) {
                         <span style="color:#e67e22; font-weight:bold;">₹${s.cost} / person</span>
                     </div>
                     <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
-                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
+                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max: ${s.max}):</label>
+                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
              `).join('');
@@ -663,9 +663,9 @@ window.showPackageDetails = function(pEncoded) {
     let vaishnoHtmlBlock = '';
     if (isVaishnoDevi) {
         const vaishnoServices = [
-            { id: 'vaishno_ghoda', label: '🐴 Horse (Ghora) - Vaishno Devi', cost: parseFloat(p.vaishno_ghoda_price) || 0 },
-            { id: 'vaishno_dandi', label: '🪑 Palanquin (Palki) - Vaishno Devi', cost: parseFloat(p.vaishno_dandi_price) || 0 },
-            { id: 'vaishno_pitthu', label: '🎒 Porters (Pithoo) - Vaishno Devi', cost: parseFloat(p.vaishno_pitthu_price) || 0 }
+            { id: 'vaishno_ghoda', label: '🐴 Horse (Ghora) - Vaishno Devi', cost: parseFloat(p.vaishno_ghoda_price) || 0, max: parseInt(p.vaishno_ghoda_max) || 1 },
+            { id: 'vaishno_palki', label: '🪑 Palanquin (Palki) - Vaishno Devi', cost: parseFloat(p.vaishno_palki_price) || 0, max: parseInt(p.vaishno_palki_max) || 1 },
+            { id: 'vaishno_pitthu', label: '🎒 Porters (Pithoo) - Vaishno Devi', cost: parseFloat(p.vaishno_pitthu_price) || 0, max: parseInt(p.vaishno_pitthu_max) || 1 }
         ].filter(s => s.cost > 0);
 
         if (vaishnoServices.length > 0) {
@@ -680,8 +680,8 @@ window.showPackageDetails = function(pEncoded) {
                         <span style="color:#2980b9; font-weight:bold;">₹${s.cost} / person</span>
                     </div>
                     <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
-                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
+                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max: ${s.max}):</label>
+                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
              `).join('');
@@ -810,7 +810,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     const pitthuChecked = document.getElementById('check-pitthu') && document.getElementById('check-pitthu').checked;
 
     const vGhodaChecked = document.getElementById('check-vaishno_ghoda') && document.getElementById('check-vaishno_ghoda').checked;
-    const vDandiChecked = document.getElementById('check-vaishno_dandi') && document.getElementById('check-vaishno_dandi').checked;
+    const vPalkiChecked = document.getElementById('check-vaishno_palki') && document.getElementById('check-vaishno_palki').checked;
     const vPitthuChecked = document.getElementById('check-vaishno_pitthu') && document.getElementById('check-vaishno_pitthu').checked;
 
     const ghodaQty = ghodaChecked ? (parseInt(document.getElementById('qty-ghoda').value) || 1) : 0;
@@ -819,7 +819,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     const pitthuQty = pitthuChecked ? (parseInt(document.getElementById('qty-pitthu').value) || 1) : 0;
 
     const vGhodaQty = vGhodaChecked ? (parseInt(document.getElementById('qty-vaishno_ghoda').value) || 1) : 0;
-    const vDandiQty = vDandiChecked ? (parseInt(document.getElementById('qty-vaishno_dandi').value) || 1) : 0;
+    const vPalkiQty = vPalkiChecked ? (parseInt(document.getElementById('qty-vaishno_palki').value) || 1) : 0;
     const vPitthuQty = vPitthuChecked ? (parseInt(document.getElementById('qty-vaishno_pitthu').value) || 1) : 0;
 
     if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * ghodaQty);
@@ -828,7 +828,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     if (pitthuChecked) totalPrice += (parseFloat(document.getElementById('check-pitthu').dataset.rate) * pitthuQty);
 
     if (vGhodaChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_ghoda').dataset.rate) * vGhodaQty);
-    if (vDandiChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_dandi').dataset.rate) * vDandiQty);
+    if (vPalkiChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_palki').dataset.rate) * vPalkiQty);
     if (vPitthuChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_pitthu').dataset.rate) * vPitthuQty);
 
     try {
@@ -852,7 +852,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             keda_pitthu_qty: pitthuQty,
 
             vaishno_ghoda_qty: vGhodaQty,
-            vaishno_dandi_qty: vDandiQty,
+            vaishno_palki_qty: vPalkiQty,
             vaishno_pitthu_qty: vPitthuQty,
         }]);
 
