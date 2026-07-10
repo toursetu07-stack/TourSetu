@@ -652,7 +652,7 @@ window.showPackageDetails = function(pEncoded) {
                         <span style="color:#e67e22; font-weight:bold;">₹${s.cost} / person</span>
                     </div>
                     <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max: ${s.max}):</label>
+                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max Allowed: ${s.max}):</label>
                         <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
@@ -663,9 +663,9 @@ window.showPackageDetails = function(pEncoded) {
     let vaishnoHtmlBlock = '';
     if (isVaishnoDevi) {
         const vaishnoServices = [
-            { id: 'vaishno_ghoda', label: '🐴 Horse (Ghora) - Vaishno Devi', cost: parseFloat(p.vaishno_ghoda_price) || 0, max: parseInt(p.vaishno_ghoda_max) || 1 },
+            { id: 'vaishno_ghoda', label: '🐴 Horse (Ghoda) - Vaishno Devi', cost: parseFloat(p.vaishno_ghoda_price) || 0, max: parseInt(p.vaishno_ghoda_max) || 1 },
             { id: 'vaishno_palki', label: '🪑 Palanquin (Palki) - Vaishno Devi', cost: parseFloat(p.vaishno_palki_price) || 0, max: parseInt(p.vaishno_palki_max) || 1 },
-            { id: 'vaishno_pitthu', label: '🎒 Porters (Pithoo) - Vaishno Devi', cost: parseFloat(p.vaishno_pitthu_price) || 0, max: parseInt(p.vaishno_pitthu_max) || 1 }
+            { id: 'vaishno_pitthu', label: '🎒 Porters (Pitthu) - Vaishno Devi', cost: parseFloat(p.vaishno_pitthu_price) || 0, max: parseInt(p.vaishno_pitthu_max) || 1 }
         ].filter(s => s.cost > 0);
 
         if (vaishnoServices.length > 0) {
@@ -680,7 +680,7 @@ window.showPackageDetails = function(pEncoded) {
                         <span style="color:#2980b9; font-weight:bold;">₹${s.cost} / person</span>
                     </div>
                     <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max: ${s.max}):</label>
+                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max Allowed: ${s.max}):</label>
                         <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
@@ -852,7 +852,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             keda_pitthu_qty: pitthuQty,
 
             vaishno_ghoda_qty: vGhodaQty,
-            vaishno_dandi_qty: vPalkiQty, // Maps matching booking table structures securely
+            vaishno_palki_qty: vPalkiQty,
             vaishno_pitthu_qty: vPitthuQty,
         }]);
 
