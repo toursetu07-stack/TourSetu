@@ -652,7 +652,7 @@ window.showPackageDetails = function(pEncoded) {
                         <span style="color:#e67e22; font-weight:bold;">₹${s.cost} / person</span>
                     </div>
                     <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max Allowed: ${s.max}):</label>
+                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max: ${s.max}):</label>
                         <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
@@ -680,7 +680,7 @@ window.showPackageDetails = function(pEncoded) {
                         <span style="color:#2980b9; font-weight:bold;">₹${s.cost} / person</span>
                     </div>
                     <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max Allowed: ${s.max}):</label>
+                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max: ${s.max}):</label>
                         <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
@@ -852,7 +852,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
             keda_pitthu_qty: pitthuQty,
 
             vaishno_ghoda_qty: vGhodaQty,
-            vaishno_palki_qty: vPalkiQty,
+            vaishno_dandi_qty: vPalkiQty, // Maps matching booking table structures securely
             vaishno_pitthu_qty: vPitthuQty,
         }]);
 
