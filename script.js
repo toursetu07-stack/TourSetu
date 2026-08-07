@@ -156,6 +156,7 @@ function renderAuthUI() {
                 <select id="role" onchange="toggleBusinessFields()" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
                     <option value="customer">Traveler</option>
                     <option value="agency">Travel Agency</option>
+                    <option value="hotel">Hotel Partner 🏨</option>
                 </select>
             </div>
 
@@ -177,6 +178,30 @@ function renderAuthUI() {
             <div id="status" style="margin-top:15px; font-size:13px; font-weight:bold;"></div>
         </div>
     `;
+}
+
+/* Helper function to handle field visibility for Agency & Hotel */
+function toggleBusinessFields() {
+    const role = document.getElementById('role')?.value;
+    const businessFields = document.getElementById('business-fields');
+    if (!businessFields) return;
+
+    if (role === 'agency' || role === 'hotel') {
+        businessFields.style.display = 'block';
+        if (role === 'hotel') {
+            document.getElementById('gst-no').placeholder = "Hotel GSTIN / FSSAI License";
+            document.getElementById('biz-reg').placeholder = "Property Registration No";
+            document.getElementById('biz-lic').placeholder = "Nearest Temple / Landmark Point";
+            document.getElementById('biz-phone').placeholder = "Hotel Front Desk / Owner Phone";
+        } else {
+            document.getElementById('gst-no').placeholder = "GST Number";
+            document.getElementById('biz-reg').placeholder = "Business Reg No";
+            document.getElementById('biz-lic').placeholder = "Trade License";
+            document.getElementById('biz-phone').placeholder = "Mobile / Contact No";
+        }
+    } else {
+        businessFields.style.display = 'none';
+    }
 }
 
 /* =========================================
@@ -2448,6 +2473,736 @@ window.loadAgencyDashboard = async function() {
         if (container) container.innerHTML = `<div style="color:red; padding:20px;">Load Error: ${err.message}</div>`;
     }
 };
+/* =========================================================================
+   HOTEL PARTNER DASHBOARD & GROUND OPERATIONS SYSTEM
+   ========================================================================= */
+
+// Global State & Timers for Hotel Module
+let activeQrScanner = null;
+let realtimeSubscription = null;
+let ackTimer = null;
+
+/**
+ * Main Entry Point for Hotel Partner Interface
+ */
+async function renderHotelDashboard(user) {
+    const app = document.getElementById('app');
+    app.style.maxWidth = "100%";
+
+    app.innerHTML = `
+        <div style="display:flex; min-height:100vh; background:#f4f6f9; font-family:'Inter', sans-serif; margin:-20px;">
+            <!-- Hotel Sidebar Navigation -->
+            <div style="width:280px; background:#1e272e; color:white; padding:25px; flex-shrink:0; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:30px;">
+                        <span style="font-size:28px;">🏔️</span>
+                        <div>
+                            <h3 style="margin:0; color:#ff9f43; font-size:18px;">TourSetu Hotel</h3>
+                            <small style="color:#a4b0be; font-size:11px;">Char Dham Ground Ops Desk</small>
+                        </div>
+                    </div>
+                    
+                    <nav style="display:flex; flex-direction:column; gap:8px;">
+                        <div onclick="showHotelTab('checkin')" class="hotel-nav-btn" id="nav-checkin" style="padding:14px; cursor:pointer; border-radius:10px; background:#2c3e50; font-weight:600; display:flex; align-items:center; gap:10px;">
+                            <span>📲</span> QR/OTP Check-in Desk
+                        </div>
+                        <div onclick="showHotelTab('inventory')" class="hotel-nav-btn" id="nav-inventory" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
+                            <span>🏨</span> Room Inventory & Lock
+                        </div>
+                        <div onclick="showHotelTab('bookings')" class="hotel-nav-btn" id="nav-bookings" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
+                            <span>📋</span> Arrivals & Payouts
+                        </div>
+                        <div onclick="showHotelTab('landslide')" class="hotel-nav-btn" id="nav-landslide" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; color:#ff7675; gap:10px;">
+                            <span>⚠️</span> Landslide / Weather Policy
+                        </div>
+                    </nav>
+                </div>
+
+                <div style="border-top:1px solid #485460; padding-top:20px;">
+                    <div style="font-size:12px; color:#a4b0be; margin-bottom:10px;">Property Status:</div>
+                    <button id="stop-sell-btn" onclick="toggleStopSell('${user.id}')" style="width:100%; padding:10px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; background:#2ecc71; color:white; margin-bottom:15px;">
+                        🟢 Normal Selling Mode
+                    </button>
+                    <button onclick="handleLogout()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ff7675; background:none; color:#ff7675; font-weight:bold; cursor:pointer;">
+                        🚪 Logout Desk
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content Display Area -->
+            <div id="hotel-main-content" style="flex:1; padding:35px; overflow-y:auto; background:#f4f6f9;">
+                <div style="text-align:center; padding:50px;">
+                    <h3>Initializing Hotel Dashboard & Network Listener...</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Check-in Verification Result Modal -->
+        <div id="hotel-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; padding:20px;">
+            <div id="hotel-modal-body" style="background:white; border-radius:16px; max-width:500px; width:100%; padding:30px; box-shadow:0 20px 40px rgba(0,0,0,0.4);"></div>
+        </div>
+    `;
+
+    // Initialize Real-time WebSocket Listeners with Fallback Alerts
+    setupRealtimeBookingsSubscription(user.id);
+    
+    // Auto-run Dynamic Hold Release Sweeper
+    runInventoryHoldSweeper();
+    
+    // Default Tab
+    showHotelTab('checkin');
+}
+
+/**
+ * Dynamic Tab Switcher for Hotel Dashboard
+ */
+async function showHotelTab(tabName) {
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    const container = document.getElementById('hotel-main-content');
+
+    // Stop camera active stream if navigating away from scan tab
+    if (activeQrScanner) {
+        try { await activeQrScanner.stop(); } catch(e){}
+        activeQrScanner = null;
+    }
+
+    // Update Sidebar Navigation UI Styles
+    document.querySelectorAll('.hotel-nav-btn').forEach(btn => btn.style.background = 'transparent');
+    const activeBtn = document.getElementById(`nav-${tabName}`);
+    if (activeBtn) activeBtn.style.background = '#2c3e50';
+
+    if (tabName === 'checkin') {
+        renderCheckinDesk(container, user);
+    } else if (tabName === 'inventory') {
+        renderInventoryManager(container, user);
+    } else if (tabName === 'bookings') {
+        renderArrivalsAndPayouts(container, user);
+    } else if (tabName === 'landslide') {
+        renderLandslideDisputeDesk(container, user);
+    }
+}
+
+/* =========================================================================
+   FEATURE 1: SCAN & VERIFY GUEST CHECK-IN DESK (QR + 4-DIGIT OTP)
+   ========================================================================= */
+
+function renderCheckinDesk(container, user) {
+    container.innerHTML = `
+        <div style="max-width:900px; margin:auto;">
+            <div style="margin-bottom:25px;">
+                <h1 style="margin:0; color:#1e272e; font-size:26px;">📲 Reception Check-in Desk</h1>
+                <p style="color:#7f8c8d; margin-top:5px;">Verify Char Dham Yatra Booking Pass via dynamic QR scanner or 4-digit OTP code.</p>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:25px;">
+                <!-- Mode A: Camera QR Code Scanner -->
+                <div style="background:white; padding:25px; border-radius:16px; border:1px solid #e1e8ed; box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+                    <h3 style="margin-top:0; color:#2c3e50; display:flex; align-items:center; gap:8px;">
+                        <span>📷</span> Scan Dynamic QR Pass
+                    </h3>
+                    <div id="qr-reader-box" style="width:100%; height:260px; background:#000; border-radius:12px; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; color:white;">
+                        <button id="start-cam-btn" onclick="startCameraScanner()" style="background:#ff9f43; color:white; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                            Activate Camera
+                        </button>
+                    </div>
+                    <small style="color:#95a5a6; display:block; margin-top:10px; text-align:center;">Point camera at guest's Booking Pass QR Code</small>
+                </div>
+
+                <!-- Mode B: 4-Digit OTP Manual Entry -->
+                <div style="background:white; padding:25px; border-radius:16px; border:1px solid #e1e8ed; box-shadow:0 4px 12px rgba(0,0,0,0.03); display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <h3 style="margin-top:0; color:#2c3e50; display:flex; align-items:center; gap:8px;">
+                            <span>🔢</span> Manual 4-Digit OTP Check-in
+                        </h3>
+                        <p style="font-size:13px; color:#7f8c8d;">If guest's mobile screen is damaged or offline, enter the 4-digit check-in OTP generated on their Booking Pass.</p>
+                        
+                        <div style="margin:25px 0; text-align:center;">
+                            <input type="text" id="manual-otp-input" maxlength="4" placeholder="0 0 0 0" 
+                                   style="width:80%; letter-spacing:15px; font-size:32px; font-weight:bold; text-align:center; padding:15px; border:2px solid #3498db; border-radius:12px; outline:none; background:#f8fbfe;">
+                        </div>
+                    </div>
+
+                    <button onclick="verifyCheckinByOtp()" style="background:#2ecc71; color:white; border:none; width:100%; padding:16px; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; transition:0.3s;">
+                        VERIFY & CHECK-IN GUEST
+                    </button>
+                </div>
+            </div>
+
+            <!-- Realtime Quick Verification Status Banner -->
+            <div id="verification-status-banner" style="margin-top:25px;"></div>
+        </div>
+    `;
+}
+
+/**
+ * Camera Scanner Engine using Html5Qrcode
+ */
+async function startCameraScanner() {
+    const box = document.getElementById('qr-reader-box');
+    box.innerHTML = `<div id="reader" style="width:100%; height:100%;"></div>`;
+
+    if (typeof Html5Qrcode === "undefined") {
+        alert("Loading Camera Engine... Please check internet connection or retry.");
+        return;
+    }
+
+    activeQrScanner = new Html5Qrcode("reader");
+    try {
+        await activeQrScanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 200, height: 200 } },
+            (decodedText) => {
+                // QR Decoded Payload structure: {"booking_id": "UUID", "checkin_otp": "1234"}
+                try {
+                    const parsed = JSON.parse(decodedText);
+                    if (parsed.booking_id && parsed.checkin_otp) {
+                        executeCheckInVerification(parsed.booking_id, parsed.checkin_otp);
+                    } else {
+                        executeCheckInVerification(decodedText.trim(), null);
+                    }
+                } catch(e) {
+                    executeCheckInVerification(decodedText.trim(), null);
+                }
+            },
+            (errorMessage) => { /* scanning ... */ }
+        );
+    } catch(err) {
+        box.innerHTML = `<div style="padding:20px; text-align:center; color:#e74c3c;">Camera Access Denied or Unavailable: ${err.message}</div>`;
+    }
+}
+
+/**
+ * Manual OTP Verification Trigger
+ */
+function verifyCheckinByOtp() {
+    const otp = document.getElementById('manual-otp-input').value.trim();
+    if (otp.length !== 4 || isNaN(otp)) {
+        alert("⚠️ Please enter a valid 4-digit numerical check-in OTP.");
+        return;
+    }
+    executeCheckInVerification(null, otp);
+}
+
+/**
+ * Core Verification Logic: Matches OTP/QR with Supabase DB & Releases Payout
+ */
+async function executeCheckInVerification(bookingId, checkinOtp) {
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    const modal = document.getElementById('hotel-modal');
+    const modalBody = document.getElementById('hotel-modal-body');
+
+    modal.style.display = 'flex';
+    modalBody.innerHTML = `<div style="text-align:center; padding:30px;"><h2>⏳ Verifying Booking Pass...</h2></div>`;
+
+    try {
+        let query = client.from('bookings').select('*').eq('hotel_id', user.id);
+
+        if (bookingId && checkinOtp) {
+            query = query.eq('booking_id', bookingId).eq('checkin_otp', checkinOtp);
+        } else if (bookingId) {
+            query = query.eq('booking_id', bookingId);
+        } else if (checkinOtp) {
+            query = query.eq('checkin_otp', checkinOtp);
+        }
+
+        const { data, error } = await query;
+
+        if (error || !data || data.length === 0) {
+            modalBody.innerHTML = `
+                <div style="text-align:center;">
+                    <div style="font-size:50px; color:#e74c3c;">❌</div>
+                    <h2 style="color:#e74c3c; margin-top:10px;">Verification Failed</h2>
+                    <p style="color:#636e72;">No active booking found matching this QR code or 4-digit OTP for your hotel property.</p>
+                    <button onclick="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close & Retry</button>
+                </div>
+            `;
+            return;
+        }
+
+        const booking = data[0];
+
+        // Validation Checks
+        if (booking.status === 'checked_in') {
+            modalBody.innerHTML = `
+                <div style="text-align:center;">
+                    <div style="font-size:50px; color:#f39c12;">⚠️</div>
+                    <h2 style="color:#f39c12; margin-top:10px;">Already Checked-In</h2>
+                    <p style="color:#636e72;">Guest <b>${booking.customer_email || 'Traveler'}</b> checked in on ${new Date(booking.updated_at).toLocaleString()}.</p>
+                    <button onclick="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close</button>
+                </div>
+            `;
+            return;
+        }
+
+        if (booking.status !== 'paid') {
+            modalBody.innerHTML = `
+                <div style="text-align:center;">
+                    <div style="font-size:50px; color:#e74c3c;">⛔</div>
+                    <h2 style="color:#e74c3c; margin-top:10px;">Unpaid / Held Booking</h2>
+                    <p style="color:#636e72;">Booking Status is <b>${booking.status.toUpperCase()}</b>. Check-in cannot be verified until booking status is PAID.</p>
+                    <button onclick="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close</button>
+                </div>
+            `;
+            return;
+        }
+
+        // UPDATE BOOKING TO CHECKED_IN & RELEASE PAYOUT
+        const payoutAmount = (parseFloat(booking.total_price) || 0) * 0.90; // 90% payout after 10% platform fee
+
+        const { error: updateErr } = await client
+            .from('bookings')
+            .update({ 
+                status: 'checked_in', 
+                payout_released: true, 
+                payout_amount: payoutAmount,
+                checked_in_at: new Date().toISOString()
+            })
+            .eq('booking_id', booking.booking_id);
+
+        if (updateErr) throw updateErr;
+
+        modalBody.innerHTML = `
+            <div style="text-align:center;">
+                <div style="font-size:60px; color:#2ecc71;">✅</div>
+                <h2 style="color:#2ecc71; margin:10px 0 5px 0;">Check-in Successful!</h2>
+                <p style="color:#2d3436; font-size:16px; margin-bottom:15px;">Welcome Guest: <b>${booking.customer_email}</b></p>
+
+                <div style="background:#f8f9fa; padding:15px; border-radius:10px; text-align:left; font-size:13px; line-height:1.6; margin-bottom:20px;">
+                    <div>🆔 <b>Booking ID:</b> ${booking.booking_id}</div>
+                    <div>🛌 <b>Room Type:</b> ${booking.room_type || 'Standard Deluxe'}</div>
+                    <div>⏳ <b>Duration:</b> ${booking.duration_days || 1} Night(s)</div>
+                    <div>💰 <b>Commission Payout:</b> <span style="color:#2ecc71; font-weight:bold;">₹${payoutAmount.toLocaleString('en-IN')} (Released)</span></div>
+                </div>
+
+                <button onclick="document.getElementById('hotel-modal').style.display='none'; showHotelTab('checkin');" style="background:#2ecc71; color:white; padding:12px 30px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px;">
+                    DONE & CONTINUE
+                </button>
+            </div>
+        `;
+
+    } catch(err) {
+        modalBody.innerHTML = `<div style="color:red; text-align:center;">Error verifying check-in: ${err.message}</div>`;
+    }
+}
+
+/* =========================================================================
+   FEATURE 1 & 5: DYNAMIC INVENTORY HOLD SWEEPER & ROOM MANAGER
+   ========================================================================= */
+
+function renderInventoryManager(container, user) {
+    container.innerHTML = `
+        <div style="max-width:900px; margin:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+                <div>
+                    <h1 style="margin:0; color:#1e272e;">🏨 Dynamic Room Inventory & Holds</h1>
+                    <p style="color:#7f8c8d; margin-top:5px;">Manage total available rooms and view active 15-minute temporary inventory holds.</p>
+                </div>
+                <button onclick="showHotelTab('inventory')" style="background:#3498db; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                    🔄 Refresh Inventory
+                </button>
+            </div>
+
+            <div id="inventory-card-area">Loading Inventory Details...</div>
+        </div>
+    `;
+    fetchAndRenderHotelInventory(user.id);
+}
+
+async function fetchAndRenderHotelInventory(hotelId) {
+    const area = document.getElementById('inventory-card-area');
+    const client = getClient();
+
+    // Fetch Hotel details & Active Holds
+    const { data: hotel } = await client.from('hotels').select('*').eq('id', hotelId).single();
+    const { data: activeHolds } = await client
+        .from('bookings')
+        .select('*')
+        .eq('hotel_id', hotelId)
+        .eq('status', 'held')
+        .gt('hold_expires_at', new Date().toISOString());
+
+    const totalRooms = hotel?.total_rooms || 10;
+    const availableRooms = hotel?.available_rooms || 10;
+    const holdCount = activeHolds ? activeHolds.length : 0;
+
+    area.innerHTML = `
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-bottom:30px;">
+            <div style="background:white; padding:20px; border-radius:12px; border-left:5px solid #2ecc71; box-shadow:0 4px 10px rgba(0,0,0,0.03);">
+                <small style="color:#7f8c8d; font-weight:bold;">AVAILABLE ROOMS</small>
+                <h2 style="margin:10px 0 0 0; font-size:32px; color:#2ecc71;">${availableRooms}</h2>
+            </div>
+            <div style="background:white; padding:20px; border-radius:12px; border-left:5px solid #e67e22; box-shadow:0 4px 10px rgba(0,0,0,0.03);">
+                <small style="color:#7f8c8d; font-weight:bold;">TEMPORARY HOLDS (15-MIN)</small>
+                <h2 style="margin:10px 0 0 0; font-size:32px; color:#e67e22;">${holdCount}</h2>
+            </div>
+            <div style="background:white; padding:20px; border-radius:12px; border-left:5px solid #3498db; box-shadow:0 4px 10px rgba(0,0,0,0.03);">
+                <small style="color:#7f8c8d; font-weight:bold;">TOTAL PROPERTY CAPACITY</small>
+                <h2 style="margin:10px 0 0 0; font-size:32px; color:#3498db;">${totalRooms}</h2>
+            </div>
+        </div>
+
+        <div style="background:white; padding:25px; border-radius:16px; border:1px solid #e1e8ed;">
+            <h3 style="margin-top:0; color:#2c3e50;">⏱️ Active Agency Inventory Holds</h3>
+            ${holdCount === 0 ? `
+                <p style="color:#95a5a6;">No temporary inventory holds active at the moment.</p>
+            ` : `
+                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
+                    <thead>
+                        <tr style="border-bottom:2px solid #eee; color:#7f8c8d;">
+                            <th style="padding:10px;">Booking ID</th>
+                            <th style="padding:10px;">Agency</th>
+                            <th style="padding:10px;">Hold Expires In</th>
+                            <th style="padding:10px;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${activeHolds.map(h => {
+                            const expiresAt = new Date(h.hold_expires_at).getTime();
+                            const now = new Date().getTime();
+                            const diffMins = Math.max(0, Math.ceil((expiresAt - now) / 60000));
+                            return `
+                                <tr style="border-bottom:1px solid #f0f0f0;">
+                                    <td style="padding:12px; font-weight:bold;">${h.booking_id}</td>
+                                    <td style="padding:12px;">${h.agency_id || 'Travel Agency'}</td>
+                                    <td style="padding:12px; color:#e67e22; font-weight:bold;">⏳ ${diffMins} Minutes</td>
+                                    <td style="padding:12px;"><span style="background:#fff4e6; color:#d35400; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:11px;">HELD</span></td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `}
+        </div>
+    `;
+}
+
+/**
+ * Sweeper logic: Automatically releases rooms when hold_expires_at is passed
+ */
+async function runInventoryHoldSweeper() {
+    const client = getClient();
+    try {
+        const nowIso = new Date().toISOString();
+        
+        // Find expired holds
+        const { data: expiredBookings } = await client
+            .from('bookings')
+            .select('*')
+            .eq('status', 'held')
+            .lt('hold_expires_at', nowIso);
+
+        if (expiredBookings && expiredBookings.length > 0) {
+            for (let b of expiredBookings) {
+                // Update booking status to cancelled/expired
+                await client.from('bookings').update({ status: 'cancelled' }).eq('booking_id', b.booking_id);
+                
+                // Increment available_rooms in hotels table
+                if (b.hotel_id) {
+                    const { data: hotel } = await client.from('hotels').select('available_rooms').eq('id', b.hotel_id).single();
+                    if (hotel) {
+                        await client.from('hotels').update({ available_rooms: hotel.available_rooms + 1 }).eq('id', b.hotel_id);
+                    }
+                }
+            }
+        }
+    } catch(e) {
+        console.error("Sweeper Error:", e.message);
+    }
+}
+
+/* =========================================================================
+   FEATURE 2: CONTACT MASKING & ANTI-BYPASS SECURE RENDERER
+   ========================================================================= */
+
+/**
+ * Helper function used by Agency Dashboard to mask hotel info before payment
+ */
+function renderHotelCardForAgency(hotel, bookingStatus) {
+    const isPaid = bookingStatus === 'paid' || bookingStatus === 'checked_in';
+
+    return `
+        <div class="hotel-card" style="background:white; padding:20px; border-radius:12px; border:1px solid #e1e8ed; margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+                <div>
+                    <h3 style="margin:0 0 5px 0; color:#2c3e50;">${hotel.name || 'Char Dham Partner Hotel'}</h3>
+                    <p style="margin:0; font-size:13px; color:#e67e22; font-weight:bold;">
+                        📍 Proximity: Near ${hotel.nearest_temple || 'Yamunotri Temple'} (${hotel.proximity_km || '1.5'} km away)
+                    </p>
+                </div>
+                <span style="background:${isPaid ? '#2ecc71' : '#e67e22'}; color:white; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold;">
+                    ${isPaid ? 'UNLOCKED' : 'PROTECTED'}
+                </span>
+            </div>
+
+            <div style="margin-top:15px; padding:12px; border-radius:8px; background:${isPaid ? '#f0fff4' : '#f8f9fa'}; border:1px dashed ${isPaid ? '#2ecc71' : '#bdc3c7'};">
+                ${isPaid ? `
+                    <div style="font-size:13px; color:#27ae60; line-height:1.6;">
+                        <div>📞 <b>Direct Phone:</b> ${hotel.phone || '+91 9876543210'}</div>
+                        <div>✉️ <b>Email Desk:</b> ${hotel.email || 'reception@hotel.com'}</div>
+                        <div>🏠 <b>Exact Address:</b> ${hotel.full_address || 'Main Temple Road, Barkot, Uttarakhand'}</div>
+                    </div>
+                ` : `
+                    <div style="font-size:13px; color:#7f8c8d; text-align:center;">
+                        <span>🔒 <b>Hotel Phone, Email & Street Address Masked</b></span><br>
+                        <small>Anti-Bypass Protection: Direct contact details unlock automatically after Agency payment completion.</small>
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
+}
+
+/* =========================================================================
+   FEATURE 3: NETWORK FALLBACK & MOUNTAIN OFFLINE SMS/WHATSAPP ALERTS
+   ========================================================================= */
+
+function setupRealtimeBookingsSubscription(hotelId) {
+    const client = getClient();
+
+    // Subscribe to new completed payments for this hotel
+    realtimeSubscription = client
+        .channel('hotel-payment-channel')
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'bookings',
+                filter: `hotel_id=eq.${hotelId}`
+            },
+            (payload) => {
+                if (payload.new && payload.new.status === 'paid') {
+                    handleNewPaidBookingNotification(payload.new);
+                }
+            }
+        )
+        .subscribe();
+}
+
+/**
+ * Handle WebPush Notification + 2-Minute Offline Alert Fallback
+ */
+function handleNewPaidBookingNotification(booking) {
+    let acknowledged = false;
+
+    // 1. Display Real-time Web Notification Banner on Hotel Screen
+    const statusBanner = document.getElementById('verification-status-banner');
+    if (statusBanner) {
+        statusBanner.innerHTML = `
+            <div style="background:#e8f8f5; border:2px solid #2ecc71; padding:20px; border-radius:12px; color:#27ae60;">
+                <h3 style="margin:0 0 10px 0;">🔔 NEW PAID BOOKING RECEIVED!</h3>
+                <p style="margin:0;">Booking ID: <b>${booking.booking_id}</b> | Guest OTP: <b>${booking.checkin_otp}</b></p>
+                <button onclick="acknowledgeBookingAlert('${booking.booking_id}')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:12px;">
+                    ACKNOWLEDGE RECEIPT (Stop Fallback SMS)
+                </button>
+            </div>
+        `;
+    }
+
+    // 2. Start 2-Minute Fallback Countdown Timer for Poor Mountain Connectivity
+    if (ackTimer) clearTimeout(ackTimer);
+    
+    ackTimer = setTimeout(() => {
+        if (!acknowledged) {
+            triggerOfflineSmsWhatsAppAlert(booking);
+        }
+    }, 120000); // 2 minutes (120,000 ms)
+
+    window.acknowledgeBookingAlert = function(bId) {
+        acknowledged = true;
+        if (ackTimer) clearTimeout(ackTimer);
+        alert("✅ Booking Acknowledged. Offline SMS alert cancelled.");
+        if (statusBanner) statusBanner.innerHTML = '';
+    };
+}
+
+/**
+ * Trigger Supabase Edge Function to dispatch SMS/WhatsApp when offline
+ */
+async function triggerOfflineSmsWhatsAppAlert(booking) {
+    const client = getClient();
+    try {
+        console.warn("Hotel offline / unacknowledged for 2 mins. Dispatching SMS/WhatsApp fallback alert...");
+        await client.functions.invoke('send-offline-hotel-sms', {
+            body: { 
+                booking_id: booking.booking_id,
+                hotel_id: booking.hotel_id,
+                checkin_otp: booking.checkin_otp,
+                message: `[TourSetu Urgent Alert] New Paid Booking #${booking.booking_id}. Guest OTP is ${booking.checkin_otp}. Please prepare room.` 
+            }
+        });
+    } catch(err) {
+        console.error("Offline Fallback Alert Trigger Error:", err.message);
+    }
+}
+
+/* =========================================================================
+   FEATURE 4: CHAR DHAM LANDSLIDE / WEATHER CANCELLATION DISPUTE DESK
+   ========================================================================= */
+
+function renderLandslideDisputeDesk(container, user) {
+    container.innerHTML = `
+        <div style="max-width:900px; margin:auto;">
+            <div style="margin-bottom:25px;">
+                <h1 style="margin:0; color:#d63031;">⚠️ Char Dham Landslide & Weather Cancellation Desk</h1>
+                <p style="color:#7f8c8d; margin-top:5px;">Process Force Majeure road closures, mountain blockages, or issue 1-tap Free Date Reschedule.</p>
+            </div>
+
+            <div style="background:white; padding:25px; border-radius:16px; border:1px solid #ff7675; box-shadow:0 4px 15px rgba(214,48,49,0.05);">
+                <h3 style="margin-top:0; color:#d63031;">Initiate Force Majeure Route Blocked Dispute</h3>
+                <p style="font-size:13px; color:#636e72;">Under Char Dham Operational Risk Rules: In the event of a severe landslide or government-ordered Yatra halt, financial risk is split 50/50 between parties or settled via season reschedule.</p>
+                
+                <div style="margin:20px 0;">
+                    <label style="font-size:12px; font-weight:bold; color:#2d3436; display:block; margin-bottom:5px;">SELECT AFFECTED BOOKING ID</label>
+                    <select id="dispute-booking-select" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:8px;">
+                        <option value="">Select Booking...</option>
+                    </select>
+                </div>
+
+                <div style="margin:20px 0;">
+                    <label style="font-size:12px; font-weight:bold; color:#2d3436; display:block; margin-bottom:5px;">FORCE MAJEURE REASON</label>
+                    <textarea id="dispute-reason" placeholder="e.g. Landslide at Sonprayag / Helipad suspended due to heavy rain..." style="width:100%; height:70px; padding:12px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box;"></textarea>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:25px;">
+                    <button onclick="executeLandslideResolution('split_50_50')" style="background:#e67e22; color:white; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                        🤝 Execute 50/50 Risk Split (50% Refund / 50% Hotel Payout)
+                    </button>
+                    <button onclick="executeLandslideResolution('reschedule')" style="background:#0984e3; color:white; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                        📅 1-Tap Free Season Date Reschedule
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    populatePaidBookingsDropdown(user.id);
+}
+
+async function populatePaidBookingsDropdown(hotelId) {
+    const client = getClient();
+    const select = document.getElementById('dispute-booking-select');
+    if (!select) return;
+
+    const { data } = await client.from('bookings').select('*').eq('hotel_id', hotelId).eq('status', 'paid');
+    if (data && data.length > 0) {
+        select.innerHTML = `<option value="">Select Booking...</option>` + data.map(b => `
+            <option value="${b.booking_id}">Booking ID: ${b.booking_id} - ₹${b.total_price} (${b.customer_email})</option>
+        `).join('');
+    } else {
+        select.innerHTML = `<option value="">No Active Paid Bookings Eligible for Dispute</option>`;
+    }
+}
+
+/**
+ * Execute Landslide Dispute Resolution Workflow
+ */
+async function executeLandslideResolution(actionType) {
+    const bookingId = document.getElementById('dispute-booking-select').value;
+    const reason = document.getElementById('dispute-reason').value;
+
+    if (!bookingId || !reason.trim()) {
+        alert("⚠️ Please select a booking and state the landslide/weather reason.");
+        return;
+    }
+
+    const client = getClient();
+
+    try {
+        if (actionType === 'split_50_50') {
+            if (!confirm("Are you sure you want to execute a 50/50 financial split? 50% will be refunded to customer/agency and 50% partial payout will be released to hotel to cover blocked inventory.")) return;
+
+            const { data: booking } = await client.from('bookings').select('total_price').eq('booking_id', bookingId).single();
+            const total = parseFloat(booking.total_price) || 0;
+            const partialRefund = total * 0.50;
+            const partialPayout = total * 0.50;
+
+            await client.from('bookings').update({
+                status: 'cancelled_landslide',
+                refund_amount: partialRefund,
+                payout_amount: partialPayout,
+                dispute_reason: reason,
+                payout_released: true
+            }).eq('booking_id', bookingId);
+
+            alert(`✅ Landslide 50/50 Resolution Applied successfully! Refund: ₹${partialRefund}, Hotel Payout: ₹${partialPayout}`);
+
+        } else if (actionType === 'reschedule') {
+            const newDate = prompt("Enter new Yatra Check-in Date for guest (YYYY-MM-DD):");
+            if (!newDate) return;
+
+            await client.from('bookings').update({
+                travel_date: newDate,
+                dispute_reason: reason + ` [Rescheduled to ${newDate}]`
+            }).eq('booking_id', bookingId);
+
+            alert(`✅ Free Season Date Reschedule applied for ${newDate}.`);
+        }
+
+        showHotelTab('landslide');
+
+    } catch(err) {
+        alert("Dispute Error: " + err.message);
+    }
+}
+
+/* =========================================================================
+   MISC HOTEL HELPER FUNCTIONS
+   ========================================================================= */
+
+async function renderArrivalsAndPayouts(container, user) {
+    const client = getClient();
+    const { data: bookings } = await client.from('bookings').select('*').eq('hotel_id', user.id).order('created_at', { ascending: false });
+
+    container.innerHTML = `
+        <div style="max-width:1000px; margin:auto;">
+            <h1 style="margin:0 0 20px 0; color:#1e272e;">📋 Guest Arrivals & Commission Payout Ledger</h1>
+            <div style="background:white; border-radius:12px; border:1px solid #e1e8ed; overflow:hidden;">
+                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
+                    <thead style="background:#f8f9fa; border-bottom:2px solid #eee;">
+                        <tr>
+                            <th style="padding:15px;">Guest Email</th>
+                            <th style="padding:15px;">Check-in OTP</th>
+                            <th style="padding:15px;">Travel Date</th>
+                            <th style="padding:15px;">Status</th>
+                            <th style="padding:15px;">Payout Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${!bookings || bookings.length === 0 ? `<tr><td colspan="5" style="padding:20px; text-align:center;">No arrivals recorded yet.</td></tr>` : bookings.map(b => `
+                            <tr style="border-bottom:1px solid #f0f0f0;">
+                                <td style="padding:15px; font-weight:bold;">${b.customer_email || 'Traveler'}</td>
+                                <td style="padding:15px;"><span style="background:#eee; padding:3px 8px; border-radius:4px; font-family:monospace; font-weight:bold;">${b.checkin_otp || 'N/A'}</span></td>
+                                <td style="padding:15px;">${b.travel_date || 'N/A'}</td>
+                                <td style="padding:15px;"><span style="padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold; background:${b.status === 'checked_in' ? '#e8f8f5' : '#fef9e7'}; color:${b.status === 'checked_in' ? '#27ae60' : '#f39c12'};">${b.status.toUpperCase()}</span></td>
+                                <td style="padding:15px; font-weight:bold; color:#2ecc71;">₹${b.payout_amount || 0}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+async function toggleStopSell(hotelId) {
+    const client = getClient();
+    const btn = document.getElementById('stop-sell-btn');
+    
+    const { data: hotel } = await client.from('hotels').select('is_stop_sell').eq('id', hotelId).single();
+    const newStatus = !hotel?.is_stop_sell;
+
+    await client.from('hotels').update({ is_stop_sell: newStatus }).eq('id', hotelId);
+
+    if (newStatus) {
+        btn.style.background = '#e74c3c';
+        btn.innerText = '🔴 STOP SELL ACTIVE (Property Closed)';
+    } else {
+        btn.style.background = '#2ecc71';
+        btn.innerText = '🟢 Normal Selling Mode';
+    }
+}
 // 12. STYLES
 const styleTag = document.createElement('style');
 styleTag.innerHTML = `
