@@ -172,17 +172,23 @@ async function handleHotelProfileSetup(user) {
     const client = getClient();
     const appContainer = document.getElementById('app');
 
-    // Safe Query: Avoiding 406 single() crash
-    const { data: hotelsData, error } = await client
-        .from('hotels')
-        .select('*')
-        .eq('owner_id', user.id);
+    // Safe Query with Explicit Headers & Safe Limit
+    let hotel = null;
+    try {
+        const { data, error } = await client
+            .from('hotels')
+            .select('*')
+            .eq('owner_id', user.id)
+            .limit(1);
 
-    if (error) {
-        console.error("Hotel fetch error:", error);
+        if (error) {
+            console.error("Hotel fetch error:", error);
+        } else if (data && data.length > 0) {
+            hotel = data[0];
+        }
+    } catch (err) {
+        console.error("Query Execution Exception:", err);
     }
-
-    const hotel = (hotelsData && hotelsData.length > 0) ? hotelsData[0] : null;
 
     if (!hotel) {
         // Render Hotel Setup Form if property doesn't exist
@@ -219,6 +225,17 @@ async function handleHotelProfileSetup(user) {
             </div>
         `;
     } else {
+        // Hotel exists
+        appContainer.innerHTML = `
+            <div style="padding:20px;">
+                <h2>Hotel Dashboard - ${hotel.hotel_name}</h2>
+                <p>Location: ${hotel.city}</p>
+                <p>Owner Email: ${user.email}</p>
+                <button onclick="handleLogout()">Logout</button>
+            </div>
+        `;
+    }
+}
         // Hotel exists
         appContainer.innerHTML = `
             <div style="padding:20px;">
