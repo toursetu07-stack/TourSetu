@@ -112,16 +112,16 @@ async function initApp() {
     const client = getClient();
     if (!client) return;
     
-    const { data: { user } } = await client.auth.getUser();
-    if (user) {
-        showDashboard(user);
+    const { data: { user }, error } = await client.auth.getUser();
+    if (user && !error) {
+        await showDashboard(user);
     } else {
         renderAuthUI();
     }
 }
 
 async function showDashboard(user) {
-    const role = user.user_metadata.role || 'customer';
+    const role = user?.user_metadata?.role || 'customer';
     
     if (role === 'hotel') {
         // Safe database query call kar rahe hain UI render karne se pehle
