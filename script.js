@@ -1779,59 +1779,219 @@ async function evaluateHotelVisibility(hotelId) {
         .eq('hotel_id', hotelId);
 }
 
-/* =========================================
-   11. HOTEL PARTNER DASHBOARD (MODULE)
-   ========================================= */
+/* =========================================================
+   HOTEL PARTNER MODULE - PROPERTY & INVENTORY MANAGEMENT
+   ========================================================= */
 
-// 1. Safe Database Fetch Functions (Outside scope)
-async function fetchHotelProfile(userId) {
-    try {
-        const client = getClient();
-        if (!client) return null;
+// Fixed Permitted Locations List
+const FIXED_HOTEL_DESTINATIONS = [
+    "Haridwar", 
+    "Rishikesh", 
+    "Dehradun", 
+    "Barkot", 
+    "Uttarkashi", 
+    "Guptkashi", 
+    "Sonprayag", 
+    "Phata", 
+    "Badrinath Main Market", 
+    "Gangotri Temple Road & Market Area"
+];
 
-        const { data: hotel, error } = await client
-            .from('hotels')
-            .select('*')
-            .eq('owner_id', userId)
-            .maybeSingle();
+// Helper: Upload Image to Supabase Storage Bucket
+async function uploadHotelImage(file, bucketPath) {
+    if (!file) return null;
+    const client = getClient();
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+    const filePath = `${bucketPath}/${fileName}`;
 
-        if (error) throw error;
-        return hotel;
-    } catch (err) {
-        console.error("Hotel profile fetch error:", err.message);
+    const { data, error } = await client.storage
+        .from('hotel-assets')
+        .upload(filePath, file);
+
+    if (error) {
+        console.error("Image Upload Error:", error.message);
         return null;
     }
+
+    const { data: publicUrlData } = client.storage
+        .from('hotel-assets')
+        .getPublicUrl(filePath);
+
+    return publicUrlData.publicUrl;
 }
 
-async function fetchHotels(ownerId) {
+// Render Property & Inventory Tab Content
+async function renderPropertyAndInventoryTab(container, hotel) {
+    const destOptions = FIXED_HOTEL_DESTINATIONS.map(loc => 
+        `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+    ).join('');
+
+    container.innerHTML = `
+        <div style="max-width: 900px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); color: #1e293b;">
+            <div style="border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 25px;">
+                <h2 style="margin: 0; color: #0f172a; font-size: 22px;">🏨 Hotel Profile & Inventory Setup</h2>
+                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">Setup property photos, room counts, and pricing to make it visible for Agencies and Customers.</p>
+            </div>
+
+            <form id="hotel-profile-form" onsubmit="event.preventDefault(); handleSaveHotelProfile('${hotel?.hotel_id || ''}');">
+                <!-- SECTION 1: BASIC & LOCATION INFO -->
+                <h3 style="font-size: 16px; color: #0284c7; margin-bottom: 15px;">1. Basic Info & Nearest Location</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Hotel Name *</label>
+                        <input type="text" id="h-name" required placeholder="e.g. Hotel Devbhoomi Inn" value="${hotel?.hotel_name || ''}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Nearest Permitted Location *</label>
+                        <select id="h-city" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                            <option value="">-- Pick Nearest Location --</option>
+                            ${destOptions}
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Complete Street Address *</label>
+                    <input type="text" id="h-address" required placeholder="Street, Landmark, City" value="${hotel?.address || ''}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <!-- SECTION 2: ROOM & PRICING DETAILS -->
+                <h3 style="font-size: 16px; color: #0284c7; margin-bottom: 15px;">2. Room Inventory & Rates</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Rate per Night (₹) *</label>
+                        <input type="number" id="h-rate" required min="0" step="1" placeholder="Numeric only (e.g. 2500)" value="${hotel?.price_per_night || ''}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Total Rooms Count *</label>
+                        <input type="number" id="h-total-rooms" required min="1" step="1" placeholder="e.g. 20" value="${hotel?.total_rooms || ''}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Available Rooms *</label>
+                        <input type="number" id="h-avail-rooms" required min="0" step="1" placeholder="e.g. 15" value="${hotel?.available_rooms || ''}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <!-- SECTION 3: MEDIA / IMAGES UPLOAD -->
+                <h3 style="font-size: 16px; color: #0284c7; margin-bottom: 15px;">3. Hotel Photos</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 5px;">Hotel Front Image *</label>
+                        <input type="file" id="h-front-img" accept="image/*" style="width: 100%; font-size: 12px;">
+                        ${hotel?.front_image ? `<small style="color:#16a34a;">✓ Image Uploaded</small>` : ''}
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 5px;">Parking Area Image</label>
+                        <input type="file" id="h-parking-img" accept="image/*" style="width: 100%; font-size: 12px;">
+                        ${hotel?.parking_image ? `<small style="color:#16a34a;">✓ Image Uploaded</small>` : ''}
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 5px;">Room Interior Image *</label>
+                        <input type="file" id="h-room-img" accept="image/*" style="width: 100%; font-size: 12px;">
+                        ${hotel?.room_image ? `<small style="color:#16a34a;">✓ Image Uploaded</small>` : ''}
+                    </div>
+                </div>
+
+                <!-- ACTION BUTTONS -->
+                <div style="display: flex; gap: 15px; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                    <button type="button" onclick="showHotelTab('overview')" style="padding: 10px 24px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Cancel</button>
+                    <button type="submit" id="btn-save-hotel" style="padding: 10px 24px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Upload & Save Profile</button>
+                </div>
+            </form>
+        </div>
+    `;
+}
+
+// Form Submit Handler (Database Upload Logic)
+async function handleSaveHotelProfile(existingHotelId) {
+    const btn = document.getElementById('btn-save-hotel');
+    btn.disabled = true;
+    btn.innerText = "Uploading assets & saving...";
+
     try {
         const client = getClient();
-        if (!client) return [];
+        const { data: { user } } = await client.auth.getUser();
 
-        const { data, error } = await client
-            .from('hotels')
-            .select('*')
-            .eq('owner_id', ownerId);
+        if (!user) throw new Error("User session not found.");
 
-        if (error) throw error;
-        return data || [];
+        // Input Values
+        const hotelName = document.getElementById('h-name').value;
+        const city = document.getElementById('h-city').value;
+        const address = document.getElementById('h-address').value;
+        const pricePerNight = parseFloat(document.getElementById('h-rate').value);
+        const totalRooms = parseInt(document.getElementById('h-total-rooms').value);
+        const availableRooms = parseInt(document.getElementById('h-avail-rooms').value);
+
+        // Validation Check
+        if (availableRooms > totalRooms) {
+            alert("Available rooms cannot be greater than Total rooms!");
+            btn.disabled = false;
+            btn.innerText = "Upload & Save Profile";
+            return;
+        }
+
+        // Image Files
+        const frontFile = document.getElementById('h-front-img').files[0];
+        const parkingFile = document.getElementById('h-parking-img').files[0];
+        const roomFile = document.getElementById('h-room-img').files[0];
+
+        // Upload Images if selected
+        let frontUrl = null;
+        let parkingUrl = null;
+        let roomUrl = null;
+
+        if (frontFile) frontUrl = await uploadHotelImage(frontFile, 'front_views');
+        if (parkingFile) parkingUrl = await uploadHotelImage(parkingFile, 'parking_views');
+        if (roomFile) roomUrl = await uploadHotelImage(roomFile, 'room_views');
+
+        // Payload Object
+        const payload = {
+            owner_id: user.id,
+            hotel_name: hotelName,
+            city: city,
+            address: address,
+            price_per_night: pricePerNight,
+            total_rooms: totalRooms,
+            available_rooms: availableRooms,
+            hide_from_search: false,
+            updated_at: new Date()
+        };
+
+        if (frontUrl) payload.front_image = frontUrl;
+        if (parkingUrl) payload.parking_image = parkingUrl;
+        if (roomUrl) payload.room_image = roomUrl;
+
+        let dbError = null;
+
+        if (existingHotelId) {
+            // Update Existing Record
+            const { error } = await client
+                .from('hotels')
+                .update(payload)
+                .eq('hotel_id', existingHotelId);
+            dbError = error;
+        } else {
+            // Insert New Record
+            const { error } = await client
+                .from('hotels')
+                .insert([payload]);
+            dbError = error;
+        }
+
+        if (dbError) throw dbError;
+
+        alert("🎉 Hotel Profile & Inventory updated successfully! It is now live for Agencies & Customers.");
+        showHotelTab('overview');
+
     } catch (err) {
-        console.error("Hotel fetch error:", err.message);
-        return [];
+        console.error("Save Error:", err.message);
+        alert("Failed to save profile: " + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Upload & Save Profile";
     }
 }
-
-// 2. Main Dashboard Loader Function
-async function initHotelDashboard(user) {
-    try {
-        const hotel = await fetchHotelProfile(user.id);
-        renderHotelDashboard(user, hotel);
-    } catch (err) {
-        console.error("Dashboard Init Error:", err.message);
-        renderHotelDashboard(user, null);
-    }
-}
-
 // 3. UI Layout Render Function
 async function renderHotelDashboard(user, hotelData = null) {
     const app = document.getElementById('app');
