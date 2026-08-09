@@ -1854,8 +1854,31 @@ window.showHotelTab = async function(tabName) {
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
 
-    // Fetch Profile/Hotel Info
-    let { data: hotel } = await client.from('hotels').select('*').eq('owner_id', user.id).single();
+   // 1. Single Hotel Fetch Function (Profile/Dashboard ke liye)
+async function fetchHotelProfile(userId) {
+    try {
+        // .maybeSingle() use karne se agar row na mile toh error throw karne ki jagah 'null' return hoga
+        const { data: hotel, error } = await getClient()
+            .from('hotels')
+            .select('*')
+            .eq('owner_id', userId)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!hotel) {
+            console.warn("Is owner_id ke liye koi hotel record nahi mila.");
+            return null; // Hotel profile abhi created nahi hai
+        }
+
+        return hotel;
+    } catch (err) {
+        console.error("Hotel profile fetch error:", err.message);
+        return null;
+    }
+}
+
+// 2. Multiple Hotels Fetch Function (List fetch karne ke liye)
 async function fetchHotels(ownerId) {
     try {
         const { data, error } = await getClient()
@@ -1864,9 +1887,11 @@ async function fetchHotels(ownerId) {
             .eq('owner_id', ownerId);
 
         if (error) throw error;
-        return data;
+
+        return data || []; // High safety: agar undefined ho toh empty array return karega
     } catch (err) {
         console.error("Hotel fetch error:", err.message);
+        return [];
     }
 }
     if (tabName === 'overview') {
