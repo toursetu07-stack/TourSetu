@@ -122,7 +122,11 @@ async function initApp() {
 
 async function showDashboard(user) {
     const role = user.user_metadata.role || 'customer';
-    if (role === 'agency') {
+    
+    if (role === 'hotel') {
+        if (typeof renderHotelDashboard === "function") renderHotelDashboard(user);
+        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
+    } else if (role === 'agency') {
         if (typeof renderAgencyDashboard === "function") renderAgencyDashboard(user);
         else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
     } else {
@@ -130,7 +134,6 @@ async function showDashboard(user) {
         else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
     }
 }
-
 async function handleLogout() {
     await getClient().auth.signOut();
     window.location.reload();
@@ -1708,6 +1711,442 @@ window.executeLogout = async () => {
     location.reload(); 
 };
 /* =========================================
+   10. HOTEL PARTNER & REAL-TIME ENGINE
+   ========================================= */
+
+// STRICT 11 DESTINATIONS CONSTANT
+const FIXED_HOTEL_DESTINATIONS = [
+    "Haridwar", "Barkot", "Uttarkashi", "Yamunotri", "Gangotri",
+    "Kedarnath", "Badrinath", "Rishikesh", "Dehradun", "Devprayag", "Srinagar (Garhwal)"
+];
+
+/**
+ * Realtime Subscription Engine for Dynamic Hotel & Room Inventory Control
+ */
+function initHotelRealtimeSubscriptions() {
+    const client = getClient();
+    if (!client) return;
+
+    // Listen to live inventory changes on rooms table
+    client
+        .channel('public:rooms')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, async (payload) => {
+            console.log("⚡ Realtime Room Stock Update Triggered:", payload);
+            
+            // Auto calculate inventory status for parent hotel
+            const hotelId = payload.new ? payload.new.hotel_id : payload.old.hotel_id;
+            if (hotelId) {
+                await evaluateHotelVisibility(hotelId);
+            }
+            
+            // Refresh Active Views dynamically if currently on active dashboards
+            if (document.getElementById('hotel-rooms-list')) {
+                loadHotelRooms();
+            }
+            if (document.getElementById('customer-pkg-list')) {
+                loadHotelListings();
+            }
+        })
+        .subscribe();
+}
+
+/**
+ * Visibility Engine: Hides hotel if total available rooms across all categories is 0
+ */
+async function evaluateHotelVisibility(hotelId) {
+    const client = getClient();
+    const { data: roomList, error } = await client
+        .from('rooms')
+        .select('available_rooms')
+        .eq('hotel_id', hotelId);
+
+    if (error || !roomList) return;
+
+    // Sum available inventory across room types
+    const totalAvailable = roomList.reduce((acc, curr) => acc + (parseInt(curr.available_rooms) || 0), 0);
+    const shouldHide = totalAvailable <= 0;
+
+    // Update visibility state in Database
+    await client
+        .from('hotels')
+        .update({ hide_from_search: shouldHide })
+        .eq('hotel_id', hotelId);
+}
+
+/* =========================================
+   11. HOTEL PARTNER DASHBOARD (MODULE)
+   ========================================= */
+
+async function renderHotelDashboard(user) {
+    const app = document.getElementById('app');
+    app.style.maxWidth = "100%";
+
+    app.innerHTML = `
+        <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
+            <div style="width:260px; background:#1e272e; color:white; padding:25px; flex-shrink:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+                    <h2 style="color:#ff9f43; margin:0;">TourSetu <small style="font-size:12px; color:#aaa; display:block;">Hotel Partner</small></h2>
+                </div>
+                <nav>
+                    <div onclick="showHotelTab('overview')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
+                    <div onclick="showHotelTab('property')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🏨 Property & Rooms</div>
+                    <div onclick="showHotelTab('requests')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📥 Booking Inbox</div>
+                    <div onclick="confirmAndExecuteLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
+                </nav>
+            </div>
+            <div id="hotel-main-content" style="flex:1; padding:40px; overflow-y:auto; background:#f8f9fa;"></div>
+        </div>
+
+        <!-- Approval / Rejection Modal -->
+        <div id="hotel-action-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center; padding:20px;">
+            <div class="card" style="background:white; max-width:450px; width:100%; padding:30px; border-radius:15px; text-align:left;">
+                <div id="hotel-action-modal-body"></div>
+            </div>
+        </div>
+    `;
+
+    // Initialize Realtime Listener
+    initHotelRealtimeSubscriptions();
+    showHotelTab('overview');
+}
+
+window.showHotelTab = async function(tabName) {
+    const container = document.getElementById('hotel-main-content');
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+
+    // Fetch Profile/Hotel Info
+    let { data: hotel } = await client.from('hotels').select('*').eq('owner_id', user.id).single();
+
+    if (tabName === 'overview') {
+        if (!hotel) {
+            container.innerHTML = `
+                <div class="card" style="background:white; padding:40px; border-radius:15px; text-align:center;">
+                    <h2>Welcome Partner! 🏨</h2>
+                    <p style="color:#666;">Please setup your property details to begin taking room requests.</p>
+                    <button onclick="showHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:10px;">Setup Property Now</button>
+                </div>`;
+            return;
+        }
+
+        // Quick Stats Aggregation
+        const { data: requests } = await client.from('hotel_requests').select('*').eq('hotel_id', hotel.hotel_id);
+        const pendingCount = requests ? requests.filter(r => r.status === 'pending').length : 0;
+        const approvedCount = requests ? requests.filter(r => r.status === 'approved').length : 0;
+
+        container.innerHTML = `
+            <h1>Hotel Overview</h1>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-top:20px;">
+                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #ff9f43;">
+                    <small style="color:#888;">PROPERTY STATUS</small>
+                    <h3 style="margin:5px 0;">${hotel.hide_from_search ? '🔴 Hidden (No Inventory)' : '🟢 Active & Listed'}</h3>
+                </div>
+                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #3498db;">
+                    <small style="color:#888;">PENDING REQUESTS</small>
+                    <h2 style="margin:5px 0;">${pendingCount}</h2>
+                </div>
+                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #2ecc71;">
+                    <small style="color:#888;">CONFIRMED BOOKINGS</small>
+                    <h2 style="margin:5px 0;">${approvedCount}</h2>
+                </div>
+            </div>`;
+    } 
+    else if (tabName === 'property') {
+        const destSelectOptions = FIXED_HOTEL_DESTINATIONS.map(loc => 
+            `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+        ).join('');
+
+        container.innerHTML = `
+            <h1>Property & Inventory Management</h1>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
+                <!-- PROPERTY DETAILS FORM -->
+                <div class="card" style="background:white; padding:25px; border-radius:15px;">
+                    <h3>🏨 Property Profile</h3>
+                    <input type="text" id="h-name" placeholder="Hotel Name" value="${hotel?.hotel_name || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    
+                    <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION (STRICT LOCATION LIMITATION)</label>
+                    <select id="h-city" style="width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
+                        <option value="">Select Permitted Destination</option>
+                        ${destSelectOptions}
+                    </select>
+
+                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${hotel?.address || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    
+                    <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">FRONT COVER PICTURE</label>
+                    <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
+
+                    <button onclick="saveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                </div>
+
+                <!-- ROOM CATEGORIES CREATOR -->
+                <div class="card" style="background:white; padding:25px; border-radius:15px;">
+                    <h3>🛏️ Add Room Category</h3>
+                    ${!hotel ? '<p style="color:#e74c3c;">Save hotel property details first before adding rooms.</p>' : `
+                        <input type="text" id="r-type" placeholder="Room Category (e.g. Deluxe AC, Suite)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-price" placeholder="Specific Price per Night (₹)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-total" placeholder="Total Rooms Inventory" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        
+                        <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">ROOM PHOTOS</label>
+                        <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
+
+                        <button onclick="saveRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
+                    `}
+                </div>
+            </div>
+
+            <!-- ROOM INVENTORY TABLE -->
+            <div style="margin-top:30px;">
+                <h3>Live Inventory Stock</h3>
+                <div id="hotel-rooms-list">Loading inventory...</div>
+            </div>`;
+
+        if (hotel) loadHotelRooms(hotel.hotel_id);
+    }
+    else if (tabName === 'requests') {
+        container.innerHTML = `
+            <h1>Booking & Quote Requests</h1>
+            <div style="margin-top:20px;" id="hotel-inbox-container">Loading requests...</div>`;
+        if (hotel) loadHotelRequests(hotel.hotel_id);
+    }
+};
+
+/* =========================================
+   12. HOTEL DATA MUTATION HELPERS
+   ========================================= */
+
+window.saveHotelProfile = async function(existingHotelId) {
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+
+    const name = document.getElementById('h-name').value.trim();
+    const city = document.getElementById('h-city').value;
+    const address = document.getElementById('h-address').value.trim();
+    const fileInput = document.getElementById('h-front-pic');
+
+    if (!name || !city || !address) {
+        alert("Please fill out all required fields!");
+        return;
+    }
+
+    let imageUrl = null;
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const fileExt = file.name.split('.').pop();
+        const filePath = `hotels/${Date.now()}.${fileExt}`;
+        const { error: uploadErr } = await client.storage.from('hotel-media').upload(filePath, file);
+        if (uploadErr) { alert("Image Upload Failed: " + uploadErr.message); return; }
+        const { data: urlData } = client.storage.from('hotel-media').getPublicUrl(filePath);
+        imageUrl = urlData.publicUrl;
+    }
+
+    const payload = {
+        owner_id: user.id,
+        hotel_name: name,
+        city: city,
+        address: address,
+        status: 'active'
+    };
+    if (imageUrl) payload.front_pictures_urls = [imageUrl];
+
+    let err = null;
+    if (existingHotelId) {
+        const { error } = await client.from('hotels').update(payload).eq('hotel_id', existingHotelId);
+        err = error;
+    } else {
+        const { error } = await client.from('hotels').insert([payload]);
+        err = error;
+    }
+
+    if (!err) {
+        alert("Hotel Details Saved!");
+        showHotelTab('property');
+    } else {
+        alert("Save Error: " + err.message);
+    }
+};
+
+window.saveRoomCategory = async function(hotelId) {
+    const client = getClient();
+    const type = document.getElementById('r-type').value.trim();
+    const price = parseFloat(document.getElementById('r-price').value);
+    const total = parseInt(document.getElementById('r-total').value);
+    const available = parseInt(document.getElementById('r-available').value);
+    const fileInput = document.getElementById('r-photos');
+
+    if (!type || isNaN(price) || isNaN(total) || isNaN(available)) {
+        alert("Please fill all valid numerical room details.");
+        return;
+    }
+
+    let uploadedUrls = [];
+    if (fileInput.files.length > 0) {
+        for (let file of fileInput.files) {
+            const filePath = `rooms/${Date.now()}_${file.name}`;
+            const { error: uploadErr } = await client.storage.from('hotel-media').upload(filePath, file);
+            if (!uploadErr) {
+                const { data: urlData } = client.storage.from('hotel-media').getPublicUrl(filePath);
+                uploadedUrls.push(urlData.publicUrl);
+            }
+        }
+    }
+
+    const { error } = await client.from('rooms').insert([{
+        hotel_id: hotelId,
+        room_type: type,
+        specific_price: price,
+        total_rooms: total,
+        available_rooms: available,
+        room_photos_urls: uploadedUrls
+    }]);
+
+    if (!error) {
+        alert("Room Category Added!");
+        await evaluateHotelVisibility(hotelId);
+        loadHotelRooms(hotelId);
+    } else {
+        alert("Error creating room: " + error.message);
+    }
+};
+
+async function loadHotelRooms(hotelId) {
+    const container = document.getElementById('hotel-rooms-list');
+    if (!container) return;
+
+    const client = getClient();
+    const { data: rooms } = await client.from('rooms').select('*').eq('hotel_id', hotelId);
+
+    if (!rooms || rooms.length === 0) {
+        container.innerHTML = `<p style="color:#777;">No room categories configured yet.</p>`;
+        return;
+    }
+
+    container.innerHTML = rooms.map(r => `
+        <div class="card" style="background:white; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h4 style="margin:0;">${r.room_type}</h4>
+                <small style="color:#666;">Price: ₹${r.specific_price} / night</small>
+            </div>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <div>
+                    <small style="display:block; font-size:10px; color:#888;">AVAILABLE / TOTAL</small>
+                    <input type="number" value="${r.available_rooms}" min="0" max="${r.total_rooms}" onchange="updateRoomStock('${r.room_id}', '${r.hotel_id}', this.value)" style="width:60px; padding:5px; border:1px solid #ccc; border-radius:5px; font-weight:bold;"> / ${r.total_rooms}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+window.updateRoomStock = async function(roomId, hotelId, newAvailable) {
+    const client = getClient();
+    const { error } = await client
+        .from('rooms')
+        .update({ available_rooms: parseInt(newAvailable) })
+        .eq('room_id', roomId);
+
+    if (!error) {
+        await evaluateHotelVisibility(hotelId);
+    } else {
+        alert("Failed to update stock: " + error.message);
+    }
+};
+
+async function loadHotelRequests(hotelId) {
+    const container = document.getElementById('hotel-inbox-container');
+    const client = getClient();
+    const { data: requests } = await client
+        .from('hotel_requests')
+        .select('*, rooms(*)')
+        .eq('hotel_id', hotelId)
+        .order('created_at', { ascending: false });
+
+    if (!requests || requests.length === 0) {
+        container.innerHTML = `<p style="color:#777;">No incoming requests.</p>`;
+        return;
+    }
+
+    container.innerHTML = requests.map(req => {
+        let statusBadge = `#ff9f43`;
+        if (req.status === 'approved') statusBadge = `#2ecc71`;
+        if (req.status === 'denied') statusBadge = `#e74c3c`;
+
+        return `
+        <div class="card" style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; border-left:5px solid ${statusBadge};">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+                <div>
+                    <h3 style="margin:0;">${req.rooms?.room_type || 'Room Request'}</h3>
+                    <small style="color:#888;">Requester: <b>${req.requester_type.toUpperCase()}</b> (${req.agency_contact || 'Direct Customer'})</small>
+                    <p style="margin:5px 0; font-size:13px;">Dates: ${req.requested_dates || 'Not Specified'}</p>
+                </div>
+                <div style="text-align:right;">
+                    <span style="background:${statusBadge}; color:white; font-size:10px; padding:3px 8px; border-radius:4px; font-weight:bold;">${req.status.toUpperCase()}</span>
+                </div>
+            </div>
+
+            ${req.status === 'pending' ? `
+                <div style="margin-top:15px; display:flex; gap:10px;">
+                    <button onclick="promptHotelAction('${req.request_id}', 'approve')" style="background:#2ecc71; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">Accept</button>
+                    <button onclick="promptHotelAction('${req.request_id}', 'deny')" style="background:#e74c3c; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny</button>
+                </div>
+            ` : ''}
+        </div>`;
+    }).join('');
+}
+
+window.promptHotelAction = function(requestId, action) {
+    const modal = document.getElementById('hotel-action-modal');
+    const body = document.getElementById('hotel-action-modal-body');
+
+    if (action === 'approve') {
+        body.innerHTML = `
+            <h3 style="margin-top:0;">Accept Booking & Set Payment Info</h3>
+            <p style="font-size:12px; color:#666;">Enter payment collection instructions (GPay / UPI / Bank Details) for the buyer:</p>
+            <textarea id="h-pay-details" placeholder="e.g. GPay UPI ID: 9876543210@upi or Bank transfer details..." style="width:100%; height:80px; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box;"></textarea>
+            <button onclick="executeHotelRequestAction('${requestId}', 'approved')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">Confirm Acceptance</button>
+        `;
+    } else {
+        body.innerHTML = `
+            <h3 style="margin-top:0; color:#e74c3c;">Deny Booking Request</h3>
+            <p style="font-size:12px; color:#666;">State cancellation reason for client:</p>
+            <textarea id="h-deny-reason" placeholder="Reason for declining inquiry..." style="width:100%; height:80px; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box;"></textarea>
+            <button onclick="executeHotelRequestAction('${requestId}', 'denied')" style="width:100%; background:#e74c3c; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">Confirm Decline</button>
+        `;
+    }
+    modal.style.display = 'flex';
+};
+
+window.executeHotelRequestAction = async function(requestId, newStatus) {
+    const client = getClient();
+    const payInfo = document.getElementById('h-pay-details')?.value || null;
+
+    const { error } = await client
+        .from('hotel_requests')
+        .update({ status: newStatus, agency_contact: payInfo })
+        .eq('request_id', requestId);
+
+    if (!error) {
+        document.getElementById('hotel-action-modal').style.display = 'none';
+        showHotelTab('requests');
+    } else {
+        alert("Action Error: " + error.message);
+    }
+};
+
+/* =========================================
+   13. CUSTOMER & AGENCY DISCOVERY MODULE
+   ========================================= */
+
+window.loadHotelListings = async function() {
+    const client = getClient();
+    // Only query non-hidden hotel properties (Hide visibility rule enforcement)
+    const { data: hotels } = await client
+        .from('hotels')
+        .select('*, rooms(*)')
+        .eq('hide_from_search', false);
+
+    return hotels || [];
+};
+/* =========================================
    10. SECURE NOTIFICATION SYSTEM (Cloudflare Bridge)
    ========================================= */
 
@@ -1737,6 +2176,7 @@ async function sendPushNotification(targetUserId, messageTitle, messageBody) {
         console.error("Error sending secure notification:", error);
     }
 }
+
 /* =========================================
    10. PACKAGE FORM & HELPER LOGIC
    ========================================= */
