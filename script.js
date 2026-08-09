@@ -2491,9 +2491,17 @@ if (!hotel) {
 /* ==========================================================================
    REALTIME INVENTORY & SUBSCRIPTIONS
    ========================================================================== */
+// 1. Global variable declare karein taaki ReferenceError na aaye
+let hotelRealtimeChannel = null;
+
 function initHotelRealtimeSubscriptions(userId) {
     const client = getClient();
-    if (hotelRealtimeChannel) client.removeChannel(hotelRealtimeChannel);
+    if (!client) return;
+
+    // 2. Clear previous subscription if already active
+    if (hotelRealtimeChannel) {
+        client.removeChannel(hotelRealtimeChannel);
+    }
 
     hotelRealtimeChannel = client.channel('hotel-inventory-sync')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, payload => {
