@@ -2060,7 +2060,6 @@ async function renderHotelDashboard(user, hotelData = null) {
         }
     }
 };
-}; // <--- YEH WALA BRACKET CHECK KAREIN! Yeh Line 4335 par hona zaroori hai.
   // 1. Safe Fetch Function for Hotel Profile
 async function fetchHotelProfile(userId) {
     try {
