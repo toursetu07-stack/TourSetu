@@ -1793,20 +1793,25 @@ async function evaluateHotelVisibility(hotelId) {
    HOTEL PARTNER MODULE - PROPERTY & INVENTORY MANAGEMENT
    ========================================================= */
 
-// Fixed Permitted Locations List
-const FIXED_HOTEL_DESTINATIONS = [
-    "Haridwar", 
-    "Rishikesh", 
-    "Dehradun", 
-    "Barkot", 
-    "Uttarkashi", 
-    "Guptkashi", 
-    "Sonprayag", 
-    "Phata", 
-    "Badrinath Main Market", 
-    "Gangotri Temple Road & Market Area"
-];
+/* =========================================================
+   HOTEL PARTNER MODULE - PROPERTY & INVENTORY MANAGEMENT
+   ========================================================= */
 
+// Agar pehle se declared hai toh re-declare mat karein, direct value update/reassign karein (ya ise hata hi dein):
+if (typeof FIXED_HOTEL_DESTINATIONS === 'undefined') {
+    var FIXED_HOTEL_DESTINATIONS = [
+        "Haridwar", 
+        "Rishikesh", 
+        "Dehradun", 
+        "Barkot", 
+        "Uttarkashi", 
+        "Guptkashi", 
+        "Sonprayag", 
+        "Phata", 
+        "Badrinath Main Market", 
+        "Gangotri Temple Road & Market Area"
+    ];
+}
 // Helper: Upload Image to Supabase Storage Bucket
 async function uploadHotelImage(file, bucketPath) {
     if (!file) return null;
