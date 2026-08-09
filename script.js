@@ -232,20 +232,24 @@ async function handleAuth() {
             const role = document.getElementById('role').value;
             const metadata = { role, is_approved: (role === 'customer') };
             
-            if (role === 'agency') {
+            // Agency or Hotel attributes mapping
+            if (role === 'agency' || role === 'hotel') {
                 metadata.gst = document.getElementById('gst-no').value || "N/A";
                 metadata.reg_no = document.getElementById('biz-reg').value || "N/A";
                 metadata.license = document.getElementById('biz-lic').value || "N/A";
                 metadata.phone = document.getElementById('biz-phone').value || "N/A";
             }
             
+            // Clean Redirect URL (removes any existing hash/query params that might corrupt URL)
+            const redirectUrl = window.location.origin + window.location.pathname;
+
             // SIGNUP WITH REDIRECT
-            const { error } = await client.auth.signUp({ 
+            const { data, error } = await client.auth.signUp({ 
                 email, 
                 password, 
                 options: { 
                     data: metadata,
-                    emailRedirectTo: window.location.href // Sends user back here after confirmation
+                    emailRedirectTo: redirectUrl // Sends user back safely after confirmation
                 } 
             });
 
