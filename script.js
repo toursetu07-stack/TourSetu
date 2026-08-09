@@ -2050,7 +2050,97 @@ async function renderHotelDashboard(user, hotelData = null) {
     showHotelTab('overview');
 }
 
-// TAB: REQUESTS
+// 4. Tab Switching Global Function
+window.showHotelTab = async function(tabName) {
+    const container = document.getElementById('hotel-main-content');
+    if (!container) return;
+
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) return;
+
+    const hotel = await fetchHotelProfile(user.id);
+
+    // TAB 1: OVERVIEW
+    if (tabName === 'overview') {
+        if (!hotel) {
+            container.innerHTML = `
+                <div class="card" style="background:white; padding:40px; border-radius:15px; text-align:center;">
+                    <h2>Welcome Partner! 🏨</h2>
+                    <p style="color:#666;">Please setup your property details to begin taking room requests.</p>
+                    <button onclick="showHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:10px;">Setup Property Now</button>
+                </div>`;
+            return;
+        }
+
+        const { data: requests } = await client.from('hotel_requests').select('*').eq('hotel_id', hotel.hotel_id);
+        const pendingCount = requests ? requests.filter(r => r.status === 'pending').length : 0;
+        const approvedCount = requests ? requests.filter(r => r.status === 'approved').length : 0;
+
+        container.innerHTML = `
+            <h1>Hotel Overview</h1>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-top:20px;">
+                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #ff9f43;">
+                    <small style="color:#888;">PROPERTY STATUS</small>
+                    <h3 style="margin:5px 0;">${hotel.hide_from_search ? '🔴 Hidden (No Inventory)' : '🟢 Active & Listed'}</h3>
+                </div>
+                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #3498db;">
+                    <small style="color:#888;">PENDING REQUESTS</small>
+                    <h2 style="margin:5px 0;">${pendingCount}</h2>
+                </div>
+                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #2ecc71;">
+                    <small style="color:#888;">CONFIRMED BOOKINGS</small>
+                    <h2 style="margin:5px 0;">${approvedCount}</h2>
+                </div>
+            </div>`;
+    } 
+    // TAB 2: PROPERTY / ROOM INVENTORY
+    else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
+        const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
+            `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+        ).join('');
+
+        container.innerHTML = `
+            <h1>Property & Inventory Management</h1>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
+                <div class="card" style="background:white; padding:25px; border-radius:15px;">
+                    <h3>🏨 Property Profile</h3>
+                    <input type="text" id="h-name" placeholder="Hotel Name" value="${hotel?.hotel_name || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    
+                    <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION</label>
+                    <select id="h-city" style="width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
+                        <option value="">Select Permitted Destination</option>
+                        ${destSelectOptions}
+                    </select>
+
+                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${hotel?.address || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
+
+                    <button onclick="saveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                </div>
+
+                <div class="card" style="background:white; padding:25px; border-radius:15px;">
+                    <h3>🛏️ Add Room Category</h3>
+                    ${!hotel ? '<p style="color:#e74c3c;">Save hotel property details first before adding rooms.</p>' : `
+                        <input type="text" id="r-type" placeholder="Room Category (e.g. Deluxe AC)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-price" placeholder="Price per Night (₹)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-total" placeholder="Total Rooms Inventory" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
+
+                        <button onclick="saveRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
+                    `}
+                </div>
+            </div>
+
+            <div style="margin-top:30px;">
+                <h3>Live Inventory Stock</h3>
+                <div id="hotel-rooms-list">Loading inventory...</div>
+            </div>`;
+
+        if (hotel && typeof loadHotelRooms === "function") loadHotelRooms(hotel.hotel_id);
+    } 
+    // TAB 3: REQUESTS
     else if (tabName === 'requests') {
         container.innerHTML = `
             <h1>Booking & Quote Requests</h1>
