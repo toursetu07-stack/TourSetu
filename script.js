@@ -2058,7 +2058,7 @@ window.showHotelTab = async function(tabName) {
     const { data: { user } } = await client.auth.getUser();
     
     if (!user) return;
-   // 1. Safe Fetch Function for Hotel Profile
+  // 1. Safe Fetch Function for Hotel Profile
 async function fetchHotelProfile(userId) {
     try {
         const client = getClient();
@@ -2176,7 +2176,6 @@ window.showHotelTab = async function(tabName) {
         if (hotel && typeof loadHotelRequests === "function") loadHotelRequests(hotel.hotel_id);
     }
 };
-
 /* =========================================
    12. HOTEL DATA MUTATION HELPERS
    ========================================= */
