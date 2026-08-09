@@ -1783,39 +1783,65 @@ async function evaluateHotelVisibility(hotelId) {
    11. HOTEL PARTNER DASHBOARD (MODULE)
    ========================================= */
 
-// 1. Safe Database Fetch Function (.maybeSingle Error Protection)
-async function initHotelDashboard(user) {
+// 1. Safe Database Fetch Functions (Outside scope)
+async function fetchHotelProfile(userId) {
     try {
         const client = getClient();
-        if (!client) return;
+        if (!client) return null;
 
-        // .maybeSingle() use karke 406 Error se protection
         const { data: hotel, error } = await client
             .from('hotels')
             .select('*')
-            .eq('owner_id', user.id)
+            .eq('owner_id', userId)
             .maybeSingle();
 
-        if (error) {
-            console.error("Error fetching hotel details:", error.message);
-        }
+        if (error) throw error;
+        return hotel;
+    } catch (err) {
+        console.error("Hotel profile fetch error:", err.message);
+        return null;
+    }
+}
 
-        // Dashboard Layout render karein
+async function fetchHotels(ownerId) {
+    try {
+        const client = getClient();
+        if (!client) return [];
+
+        const { data, error } = await client
+            .from('hotels')
+            .select('*')
+            .eq('owner_id', ownerId);
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error("Hotel fetch error:", err.message);
+        return [];
+    }
+}
+
+// 2. Main Dashboard Loader Function
+async function initHotelDashboard(user) {
+    try {
+        const hotel = await fetchHotelProfile(user.id);
         renderHotelDashboard(user, hotel);
-
     } catch (err) {
         console.error("Dashboard Init Error:", err.message);
         renderHotelDashboard(user, null);
     }
 }
 
-// 2. Exact UI Render Function (No visual changes)
+// 3. UI Layout Render Function
 async function renderHotelDashboard(user, hotelData = null) {
     const app = document.getElementById('app');
+    if (!app) return;
+    
     app.style.maxWidth = "100%";
 
     app.innerHTML = `
         <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
+            <!-- SIDEBAR -->
             <div style="width:260px; background:#1e272e; color:white; padding:25px; flex-shrink:0;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
                     <h2 style="color:#ff9f43; margin:0;">TourSetu <small style="font-size:12px; color:#aaa; display:block;">Hotel Partner</small></h2>
@@ -1827,10 +1853,12 @@ async function renderHotelDashboard(user, hotelData = null) {
                     <div onclick="confirmAndExecuteLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
                 </nav>
             </div>
+            
+            <!-- MAIN DISPLAY AREA -->
             <div id="hotel-main-content" style="flex:1; padding:40px; overflow-y:auto; background:#f8f9fa;"></div>
         </div>
 
-        <!-- Approval / Rejection Modal -->
+        <!-- Action Modal -->
         <div id="hotel-action-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center; padding:20px;">
             <div class="card" style="background:white; max-width:450px; width:100%; padding:30px; border-radius:15px; text-align:left;">
                 <div id="hotel-action-modal-body"></div>
@@ -1838,62 +1866,29 @@ async function renderHotelDashboard(user, hotelData = null) {
         </div>
     `;
 
-    // Direct overview tab render karne ke liye (agar showHotelTab available ho)
-    if (typeof showHotelTab === "function") {
-        showHotelTab('overview');
+    // Initialize Realtime Listener
+    if (typeof initHotelRealtimeSubscriptions === "function") {
+        initHotelRealtimeSubscriptions();
     }
+    
+    // Load default tab
+    showHotelTab('overview');
 }
 
-    // Initialize Realtime Listener
-    initHotelRealtimeSubscriptions();
-    showHotelTab('overview');
-
-
+// 4. Tab Switching Global Function
 window.showHotelTab = async function(tabName) {
     const container = document.getElementById('hotel-main-content');
+    if (!container) return;
+
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
+    
+    if (!user) return;
 
-   // 1. Single Hotel Fetch Function (Profile/Dashboard ke liye)
-async function fetchHotelProfile(userId) {
-    try {
-        // .maybeSingle() use karne se agar row na mile toh error throw karne ki jagah 'null' return hoga
-        const { data: hotel, error } = await getClient()
-            .from('hotels')
-            .select('*')
-            .eq('owner_id', userId)
-            .maybeSingle();
+    // Fetch Hotel Profile for the current user
+    const hotel = await fetchHotelProfile(user.id);
 
-        if (error) throw error;
-
-        if (!hotel) {
-            console.warn("Is owner_id ke liye koi hotel record nahi mila.");
-            return null; // Hotel profile abhi created nahi hai
-        }
-
-        return hotel;
-    } catch (err) {
-        console.error("Hotel profile fetch error:", err.message);
-        return null;
-    }
-}
-
-// 2. Multiple Hotels Fetch Function (List fetch karne ke liye)
-async function fetchHotels(ownerId) {
-    try {
-        const { data, error } = await getClient()
-            .from('hotels')
-            .select('*')
-            .eq('owner_id', ownerId);
-
-        if (error) throw error;
-
-        return data || []; // High safety: agar undefined ho toh empty array return karega
-    } catch (err) {
-        console.error("Hotel fetch error:", err.message);
-        return [];
-    }
-}
+    // TAB: OVERVIEW
     if (tabName === 'overview') {
         if (!hotel) {
             container.innerHTML = `
@@ -1905,7 +1900,6 @@ async function fetchHotels(ownerId) {
             return;
         }
 
-        // Quick Stats Aggregation
         const { data: requests } = await client.from('hotel_requests').select('*').eq('hotel_id', hotel.hotel_id);
         const pendingCount = requests ? requests.filter(r => r.status === 'pending').length : 0;
         const approvedCount = requests ? requests.filter(r => r.status === 'approved').length : 0;
@@ -1927,43 +1921,38 @@ async function fetchHotels(ownerId) {
                 </div>
             </div>`;
     } 
+    // TAB: PROPERTY
     else if (tabName === 'property') {
-        const destSelectOptions = FIXED_HOTEL_DESTINATIONS.map(loc => 
+        const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
             `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
         ).join('');
 
         container.innerHTML = `
             <h1>Property & Inventory Management</h1>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
-                <!-- PROPERTY DETAILS FORM -->
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
                     <h3>🏨 Property Profile</h3>
                     <input type="text" id="h-name" placeholder="Hotel Name" value="${hotel?.hotel_name || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     
-                    <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION (STRICT LOCATION LIMITATION)</label>
+                    <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION</label>
                     <select id="h-city" style="width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
                         <option value="">Select Permitted Destination</option>
                         ${destSelectOptions}
                     </select>
 
                     <input type="text" id="h-address" placeholder="Complete Street Address" value="${hotel?.address || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    
-                    <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">FRONT COVER PICTURE</label>
                     <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
                     <button onclick="saveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
                 </div>
 
-                <!-- ROOM CATEGORIES CREATOR -->
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
                     <h3>🛏️ Add Room Category</h3>
                     ${!hotel ? '<p style="color:#e74c3c;">Save hotel property details first before adding rooms.</p>' : `
-                        <input type="text" id="r-type" placeholder="Room Category (e.g. Deluxe AC, Suite)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                        <input type="number" id="r-price" placeholder="Specific Price per Night (₹)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="text" id="r-type" placeholder="Room Category (e.g. Deluxe AC)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-price" placeholder="Price per Night (₹)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                         <input type="number" id="r-total" placeholder="Total Rooms Inventory" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                         <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                        
-                        <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">ROOM PHOTOS</label>
                         <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
 
                         <button onclick="saveRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
@@ -1971,19 +1960,19 @@ async function fetchHotels(ownerId) {
                 </div>
             </div>
 
-            <!-- ROOM INVENTORY TABLE -->
             <div style="margin-top:30px;">
                 <h3>Live Inventory Stock</h3>
                 <div id="hotel-rooms-list">Loading inventory...</div>
             </div>`;
 
-        if (hotel) loadHotelRooms(hotel.hotel_id);
-    }
+        if (hotel && typeof loadHotelRooms === "function") loadHotelRooms(hotel.hotel_id);
+    } 
+    // TAB: REQUESTS
     else if (tabName === 'requests') {
         container.innerHTML = `
             <h1>Booking & Quote Requests</h1>
             <div style="margin-top:20px;" id="hotel-inbox-container">Loading requests...</div>`;
-        if (hotel) loadHotelRequests(hotel.hotel_id);
+        if (hotel && typeof loadHotelRequests === "function") loadHotelRequests(hotel.hotel_id);
     }
 };
 
