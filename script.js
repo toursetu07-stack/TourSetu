@@ -2255,8 +2255,31 @@ async function switchHotelTab(tabName) {
     const { data: { user } } = await client.auth.getUser();
     const content = document.getElementById('hotel-main-content');
 
-    // Fetch Hotel Profile
-    const { data: hotel } = await client.from('hotels').select('*').eq('owner_id', user.id).single();
+   // ✅ SAFE FETCHING LOGIC
+const { data: hotelsList, error } = await client
+    .from('hotels')
+    .select('*')
+    .eq('owner_id', user.id);
+
+if (error) {
+    console.error("Hotel fetch error:", error);
+}
+
+// Check agar hotel profile exist karta hai ya nahi
+const hotel = (hotelsList && hotelsList.length > 0) ? hotelsList[0] : null;
+
+if (!hotel) {
+    // Agar hotel record nahi mila, toh crash mat hone do - 'Create Profile' form dikhao!
+    const content = document.getElementById('hotel-main-content');
+    content.innerHTML = `
+        <div style="background:white; padding:30px; border-radius:12px; text-align:center;">
+            <h3>🏨 Welcome to TourSetu Hotel Dashboard</h3>
+            <p style="color:#666;">Aapki hotel property abhi registered nahi hai. Pehle property details bharein.</p>
+            <button onclick="switchHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">Create Property Profile</button>
+        </div>
+    `;
+    return;
+}
 
     if (!hotel && tabName !== 'property') {
         content.innerHTML = `
