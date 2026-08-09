@@ -2491,19 +2491,16 @@ if (!hotel) {
 /* ==========================================================================
    REALTIME INVENTORY & SUBSCRIPTIONS
    ========================================================================== */
-// 1. Global variable declare karein taaki ReferenceError na aaye
-let hotelRealtimeChannel = null;
-
 function initHotelRealtimeSubscriptions(userId) {
     const client = getClient();
     if (!client) return;
 
-    // 2. Clear previous subscription if already active
-    if (hotelRealtimeChannel) {
-        client.removeChannel(hotelRealtimeChannel);
+    // Window object use karein - No redeclaration error!
+    if (window.hotelRealtimeChannel) {
+        client.removeChannel(window.hotelRealtimeChannel);
     }
 
-    hotelRealtimeChannel = client.channel('hotel-inventory-sync')
+    window.hotelRealtimeChannel = client.channel('hotel-inventory-sync')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, payload => {
             console.log('⚡ Live Inventory Shift Detected:', payload);
             if (document.getElementById('hotel-main-content')) {
