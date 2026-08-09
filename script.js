@@ -2055,8 +2055,11 @@ async function renderHotelDashboard(user, hotelData = null) {
         container.innerHTML = `
             <h1>Booking & Quote Requests</h1>
             <div style="margin-top:20px;" id="hotel-inbox-container">Loading requests...</div>`;
-        if (hotel && typeof loadHotelRequests === "function") loadHotelRequests(hotel.hotel_id);
+        if (hotel && typeof loadHotelRequests === "function") {
+            loadHotelRequests(hotel.hotel_id);
+        }
     }
+};
 }; // <--- YEH WALA BRACKET CHECK KAREIN! Yeh Line 4335 par hona zaroori hai.
   // 1. Safe Fetch Function for Hotel Profile
 async function fetchHotelProfile(userId) {
