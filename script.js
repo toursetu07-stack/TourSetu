@@ -1716,15 +1716,25 @@ window.executeLogout = async () => {
     await getClient().auth.signOut(); 
     location.reload(); 
 };
-/* =========================================
-   10. HOTEL PARTNER & REAL-TIME ENGINE
-   ========================================= */
+/* =========================================================
+   HOTEL PARTNER MODULE - PROPERTY & INVENTORY MANAGEMENT
+   ========================================================= */
 
-// STRICT 11 DESTINATIONS CONSTANT
-const FIXED_HOTEL_DESTINATIONS = [
-    "Haridwar", "Barkot", "Uttarkashi", "Yamunotri", "Gangotri",
-    "Kedarnath", "Badrinath", "Rishikesh", "Dehradun", "Devprayag", "Srinagar (Garhwal)"
-];
+// Agar pehle se declared hai toh re-declare mat karein, direct value update/reassign karein (ya ise hata hi dein):
+if (typeof FIXED_HOTEL_DESTINATIONS === 'undefined') {
+    var FIXED_HOTEL_DESTINATIONS = [
+        "Haridwar", 
+        "Rishikesh", 
+        "Dehradun", 
+        "Barkot", 
+        "Uttarkashi", 
+        "Guptkashi", 
+        "Sonprayag", 
+        "Phata", 
+        "Badrinath Main Market", 
+        "Gangotri Temple Road & Market Area"
+    ];
+}
 
 /**
  * Realtime Subscription Engine for Dynamic Hotel & Room Inventory Control
