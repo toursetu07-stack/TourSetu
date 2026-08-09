@@ -2146,6 +2146,383 @@ window.loadHotelListings = async function() {
 
     return hotels || [];
 };
+/* ==========================================================================
+   TOURSETU - HOTEL PARTNER ECOSYSTEM MODULE
+   Engineered for: Realtime Inventory, Multi-Role Workflows, Dynamic Visibility
+   ========================================================================== */
+
+// 1. STRICT LOCATION MATRIX CONSTRAINT (11 Permitted Locations)
+const PERMITTED_HOTEL_LOCATIONS = [
+    "Haridwar", "Barkot", "Uttarkashi", "Yamunotri", "Gangotri", 
+    "Kedarnath", "Badrinath", "Rishikesh", "Dehradun", "Devprayag", "Srinagar (Garhwal)"
+];
+
+let hotelRealtimeChannel = null;
+
+/* ==========================================================================
+   AUTH REGISTRATION EXTENSION
+   ========================================================================== */
+/**
+ * Extends auth signup to register Hotel Partners with metadata
+ */
+async function registerHotelUser(email, password, phone, businessName) {
+    const client = getClient();
+    try {
+        const { data, error } = await client.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    role: 'hotel',
+                    phone: phone,
+                    business_name: businessName
+                }
+            }
+        });
+
+        if (error) throw error;
+
+        // Upsert into profiles table
+        if (data.user) {
+            await client.from('profiles').upsert({
+                id: data.user.id,
+                email: email,
+                role: 'hotel',
+                phone: phone,
+                business_details: { company_name: businessName }
+            });
+        }
+
+        alert('Hotel Partner Registration successful! Please log in.');
+    } catch (err) {
+        console.error('Registration Error:', err.message);
+        alert('Registration failed: ' + err.message);
+    }
+}
+
+/* ==========================================================================
+   HOTEL PARTNER DASHBOARD RENDERER
+   ========================================================================== */
+/**
+ * Main dashboard view generator for role === 'hotel'
+ */
+async function renderHotelDashboard(user) {
+    const app = document.getElementById('app');
+    if (!app) return;
+    app.style.maxWidth = "100%";
+
+    app.innerHTML = `
+        <div style="display:flex; min-height:100vh; background:#f4f7f6; margin:-20px; font-family:'Inter', sans-serif;">
+            <!-- Hotel Sidebar Navigation -->
+            <div style="width:260px; background:#1e272e; color:white; padding:25px; flex-shrink:0;">
+               <h2 style="color:#ff9f43; margin-bottom:5px;">TourSetu</h2>
+               <small style="font-size:12px; color:#aaa; display:block; margin-bottom:30px;">Hotel Partner Panel</small>
+               
+               <nav style="display:flex; flex-direction:column; gap:10px;">
+                    <button onclick="switchHotelTab('overview')" class="hotel-nav-btn" style="text-align:left; padding:12px; background:#2c3e50; border:none; color:white; font-weight:bold; cursor:pointer; border-radius:8px;">📊 Overview</button>
+                    <button onclick="switchHotelTab('property')" class="hotel-nav-btn" style="text-align:left; padding:12px; background:none; border:none; color:white; font-weight:bold; cursor:pointer; border-radius:8px;">🏨 Property & Rooms</button>
+                    <button onclick="switchHotelTab('inbox')" class="hotel-nav-btn" style="text-align:left; padding:12px; background:none; border:none; color:white; font-weight:bold; cursor:pointer; border-radius:8px;">📥 Booking Inbox</button>
+                    <button onclick="confirmAndExecuteLogout()" style="text-align:left; padding:12px; background:none; border:none; color:#ff7675; font-weight:bold; cursor:pointer; margin-top:40px;">🚪 Logout</button>
+               </nav>
+            </div>
+
+            <!-- Main Content Display -->
+            <div id="hotel-main-content" style="flex:1; padding:40px; overflow-y:auto;">
+                <div style="text-align:center; padding:50px;">
+                    <div class="skeleton-loader" style="height:40px; width:300px; margin:0 auto 20px; background:#e0e0e0; border-radius:8px;"></div>
+                    <p style="color:#666;">Loading property matrix...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global Action Modal -->
+        <div id="hotel-action-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; justify-content:center; align-items:center;">
+            <div id="hotel-modal-box" style="background:white; padding:30px; border-radius:15px; width:90%; max-width:480px; box-shadow:0 10px 25px rgba(0,0,0,0.2);"></div>
+        </div>
+    `;
+
+    // Initialize Real-time Database Listeners
+    initHotelRealtimeSubscriptions(user.id);
+    // Render initial overview tab
+    switchHotelTab('overview');
+}
+
+/* ==========================================================================
+   TAB NAVIGATION & DATA RENDERER LOGIC
+   ========================================================================== */
+async function switchHotelTab(tabName) {
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    const content = document.getElementById('hotel-main-content');
+
+    // Fetch Hotel Profile
+    const { data: hotel } = await client.from('hotels').select('*').eq('owner_id', user.id).single();
+
+    if (!hotel && tabName !== 'property') {
+        content.innerHTML = `
+            <div style="background:white; padding:40px; border-radius:12px; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                <h3 style="color:#e67e22; margin-bottom:10px;">⚠️ Complete Property Registration Required</h3>
+                <p style="color:#666; margin-bottom:20px;">You must setup your hotel profile and location details before managing inventory.</p>
+                <button onclick="switchHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold;">Create Property Profile</button>
+            </div>`;
+        return;
+    }
+
+    // TAB 1: OVERVIEW & QUICK METRICS
+    if (tabName === 'overview') {
+        const { data: rooms } = await client.from('rooms').select('*').eq('hotel_id', hotel.hotel_id);
+        const { data: reqs } = await client.from('hotel_requests').select('*').eq('hotel_id', hotel.hotel_id);
+
+        const totalRooms = rooms ? rooms.reduce((acc, r) => acc + r.total_rooms, 0) : 0;
+        const availRooms = rooms ? rooms.reduce((acc, r) => acc + r.available_rooms, 0) : 0;
+        const totalEarnings = reqs ? reqs.filter(r => r.status === 'approved').reduce((acc, r) => acc + parseFloat(r.total_amount), 0) : 0;
+        const pendingCount = reqs ? reqs.filter(r => r.status === 'pending').length : 0;
+
+        content.innerHTML = `
+            <h2>Property Overview Statistics</h2>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px; margin-top:20px;">
+                <div style="background:white; padding:20px; border-radius:12px; border-top:5px solid ${availRooms > 0 ? '#2ecc71' : '#e74c3c'}; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <small style="color:#7f8c8d; font-weight:bold;">REALTIME SEARCH VISIBILITY</small>
+                    <h3 style="margin:10px 0;">${availRooms} / ${totalRooms} Rooms Available</h3>
+                    <span style="font-size:13px; color:${availRooms > 0 ? '#2ecc71' : '#e74c3c'}; font-weight:bold;">
+                        ${availRooms > 0 ? '🟢 Visible on Customer/Agency Search' : '🔴 Hidden from Search (Zero Stock)'}
+                    </span>
+                </div>
+                <div style="background:white; padding:20px; border-radius:12px; border-top:5px solid #ff9f43; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <small style="color:#7f8c8d; font-weight:bold;">PENDING QUOTE REQUESTS</small>
+                    <h3 style="margin:10px 0;">${pendingCount} Pending Quotes</h3>
+                    <small style="color:#3498db; cursor:pointer;" onclick="switchHotelTab('inbox')">View Inbox &rarr;</small>
+                </div>
+                <div style="background:white; padding:20px; border-radius:12px; border-top:5px solid #3498db; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <small style="color:#7f8c8d; font-weight:bold;">TOTAL CONFIRMED EARNINGS</small>
+                    <h3 style="margin:10px 0;">₹${totalEarnings.toLocaleString('en-IN')}</h3>
+                    <small style="color:#2ecc71; font-weight:bold;">Approved Bookings</small>
+                </div>
+            </div>`;
+    } 
+
+    // TAB 2: PROPERTY & ROOM MANAGEMENT
+    else if (tabName === 'property') {
+        const { data: rooms } = hotel ? await client.from('rooms').select('*').eq('hotel_id', hotel.hotel_id) : { data: [] };
+
+        const optionsHtml = PERMITTED_HOTEL_LOCATIONS.map(loc => 
+            `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+        ).join('');
+
+        content.innerHTML = `
+            <h2>Property & Room Inventory Setup</h2>
+            <div style="background:white; padding:25px; border-radius:15px; margin-top:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                <h3>Hotel Details</h3>
+                <form id="hotel-profile-form" onsubmit="saveHotelProfile(event, '${hotel ? hotel.hotel_id : ''}')" style="display:grid; gap:15px; margin-top:15px;">
+                    <div>
+                        <label style="font-size:13px; font-weight:bold;">Hotel Name</label>
+                        <input type="text" id="h-name" value="${hotel ? hotel.hotel_name : ''}" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:5px;">
+                    </div>
+                    <div>
+                        <label style="font-size:13px; font-weight:bold;">Location City (Restricted to Permitted 11 Cities)</label>
+                        <select id="h-city" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:5px;">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:13px; font-weight:bold;">Property Street Address</label>
+                        <input type="text" id="h-address" value="${hotel ? hotel.address : ''}" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:5px;">
+                    </div>
+                    <div>
+                        <label style="font-size:13px; font-weight:bold;">Upload Front Cover Pictures (Supabase Storage: hotel-media)</label>
+                        <input type="file" id="h-images" multiple accept="image/*" style="width:100%; margin-top:5px;">
+                    </div>
+                    <button type="submit" style="background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; width:200px;">Save Property Information</button>
+                </form>
+            </div>
+
+            ${hotel ? `
+            <div style="background:white; padding:25px; border-radius:15px; margin-top:30px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="margin:0;">Room Categories & Inventory Counter</h3>
+                        <p style="font-size:12px; color:#666; margin-top:40px;">Real-time stock edits reflect instantly across all customer devices.</p>
+                    </div>
+                    <button onclick="showRoomForm('${hotel.hotel_id}')" style="background:#ff9f43; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">+ Add Room Category</button>
+                </div>
+                <div id="room-list" style="display:grid; gap:15px; margin-top:20px;">
+                    ${rooms.map(r => `
+                        <div style="border:1px solid #eee; padding:15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; background:#fafafa;">
+                            <div>
+                                <h4 style="margin:0; font-size:16px;">${r.room_type}</h4>
+                                <small style="color:#666;">Price: ₹${r.specific_price} / night</small>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:15px;">
+                                <div style="text-align:right;">
+                                    <small style="display:block; font-weight:bold; color:#555;">Available Stock</small>
+                                    <input type="number" value="${r.available_rooms}" min="0" max="${r.total_rooms}" 
+                                           onchange="updateRoomStockOptimistic('${r.room_id}', this.value)" 
+                                           style="width:70px; padding:6px; border:2px solid #3498db; border-radius:6px; font-weight:bold; text-align:center;">
+                                    <span style="font-size:12px; color:#888;">/ ${r.total_rooms}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>` : ''}`;
+    } 
+
+    // TAB 3: DUAL REQUEST INBOX
+    else if (tabName === 'inbox') {
+        const { data: reqs } = await client.from('hotel_requests').select('*, rooms(room_type)').eq('hotel_id', hotel.hotel_id).order('created_at', { ascending: false });
+
+        content.innerHTML = `
+            <h2>Dual Request Booking Inbox</h2>
+            <div id="requests-container" style="display:grid; gap:20px; margin-top:20px;">
+                ${(reqs || []).length === 0 ? '<p style="color:#666;">No booking quotes received yet.</p>' : ''}
+                ${(reqs || []).map(req => {
+                    const isAgency = req.requester_type === 'agency';
+                    return `
+                        <div style="background:white; padding:20px; border-radius:12px; border-left:6px solid ${isAgency ? '#3498db' : '#2ecc71'}; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div>
+                                    <span style="background:${isAgency ? '#ebf5fb' : '#e8f8f5'}; color:${isAgency ? '#2980b9' : '#27ae60'}; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; letter-spacing:0.5px;">
+                                        ${req.requester_type.toUpperCase()} REQUEST
+                                    </span>
+                                    <h3 style="margin:10px 0 0 0; color:#2c3e50;">${req.rooms?.room_type || 'Room Package Request'}</h3>
+                                </div>
+                                <div style="text-align:right;">
+                                    <h3 style="margin:0; color:#2ecc71;">₹${req.total_amount}</h3>
+                                    <span style="display:inline-block; margin-top:4px; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; background:#eee; color:#555;">
+                                        ${req.status.toUpperCase()}
+                                    </span>
+                                </div>
+                            </div>
+                            <div style="margin:15px 0; font-size:13px; color:#555; display:flex; gap:20px;">
+                                <span>📅 Check-in: <b>${req.check_in}</b> to <b>${req.check_out}</b></span>
+                                <span>🚪 Quantity: <b>${req.quantity} Room(s)</b></span>
+                            </div>
+                            ${req.status === 'pending' ? `
+                                <div style="display:flex; gap:10px; margin-top:15px;">
+                                    <button onclick="handleHotelRequestAction('${req.request_id}', 'approve')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Accept Request</button>
+                                    <button onclick="handleHotelRequestAction('${req.request_id}', 'deny')" style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Deny Request</button>
+                                </div>
+                            ` : ''}
+                            ${req.status === 'approved' ? `
+                                <div style="background:#f0fff4; padding:10px; border-radius:6px; font-size:12px; color:#27ae60; margin-top:10px;">
+                                    <strong>Shared Payment Instructions:</strong> ${req.payment_details || 'N/A'}
+                                </div>
+                            ` : ''}
+                        </div>`;
+                }).join('')}
+            </div>`;
+    }
+}
+
+/* ==========================================================================
+   REALTIME INVENTORY & SUBSCRIPTIONS
+   ========================================================================== */
+function initHotelRealtimeSubscriptions(userId) {
+    const client = getClient();
+    if (hotelRealtimeChannel) client.removeChannel(hotelRealtimeChannel);
+
+    hotelRealtimeChannel = client.channel('hotel-inventory-sync')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, payload => {
+            console.log('⚡ Live Inventory Shift Detected:', payload);
+            if (document.getElementById('hotel-main-content')) {
+                // Refresh overview status without tearing down full UI
+                switchHotelTab('overview');
+            }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'hotel_requests' }, payload => {
+            console.log('⚡ Incoming Booking Request Triggered:', payload);
+            if (document.getElementById('hotel-main-content')) {
+                switchHotelTab('inbox');
+            }
+        })
+        .subscribe();
+}
+
+/**
+ * Optimistic UI Updates for Instant Stock Manipulation
+ */
+window.updateRoomStockOptimistic = async function(roomId, newCount) {
+    const client = getClient();
+    try {
+        const countInt = parseInt(newCount);
+        if (isNaN(countInt) || countInt < 0) return;
+
+        // Optimistic mutation call
+        const { error } = await client.from('rooms').update({ available_rooms: countInt }).eq('room_id', roomId);
+        if (error) throw error;
+
+        console.log(`Inventory successfully synced for room: ${roomId}`);
+    } catch (err) {
+        alert("Stock update failed: " + err.message);
+        switchHotelTab('property'); // Revert UI on failure
+    }
+};
+
+/* ==========================================================================
+   ACTION HANDLERS & MODAL WORKFLOWS
+   ========================================================================== */
+window.handleHotelRequestAction = function(requestId, action) {
+    const modal = document.getElementById('hotel-action-modal');
+    const box = document.getElementById('hotel-modal-box');
+
+    if (action === 'approve') {
+        box.innerHTML = `
+            <h3 style="margin-top:0; color:#2c3e50;">Set Payment Instructions</h3>
+            <p style="font-size:13px; color:#666;">Provide UPI details (PhonePe/GPay) or Bank Transfer details for the requester to complete the payment.</p>
+            <textarea id="h-pay-details" placeholder="e.g., GPay / PhonePe UPI ID: hotelpay@upi or Bank Account details..." style="width:100%; height:90px; padding:10px; border:1px solid #ccc; border-radius:8px; margin:15px 0; box-sizing:border-box;"></textarea>
+            <div style="display:flex; gap:10px;">
+                <button onclick="executeRequestStatusUpdate('${requestId}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Approval</button>
+                <button onclick="document.getElementById('hotel-action-modal').style.display='none'" style="background:#eee; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Cancel</button>
+            </div>
+        `;
+    } else {
+        box.innerHTML = `
+            <h3 style="margin-top:0; color:#e74c3c;">Decline Request</h3>
+            <p style="font-size:13px; color:#666;">Provide a reason for declining this room booking request.</p>
+            <textarea id="h-cancel-reason" placeholder="Reason for decline (e.g. Sold out, Under maintenance)..." style="width:100%; height:90px; padding:10px; border:1px solid #ccc; border-radius:8px; margin:15px 0; box-sizing:border-box;"></textarea>
+            <div style="display:flex; gap:10px;">
+                <button onclick="executeRequestStatusUpdate('${requestId}', 'denied')" style="background:#e74c3c; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Decline</button>
+                <button onclick="document.getElementById('hotel-action-modal').style.display='none'" style="background:#eee; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Cancel</button>
+            </div>
+        `;
+    }
+    modal.style.display = 'flex';
+};
+
+window.executeRequestStatusUpdate = async function(requestId, newStatus) {
+    const client = getClient();
+    const payload = { status: newStatus };
+
+    if (newStatus === 'approved') {
+        payload.payment_details = document.getElementById('h-pay-details').value;
+    } else {
+        payload.cancellation_reason = document.getElementById('h-cancel-reason').value;
+    }
+
+    const { error } = await client.from('hotel_requests').update(payload).eq('request_id', requestId);
+    
+    if (!error) {
+        document.getElementById('hotel-action-modal').style.display = 'none';
+        switchHotelTab('inbox');
+        
+        // Trigger OneSignal Push Notification Event
+        triggerOneSignalPush(requestId, newStatus);
+    } else {
+        alert("Action Error: " + error.message);
+    }
+};
+
+/* ==========================================================================
+   ONESIGNAL PUSH NOTIFICATIONS TRIGGER
+   ========================================================================== */
+function triggerOneSignalPush(requestId, status) {
+    if (window.OneSignal) {
+        window.OneSignal.push(function() {
+            console.log(`[OneSignal] Notification triggered for Request ID: ${requestId} | Status: ${status}`);
+            // Push Notification Dispatch Logic via REST API or Notification Edge Function
+        });
+    }
+}
 /* =========================================
    10. SECURE NOTIFICATION SYSTEM (Cloudflare Bridge)
    ========================================= */
