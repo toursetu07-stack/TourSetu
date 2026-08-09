@@ -2050,7 +2050,6 @@ async function renderHotelDashboard(user, hotelData = null) {
     showHotelTab('overview');
 }
 
-// 4. Tab Switching Global Function
 window.showHotelTab = async function(tabName) {
     const container = document.getElementById('hotel-main-content');
     if (!container) return;
@@ -2059,7 +2058,6 @@ window.showHotelTab = async function(tabName) {
     const { data: { user } } = await client.auth.getUser();
     
     if (!user) return;
-
    // 1. Safe Fetch Function for Hotel Profile
 async function fetchHotelProfile(userId) {
     try {
@@ -2079,6 +2077,18 @@ async function fetchHotelProfile(userId) {
         return null;
     }
 }
+
+// 2. Global Tab Switcher Function
+window.showHotelTab = async function(tabName) {
+    const container = document.getElementById('hotel-main-content');
+    if (!container) return;
+
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) return;
+
+    const hotel = await fetchHotelProfile(user.id);
+
     // TAB: OVERVIEW
     if (tabName === 'overview') {
         if (!hotel) {
@@ -2112,8 +2122,8 @@ async function fetchHotelProfile(userId) {
                 </div>
             </div>`;
     } 
-    // TAB: PROPERTY
-    else if (tabName === 'property') {
+    // TAB: PROPERTY / ROOM INVENTORY (Teeno Names Support Karega)
+    else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
         const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
             `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
         ).join('');
