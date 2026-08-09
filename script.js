@@ -2060,9 +2060,25 @@ window.showHotelTab = async function(tabName) {
     
     if (!user) return;
 
-    // Fetch Hotel Profile for the current user
-    const hotel = await fetchHotelProfile(user.id);
+   // 1. Safe Fetch Function for Hotel Profile
+async function fetchHotelProfile(userId) {
+    try {
+        const client = getClient();
+        if (!client) return null;
 
+        const { data: hotel, error } = await client
+            .from('hotels')
+            .select('*')
+            .eq('owner_id', userId)
+            .maybeSingle();
+
+        if (error) throw error;
+        return hotel;
+    } catch (err) {
+        console.error("Hotel profile fetch error:", err.message);
+        return null;
+    }
+}
     // TAB: OVERVIEW
     if (tabName === 'overview') {
         if (!hotel) {
