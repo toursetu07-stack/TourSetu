@@ -1817,7 +1817,19 @@ window.showHotelTab = async function(tabName) {
 
     // Fetch Profile/Hotel Info
     let { data: hotel } = await client.from('hotels').select('*').eq('owner_id', user.id).single();
+async function fetchHotels(ownerId) {
+    try {
+        const { data, error } = await getClient()
+            .from('hotels')
+            .select('*')
+            .eq('owner_id', ownerId);
 
+        if (error) throw error;
+        return data;
+    } catch (err) {
+        console.error("Hotel fetch error:", err.message);
+    }
+}
     if (tabName === 'overview') {
         if (!hotel) {
             container.innerHTML = `
