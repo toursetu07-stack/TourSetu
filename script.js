@@ -2050,14 +2050,14 @@ async function renderHotelDashboard(user, hotelData = null) {
     showHotelTab('overview');
 }
 
-window.showHotelTab = async function(tabName) {
-    const container = document.getElementById('hotel-main-content');
-    if (!container) return;
-
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-    
-    if (!user) return;
+// TAB: REQUESTS
+    else if (tabName === 'requests') {
+        container.innerHTML = `
+            <h1>Booking & Quote Requests</h1>
+            <div style="margin-top:20px;" id="hotel-inbox-container">Loading requests...</div>`;
+        if (hotel && typeof loadHotelRequests === "function") loadHotelRequests(hotel.hotel_id);
+    }
+}; // <--- YEH WALA BRACKET CHECK KAREIN! Yeh Line 4335 par hona zaroori hai.
   // 1. Safe Fetch Function for Hotel Profile
 async function fetchHotelProfile(userId) {
     try {
