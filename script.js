@@ -124,8 +124,14 @@ async function showDashboard(user) {
     const role = user.user_metadata.role || 'customer';
     
     if (role === 'hotel') {
-        if (typeof renderHotelDashboard === "function") renderHotelDashboard(user);
-        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
+        // Safe database query call kar rahe hain UI render karne se pehle
+        if (typeof initHotelDashboard === "function") {
+            await initHotelDashboard(user);
+        } else if (typeof renderHotelDashboard === "function") {
+            renderHotelDashboard(user);
+        } else {
+            document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
+        }
     } else if (role === 'agency') {
         if (typeof renderAgencyDashboard === "function") renderAgencyDashboard(user);
         else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
@@ -134,11 +140,11 @@ async function showDashboard(user) {
         else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
     }
 }
+
 async function handleLogout() {
     await getClient().auth.signOut();
     window.location.reload();
 }
-
 
 /* =========================================
    4. UI RENDERING (Login / Signup)
@@ -1777,7 +1783,34 @@ async function evaluateHotelVisibility(hotelId) {
    11. HOTEL PARTNER DASHBOARD (MODULE)
    ========================================= */
 
-async function renderHotelDashboard(user) {
+// 1. Safe Database Fetch Function (.maybeSingle Error Protection)
+async function initHotelDashboard(user) {
+    try {
+        const client = getClient();
+        if (!client) return;
+
+        // .maybeSingle() use karke 406 Error se protection
+        const { data: hotel, error } = await client
+            .from('hotels')
+            .select('*')
+            .eq('owner_id', user.id)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Error fetching hotel details:", error.message);
+        }
+
+        // Dashboard Layout render karein
+        renderHotelDashboard(user, hotel);
+
+    } catch (err) {
+        console.error("Dashboard Init Error:", err.message);
+        renderHotelDashboard(user, null);
+    }
+}
+
+// 2. Exact UI Render Function (No visual changes)
+async function renderHotelDashboard(user, hotelData = null) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
 
@@ -1804,6 +1837,12 @@ async function renderHotelDashboard(user) {
             </div>
         </div>
     `;
+
+    // Direct overview tab render karne ke liye (agar showHotelTab available ho)
+    if (typeof showHotelTab === "function") {
+        showHotelTab('overview');
+    }
+}
 
     // Initialize Realtime Listener
     initHotelRealtimeSubscriptions();
