@@ -1847,7 +1847,7 @@ async function renderHotelDashboard(user, hotelData = null) {
     // Initialize Realtime Listener
     initHotelRealtimeSubscriptions();
     showHotelTab('overview');
-}
+
 
 window.showHotelTab = async function(tabName) {
     const container = document.getElementById('hotel-main-content');
