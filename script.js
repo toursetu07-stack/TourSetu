@@ -121,161 +121,25 @@ async function initApp() {
 }
 
 async function showDashboard(user) {
-    // 🛡️ Safe check for metadata using optional chaining
-    const role = user.user_metadata?.role || 'customer';
+    const role = user.user_metadata.role || 'customer';
     
     if (role === 'hotel') {
-        if (typeof renderHotelDashboard === "function") {
-            renderHotelDashboard(user);
-        } else {
-            // Fallback: Check hotel profile directly if renderHotelDashboard is not defined
-            await handleHotelProfileSetup(user);
-        }
+        if (typeof renderHotelDashboard === "function") renderHotelDashboard(user);
+        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
     } else if (role === 'agency') {
-        if (typeof renderAgencyDashboard === "function") {
-            renderAgencyDashboard(user);
-        } else {
-            document.getElementById('app').innerHTML = `
-                <div style="padding:20px;">
-                    <h2>Agency Dashboard</h2>
-                    <p>Welcome, ${user.email}</p>
-                    <button onclick="handleLogout()">Logout</button>
-                </div>`;
-        }
+        if (typeof renderAgencyDashboard === "function") renderAgencyDashboard(user);
+        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
     } else {
-        if (typeof renderCustomerHomepage === "function") {
-            renderCustomerHomepage(user);
-        } else {
-            document.getElementById('app').innerHTML = `
-                <div style="padding:20px;">
-                    <h2>Traveler Home</h2>
-                    <p>Welcome, ${user.email}</p>
-                    <button onclick="handleLogout()">Logout</button>
-                </div>`;
-        }
+        if (typeof renderCustomerHomepage === "function") renderCustomerHomepage(user);
+        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
     }
 }
-
 async function handleLogout() {
-    const client = getClient();
-    if (client) {
-        await client.auth.signOut();
-    }
+    await getClient().auth.signOut();
     window.location.reload();
 }
 
-/* =========================================
-   HOTEL HELPER LOGIC (SAFE RETRIEVAL)
-   ========================================= */
 
-async function handleHotelProfileSetup(user) {
-    const client = getClient();
-    const appContainer = document.getElementById('app');
-
-    // Safe Query with Explicit Headers & Safe Limit
-    let hotel = null;
-    try {
-        const { data, error } = await client
-            .from('hotels')
-            .select('*')
-            .eq('owner_id', user.id)
-            .limit(1);
-
-        if (error) {
-            console.error("Hotel fetch error:", error);
-        } else if (data && data.length > 0) {
-            hotel = data[0];
-        }
-    } catch (err) {
-        console.error("Query Execution Exception:", err);
-    }
-
-    if (!hotel) {
-        // Render Hotel Setup Form if property doesn't exist
-        appContainer.innerHTML = `
-            <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); max-width: 500px; margin: 40px auto; font-family: sans-serif;">
-                <h2 style="color: #2c3e50; margin-bottom: 10px;">🏨 Complete Hotel Registration</h2>
-                <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Welcome to TourSetu! Please register your hotel profile to manage room inventory.</p>
-                <form id="create-hotel-form" onsubmit="saveNewHotelProfile(event)" style="display: flex; flex-direction: column; gap: 15px;">
-                    <div>
-                        <label style="font-weight: bold; font-size: 13px; display: block; margin-bottom: 5px;">Hotel Name</label>
-                        <input type="text" id="new-hotel-name" required placeholder="e.g. Grand Kedarnath Resort" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
-                    </div>
-                    <div>
-                        <label style="font-weight: bold; font-size: 13px; display: block; margin-bottom: 5px;">City Location</label>
-                        <select id="new-hotel-city" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;">
-                            <option value="Haridwar">Haridwar</option>
-                            <option value="Barkot">Barkot</option>
-                            <option value="Uttarkashi">Uttarkashi</option>
-                            <option value="Yamunotri">Yamunotri</option>
-                            <option value="Gangotri">Gangotri</option>
-                            <option value="Kedarnath">Kedarnath</option>
-                            <option value="Badrinath">Badrinath</option>
-                            <option value="Rishikesh">Rishikesh</option>
-                            <option value="Dehradun">Dehradun</option>
-                            <option value="Devprayag">Devprayag</option>
-                            <option value="Srinagar (Garhwal)">Srinagar (Garhwal)</option>
-                        </select>
-                    </div>
-                    <button type="submit" style="background: #2ecc71; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px;">Save Profile & Continue</button>
-                </form>
-                <div style="margin-top: 15px; text-align: center;">
-                    <button onclick="handleLogout()" style="background: transparent; border: none; color: #e74c3c; cursor: pointer; text-decoration: underline;">Logout</button>
-                </div>
-            </div>
-        `;
-    } else {
-        // Hotel exists
-        appContainer.innerHTML = `
-            <div style="padding:20px;">
-                <h2>Hotel Dashboard - ${hotel.hotel_name}</h2>
-                <p>Location: ${hotel.city}</p>
-                <p>Owner Email: ${user.email}</p>
-                <button onclick="handleLogout()">Logout</button>
-            </div>
-        `;
-    }
-}
-        // Hotel exists
-        appContainer.innerHTML = `
-            <div style="padding:20px;">
-                <h2>Hotel Dashboard - ${hotel.hotel_name}</h2>
-                <p>Location: ${hotel.city}</p>
-                <p>Owner Email: ${user.email}</p>
-                <button onclick="handleLogout()">Logout</button>
-            </div>
-        `;
-    }
-}
-
-// Global handler for Hotel Registration submit
-window.saveNewHotelProfile = async function(event) {
-    event.preventDefault();
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-
-    const hotelName = document.getElementById('new-hotel-name').value;
-    const city = document.getElementById('new-hotel-city').value;
-
-    try {
-        const { error } = await client.from('hotels').insert([
-            {
-                owner_id: user.id,
-                hotel_name: hotelName,
-                city: city,
-                address: city,
-                hide_from_search: false
-            }
-        ]);
-
-        if (error) throw error;
-
-        alert('Hotel profile saved successfully!');
-        window.location.reload();
-    } catch (err) {
-        alert('Error saving hotel profile: ' + err.message);
-    }
-};
 /* =========================================
    4. UI RENDERING (Login / Signup)
    ========================================= */
@@ -1531,13 +1395,9 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("Error: " + error.message);
     }
 };
-// =========================================
 // 9. AGENCY DASHBOARD
-// =========================================
-
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
-    if (!app) return;
     app.style.maxWidth = "100%";
     
     app.innerHTML = `
@@ -1583,15 +1443,10 @@ function renderAgencyDashboard(user) {
 
 window.showTab = async function(tabName) {
     const container = document.getElementById('main-content');
-    if (!container) return;
-    
     const client = getClient();
-    if (!client) return;
-    
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
-    // Safe retrieval of bookings data
     const { data: bookingsData } = await client
         .from('bookings')
         .select('*')
@@ -1604,10 +1459,9 @@ window.showTab = async function(tabName) {
     
     if (badge && pendingCount > 0) {
         badge.innerText = pendingCount; badge.style.display = 'block';
-        if (sideCount) { sideCount.innerText = pendingCount; sideCount.style.display = 'block'; }
+        sideCount.innerText = pendingCount; sideCount.style.display = 'block';
     } else if (badge) {
-        badge.style.display = 'none'; 
-        if (sideCount) sideCount.style.display = 'none';
+        badge.style.display = 'none'; sideCount.style.display = 'none';
     }
 
     if (tabName === 'earnings') {
@@ -1622,7 +1476,7 @@ window.showTab = async function(tabName) {
                 <div class="card" style="border-top:5px solid #3498db; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>ACTIVE PACKAGES</small><h2 id="act-pkg-count">...</h2></div>
             </div>`;
         const { count } = await client.from('packages').select('*', { count: 'exact', head: true }).eq('agency_id', user.id);
-        if (document.getElementById('act-pkg-count')) document.getElementById('act-pkg-count').innerText = count || 0;
+        if(document.getElementById('act-pkg-count')) document.getElementById('act-pkg-count').innerText = count || 0;
     } 
     else if (tabName === 'bookings') {
         container.innerHTML = `<h1>Customer Bookings</h1><div id="booking-list-area">Loading...</div>`;
@@ -1639,7 +1493,7 @@ window.showTab = async function(tabName) {
             const isCancelled = b.status === 'cancelled';
             
             const displayPhone = isPaid ? b.customer_phone : "Locked (Visible after Payment)";
-            const displayEmail = isPaid ? b.customer_email : (b.customer_email ? b.customer_email.replace(/(.{3})(.*)(?=@)/, "$1***") : 'N/A');
+            const displayEmail = isPaid ? b.customer_email : b.customer_email.replace(/(.{3})(.*)(?=@)/, "$1***");
             const phoneColor = isPaid ? "#ff9f43" : "#999";
             
             let statusColor = '#ff9f43';
@@ -1676,11 +1530,12 @@ window.showTab = async function(tabName) {
                 </div>`;
             }
 
-            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION
+            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION (FIXED TO READ VAISHNO SPECIFIC COLUMNS)
             const vGhodaPrice = parseFloat(b.vaishno_ghoda_price) || 0;
             const vDandiPrice = parseFloat(b.vaishno_dandi_price) || 0;
             const vPitthuPrice = parseFloat(b.vaishno_pitthu_price) || 0;
 
+            // यहाँ पहले फ़ॉलबैक में ghoda_max (केदारनाथ वाला) आ रहा था, इसे पूरी तरह अलग कर के सिर्फ वैष्णो देवी के कॉलम से मैप कर दिया गया है।
             const vGhodaMax = parseInt(b.vaishno_ghoda_max_members || b.vaishno_ghoda_max) || 0;
             const vDandiMax = parseInt(b.vaishno_dandi_max_members || b.vaishno_dandi_max) || 0;
             const vPitthuMax = parseInt(b.vaishno_pitthu_max_members || b.vaishno_pitthu_max) || 0;
@@ -1702,7 +1557,7 @@ window.showTab = async function(tabName) {
             <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${statusColor}; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <div>
-                        <h3 style="margin:0; color:#2d3436;">${b.package_title || 'Untitled Package'}</h3>
+                        <h3 style="margin:0; color:#2d3436;">${b.package_title}</h3>
                         <div style="margin-top:5px; display:flex; gap:15px; font-size:12px; color:#636e72;">
                              <span>📩 Requested: ${new Date(b.created_at).toLocaleDateString()}</span>
                              <span style="color:white; background:#ff9f43; padding:2px 8px; border-radius:4px; font-weight:bold;">📅 TRAVEL DATE: ${travelDateStr}</span>
@@ -1711,7 +1566,7 @@ window.showTab = async function(tabName) {
                     <div style="text-align:right;">
                         <div style="font-size:22px; font-weight:bold; color:#2ecc71;">₹${b.total_price || 0}</div>
                         <span style="padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold; background:#f0f0f0; color:${statusColor};">
-                            ${(b.status || 'PENDING').toUpperCase()}
+                            ${b.status.toUpperCase()}
                         </span>
                     </div>
                 </div>
@@ -1731,7 +1586,7 @@ window.showTab = async function(tabName) {
 
                 <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="width: 100%;">
-                        <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles || 'None'}</p>
+                        <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
                         
                         ${trekkingHtml} 
                         
@@ -1793,14 +1648,13 @@ window.showTab = async function(tabName) {
 window.openActionModal = function(bookingId, type, customerId, packageTitle) {
     const modal = document.getElementById('action-modal');
     const content = document.getElementById('action-modal-content');
-    if (!modal || !content) return;
     modal.style.display = 'flex';
 
     if (type === 'approved') {
         content.innerHTML = `
             <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
             <p style="font-size:14px; color:#666;">Provide the contact number for payment collection (GPay/PhonePe).</p>
-            <input type="text" id="modal-contact-input" placeholder="Enter Contact Number" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;">
+            <input type="text" id="modal-contact-input" placeholder="Enter Contact Number" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
             <div style="display:flex; gap:10px;">
                 <button onclick="processStatusUpdate('${bookingId}', 'approved', '${customerId}', '${packageTitle}')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
@@ -1816,40 +1670,32 @@ window.openActionModal = function(bookingId, type, customerId, packageTitle) {
     }
 };
 
-window.closeActionModal = function() {
-    const modal = document.getElementById('action-modal');
-    if (modal) modal.style.display = 'none';
-};
+window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
 
 window.processStatusUpdate = async function(bookingId, newStatus, customerId, packageTitle) {
     const client = getClient();
-    if (!client) return;
-
     let updateData = { status: newStatus };
 
     if (newStatus === 'approved') {
-        const contactInput = document.getElementById('modal-contact-input');
-        const contact = contactInput ? contactInput.value : '';
+        const contact = document.getElementById('modal-contact-input').value;
         if (!contact.trim()) { alert("Please enter a contact number!"); return; }
         updateData.agency_contact = contact;
     }
 
     const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
     if (!error) {
-        if (typeof sendPushNotification === "function") {
-            if (newStatus === 'approved') {
-                sendPushNotification(
-                    customerId, 
-                    "Booking Approved! ✅", 
-                    `Your trip for ${packageTitle} has been confirmed. Check the app for payment details.`
-                );
-            } else if (newStatus === 'denied') {
-                sendPushNotification(
-                    customerId, 
-                    "Booking Update", 
-                    `Your booking request for ${packageTitle} was not accepted.`
-                );
-            }
+        if (newStatus === 'approved') {
+            sendPushNotification(
+                customerId, 
+                "Booking Approved! ✅", 
+                `Your trip for ${packageTitle} has been confirmed. Check the app for payment details.`
+            );
+        } else if (newStatus === 'denied') {
+            sendPushNotification(
+                customerId, 
+                "Booking Update", 
+                `Your booking request for ${packageTitle} was not accepted.`
+            );
         }
 
         closeActionModal();
@@ -1859,16 +1705,9 @@ window.processStatusUpdate = async function(bookingId, newStatus, customerId, pa
     }
 };
 
-window.confirmLogout = function() {
-    const logoutModal = document.getElementById('logout-modal');
-    if (logoutModal) logoutModal.style.display = 'flex';
-};
-
-window.executeLogout = async function() { 
-    const client = getClient();
-    if (client) {
-        await client.auth.signOut(); 
-    }
+window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
+window.executeLogout = async () => { 
+    await getClient().auth.signOut(); 
     location.reload(); 
 };
 /* =========================================
