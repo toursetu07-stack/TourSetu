@@ -4553,12 +4553,7 @@ async function toggleStopSell(hotelId) {
         btn.innerText = '🟢 Normal Selling Mode';
     }
 }
-// Global variable tracking for editing 
-currentEditingRoomId = currentEditingRoomId || null;
-
-// Global variable tracking for room editing
-let currentEditingRoomId = null;
-
+var currentEditingRoomId = typeof currentEditingRoomId !== 'undefined' ? currentEditingRoomId : null;
 // 1. Safe Fetch Function for Hotel Profile
 async function fetchHotelProfile(userId) {
     try {
