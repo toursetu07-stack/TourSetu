@@ -4553,7 +4553,7 @@ async function toggleStopSell(hotelId) {
         btn.innerText = '🟢 Normal Selling Mode';
     }
 }
-var currentEditingRoomId = typeof currentEditingRoomId !== 'undefined' ? currentEditingRoomId : null;
+currentEditingRoomId = typeof currentEditingRoomId !== 'undefined' ? currentEditingRoomId : null;
 // 1. Safe Fetch Function for Hotel Profile
 async function fetchHotelProfile(userId) {
     try {
