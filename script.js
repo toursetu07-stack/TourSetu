@@ -4412,19 +4412,18 @@ async function toggleStopSell(hotelId) {
 // Global variable tracking for editing
 let currentEditingRoomId = null;
 
-// 1. Edit Button Click karne par form bharnay ka function
+// 1. Edit Button Click karne par form bharne ka function
 function editRoomCategory(id, category, price, total, available) {
   currentEditingRoomId = id;
 
-  // Form Inputs mein purana data bharein
-  // (In IDs ko apne HTML input IDs ke sath match kar lein agar alag ho)
-  if(document.getElementById('roomCategory')) document.getElementById('roomCategory').value = category;
-  if(document.getElementById('roomPrice')) document.getElementById('roomPrice').value = price;
-  if(document.getElementById('totalRooms')) document.getElementById('totalRooms').value = total;
-  if(document.getElementById('availableRooms')) document.getElementById('availableRooms').value = available;
+  // Form Inputs mein purana data bharein (Updated with your exact HTML IDs)
+  if(document.getElementById('r-type')) document.getElementById('r-type').value = category;
+  if(document.getElementById('r-price')) document.getElementById('r-price').value = price;
+  if(document.getElementById('r-total')) document.getElementById('r-total').value = total;
+  if(document.getElementById('r-available')) document.getElementById('r-available').value = available;
 
   // Save button ka text & background badlein
-  const addBtn = document.getElementById('addRoomBtn');
+  const addBtn = document.getElementById('btn-save-room') || document.getElementById('addRoomBtn');
   if(addBtn) {
     addBtn.innerText = "🔄 Update Room Type";
     addBtn.style.backgroundColor = "#ff9800"; // Orange color for update mode
@@ -4434,12 +4433,17 @@ function editRoomCategory(id, category, price, total, available) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 2. Add / Update Room Save Logic (SupaBase Direct Update)
-async function saveOrUpdateRoomCategory() {
-  const category = document.getElementById('roomCategory').value;
-  const price = document.getElementById('roomPrice').value;
-  const total = document.getElementById('totalRooms').value;
-  const available = document.getElementById('availableRooms').value;
+// 2. Add / Update Room Save Logic (Supabase Direct Update)
+async function saveOrUpdateRoomCategory(hotelId) {
+  const categoryInput = document.getElementById('r-type') || document.getElementById('roomCategory');
+  const priceInput = document.getElementById('r-price') || document.getElementById('roomPrice');
+  const totalInput = document.getElementById('r-total') || document.getElementById('totalRooms');
+  const availableInput = document.getElementById('r-available') || document.getElementById('availableRooms');
+
+  const category = categoryInput ? categoryInput.value : '';
+  const price = priceInput ? priceInput.value : '';
+  const total = totalInput ? totalInput.value : 0;
+  const available = availableInput ? availableInput.value : 0;
 
   if (!category || !price) {
     alert("Please enter room category and price!");
@@ -4449,9 +4453,9 @@ async function saveOrUpdateRoomCategory() {
   // Agar Edit Mode Active Hai (UPDATE)
   if (currentEditingRoomId) {
     const { error } = await client
-      .from('room_categories') // Agar aapki DB table ka naam alag hai (e.g. 'hotel_rooms'), toh yahan change kar lein
+      .from('room_categories')
       .update({
-        category_name: category,
+        room_type: category,
         price_per_night: price,
         total_rooms: total,
         available_rooms: available
@@ -4463,7 +4467,8 @@ async function saveOrUpdateRoomCategory() {
     } else {
       alert("Room details updated successfully!");
       resetRoomForm();
-      loadInventory(); // Wapas inventory reload karein
+      if (typeof loadHotelRooms === "function") loadHotelRooms(hotelId);
+      else if (typeof loadInventory === "function") loadInventory();
     }
   } 
   // Agar New Record Add Kar Rahe Hain (INSERT)
@@ -4472,8 +4477,8 @@ async function saveOrUpdateRoomCategory() {
       .from('room_categories')
       .insert([
         {
-          hotel_id: currentHotelId, // Aapki variable jo current hotel tracking kar rahi ho
-          category_name: category,
+          hotel_id: hotelId,
+          room_type: category,
           price_per_night: price,
           total_rooms: total,
           available_rooms: available
@@ -4485,7 +4490,8 @@ async function saveOrUpdateRoomCategory() {
     } else {
       alert("Room added successfully!");
       resetRoomForm();
-      loadInventory();
+      if (typeof loadHotelRooms === "function") loadHotelRooms(hotelId);
+      else if (typeof loadInventory === "function") loadInventory();
     }
   }
 }
@@ -4493,15 +4499,16 @@ async function saveOrUpdateRoomCategory() {
 // Form Reset Function
 function resetRoomForm() {
   currentEditingRoomId = null;
-  if(document.getElementById('roomCategory')) document.getElementById('roomCategory').value = '';
-  if(document.getElementById('roomPrice')) document.getElementById('roomPrice').value = '';
-  if(document.getElementById('totalRooms')) document.getElementById('totalRooms').value = '';
-  if(document.getElementById('availableRooms')) document.getElementById('availableRooms').value = '';
+  
+  if(document.getElementById('r-type')) document.getElementById('r-type').value = '';
+  if(document.getElementById('r-price')) document.getElementById('r-price').value = '';
+  if(document.getElementById('r-total')) document.getElementById('r-total').value = '';
+  if(document.getElementById('r-available')) document.getElementById('r-available').value = '';
 
-  const addBtn = document.getElementById('addRoomBtn');
+  const addBtn = document.getElementById('btn-save-room') || document.getElementById('addRoomBtn');
   if(addBtn) {
     addBtn.innerText = "+ Add Room Type";
-    addBtn.style.backgroundColor = "#4CAF50"; // Green color
+    addBtn.style.backgroundColor = "#2ecc71"; // Green color
   }
 }
 // 12. STYLES
