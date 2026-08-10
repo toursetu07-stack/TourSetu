@@ -4534,29 +4534,156 @@ async function toggleStopSell(hotelId) {
 // Global variable tracking for editing
 let currentEditingRoomId = null;
 
-// 1. Edit Button Click karne par form bharne ka function
+// Global variable tracking for room editing
+let currentEditingRoomId = null;
+
+// 1. Safe Fetch Function for Hotel Profile
+async function fetchHotelProfile(userId) {
+    try {
+        const client = getClient();
+        if (!client) return null;
+
+        const { data: hotel, error } = await client
+            .from('hotels')
+            .select('*')
+            .eq('owner_id', userId)
+            .maybeSingle();
+
+        if (error) throw error;
+        return hotel;
+    } catch (err) {
+        console.error("Hotel profile fetch error:", err.message);
+        return null;
+    }
+}
+
+// 2. Global Tab Switcher Function
+window.showHotelTab = async function(tabName) {
+    const container = document.getElementById('hotel-main-content');
+    if (!container) return;
+
+    const client = getClient();
+    if (!client) return;
+    
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) return;
+
+    const hotel = await fetchHotelProfile(user.id);
+
+    // TAB: OVERVIEW
+    if (tabName === 'overview') {
+        if (!hotel) {
+            container.innerHTML = `
+                <div class="card" style="background:white; padding:40px; border-radius:15px; text-align:center;">
+                    <h2>Welcome Partner! 🏨</h2>
+                    <p style="color:#666;">Please setup your property details to begin taking room requests.</p>
+                    <button onclick="showHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:10px;">Setup Property Now</button>
+                </div>`;
+            return;
+        }
+
+        const { data: requests } = await client.from('hotel_requests').select('*').eq('hotel_id', hotel.hotel_id);
+        const pendingCount = requests ? requests.filter(r => r.status === 'pending').length : 0;
+        const approvedCount = requests ? requests.filter(r => r.status === 'approved').length : 0;
+
+        container.innerHTML = `
+            <h1>Hotel Overview</h1>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-top:20px;">
+                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #ff9f43;">
+                    <small style="color:#888;">PROPERTY STATUS</small>
+                    <h3 style="margin:5px 0;">${hotel.hide_from_search ? '🔴 Hidden (No Inventory)' : '🟢 Active & Listed'}</h3>
+                </div>
+                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #3498db;">
+                    <small style="color:#888;">PENDING REQUESTS</small>
+                    <h2 style="margin:5px 0;">${pendingCount}</h2>
+                </div>
+                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #2ecc71;">
+                    <small style="color:#888;">CONFIRMED BOOKINGS</small>
+                    <h2 style="margin:5px 0;">${approvedCount}</h2>
+                </div>
+            </div>`;
+    } 
+    // TAB: PROPERTY / ROOM INVENTORY
+    else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
+        const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
+            `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+        ).join('');
+
+        container.innerHTML = `
+            <h1>Property & Inventory Management</h1>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
+                <div class="card" style="background:white; padding:25px; border-radius:15px;">
+                    <h3>🏨 Property Profile</h3>
+                    <input type="text" id="h-name" placeholder="Hotel Name" value="${hotel?.hotel_name || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    
+                    <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION</label>
+                    <select id="h-city" style="width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
+                        <option value="">Select Permitted Destination</option>
+                        ${destSelectOptions}
+                    </select>
+
+                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${hotel?.address || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
+
+                    <button onclick="saveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                </div>
+
+                <div class="card" style="background:white; padding:25px; border-radius:15px;">
+                    <h3>🛏️ Add Room Category</h3>
+                    ${!hotel ? '<p style="color:#e74c3c;">Save hotel property details first before adding rooms.</p>' : `
+                        <input type="text" id="r-type" placeholder="Room Category (e.g. Deluxe AC)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-price" placeholder="Price per Night (₹)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-total" placeholder="Total Rooms Inventory" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
+
+                        <button id="btn-save-room" onclick="saveOrUpdateRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
+                    `}
+                </div>
+            </div>
+
+            <div style="margin-top:30px;">
+                <h3>Live Inventory Stock</h3>
+                <div id="hotel-rooms-list">Loading inventory...</div>
+            </div>`;
+
+        if (hotel && typeof loadHotelRooms === "function") loadHotelRooms(hotel.hotel_id);
+    } 
+    // TAB: REQUESTS
+    else if (tabName === 'requests') {
+        container.innerHTML = `
+            <h1>Booking & Quote Requests</h1>
+            <div style="margin-top:20px;" id="hotel-inbox-container">Loading requests...</div>`;
+        if (hotel && typeof loadHotelRequests === "function") loadHotelRequests(hotel.hotel_id);
+    }
+};
+
+// 3. Edit Button Click Function
 function editRoomCategory(id, category, price, total, available) {
   currentEditingRoomId = id;
 
-  // Form Inputs mein purana data bharein (Updated with your exact HTML IDs)
   if(document.getElementById('r-type')) document.getElementById('r-type').value = category;
   if(document.getElementById('r-price')) document.getElementById('r-price').value = price;
   if(document.getElementById('r-total')) document.getElementById('r-total').value = total;
   if(document.getElementById('r-available')) document.getElementById('r-available').value = available;
 
-  // Save button ka text & background badlein
   const addBtn = document.getElementById('btn-save-room') || document.getElementById('addRoomBtn');
   if(addBtn) {
     addBtn.innerText = "🔄 Update Room Type";
-    addBtn.style.backgroundColor = "#ff9800"; // Orange color for update mode
+    addBtn.style.backgroundColor = "#ff9800";
   }
 
-  // Smooth scroll up to form
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 2. Add / Update Room Save Logic (Supabase Direct Update)
+// 4. Add / Update Room Save Logic (Fixed client instance)
 async function saveOrUpdateRoomCategory(hotelId) {
+  const client = getClient();
+  if (!client) {
+    alert("Database connection error!");
+    return;
+  }
+
   const categoryInput = document.getElementById('r-type') || document.getElementById('roomCategory');
   const priceInput = document.getElementById('r-price') || document.getElementById('roomPrice');
   const totalInput = document.getElementById('r-total') || document.getElementById('totalRooms');
@@ -4572,7 +4699,7 @@ async function saveOrUpdateRoomCategory(hotelId) {
     return;
   }
 
-  // Agar Edit Mode Active Hai (UPDATE)
+  // UPDATE MODE
   if (currentEditingRoomId) {
     const { error } = await client
       .from('room_categories')
@@ -4593,7 +4720,7 @@ async function saveOrUpdateRoomCategory(hotelId) {
       else if (typeof loadInventory === "function") loadInventory();
     }
   } 
-  // Agar New Record Add Kar Rahe Hain (INSERT)
+  // INSERT MODE
   else {
     const { error } = await client
       .from('room_categories')
@@ -4618,7 +4745,10 @@ async function saveOrUpdateRoomCategory(hotelId) {
   }
 }
 
-// Form Reset Function
+// Alias for backwards compatibility
+const saveRoomCategory = saveOrUpdateRoomCategory;
+
+// 5. Form Reset Function
 function resetRoomForm() {
   currentEditingRoomId = null;
   
@@ -4630,8 +4760,53 @@ function resetRoomForm() {
   const addBtn = document.getElementById('btn-save-room') || document.getElementById('addRoomBtn');
   if(addBtn) {
     addBtn.innerText = "+ Add Room Type";
-    addBtn.style.backgroundColor = "#2ecc71"; // Green color
+    addBtn.style.backgroundColor = "#2ecc71";
   }
+}
+
+// 6. Auto Load Rooms Function
+async function loadHotelRooms(hotelId) {
+    const listDiv = document.getElementById('hotel-rooms-list');
+    if (!listDiv) return;
+
+    const client = getClient();
+    if (!client) return;
+
+    const { data: rooms, error } = await client
+        .from('room_categories')
+        .select('*')
+        .eq('hotel_id', hotelId);
+
+    if (error) {
+        listDiv.innerHTML = `<p style="color:red;">Error loading rooms: ${error.message}</p>`;
+        return;
+    }
+
+    if (!rooms || rooms.length === 0) {
+        listDiv.innerHTML = `<p style="color:#666;">No room categories added yet.</p>`;
+        return;
+    }
+
+    listDiv.innerHTML = rooms.map(room => `
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:15px; margin-top:10px; background:#fff; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div>
+                <h4 style="margin:0;">${room.room_type || room.category_name || ''}</h4>
+                <p style="margin:5px 0 0; color:#666;">Price: ₹${room.price_per_night || room.price || 0} / night</p>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:15px;">
+                <div style="text-align:right;">
+                    <small style="color:#888; font-size:10px; display:block;">AVAILABLE / TOTAL</small>
+                    <div><strong>${room.available_rooms ?? 0}</strong> / ${room.total_rooms ?? 0}</div>
+                </div>
+                
+                <button onclick="editRoomCategory('${room.id}', '${room.room_type || room.category_name || ''}', '${room.price_per_night || room.price || 0}', '${room.total_rooms || 0}', '${room.available_rooms || 0}')" 
+                        style="background:#2196F3; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">
+                    ✏️ Edit
+                </button>
+            </div>
+        </div>
+    `).join('');
 }
 // 12. STYLES
 const styleTag = document.createElement('style');
