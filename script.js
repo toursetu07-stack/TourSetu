@@ -2094,7 +2094,7 @@ window.showHotelTab = async function(tabName) {
                 </div>
             </div>`;
     } 
-    // TAB 2: PROPERTY / ROOM INVENTORY
+   // TAB 2: PROPERTY / ROOM INVENTORY
 else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
     const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
         `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
@@ -2139,6 +2139,128 @@ else if (tabName === 'property' || tabName === 'room-inventory' || tabName === '
         </div>`;
 
     if (hotel && typeof loadHotelRooms === "function") loadHotelRooms(hotel.hotel_id);
+}
+
+
+// --- SUPPORTING FUNCTIONS FOR AUTO-LOAD & EDIT FEATURE ---
+
+let currentEditingRoomId = null;
+
+// Live Inventory Stock Auto-Loader
+async function loadHotelRooms(hotelId) {
+    const listDiv = document.getElementById('hotel-rooms-list');
+    if (!listDiv) return;
+
+    const { data: rooms, error } = await client
+        .from('room_categories')
+        .select('*')
+        .eq('hotel_id', hotelId);
+
+    if (error) {
+        listDiv.innerHTML = `<p style="color:red;">Error loading rooms: ${error.message}</p>`;
+        return;
+    }
+
+    if (!rooms || rooms.length === 0) {
+        listDiv.innerHTML = `<p style="color:#666;">No room categories added yet.</p>`;
+        return;
+    }
+
+    listDiv.innerHTML = rooms.map(room => `
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:15px; margin-top:10px; background:#fff; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div>
+                <h4 style="margin:0;">${room.category_name || room.room_type || ''}</h4>
+                <p style="margin:5px 0 0; color:#666;">Price: ₹${room.price_per_night || room.price || 0} / night</p>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:15px;">
+                <div style="text-align:right;">
+                    <small style="color:#888; font-size:10px; display:block;">AVAILABLE / TOTAL</small>
+                    <div><strong>${room.available_rooms ?? 0}</strong> / ${room.total_rooms ?? 0}</div>
+                </div>
+                
+                <!-- BLUE EDIT BUTTON -->
+                <button onclick="editRoomCategory('${room.id}', '${room.category_name || room.room_type || ''}', '${room.price_per_night || room.price || 0}', '${room.total_rooms || 0}', '${room.available_rooms || 0}')" 
+                        style="background:#2196F3; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">
+                    ✏️ Edit
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Edit Button Click Action
+function editRoomCategory(id, category, price, total, available) {
+    currentEditingRoomId = id;
+
+    if (document.getElementById('r-type')) document.getElementById('r-type').value = category;
+    if (document.getElementById('r-price')) document.getElementById('r-price').value = price;
+    if (document.getElementById('r-total')) document.getElementById('r-total').value = total;
+    if (document.getElementById('r-available')) document.getElementById('r-available').value = available;
+
+    const btn = document.getElementById('btn-save-room');
+    if (btn) {
+        btn.innerText = "🔄 Update Room Type";
+        btn.style.backgroundColor = "#ff9800";
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Save or Update Room Category Logic
+async function saveRoomCategory(hotelId) {
+    const category = document.getElementById('r-type')?.value;
+    const price = document.getElementById('r-price')?.value;
+    const total = document.getElementById('r-total')?.value || 0;
+    const available = document.getElementById('r-available')?.value || 0;
+
+    if (!category || !price) {
+        alert("Please enter room category and price!");
+        return;
+    }
+
+    const payload = {
+        hotel_id: hotelId,
+        room_type: category,
+        price_per_night: price,
+        total_rooms: total,
+        available_rooms: available
+    };
+
+    let error;
+
+    if (currentEditingRoomId) {
+        const res = await client
+            .from('room_categories')
+            .update(payload)
+            .eq('id', currentEditingRoomId);
+        error = res.error;
+    } else {
+        const res = await client
+            .from('room_categories')
+            .insert([payload]);
+        error = res.error;
+    }
+
+    if (error) {
+        alert("Error saving room: " + error.message);
+    } else {
+        alert(currentEditingRoomId ? "Room updated successfully!" : "Room added successfully!");
+        
+        currentEditingRoomId = null;
+        if (document.getElementById('r-type')) document.getElementById('r-type').value = '';
+        if (document.getElementById('r-price')) document.getElementById('r-price').value = '';
+        if (document.getElementById('r-total')) document.getElementById('r-total').value = '';
+        if (document.getElementById('r-available')) document.getElementById('r-available').value = '';
+
+        const btn = document.getElementById('btn-save-room');
+        if (btn) {
+            btn.innerText = "+ Add Room Type";
+            btn.style.backgroundColor = "#2ecc71";
+        }
+
+        loadHotelRooms(hotelId);
+    }
 }
     // TAB 3: REQUESTS
     else if (tabName === 'requests') {
