@@ -4553,8 +4553,8 @@ async function toggleStopSell(hotelId) {
         btn.innerText = '🟢 Normal Selling Mode';
     }
 }
-// Global variable tracking for editing
-let currentEditingRoomId = null;
+// Global variable tracking for editing 
+currentEditingRoomId = currentEditingRoomId || null;
 
 // Global variable tracking for room editing
 let currentEditingRoomId = null;
