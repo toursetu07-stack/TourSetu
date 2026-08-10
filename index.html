@@ -143,12 +143,12 @@
     </nav>
 </template>
 
-<!-- Hotel Owner Dashboard UI -->
-<div id="owner-dashboard-section" style="max-width: 800px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+<!-- Hotel Owner Dashboard UI (Initially Hidden) -->
+<div id="owner-dashboard-section" style="display: none; max-width: 800px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
     <h2>Incoming Booking Requests</h2>
     
     <!-- Refresh Button -->
-    <button onclick="fetchAndRenderOwnerRequests('YOUR_HOTEL_ID_HERE')" style="padding: 10px 15px; background: #ff9f43; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button onclick="fetchAndRenderOwnerRequests(window.currentHotelId)" style="padding: 10px 15px; background: #ff9f43; color: white; border: none; border-radius: 6px; cursor: pointer;">
         🔄 Fetch/Refresh Requests
     </button>
 
