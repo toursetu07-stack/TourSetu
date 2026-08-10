@@ -4763,7 +4763,7 @@ async function saveOrUpdateRoomCategory(hotelId) {
 }
 
 // Alias for backwards compatibility
-const saveRoomCategory = saveOrUpdateRoomCategory;
+window.saveRoomCategory = saveOrUpdateRoomCategory;
 
 // 5. Form Reset Function
 function resetRoomForm() {
