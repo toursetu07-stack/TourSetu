@@ -1797,7 +1797,7 @@ async function evaluateHotelVisibility(hotelId) {
    HOTEL PARTNER MODULE - PROPERTY & INVENTORY MANAGEMENT
    ========================================================= */
 
-// Agar pehle se declared hai toh re-declare mat karein, direct value update/reassign karein (ya ise hata hi dein):
+// Destination list check & definition
 if (typeof FIXED_HOTEL_DESTINATIONS === 'undefined') {
     var FIXED_HOTEL_DESTINATIONS = [
         "Haridwar", 
@@ -1812,6 +1812,27 @@ if (typeof FIXED_HOTEL_DESTINATIONS === 'undefined') {
         "Gangotri Temple Road & Market Area"
     ];
 }
+
+// 1. Safe Fetch Function for Hotel Profile
+async function fetchHotelProfile(userId) {
+    try {
+        const client = getClient();
+        if (!client) return null;
+
+        const { data: hotel, error } = await client
+            .from('hotels')
+            .select('*')
+            .eq('owner_id', userId)
+            .maybeSingle();
+
+        if (error) throw error;
+        return hotel;
+    } catch (err) {
+        console.error("Hotel profile fetch error:", err.message);
+        return null;
+    }
+}
+
 // Helper: Upload Image to Supabase Storage Bucket
 async function uploadHotelImage(file, bucketPath) {
     if (!file) return null;
@@ -1930,7 +1951,6 @@ async function handleSaveHotelProfile(existingHotelId) {
 
         if (!user) throw new Error("User session not found.");
 
-        // Input Values
         const hotelName = document.getElementById('h-name').value;
         const city = document.getElementById('h-city').value;
         const address = document.getElementById('h-address').value;
@@ -1938,7 +1958,6 @@ async function handleSaveHotelProfile(existingHotelId) {
         const totalRooms = parseInt(document.getElementById('h-total-rooms').value);
         const availableRooms = parseInt(document.getElementById('h-avail-rooms').value);
 
-        // Validation Check
         if (availableRooms > totalRooms) {
             alert("Available rooms cannot be greater than Total rooms!");
             btn.disabled = false;
@@ -1946,12 +1965,10 @@ async function handleSaveHotelProfile(existingHotelId) {
             return;
         }
 
-        // Image Files
         const frontFile = document.getElementById('h-front-img').files[0];
         const parkingFile = document.getElementById('h-parking-img').files[0];
         const roomFile = document.getElementById('h-room-img').files[0];
 
-        // Upload Images if selected
         let frontUrl = null;
         let parkingUrl = null;
         let roomUrl = null;
@@ -1960,7 +1977,6 @@ async function handleSaveHotelProfile(existingHotelId) {
         if (parkingFile) parkingUrl = await uploadHotelImage(parkingFile, 'parking_views');
         if (roomFile) roomUrl = await uploadHotelImage(roomFile, 'room_views');
 
-        // Payload Object
         const payload = {
             owner_id: user.id,
             hotel_name: hotelName,
@@ -1980,14 +1996,12 @@ async function handleSaveHotelProfile(existingHotelId) {
         let dbError = null;
 
         if (existingHotelId) {
-            // Update Existing Record
             const { error } = await client
                 .from('hotels')
                 .update(payload)
                 .eq('hotel_id', existingHotelId);
             dbError = error;
         } else {
-            // Insert New Record
             const { error } = await client
                 .from('hotels')
                 .insert([payload]);
@@ -2007,7 +2021,8 @@ async function handleSaveHotelProfile(existingHotelId) {
         btn.innerText = "Upload & Save Profile";
     }
 }
-// 3. UI Layout Render Function
+
+// UI Layout Render Function
 async function renderHotelDashboard(user, hotelData = null) {
     const app = document.getElementById('app');
     if (!app) return;
@@ -2041,12 +2056,10 @@ async function renderHotelDashboard(user, hotelData = null) {
         </div>
     `;
 
-    // Initialize Realtime Listener
     if (typeof initHotelRealtimeSubscriptions === "function") {
         initHotelRealtimeSubscriptions();
     }
     
-    // Load default tab
     showHotelTab('overview');
 }
 
@@ -2056,6 +2069,8 @@ window.showHotelTab = async function(tabName) {
     if (!container) return;
 
     const client = getClient();
+    if (!client) return;
+
     const { data: { user } } = await client.auth.getUser();
     if (!user) return;
 
@@ -2094,53 +2109,62 @@ window.showHotelTab = async function(tabName) {
                 </div>
             </div>`;
     } 
-   // TAB 2: PROPERTY / ROOM INVENTORY
-else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
-    const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
-        `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
-    ).join('');
+    // TAB 2: PROPERTY / ROOM INVENTORY
+    else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
+        const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
+            `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+        ).join('');
 
-    container.innerHTML = `
-        <h1>Property & Inventory Management</h1>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
-            <div class="card" style="background:white; padding:25px; border-radius:15px;">
-                <h3>🏨 Property Profile</h3>
-                <input type="text" id="h-name" placeholder="Hotel Name" value="${hotel?.hotel_name || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                
-                <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION</label>
-                <select id="h-city" style="width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
-                    <option value="">Select Permitted Destination</option>
-                    ${destSelectOptions}
-                </select>
+        container.innerHTML = `
+            <h1>Property & Inventory Management</h1>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
+                <div class="card" style="background:white; padding:25px; border-radius:15px;">
+                    <h3>🏨 Property Profile</h3>
+                    <input type="text" id="h-name" placeholder="Hotel Name" value="${hotel?.hotel_name || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    
+                    <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION</label>
+                    <select id="h-city" style="width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
+                        <option value="">Select Permitted Destination</option>
+                        ${destSelectOptions}
+                    </select>
 
-                <input type="text" id="h-address" placeholder="Complete Street Address" value="${hotel?.address || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
+                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${hotel?.address || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
-                <button onclick="saveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                    <button onclick="handleSaveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                </div>
+
+                <div class="card" style="background:white; padding:25px; border-radius:15px;">
+                    <h3>🛏️ Add Room Category</h3>
+                    ${!hotel ? '<p style="color:#e74c3c;">Save hotel property details first before adding rooms.</p>' : `
+                        <input type="text" id="r-type" placeholder="Room Category (e.g. Deluxe AC)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-price" placeholder="Price per Night (₹)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-total" placeholder="Total Rooms Inventory" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                        <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
+
+                        <button id="btn-save-room" onclick="saveRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
+                    `}
+                </div>
             </div>
 
-            <div class="card" style="background:white; padding:25px; border-radius:15px;">
-                <h3>🛏️ Add Room Category</h3>
-                ${!hotel ? '<p style="color:#e74c3c;">Save hotel property details first before adding rooms.</p>' : `
-                    <input type="text" id="r-type" placeholder="Room Category (e.g. Deluxe AC)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    <input type="number" id="r-price" placeholder="Price per Night (₹)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    <input type="number" id="r-total" placeholder="Total Rooms Inventory" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
+            <div style="margin-top:30px;">
+                <h3>Live Inventory Stock</h3>
+                <div id="hotel-rooms-list">Loading inventory...</div>
+            </div>`;
 
-                    <button id="btn-save-room" onclick="saveRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
-                `}
-            </div>
-        </div>
-
-        <div style="margin-top:30px;">
-            <h3>Live Inventory Stock</h3>
-            <div id="hotel-rooms-list">Loading inventory...</div>
-        </div>`;
-
-    if (hotel && typeof loadHotelRooms === "function") loadHotelRooms(hotel.hotel_id);
-}
-
+        if (hotel && typeof loadHotelRooms === "function") loadHotelRooms(hotel.hotel_id);
+    } 
+    // TAB 3: REQUESTS (Correctly connected with main IF block)
+    else if (tabName === 'requests') {
+        container.innerHTML = `
+            <h1>Booking & Quote Requests</h1>
+            <div style="margin-top:20px;" id="hotel-inbox-container">Loading requests...</div>`;
+        if (hotel && typeof loadHotelRequests === "function") {
+            loadHotelRequests(hotel.hotel_id);
+        }
+    }
+};
 
 // --- SUPPORTING FUNCTIONS FOR AUTO-LOAD & EDIT FEATURE ---
 
@@ -2150,6 +2174,9 @@ let currentEditingRoomId = null;
 async function loadHotelRooms(hotelId) {
     const listDiv = document.getElementById('hotel-rooms-list');
     if (!listDiv) return;
+
+    const client = getClient();
+    if (!client) return;
 
     const { data: rooms, error } = await client
         .from('room_categories')
@@ -2179,7 +2206,6 @@ async function loadHotelRooms(hotelId) {
                     <div><strong>${room.available_rooms ?? 0}</strong> / ${room.total_rooms ?? 0}</div>
                 </div>
                 
-                <!-- BLUE EDIT BUTTON -->
                 <button onclick="editRoomCategory('${room.id}', '${room.category_name || room.room_type || ''}', '${room.price_per_night || room.price || 0}', '${room.total_rooms || 0}', '${room.available_rooms || 0}')" 
                         style="background:#2196F3; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">
                     ✏️ Edit
@@ -2216,6 +2242,12 @@ async function saveRoomCategory(hotelId) {
 
     if (!category || !price) {
         alert("Please enter room category and price!");
+        return;
+    }
+
+    const client = getClient();
+    if (!client) {
+        alert("Database client unavailable!");
         return;
     }
 
@@ -2262,16 +2294,6 @@ async function saveRoomCategory(hotelId) {
         loadHotelRooms(hotelId);
     }
 }
-    // TAB 3: REQUESTS
-    else if (tabName === 'requests') {
-        container.innerHTML = `
-            <h1>Booking & Quote Requests</h1>
-            <div style="margin-top:20px;" id="hotel-inbox-container">Loading requests...</div>`;
-        if (hotel && typeof loadHotelRequests === "function") {
-            loadHotelRequests(hotel.hotel_id);
-        }
-    }
-};
   // 1. Safe Fetch Function for Hotel Profile
 async function fetchHotelProfile(userId) {
     try {
