@@ -4840,3 +4840,183 @@ styleTag.innerHTML = `
 `;
 document.head.appendChild(styleTag); 
 initApp();
+/* =========================================================================
+   HOTEL INVENTORY, PACKAGE CREATION & AGENCY REQUEST BOOKING ENGINE
+   ========================================================================= */
+
+// 1. FETCH AVAILABLE HOTEL ROOM LOCKS FOR AGENCY PACKAGE CREATION
+window.fetchHotelInventoryLocks = async function() {
+    const client = getClient();
+    try {
+        const { data, error } = await client
+            .from('room_inventory')
+            .select('*')
+            .gt('available_room', 0); // Only available rooms
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error("Error fetching hotel inventory:", err.message);
+        return [];
+    }
+};
+
+// 2. RENDER HOTEL SELECTION DROPDOWN/CARDS IN AGENCY PACKAGE CREATION FORM
+window.renderHotelSelectionUI = async function(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = `<p style="font-size:12px; color:#666;">Loading available hotel rooms...</p>`;
+    const rooms = await fetchHotelInventoryLocks();
+
+    if (rooms.length === 0) {
+        container.innerHTML = `<p style="font-size:12px; color:#e74c3c;">No hotel room inventory locks found.</p>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <label style="font-size:12px; font-weight:bold; color:#636e72; display:block; margin-bottom:5px;">🏨 SELECT HOTEL ROOM INVENTORY</label>
+        <select id="selected-hotel-room-id" onchange="updateSelectedHotelDetails()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin-bottom:10px;">
+            <option value="">-- Choose Hotel Room --</option>
+            ${rooms.map(r => `<option value="${r.id}" data-type="${r.room_type}" data-price="${r.price_per_night}" data-avail="${r.available_room}">${r.room_type} - ₹${r.price_per_night}/night (${r.available_room} available)</option>`).join('')}
+        </select>
+        <div id="selected-hotel-summary" style="display:none; font-size:12px; background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #e9ecef;"></div>
+    `;
+};
+
+window.updateSelectedHotelDetails = function() {
+    const select = document.getElementById('selected-hotel-room-id');
+    const summary = document.getElementById('selected-hotel-summary');
+    if (!select || !summary) return;
+
+    const selectedOpt = select.options[select.selectedIndex];
+    if (!select.value) {
+        summary.style.display = 'none';
+        return;
+    }
+
+    const roomType = selectedOpt.dataset.type;
+    const price = selectedOpt.dataset.price;
+    const avail = selectedOpt.dataset.avail;
+
+    summary.style.display = 'block';
+    summary.innerHTML = `<b>Selected Room:</b> ${roomType} | <b>Rate:</b> ₹${price}/night | <b>Available Rooms:</b> ${avail}`;
+};
+
+// 3. RENDER SPECIFIC REQUEST HOTEL PACKAGES FOR AGENCIES WITH 2 ACTION BUTTONS
+window.renderAgencyCustomerRequestPackages = async function(requestId, customerId, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const client = getClient();
+    
+    // Fetch hotel packages linked with inventory
+    const { data: packages, error } = await client
+        .from('packages')
+        .select('*')
+        .not('hotel_room_id', 'is', null);
+
+    if (error || !packages || packages.length === 0) {
+        container.innerHTML = `<p style="font-size:13px; color:#7f8c8d;">No hotel packages available to attach.</p>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <h4 style="margin:15px 0 10px 0; color:#2d3436; font-size:14px;">🏨 Select & Share Hotel Package for this Request</h4>
+        <div style="display:grid; gap:12px;">
+            ${packages.map(pkg => `
+                <div style="border:1px solid #e0e0e0; background:#fff; padding:12px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.03);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong style="font-size:14px; color:#2c3e50;">${pkg.title}</strong>
+                            <div style="font-size:12px; color:#7f8c8d; margin-top:2px;">
+                                Room Type: <b>${pkg.room_type || 'Standard'}</b> | Price/Night: <span style="color:#27ae60; font-weight:bold;">₹${pkg.price_per_night || pkg.min_price}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- DUAL ACTION BUTTONS FOR AGENCY -->
+                    <div style="margin-top:10px; display:flex; gap:10px;">
+                        <!-- Button 1: Share package to Customer's Dashboard Request page -->
+                        <button onclick="sharePackageToCustomerDashboard('${requestId}', '${customerId}', '${pkg.id}')" 
+                                style="flex:1; background:#3498db; color:white; border:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
+                            📤 Share to Customer
+                        </button>
+                        
+                        <!-- Button 2: Direct Agency Booking -->
+                        <button onclick="directAgencyBookHotel('${requestId}', '${customerId}', '${pkg.id}', '${pkg.hotel_room_id}')" 
+                                style="flex:1; background:#2ecc71; color:white; border:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
+                            ⚡ Direct Book Hotel
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+};
+
+// BUTTON 1 HANDLER: Share package to Customer Dashboard
+window.sharePackageToCustomerDashboard = async function(requestId, customerId, packageId) {
+    const client = getClient();
+    try {
+        const { error } = await client
+            .from('customer_requests')
+            .update({
+                shared_package_id: packageId,
+                status: 'package_offered',
+                updated_at: new Date()
+            })
+            .eq('id', requestId);
+
+        if (error) throw error;
+        alert("✅ Package shared successfully with customer dashboard!");
+    } catch (err) {
+        alert("❌ Error sharing package: " + err.message);
+    }
+};
+
+// BUTTON 2 HANDLER: Direct Agency Book Hotel
+window.directAgencyBookHotel = async function(requestId, customerId, packageId, hotelRoomId) {
+    if (!confirm("Are you sure you want to directly book this hotel room for the customer?")) return;
+
+    const client = getClient();
+    try {
+        // 1. Create confirmed booking
+        const { error: bookingError } = await client
+            .from('bookings')
+            .insert([{
+                customer_id: customerId,
+                package_id: packageId,
+                status: 'confirmed',
+                booking_type: 'direct_agency_hotel'
+            }]);
+
+        if (bookingError) throw bookingError;
+
+        // 2. Decrement available room count in room_inventory
+        if (hotelRoomId) {
+            const { data: roomData } = await client
+                .from('room_inventory')
+                .select('available_room')
+                .eq('id', hotelRoomId)
+                .single();
+
+            if (roomData && roomData.available_room > 0) {
+                await client
+                    .from('room_inventory')
+                    .update({ available_room: roomData.available_room - 1 })
+                    .eq('id', hotelRoomId);
+            }
+        }
+
+        // 3. Update request status
+        await client
+            .from('customer_requests')
+            .update({ status: 'booked_by_agency' })
+            .eq('id', requestId);
+
+        alert("🎉 Hotel booked directly by agency! Inventory updated.");
+    } catch (err) {
+        alert("❌ Direct booking failed: " + err.message);
+    }
+};
