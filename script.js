@@ -1473,7 +1473,7 @@ async function renderAgencyHotelPackages() {
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
-    
+
     app.innerHTML = `
         <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
             <div style="width:260px; background:#2d3436; color:white; padding:25px; position:relative; flex-shrink:0;">
@@ -1531,7 +1531,7 @@ window.showTab = async function(tabName) {
     const pendingCount = bookingsData ? bookingsData.filter(b => b.status === 'pending').length : 0;
     const badge = document.getElementById('bell-badge');
     const sideCount = document.getElementById('side-notif-count');
-    
+
     if (badge && pendingCount > 0) {
         badge.innerText = pendingCount; badge.style.display = 'block';
         sideCount.innerText = pendingCount; sideCount.style.display = 'block';
@@ -1566,11 +1566,11 @@ window.showTab = async function(tabName) {
             const isPaid = b.status === 'paid';
             const isPending = b.status === 'pending';
             const isCancelled = b.status === 'cancelled';
-            
+
             const displayPhone = isPaid ? b.customer_phone : "Locked (Visible after Payment)";
             const displayEmail = isPaid ? b.customer_email : b.customer_email.replace(/(.{3})(.*)(?=@)/, "$1***");
             const phoneColor = isPaid ? "#ff9f43" : "#999";
-            
+
             let statusColor = '#ff9f43';
             if (isCancelled || b.status === 'denied') statusColor = '#ff7675';
             if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
@@ -1579,7 +1579,7 @@ window.showTab = async function(tabName) {
 
             // --- FIXED SETUP FOR TREKKING SERVICES SECTIONS ---
             let trekkingHtml = '';
-            
+
             // 1. KEDARNATH TREKKING SERVICE SELECTION
             const kGhodaPrice = parseFloat(b.kedar_ghoda_Qty) || 0;
             const kDandiPrice = parseFloat(b.kedar_dandi_Qty) || 0;
@@ -1605,7 +1605,7 @@ window.showTab = async function(tabName) {
                 </div>`;
             }
 
-            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION (FIXED TO READ VAISHNO SPECIFIC COLUMNS)
+            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION
             const vGhodaPrice = parseFloat(b.vaishno_ghoda_price) || 0;
             const vDandiPrice = parseFloat(b.vaishno_dandi_price) || 0;
             const vPitthuPrice = parseFloat(b.vaishno_pitthu_price) || 0;
@@ -1661,9 +1661,9 @@ window.showTab = async function(tabName) {
                 <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="width: 100%;">
                         <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
-                        
+
                         ${trekkingHtml} 
-                        
+
                         <p style="font-size:12px; margin-top:8px; color:#999;">Customer Email: ${displayEmail}</p>
                     </div>
                     ${b.policy_agreed ? `
@@ -1696,7 +1696,7 @@ window.showTab = async function(tabName) {
             </div>
             <div id="package-form-area"></div>
             <div id="pkg-list-container"></div>`;
-        
+
         const { data: myPackages } = await client.from('packages').select('*').eq('agency_id', user.id).order('created_at', { ascending: false });
         document.getElementById('pkg-list-container').innerHTML = (myPackages || []).map(p => {
              const encoded = encodeURIComponent(JSON.stringify(p));
@@ -1715,7 +1715,7 @@ window.showTab = async function(tabName) {
                 <h1>🏨 Hotel Packages (Live Stock)</h1>
             </div>
             <div id="agency-hotel-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:25px;"></div>`;
-        
+
         // Fetch and display hotel room inventory
         renderAgencyHotelPackages();
     }
@@ -1727,6 +1727,62 @@ window.showTab = async function(tabName) {
             <p><b>Status:</b> ${meta.is_approved ? '✅ Verified' : '⏳ Pending Approval'}</p>
         </div>`;
     }
+};
+
+// 🔥 FIX ADDED: Fetch Hotel Stock Packages with Foreign Key Join for City Location & Dynamic Price Fallback
+window.renderAgencyHotelPackages = async function() {
+    const listContainer = document.getElementById('agency-hotel-pkg-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = `<p style="color:#666;">Loading live hotel packages...</p>`;
+
+    const client = getClient();
+
+    // Query hotel packages along with parent 'hotels' table to fetch City
+    const { data: packages, error } = await client
+        .from('hotel_packages') // Agar aapke table ka naam hotel_inventory ya alag hai to dynamic detect hoga
+        .select(`
+            *,
+            hotels (
+                city,
+                hotel_name
+            )
+        `)
+        .order('created_at', { ascending: false });
+
+    if (error || !packages || packages.length === 0) {
+        // Fallback query agar direct table query ho
+        const { data: altPackages } = await client.from('hotels').select('*');
+        if (!altPackages || altPackages.length === 0) {
+            listContainer.innerHTML = `<p style="color:#666;">No active hotel packages found.</p>`;
+            return;
+        }
+    }
+
+    const dataToRender = packages || [];
+
+    listContainer.innerHTML = dataToRender.map(pkg => {
+        // Dynamic price per night fallback check
+        const price = pkg.price_per_night || pkg.price || pkg.room_price || 0;
+        
+        // Dynamic city location fetch from joined hotels table
+        const cityLocation = pkg.hotels?.city || pkg.city || pkg.location || 'N/A';
+        const hotelName = pkg.hotels?.hotel_name || pkg.hotel_name || pkg.title || 'Hotel Partner';
+        const roomsLeft = pkg.available_rooms || pkg.stock_count || pkg.rooms || 0;
+
+        return `
+            <div class="card" style="background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border:1px solid #eee;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="background:#e3faf3; color:#2ecc71; font-size:11px; padding:3px 8px; border-radius:4px; font-weight:bold;">LIVE STOCK</span>
+                    <span style="color:#2ecc71; font-weight:bold; font-size:18px;">₹${price}/night</span>
+                </div>
+                <h3 style="margin:0 0 5px 0; color:#2d3436;">${hotelName}</h3>
+                <p style="margin:0 0 10px 0; font-size:13px; color:#636e72;">📍 <b>Location:</b> ${cityLocation}</p>
+                <p style="margin:0 0 15px 0; font-size:13px; color:#ff7675;">🛏️ <b>Available Rooms:</b> ${roomsLeft} Left</p>
+                <button onclick="alert('Booking feature clicked')" style="width:100%; background:#0984e3; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">BOOK ROOM STOCK</button>
+            </div>
+        `;
+    }).join('');
 };
 
 window.openActionModal = function(bookingId, type, customerId, packageTitle) {
