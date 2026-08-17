@@ -1468,653 +1468,392 @@ async function renderAgencyHotelPackages() {
     }
 }
 // 9. AGENCY DASHBOARD
-
 function renderAgencyDashboard(user) {
-
     const app = document.getElementById('app');
-
     app.style.maxWidth = "100%";
 
-
-
     app.innerHTML = `
-
         <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
-
             <div style="width:260px; background:#2d3436; color:white; padding:25px; position:relative; flex-shrink:0;">
-
                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
-
                     <h2 style="color:#ff9f43; margin:0;">TourSetu</h2>
-
                     <div id="notif-bell" onclick="showTab('bookings')" style="position:relative; cursor:pointer; font-size:20px; transition: 0.3s;">
-
                         🔔
-
                         <span id="bell-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:2px 6px; border-radius:50%; font-weight:bold; border: 2px solid #2d3436;">0</span>
-
                     </div>
-
                </div>
-
                <nav>
-
                     <div onclick="showTab('earnings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
-
                     <div onclick="showTab('bookings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-
                         <span>📅 Bookings</span>
-
                         <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
-
                     </div>
-
                     <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 My Packages</div>
-
                     <div onclick="showTab('hotels')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🏨 Hotels Package</div>
-
                     <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
-
                     <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
-
                </nav>
-
             </div>
-
             <div id="main-content" style="flex:1; padding:40px; overflow-y:auto; background:#f8f9fa;"></div>
-
         </div>
-
-
 
         <div id="logout-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
-
             <div style="background:white; padding:30px; border-radius:12px; text-align:center; max-width:350px;">
-
                <h2 style="margin:0 0 20px 0;">Logout?</h2>
-
                <div style="display:flex; gap:10px;">
-
                     <button onclick="executeLogout()" style="background:#ff7675; color:white; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Yes</button>
-
                     <button onclick="document.getElementById('logout-modal').style.display='none'" style="background:#eee; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">No</button>
-
                </div>
-
            </div>
-
         </div>
-
-
 
         <div id="action-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center; padding:20px;">
-
             <div id="action-modal-content" style="background:white; padding:30px; border-radius:15px; max-width:400px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);"></div>
-
         </div>
-
     `;
-
     showTab('earnings'); 
-
 }
 
-
-
 window.showTab = async function(tabName) {
-
     const container = document.getElementById('main-content');
-
     const client = getClient();
-
     const { data: { user } } = await client.auth.getUser();
-
     if (!user) return;
 
-
-
     const { data: bookingsData } = await client
-
         .from('bookings')
-
         .select('*')
-
         .eq('agency_id', user.id)
-
         .order('created_at', { ascending: false });
 
-
-
     const pendingCount = bookingsData ? bookingsData.filter(b => b.status === 'pending').length : 0;
-
     const badge = document.getElementById('bell-badge');
-
     const sideCount = document.getElementById('side-notif-count');
 
-
-
     if (badge && pendingCount > 0) {
-
         badge.innerText = pendingCount; badge.style.display = 'block';
-
         sideCount.innerText = pendingCount; sideCount.style.display = 'block';
-
     } else if (badge) {
-
         badge.style.display = 'none'; sideCount.style.display = 'none';
-
     }
 
-
-
     if (tabName === 'earnings') {
-
         const totalRevenue = bookingsData ? bookingsData
-
                 .filter(b => b.status === 'paid')
-
                 .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0) : 0;
 
-
-
         container.innerHTML = `<h1>Overview</h1>
-
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
-
                 <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>REVENUE (PAID)</small><h2>₹${totalRevenue.toLocaleString('en-IN')}</h2></div>
-
                 <div class="card" style="border-top:5px solid #ff9f43; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>PENDING BOOKINGS</small><h2>${pendingCount}</h2></div>
-
                 <div class="card" style="border-top:5px solid #3498db; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>ACTIVE PACKAGES</small><h2 id="act-pkg-count">...</h2></div>
-
             </div>`;
-
         const { count } = await client.from('packages').select('*', { count: 'exact', head: true }).eq('agency_id', user.id);
-
         if(document.getElementById('act-pkg-count')) document.getElementById('act-pkg-count').innerText = count || 0;
-
     } 
-
     else if (tabName === 'bookings') {
-
         container.innerHTML = `<h1>Customer Bookings</h1><div id="booking-list-area">Loading...</div>`;
-
         const listArea = document.getElementById('booking-list-area');
 
-
-
         if (!bookingsData || bookingsData.length === 0) {
-
             listArea.innerHTML = `<p style="padding:20px; color:#666;">No booking requests found.</p>`;
-
             return;
-
         }
 
-
-
         listArea.innerHTML = bookingsData.map(b => {
-
             const isPaid = b.status === 'paid';
-
             const isPending = b.status === 'pending';
-
             const isCancelled = b.status === 'cancelled';
 
-
-
             const displayPhone = isPaid ? b.customer_phone : "Locked (Visible after Payment)";
-
             const displayEmail = isPaid ? b.customer_email : b.customer_email.replace(/(.{3})(.*)(?=@)/, "$1***");
-
             const phoneColor = isPaid ? "#ff9f43" : "#999";
 
-
-
             let statusColor = '#ff9f43';
-
             if (isCancelled || b.status === 'denied') statusColor = '#ff7675';
-
             if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
-
-
 
             const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
 
-
-
             // --- FIXED SETUP FOR TREKKING SERVICES SECTIONS ---
-
             let trekkingHtml = '';
 
-
-
             // 1. KEDARNATH TREKKING SERVICE SELECTION
-
             const kGhodaPrice = parseFloat(b.kedar_ghoda_Qty) || 0;
-
             const kDandiPrice = parseFloat(b.kedar_dandi_Qty) || 0;
-
             const kPitthuPrice = parseFloat(b.kedar_pitthu_Qty) || 0;
-
             const kKandiPrice = parseFloat(b.kedar_kandi_Qty) || 0;
 
-
-
             const kGhodaMax = parseInt(b.kedar_ghoda_max_members || b.ghoda_max) || 0;
-
             const kDandiMax = parseInt(b.kedar_dandi_max_members || b.dandi_max) || 0;
-
             const kPitthuMax = parseInt(b.kedar_pitthu_max_members || b.pitthu_max) || 0;
-
             const kKandiMax = parseInt(b.kedar_kandi_max_members || b.kandi_max) || 0;
 
-
-
             if (kGhodaPrice > 0 || kDandiPrice > 0 || kPitthuPrice > 0 || kKandiPrice > 0) {
-
                 let items = [];
-
                 if (kGhodaPrice > 0) items.push(`Ghoda: <b>₹${kGhodaPrice}</b> (${kGhodaMax} Person)`);
-
                 if (kDandiPrice > 0) items.push(`Dandi: <b>₹${kDandiPrice}</b> (${kDandiMax} Person)`);
-
                 if (kPitthuPrice > 0) items.push(`Pitthu: <b>₹${kPitthuPrice}</b> (${kPitthuMax} Person)`);
-
                 if (kKandiPrice > 0) items.push(`Kandi: <b>₹${kKandiPrice}</b> (${kKandiMax} Person)`);
 
-
-
                 trekkingHtml += `
-
                 <div style="margin-top: 10px; padding: 12px 15px; background: #f0faf7; border-left: 4px solid #badc58; border-radius: 6px; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-
                     <span style="color: #27ae60; font-weight: bold; display: block; margin-bottom: 5px; font-size:14px;">⛰️ Trekking Service Only For Kedarnath:</span>
-
                     <span style="color: #444; line-height: 1.6;">${items.join(' | ')}</span>
-
                 </div>`;
-
             }
-
-
 
             // 2. VAISHNO DEVI TREKKING SERVICE SELECTION (FIXED TO READ VAISHNO SPECIFIC COLUMNS)
-
             const vGhodaPrice = parseFloat(b.vaishno_ghoda_price) || 0;
-
             const vDandiPrice = parseFloat(b.vaishno_dandi_price) || 0;
-
             const vPitthuPrice = parseFloat(b.vaishno_pitthu_price) || 0;
 
-
-
             const vGhodaMax = parseInt(b.vaishno_ghoda_max_members || b.vaishno_ghoda_max) || 0;
-
             const vDandiMax = parseInt(b.vaishno_dandi_max_members || b.vaishno_dandi_max) || 0;
-
             const vPitthuMax = parseInt(b.vaishno_pitthu_max_members || b.vaishno_pitthu_max) || 0;
 
-
-
             if (vGhodaPrice > 0 || vDandiPrice > 0 || vPitthuPrice > 0) {
-
                 let items = [];
-
                 if (vGhodaPrice > 0) items.push(`Ghoda: <b>₹${vGhodaPrice}</b> (${vGhodaMax} Person)`);
-
                 if (vDandiPrice > 0) items.push(`Dandi: <b>₹${vDandiPrice}</b> (${vDandiMax} Person)`);
-
                 if (vPitthuPrice > 0) items.push(`Pitthu: <b>₹${vPitthuPrice}</b> (${vPitthuMax} Person)`);
 
-
-
                 trekkingHtml += `
-
                 <div style="margin-top: 10px; padding: 12px 15px; background: #fffcf0; border-left: 4px solid #f1c40f; border-radius: 6px; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-
                     <span style="color: #d35400; font-weight: bold; display: block; margin-bottom: 5px; font-size:14px;">⛰️ Trekking Service Only For Vaishno Devi:</span>
-
                     <span style="color: #444; line-height: 1.6;">${items.join(' | ')}</span>
-
                 </div>`;
-
             }
 
-
-
             return `
-
             <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${statusColor}; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-
                 <div style="display:flex; justify-content:space-between; align-items:start;">
-
                     <div>
-
                         <h3 style="margin:0; color:#2d3436;">${b.package_title}</h3>
-
                         <div style="margin-top:5px; display:flex; gap:15px; font-size:12px; color:#636e72;">
-
                              <span>📩 Requested: ${new Date(b.created_at).toLocaleDateString()}</span>
-
                              <span style="color:white; background:#ff9f43; padding:2px 8px; border-radius:4px; font-weight:bold;">📅 TRAVEL DATE: ${travelDateStr}</span>
-
                         </div>
-
                     </div>
-
                     <div style="text-align:right;">
-
                         <div style="font-size:22px; font-weight:bold; color:#2ecc71;">₹${b.total_price || 0}</div>
-
                         <span style="padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold; background:#f0f0f0; color:${statusColor};">
-
                             ${b.status.toUpperCase()}
-
                         </span>
-
                     </div>
-
                 </div>
-
-
 
                 <div style="margin-top:20px; padding:15px; background:#f4f7f6; border-radius:10px; display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-
                     <div>
-
                         <label style="font-size:11px; color:#999; font-weight:bold;">📍 PICKUP ADDRESS</label>
-
                         <p style="margin:5px 0; font-size:14px; color:#2d3436;">${b.customer_address || 'Not Provided'}</p>
-
                     </div>
-
                     <div>
-
                         <label style="font-size:11px; color:#999; font-weight:bold;">📞 CUSTOMER PHONE</label>
-
                         <p style="margin:5px 0; font-size:15px; font-weight:bold; color:${phoneColor};">
-
                             ${isPaid ? `<a href="tel:${displayPhone}" style="color:inherit;">${displayPhone}</a>` : displayPhone}
-
                         </p>
-
                     </div>
-
                 </div>
 
-
-
                 <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
-
                     <div style="width: 100%;">
-
                         <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
-
-
 
                         ${trekkingHtml} 
 
-
-
                         <p style="font-size:12px; margin-top:8px; color:#999;">Customer Email: ${displayEmail}</p>
-
                     </div>
-
                     ${b.policy_agreed ? `
-
                         <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:4px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71; flex-shrink:0;">
-
                             ✅ 9% DEDUCTION POLICY AGREED
-
                         </div>
-
                     ` : ''}
-
                 </div>
-
-
 
                 <div style="margin-top:20px;">
-
                 ${isCancelled ? `
-
                     <div style="background:#fff5f5; color:#ff7675; padding:12px; border-radius:8px; border:1px solid #ff7675; text-align:center; font-weight:bold;">
-
                         🚫 CUSTOMER CANCELLED
-
                     </div>
-
                 ` : (isPending ? `
-
                     <div style="border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
-
                         <button onclick="openActionModal('${b.id}', 'approved', '${b.customer_id}', '${b.package_title}')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
-
                         <button onclick="openActionModal('${b.id}', 'denied', '${b.customer_id}', '${b.package_title}')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
-
                     </div>
-
                 ` : '')}
-
                 </div>
-
             </div>`;
-
         }).join('');
-
     }
-
     else if (tabName === 'packages') {
-
         container.innerHTML = `
-
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-
                 <h1>My Packages</h1>
-
                 <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
-
             </div>
-
             <div id="package-form-area"></div>
-
             <div id="pkg-list-container"></div>`;
 
-
-
         const { data: myPackages } = await client.from('packages').select('*').eq('agency_id', user.id).order('created_at', { ascending: false });
-
         document.getElementById('pkg-list-container').innerHTML = (myPackages || []).map(p => {
-
              const encoded = encodeURIComponent(JSON.stringify(p));
-
              return `<div style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); border-left:5px solid #ff9f43;">
-
                 <div style="flex:1;">
-
                     <h3 style="margin:0; color:#2d3436;">${p.title || 'Untitled'}</h3>
-
                     <p style="margin:5px 0; color:#666; font-size:14px;">📍 <b>From:</b> ${p.starting_location || 'N/A'}</p>
-
                 </div>
-
                 <button onclick="showPackageForm('${encoded}')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold;">✏️ Edit</button>
-
             </div>`;
-
         }).join('');
-
     }
-
     else if (tabName === 'hotels') {
-
         container.innerHTML = `
-
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-
-                <h1>🏨 Hotel Packages (Live Stock)</h1>
-
+                <h1 style="color:#e67e22; display:flex; align-items:center; gap:10px;">🏨 Hotel Packages (Live Stock)</h1>
             </div>
-
             <div id="agency-hotel-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:25px;"></div>`;
 
-
-
-        // Fetch and display hotel room inventory
-
+        // Fetch and display hotel room inventory with foreign table join
         renderAgencyHotelPackages();
-
     }
-
     else if (tabName === 'profile') {
-
         const meta = user.user_metadata || {};
-
         container.innerHTML = `<h1>Agency Profile</h1><div class="card" style="background:white; padding:30px; border-radius:8px; border-left:5px solid #ff9f43;">
-
             <p><b>Email:</b> ${user.email}</p>
-
             <p><b>Phone:</b> ${meta.phone || 'N/A'}</p>
-
             <p><b>Status:</b> ${meta.is_approved ? '✅ Verified' : '⏳ Pending Approval'}</p>
-
         </div>`;
-
     }
-
 };
 
+// --- HOTEL PACKAGES FUNCTION (FIXED FOR PRICE AND CITY LOCATION) ---
+window.renderAgencyHotelPackages = async function() {
+    const listContainer = document.getElementById('agency-hotel-pkg-list');
+    if (!listContainer) return;
 
+    listContainer.innerHTML = '<p>Loading live stock...</p>';
+
+    const client = getClient();
+    // Foreign Table Relationship Join for Hotels and Room Categories
+    const { data: categories, error } = await client
+        .from('room_categories')
+        .select(`
+            *,
+            hotels (
+                name,
+                city
+            )
+        `);
+
+    if (error || !categories || categories.length === 0) {
+        listContainer.innerHTML = `<p style="color:#666;">No hotel packages available right now.</p>`;
+        return;
+    }
+
+    listContainer.innerHTML = categories.map(cat => {
+        const price = cat.price_per_night || 0;
+        const cityName = cat.hotels?.city || 'N/A';
+        const hotelName = cat.hotels?.name || 'Hotel Partner';
+        const totalRooms = cat.total_rooms || 0;
+        const categoryName = cat.category_name || cat.name || 'Room Package';
+
+        return `
+            <div style="background:white; border-radius:12px; padding:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); position:relative; border: 1px solid #e0e0e0; font-family:'Inter', sans-serif;">
+                
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
+                    <span style="background:#e8f8f5; color:#2ecb71; font-size:10px; font-weight:bold; padding:4px 8px; border-radius:4px; letter-spacing:0.5px;">LIVE STOCK</span>
+                    <div style="text-align:right;">
+                        <span style="font-size:18px; font-weight:bold; color:#2ecb71;">₹${price}</span><span style="font-size:12px; color:#666;">/night</span>
+                    </div>
+                </div>
+
+                <h3 style="margin:0 0 4px 0; font-size:18px; color:#2d3436; font-weight:bold;">${categoryName}</h3>
+                
+                <div style="display:flex; align-items:center; gap:5px; color:#555; font-size:13px; margin-bottom:12px;">
+                    <span>🏨</span> <span>${hotelName}</span> <span>🏨</span>
+                </div>
+
+                <div style="font-size:13px; color:#555; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                    <span>📍</span> <span><b>Location:</b> ${cityName}</span>
+                </div>
+
+                <div style="font-size:13px; color:#555; margin-bottom:20px; display:flex; align-items:center; gap:6px;">
+                    <span>🛏️</span> <span>Available Rooms: <b style="color:#e74c3c;">${totalRooms} Left</b></span>
+                </div>
+
+                <button style="width:100%; background:#3498db; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; letter-spacing:0.5px; box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3);">
+                    BOOK ROOM STOCK
+                </button>
+            </div>
+        `;
+    }).join('');
+};
 
 window.openActionModal = function(bookingId, type, customerId, packageTitle) {
-
     const modal = document.getElementById('action-modal');
-
     const content = document.getElementById('action-modal-content');
-
     modal.style.display = 'flex';
 
-
-
     if (type === 'approved') {
-
         content.innerHTML = `
-
             <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
-
             <p style="font-size:14px; color:#666;">Provide the contact number for payment collection (GPay/PhonePe).</p>
-
             <input type="text" id="modal-contact-input" placeholder="Enter Contact Number" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
-
             <div style="display:flex; gap:10px;">
-
                 <button onclick="processStatusUpdate('${bookingId}', 'approved', '${customerId}', '${packageTitle}')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
-
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
-
             </div>`;
-
     } else {
-
         content.innerHTML = `
-
             <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
-
             <p style="font-size:14px; color:#666;">This action will notify the customer and cancel the request.</p>
-
             <div style="display:flex; gap:10px; margin-top:20px;">
-
                 <button onclick="processStatusUpdate('${bookingId}', 'denied', '${customerId}', '${packageTitle}')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
-
                 <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
-
             </div>`;
-
     }
-
 };
-
-
 
 window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
 
-
-
 window.processStatusUpdate = async function(bookingId, newStatus, customerId, packageTitle) {
-
     const client = getClient();
-
     let updateData = { status: newStatus };
 
-
-
     if (newStatus === 'approved') {
-
         const contact = document.getElementById('modal-contact-input').value;
-
         if (!contact.trim()) { alert("Please enter a contact number!"); return; }
-
         updateData.agency_contact = contact;
-
     }
-
-
 
     const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
-
     if (!error) {
-
         if (newStatus === 'approved') {
-
             sendPushNotification(
-
                 customerId, 
-
                 "Booking Approved! ✅", 
-
                 `Your trip for ${packageTitle} has been confirmed. Check the app for payment details.`
-
             );
-
         } else if (newStatus === 'denied') {
-
             sendPushNotification(
-
                 customerId, 
-
                 "Booking Update", 
-
                 `Your booking request for ${packageTitle} was not accepted.`
-
             );
-
         }
 
-
-
         closeActionModal();
-
         showTab('bookings');
-
     } else {
-
         alert("Update Error: " + error.message);
-
     }
-
 };
 
-
-
 window.confirmLogout = () => document.getElementById('logout-modal').style.display = 'flex';
-
 window.executeLogout = async () => { 
-
     await getClient().auth.signOut(); 
-
     location.reload(); 
-
 };
 /* =========================================
    HOTELS PACKAGES IN AGENCY DASHBOARD
