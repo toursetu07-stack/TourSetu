@@ -1,3 +1,4 @@
+const SUPABASE_URL = 'https://udfwcqrmksfyeigxgdws.supabase.co';
 /* =========================================
    1. CONFIGURATION & GLOBAL STATE
    ========================================= */
