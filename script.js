@@ -1401,6 +1401,74 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId) 
         alert("Error: " + error.message);
     }
 };
+/* =========================================
+   HOTELS PACKAGES IN AGENCY DASHBOARD
+   ========================================= */
+
+// Agency ke Dashboard par Hotel Packages Render Karne Ka Logic
+async function renderAgencyHotelPackages() {
+    const container = document.getElementById('agency-hotel-pkg-list');
+    if (!container) return;
+
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px;"><h3>Loading Live Inventory Stock...</h3></div>`;
+
+    try {
+        const client = getClient();
+        // Supabase ki room_categories table se Live Stock packages fetch kar rahe hain
+        const { data, error } = await client
+            .from('room_categories')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align:center; padding:50px; background:white; border-radius:12px;">
+                    <h3>🏨 No Hotel Packages Available</h3>
+                    <p style="color:#636e72;">Hotels dwara koi Live Inventory Stock abhi publish nahi kiya gaya hai.</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = data.map(item => {
+            const price = item.price || item.room_price || 0;
+            const availableRooms = item.available_rooms || item.total_rooms || 0;
+            const hotelName = item.hotel_name || item.property_name || 'Hotel Partner 🏨';
+            const location = item.city || item.location || item.address || 'N/A';
+            const roomType = item.category_name || item.room_type || item.title || 'Standard Room';
+
+            return `
+            <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">
+                <div style="padding:25px;">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <span style="background:#e8f5e9; color:#2e7d32; font-size:11px; padding:4px 10px; border-radius:12px; font-weight:bold;">LIVE STOCK</span>
+                        <span style="font-size:20px; font-weight:bold; color:#2ecc71;">₹${price}<small style="font-size:12px; color:#666;">/night</small></span>
+                    </div>
+                    
+                    <h3 style="margin:15px 0 5px 0; color:#2d3436;">${roomType}</h3>
+                    <p style="margin:0; color:#ff9f43; font-weight:bold; font-size:14px;">🏨 ${hotelName}</p>
+                    
+                    <div style="font-size:13px; color:#636e72; margin:15px 0;">
+                        <div>📍 <b>Location:</b> ${location}</div>
+                        <div style="margin-top:5px;">🛏️ <b>Available Rooms:</b> <span style="color:#d35400; font-weight:bold;">${availableRooms} Left</span></div>
+                        ${item.amenities ? `<div style="margin-top:5px;">✨ <b>Amenities:</b> ${Array.isArray(item.amenities) ? item.amenities.join(', ') : item.amenities}</div>` : ''}
+                    </div>
+                </div>
+
+                <div style="padding:15px 25px; background:#f9f9f9; border-top:1px solid #eee;">
+                    <button onclick="alert('Hotel Booking feature coming soon!')" style="background:#3498db; color:white; width:100%; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">BOOK ROOM STOCK</button>
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error loading hotel live inventory:", err);
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
+    }
+}
+
+
 // 9. AGENCY DASHBOARD
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
@@ -1423,6 +1491,7 @@ function renderAgencyDashboard(user) {
                         <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
                     </div>
                     <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 My Packages</div>
+                    <div onclick="showTab('hotels')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🏨 Hotels Package</div>
                     <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
                     <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
                </nav>
@@ -1541,7 +1610,6 @@ window.showTab = async function(tabName) {
             const vDandiPrice = parseFloat(b.vaishno_dandi_price) || 0;
             const vPitthuPrice = parseFloat(b.vaishno_pitthu_price) || 0;
 
-            // यहाँ पहले फ़ॉलबैक में ghoda_max (केदारनाथ वाला) आ रहा था, इसे पूरी तरह अलग कर के सिर्फ वैष्णो देवी के कॉलम से मैप कर दिया गया है।
             const vGhodaMax = parseInt(b.vaishno_ghoda_max_members || b.vaishno_ghoda_max) || 0;
             const vDandiMax = parseInt(b.vaishno_dandi_max_members || b.vaishno_dandi_max) || 0;
             const vPitthuMax = parseInt(b.vaishno_pitthu_max_members || b.vaishno_pitthu_max) || 0;
@@ -1641,6 +1709,16 @@ window.showTab = async function(tabName) {
             </div>`;
         }).join('');
     }
+    else if (tabName === 'hotels') {
+        container.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h1>🏨 Hotel Packages (Live Stock)</h1>
+            </div>
+            <div id="agency-hotel-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:25px;"></div>`;
+        
+        // Fetch and display hotel room inventory
+        renderAgencyHotelPackages();
+    }
     else if (tabName === 'profile') {
         const meta = user.user_metadata || {};
         container.innerHTML = `<h1>Agency Profile</h1><div class="card" style="background:white; padding:30px; border-radius:8px; border-left:5px solid #ff9f43;">
@@ -1716,6 +1794,72 @@ window.executeLogout = async () => {
     await getClient().auth.signOut(); 
     location.reload(); 
 };
+/* =========================================
+   HOTELS PACKAGES IN AGENCY DASHBOARD
+   ========================================= */
+
+// Agency ke Dashboard par Hotel Packages Render Karne Ka Logic
+async function renderAgencyHotelPackages() {
+    const container = document.getElementById('agency-hotel-pkg-list');
+    if (!container) return;
+
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px;"><h3>Loading Live Inventory Stock...</h3></div>`;
+
+    try {
+        const client = getClient();
+        // Supabase ki room_categories table se Live Stock packages fetch kar rahe hain
+        const { data, error } = await client
+            .from('room_categories')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align:center; padding:50px; background:white; border-radius:12px;">
+                    <h3>🏨 No Hotel Packages Available</h3>
+                    <p style="color:#636e72;">Hotels dwara koi Live Inventory Stock abhi publish nahi kiya gaya hai.</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = data.map(item => {
+            const price = item.price || item.room_price || 0;
+            const availableRooms = item.available_rooms || item.total_rooms || 0;
+            const hotelName = item.hotel_name || item.property_name || 'Hotel Partner 🏨';
+            const location = item.city || item.location || item.address || 'N/A';
+            const roomType = item.category_name || item.room_type || item.title || 'Standard Room';
+
+            return `
+            <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">
+                <div style="padding:25px;">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <span style="background:#e8f5e9; color:#2e7d32; font-size:11px; padding:4px 10px; border-radius:12px; font-weight:bold;">LIVE STOCK</span>
+                        <span style="font-size:20px; font-weight:bold; color:#2ecc71;">₹${price}<small style="font-size:12px; color:#666;">/night</small></span>
+                    </div>
+                    
+                    <h3 style="margin:15px 0 5px 0; color:#2d3436;">${roomType}</h3>
+                    <p style="margin:0; color:#ff9f43; font-weight:bold; font-size:14px;">🏨 ${hotelName}</p>
+                    
+                    <div style="font-size:13px; color:#636e72; margin:15px 0;">
+                        <div>📍 <b>Location:</b> ${location}</div>
+                        <div style="margin-top:5px;">🛏️ <b>Available Rooms:</b> <span style="color:#d35400; font-weight:bold;">${availableRooms} Left</span></div>
+                        ${item.amenities ? `<div style="margin-top:5px;">✨ <b>Amenities:</b> ${Array.isArray(item.amenities) ? item.amenities.join(', ') : item.amenities}</div>` : ''}
+                    </div>
+                </div>
+
+                <div style="padding:15px 25px; background:#f9f9f9; border-top:1px solid #eee;">
+                    <button onclick="alert('Hotel Booking feature coming soon!')" style="background:#3498db; color:white; width:100%; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">BOOK ROOM STOCK</button>
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error loading hotel live inventory:", err);
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
+    }
+}
 /* =========================================================
    HOTEL PARTNER MODULE - PROPERTY & INVENTORY MANAGEMENT
    ========================================================= */
@@ -1788,11 +1932,6 @@ async function evaluateHotelVisibility(hotelId) {
         .update({ hide_from_search: shouldHide })
         .eq('hotel_id', hotelId);
 }
-
-/* =========================================================
-   HOTEL PARTNER MODULE - PROPERTY & INVENTORY MANAGEMENT
-   ========================================================= */
-
 /* =========================================================
    HOTEL PARTNER MODULE - PROPERTY & INVENTORY MANAGEMENT
    ========================================================= */
@@ -4840,183 +4979,3 @@ styleTag.innerHTML = `
 `;
 document.head.appendChild(styleTag); 
 initApp();
-/* =========================================================================
-   HOTEL INVENTORY, PACKAGE CREATION & AGENCY REQUEST BOOKING ENGINE
-   ========================================================================= */
-
-// 1. FETCH AVAILABLE HOTEL ROOM LOCKS FOR AGENCY PACKAGE CREATION
-window.fetchHotelInventoryLocks = async function() {
-    const client = getClient();
-    try {
-        const { data, error } = await client
-            .from('room_inventory')
-            .select('*')
-            .gt('available_room', 0); // Only available rooms
-
-        if (error) throw error;
-        return data || [];
-    } catch (err) {
-        console.error("Error fetching hotel inventory:", err.message);
-        return [];
-    }
-};
-
-// 2. RENDER HOTEL SELECTION DROPDOWN/CARDS IN AGENCY PACKAGE CREATION FORM
-window.renderHotelSelectionUI = async function(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    container.innerHTML = `<p style="font-size:12px; color:#666;">Loading available hotel rooms...</p>`;
-    const rooms = await fetchHotelInventoryLocks();
-
-    if (rooms.length === 0) {
-        container.innerHTML = `<p style="font-size:12px; color:#e74c3c;">No hotel room inventory locks found.</p>`;
-        return;
-    }
-
-    container.innerHTML = `
-        <label style="font-size:12px; font-weight:bold; color:#636e72; display:block; margin-bottom:5px;">🏨 SELECT HOTEL ROOM INVENTORY</label>
-        <select id="selected-hotel-room-id" onchange="updateSelectedHotelDetails()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:14px; margin-bottom:10px;">
-            <option value="">-- Choose Hotel Room --</option>
-            ${rooms.map(r => `<option value="${r.id}" data-type="${r.room_type}" data-price="${r.price_per_night}" data-avail="${r.available_room}">${r.room_type} - ₹${r.price_per_night}/night (${r.available_room} available)</option>`).join('')}
-        </select>
-        <div id="selected-hotel-summary" style="display:none; font-size:12px; background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #e9ecef;"></div>
-    `;
-};
-
-window.updateSelectedHotelDetails = function() {
-    const select = document.getElementById('selected-hotel-room-id');
-    const summary = document.getElementById('selected-hotel-summary');
-    if (!select || !summary) return;
-
-    const selectedOpt = select.options[select.selectedIndex];
-    if (!select.value) {
-        summary.style.display = 'none';
-        return;
-    }
-
-    const roomType = selectedOpt.dataset.type;
-    const price = selectedOpt.dataset.price;
-    const avail = selectedOpt.dataset.avail;
-
-    summary.style.display = 'block';
-    summary.innerHTML = `<b>Selected Room:</b> ${roomType} | <b>Rate:</b> ₹${price}/night | <b>Available Rooms:</b> ${avail}`;
-};
-
-// 3. RENDER SPECIFIC REQUEST HOTEL PACKAGES FOR AGENCIES WITH 2 ACTION BUTTONS
-window.renderAgencyCustomerRequestPackages = async function(requestId, customerId, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    const client = getClient();
-    
-    // Fetch hotel packages linked with inventory
-    const { data: packages, error } = await client
-        .from('packages')
-        .select('*')
-        .not('hotel_room_id', 'is', null);
-
-    if (error || !packages || packages.length === 0) {
-        container.innerHTML = `<p style="font-size:13px; color:#7f8c8d;">No hotel packages available to attach.</p>`;
-        return;
-    }
-
-    container.innerHTML = `
-        <h4 style="margin:15px 0 10px 0; color:#2d3436; font-size:14px;">🏨 Select & Share Hotel Package for this Request</h4>
-        <div style="display:grid; gap:12px;">
-            ${packages.map(pkg => `
-                <div style="border:1px solid #e0e0e0; background:#fff; padding:12px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.03);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <strong style="font-size:14px; color:#2c3e50;">${pkg.title}</strong>
-                            <div style="font-size:12px; color:#7f8c8d; margin-top:2px;">
-                                Room Type: <b>${pkg.room_type || 'Standard'}</b> | Price/Night: <span style="color:#27ae60; font-weight:bold;">₹${pkg.price_per_night || pkg.min_price}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- DUAL ACTION BUTTONS FOR AGENCY -->
-                    <div style="margin-top:10px; display:flex; gap:10px;">
-                        <!-- Button 1: Share package to Customer's Dashboard Request page -->
-                        <button onclick="sharePackageToCustomerDashboard('${requestId}', '${customerId}', '${pkg.id}')" 
-                                style="flex:1; background:#3498db; color:white; border:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
-                            📤 Share to Customer
-                        </button>
-                        
-                        <!-- Button 2: Direct Agency Booking -->
-                        <button onclick="directAgencyBookHotel('${requestId}', '${customerId}', '${pkg.id}', '${pkg.hotel_room_id}')" 
-                                style="flex:1; background:#2ecc71; color:white; border:none; padding:8px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
-                            ⚡ Direct Book Hotel
-                        </button>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-    `;
-};
-
-// BUTTON 1 HANDLER: Share package to Customer Dashboard
-window.sharePackageToCustomerDashboard = async function(requestId, customerId, packageId) {
-    const client = getClient();
-    try {
-        const { error } = await client
-            .from('customer_requests')
-            .update({
-                shared_package_id: packageId,
-                status: 'package_offered',
-                updated_at: new Date()
-            })
-            .eq('id', requestId);
-
-        if (error) throw error;
-        alert("✅ Package shared successfully with customer dashboard!");
-    } catch (err) {
-        alert("❌ Error sharing package: " + err.message);
-    }
-};
-
-// BUTTON 2 HANDLER: Direct Agency Book Hotel
-window.directAgencyBookHotel = async function(requestId, customerId, packageId, hotelRoomId) {
-    if (!confirm("Are you sure you want to directly book this hotel room for the customer?")) return;
-
-    const client = getClient();
-    try {
-        // 1. Create confirmed booking
-        const { error: bookingError } = await client
-            .from('bookings')
-            .insert([{
-                customer_id: customerId,
-                package_id: packageId,
-                status: 'confirmed',
-                booking_type: 'direct_agency_hotel'
-            }]);
-
-        if (bookingError) throw bookingError;
-
-        // 2. Decrement available room count in room_inventory
-        if (hotelRoomId) {
-            const { data: roomData } = await client
-                .from('room_inventory')
-                .select('available_room')
-                .eq('id', hotelRoomId)
-                .single();
-
-            if (roomData && roomData.available_room > 0) {
-                await client
-                    .from('room_inventory')
-                    .update({ available_room: roomData.available_room - 1 })
-                    .eq('id', hotelRoomId);
-            }
-        }
-
-        // 3. Update request status
-        await client
-            .from('customer_requests')
-            .update({ status: 'booked_by_agency' })
-            .eq('id', requestId);
-
-        alert("🎉 Hotel booked directly by agency! Inventory updated.");
-    } catch (err) {
-        alert("❌ Direct booking failed: " + err.message);
-    }
-};
