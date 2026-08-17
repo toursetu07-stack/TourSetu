@@ -1714,7 +1714,7 @@ window.showTab = async function(tabName) {
             </div>
             <div id="agency-hotel-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:25px;"></div>`;
 
-        // Fetch and display hotel room inventory with foreign table join
+        // Fetch and display hotel room inventory
         renderAgencyHotelPackages();
     }
     else if (tabName === 'profile') {
@@ -1725,6 +1725,79 @@ window.showTab = async function(tabName) {
             <p><b>Status:</b> ${meta.is_approved ? '✅ Verified' : '⏳ Pending Approval'}</p>
         </div>`;
     }
+};
+
+window.renderAgencyHotelPackages = async function() {
+    const listContainer = document.getElementById('agency-hotel-pkg-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<p>Loading live stock...</p>';
+
+    const client = getClient();
+    
+    // 1. Fetch Room Categories
+    const { data: categories, error: catErr } = await client
+        .from('room_categories')
+        .select('*');
+
+    // 2. Fetch Hotels
+    const { data: hotelsData, error: hotelErr } = await client
+        .from('hotels')
+        .select('*');
+
+    if (catErr || !categories || categories.length === 0) {
+        listContainer.innerHTML = `<p style="color:#666;">No hotel packages available right now.</p>`;
+        return;
+    }
+
+    // Map hotels using hotel_id column
+    const hotelMap = {};
+    if (hotelsData) {
+        hotelsData.forEach(h => {
+            const key = h.hotel_id || h.id;
+            if (key) {
+                hotelMap[key] = h;
+            }
+        });
+    }
+
+    listContainer.innerHTML = categories.map(cat => {
+        const price = cat.price_per_night || 0;
+        const hotelInfo = hotelMap[cat.hotel_id] || {};
+        const cityName = hotelInfo.city || 'N/A';
+        const hotelName = hotelInfo.hotel_name || hotelInfo.name || 'Partner Hotel';
+        const totalRooms = cat.total_rooms || 0;
+        const categoryName = cat.room_type || cat.category_name || cat.name || 'Room Package';
+
+        return `
+            <div style="background:white; border-radius:12px; padding:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; font-family:'Inter', sans-serif;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
+                    <span style="background:#e8f8f5; color:#2ecb71; font-size:10px; font-weight:bold; padding:4px 8px; border-radius:4px;">LIVE STOCK</span>
+                    <div style="text-align:right;">
+                        <span style="font-size:18px; font-weight:bold; color:#2ecb71;">₹${price}</span><span style="font-size:12px; color:#666;">/night</span>
+                    </div>
+                </div>
+
+                <h3 style="margin:0 0 4px 0; font-size:18px; color:#2d3436; font-weight:bold;">${categoryName}</h3>
+                
+                <div style="display:flex; align-items:center; gap:5px; color:#555; font-size:13px; margin-bottom:12px;">
+                    <span>🏨</span> <span>${hotelName}</span>
+                </div>
+
+                <div style="font-size:13px; color:#555; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                    <span>📍</span> <span><b>Location:</b> ${cityName}</span>
+                </div>
+
+                <div style="font-size:13px; color:#555; margin-bottom:20px; display:flex; align-items:center; gap:6px;">
+                    <span>🛏️</span> <span>Available Rooms: <b style="color:#e74c3c;">${totalRooms} Left</b></span>
+                </div>
+
+                <button style="width:100%; background:#3498db; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+                    BOOK ROOM STOCK
+                </button>
+            </div>
+        `;
+    }).join('');
 };
 
 // --- HOTEL PACKAGES FUNCTION (FIXED FOR PRICE AND CITY LOCATION) ---
