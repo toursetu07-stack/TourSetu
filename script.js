@@ -1603,7 +1603,7 @@ window.showTab = async function(tabName) {
                 </div>`;
             }
 
-            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION
+            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION (FIXED TO READ VAISHNO SPECIFIC COLUMNS)
             const vGhodaPrice = parseFloat(b.vaishno_ghoda_price) || 0;
             const vDandiPrice = parseFloat(b.vaishno_dandi_price) || 0;
             const vPitthuPrice = parseFloat(b.vaishno_pitthu_price) || 0;
@@ -1712,7 +1712,7 @@ window.showTab = async function(tabName) {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h1>🏨 Hotel Packages (Live Stock)</h1>
             </div>
-            <div id="agency-hotel-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:25px;">Loading...</div>`;
+            <div id="agency-hotel-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:25px;">Loading Hotels...</div>`;
 
         renderAgencyHotelPackages();
     }
@@ -1726,37 +1726,39 @@ window.showTab = async function(tabName) {
     }
 };
 
-// --- RENDER HOTEL PACKAGES WITH PRICE_PER_NIGHT & CITY FIX ---
 window.renderAgencyHotelPackages = async function() {
-    const container = document.getElementById('agency-hotel-pkg-list');
-    if (!container) return;
-
     const client = getClient();
-    const { data: hotels, error } = await client
+    const listContainer = document.getElementById('agency-hotel-pkg-list');
+    if (!listContainer) return;
+
+    // Fetch hotels table joined with database values
+    const { data: hotelsData, error } = await client
         .from('hotels')
         .select('*')
         .order('created_at', { ascending: false });
 
-    if (error || !hotels || hotels.length === 0) {
-        container.innerHTML = `<p style="color:#666;">No hotel packages available.</p>`;
+    if (error || !hotelsData || hotelsData.length === 0) {
+        listContainer.innerHTML = `<p style="color:#666; grid-column: 1/-1;">No hotel packages found.</p>`;
         return;
     }
 
-    container.innerHTML = hotels.map(h => {
+    listContainer.innerHTML = hotelsData.map(h => {
         const price = h.price_per_night || h.price || 0;
-        const locationCity = h.city || h.location || 'N/A';
+        const city = h.city || h.location || 'N/A';
+        const name = h.name || h.hotel_name || h.title || 'Untitled Hotel';
 
         return `
-            <div style="background:white; border-radius:12px; overflow:hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display:flex; flex-direction:column;">
-                <img src="${h.image_url || 'https://via.placeholder.com/300x180?text=Hotel'}" style="width:100%; height:180px; object-fit:cover;" />
-                <div style="padding:20px; flex:1; display:flex; flex-direction:column; justify-content:space-between;">
-                    <div>
-                        <h3 style="margin:0 0 10px 0; color:#2d3436;">${h.name || 'Untitled Hotel'}</h3>
-                        <p style="margin:0 0 8px 0; color:#636e72; font-size:14px;">📍 <b>City:</b> ${locationCity}</p>
-                        <p style="margin:0; color:#2ecc71; font-weight:bold; font-size:18px;">₹${parseFloat(price).toLocaleString('en-IN')}/night</p>
-                    </div>
-                </div>
-            </div>`;
+        <div style="background:white; border-radius:12px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-top:4px solid #3498db; display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+                <h3 style="margin:0 0 10px 0; color:#2d3436; font-size:18px;">${name}</h3>
+                <p style="margin:4px 0; color:#636e72; font-size:14px;">📍 <b>Location (City):</b> ${city}</p>
+                <p style="margin:4px 0; color:#636e72; font-size:14px;">🛏️ <b>Available Rooms:</b> ${h.available_rooms ?? h.rooms ?? 'N/A'}</p>
+            </div>
+            <div style="margin-top:15px; padding-top:15px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:20px; font-weight:bold; color:#2ecc71;">₹${parseFloat(price).toLocaleString('en-IN')}<small style="font-size:12px; color:#999;">/night</small></span>
+                <span style="background:#e8f4fd; color:#3498db; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:bold;">Live Stock</span>
+            </div>
+        </div>`;
     }).join('');
 };
 
