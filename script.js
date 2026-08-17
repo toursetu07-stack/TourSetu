@@ -1731,136 +1731,91 @@ window.renderAgencyHotelPackages = async function() {
     const listContainer = document.getElementById('agency-hotel-pkg-list');
     if (!listContainer) return;
 
-    listContainer.innerHTML = '<p>Loading live stock...</p>';
+    listContainer.innerHTML = '<p style="color:#666;">Loading live stock...</p>';
 
     const client = getClient();
     
-    // 1. Fetch Room Categories
-    const { data: categories, error: catErr } = await client
-        .from('room_categories')
-        .select('*');
+    try {
+        // 1. Fetch Room Categories Safely
+        const { data: categories, error: catErr } = await client
+            .from('room_categories')
+            .select('*');
 
-    // 2. Fetch Hotels
-    const { data: hotelsData, error: hotelErr } = await client
-        .from('hotels')
-        .select('*');
+        if (catErr) {
+            console.error("Categories Fetch Error:", catErr);
+            throw catErr;
+        }
 
-    if (catErr || !categories || categories.length === 0) {
-        listContainer.innerHTML = `<p style="color:#666;">No hotel packages available right now.</p>`;
-        return;
-    }
+        if (!categories || categories.length === 0) {
+            listContainer.innerHTML = `<p style="color:#666;">No hotel packages available right now.</p>`;
+            return;
+        }
 
-    // Map hotels using hotel_id column
-    const hotelMap = {};
-    if (hotelsData) {
-        hotelsData.forEach(h => {
-            const key = h.hotel_id || h.id;
-            if (key) {
-                hotelMap[key] = h;
-            }
-        });
-    }
+        // 2. Fetch Hotels Safely (Without nested string syntax that causes 400 Bad Request)
+        const { data: hotelsData, error: hotelErr } = await client
+            .from('hotels')
+            .select('*');
 
-    listContainer.innerHTML = categories.map(cat => {
-        const price = cat.price_per_night || 0;
-        const hotelInfo = hotelMap[cat.hotel_id] || {};
-        const cityName = hotelInfo.city || 'N/A';
-        const hotelName = hotelInfo.hotel_name || hotelInfo.name || 'Partner Hotel';
-        const totalRooms = cat.total_rooms || 0;
-        const categoryName = cat.room_type || cat.category_name || cat.name || 'Room Package';
+        if (hotelErr) {
+            console.error("Hotels Fetch Error:", hotelErr);
+        }
 
-        return `
-            <div style="background:white; border-radius:12px; padding:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; font-family:'Inter', sans-serif;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
-                    <span style="background:#e8f8f5; color:#2ecb71; font-size:10px; font-weight:bold; padding:4px 8px; border-radius:4px;">LIVE STOCK</span>
-                    <div style="text-align:right;">
-                        <span style="font-size:18px; font-weight:bold; color:#2ecb71;">₹${price}</span><span style="font-size:12px; color:#666;">/night</span>
+        // Map hotels using hotel_id or id
+        const hotelMap = {};
+        if (hotelsData) {
+            hotelsData.forEach(h => {
+                const key = h.hotel_id || h.id;
+                if (key) {
+                    hotelMap[key] = h;
+                }
+            });
+        }
+
+        // 3. Render HTML
+        listContainer.innerHTML = categories.map(cat => {
+            const price = cat.price_per_night || cat.price || 0;
+            const hotelInfo = hotelMap[cat.hotel_id] || {};
+            
+            // Dynamic check for column names
+            const cityName = hotelInfo.city || hotelInfo.location || 'N/A';
+            const hotelName = hotelInfo.hotel_name || hotelInfo.name || 'Partner Hotel';
+            const totalRooms = cat.total_rooms || cat.available_rooms || 0;
+            const categoryName = cat.room_type || cat.category_name || cat.name || 'Room Package';
+
+            return `
+                <div style="background:white; border-radius:12px; padding:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; font-family:'Inter', sans-serif;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
+                        <span style="background:#e8f8f5; color:#2ecb71; font-size:10px; font-weight:bold; padding:4px 8px; border-radius:4px;">LIVE STOCK</span>
+                        <div style="text-align:right;">
+                            <span style="font-size:18px; font-weight:bold; color:#2ecb71;">₹${price}</span><span style="font-size:12px; color:#666;">/night</span>
+                        </div>
                     </div>
-                </div>
 
-                <h3 style="margin:0 0 4px 0; font-size:18px; color:#2d3436; font-weight:bold;">${categoryName}</h3>
-                
-                <div style="display:flex; align-items:center; gap:5px; color:#555; font-size:13px; margin-bottom:12px;">
-                    <span>🏨</span> <span>${hotelName}</span>
-                </div>
-
-                <div style="font-size:13px; color:#555; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                    <span>📍</span> <span><b>Location:</b> ${cityName}</span>
-                </div>
-
-                <div style="font-size:13px; color:#555; margin-bottom:20px; display:flex; align-items:center; gap:6px;">
-                    <span>🛏️</span> <span>Available Rooms: <b style="color:#e74c3c;">${totalRooms} Left</b></span>
-                </div>
-
-                <button style="width:100%; background:#3498db; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
-                    BOOK ROOM STOCK
-                </button>
-            </div>
-        `;
-    }).join('');
-};
-
-// --- HOTEL PACKAGES FUNCTION (FIXED FOR PRICE AND CITY LOCATION) ---
-window.renderAgencyHotelPackages = async function() {
-    const listContainer = document.getElementById('agency-hotel-pkg-list');
-    if (!listContainer) return;
-
-    listContainer.innerHTML = '<p>Loading live stock...</p>';
-
-    const client = getClient();
-    // Foreign Table Relationship Join for Hotels and Room Categories
-    const { data: categories, error } = await client
-        .from('room_categories')
-        .select(`
-            *,
-            hotels (
-                name,
-                city
-            )
-        `);
-
-    if (error || !categories || categories.length === 0) {
-        listContainer.innerHTML = `<p style="color:#666;">No hotel packages available right now.</p>`;
-        return;
-    }
-
-    listContainer.innerHTML = categories.map(cat => {
-        const price = cat.price_per_night || 0;
-        const cityName = cat.hotels?.city || 'N/A';
-        const hotelName = cat.hotels?.name || 'Hotel Partner';
-        const totalRooms = cat.total_rooms || 0;
-        const categoryName = cat.category_name || cat.name || 'Room Package';
-
-        return `
-            <div style="background:white; border-radius:12px; padding:20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); position:relative; border: 1px solid #e0e0e0; font-family:'Inter', sans-serif;">
-                
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
-                    <span style="background:#e8f8f5; color:#2ecb71; font-size:10px; font-weight:bold; padding:4px 8px; border-radius:4px; letter-spacing:0.5px;">LIVE STOCK</span>
-                    <div style="text-align:right;">
-                        <span style="font-size:18px; font-weight:bold; color:#2ecb71;">₹${price}</span><span style="font-size:12px; color:#666;">/night</span>
+                    <h3 style="margin:0 0 4px 0; font-size:18px; color:#2d3436; font-weight:bold;">${categoryName}</h3>
+                    
+                    <div style="display:flex; align-items:center; gap:5px; color:#555; font-size:13px; margin-bottom:12px;">
+                        <span>🏨</span> <span>${hotelName}</span>
                     </div>
-                </div>
 
-                <h3 style="margin:0 0 4px 0; font-size:18px; color:#2d3436; font-weight:bold;">${categoryName}</h3>
-                
-                <div style="display:flex; align-items:center; gap:5px; color:#555; font-size:13px; margin-bottom:12px;">
-                    <span>🏨</span> <span>${hotelName}</span> <span>🏨</span>
-                </div>
+                    <div style="font-size:13px; color:#555; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                        <span>📍</span> <span><b>Location:</b> ${cityName}</span>
+                    </div>
 
-                <div style="font-size:13px; color:#555; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                    <span>📍</span> <span><b>Location:</b> ${cityName}</span>
-                </div>
+                    <div style="font-size:13px; color:#555; margin-bottom:20px; display:flex; align-items:center; gap:6px;">
+                        <span>🛏️</span> <span>Available Rooms: <b style="color:#e74c3c;">${totalRooms} Left</b></span>
+                    </div>
 
-                <div style="font-size:13px; color:#555; margin-bottom:20px; display:flex; align-items:center; gap:6px;">
-                    <span>🛏️</span> <span>Available Rooms: <b style="color:#e74c3c;">${totalRooms} Left</b></span>
+                    <button style="width:100%; background:#3498db; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+                        BOOK ROOM STOCK
+                    </button>
                 </div>
+            `;
+        }).join('');
 
-                <button style="width:100%; background:#3498db; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; letter-spacing:0.5px; box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3);">
-                    BOOK ROOM STOCK
-                </button>
-            </div>
-        `;
-    }).join('');
+    } catch (err) {
+        console.error("Dashboard Rendering Error:", err);
+        listContainer.innerHTML = `<p style="color:#ff7675;">Failed to load hotel packages. Please check console.</p>`;
+    }
 };
 
 window.openActionModal = function(bookingId, type, customerId, packageTitle) {
