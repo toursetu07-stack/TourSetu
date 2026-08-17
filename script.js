@@ -363,8 +363,7 @@ async function handleAuth() {
     } finally {
         btn.disabled = false;
     }
-}
-/* =========================================
+}/* =========================================
    6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
    ========================================= */
 
@@ -384,48 +383,70 @@ function renderCustomerHomepage(user) {
     app.innerHTML = `
         <div style="font-family:'Inter', sans-serif; background:#f4f7f6; min-height:100vh; margin:-20px;">
             <div style="background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80');
-                    height:450px; background-size:cover; background-position:center; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; padding:20px;">
-                <h1 style="font-size:3rem; margin-bottom:10px; text-align:center;">Find Your Perfect Match</h1>
-                <p style="font-size:1.2rem; margin-bottom:40px; opacity:0.9;">Direct connections with verified local travel agencies</p>
+                    height:auto; min-height:480px; background-size:cover; background-position:center; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; padding:30px 20px;">
+                <h1 style="font-size:2.8rem; margin-bottom:10px; text-align:center;">Find Your Perfect Match</h1>
+                <p style="font-size:1.1rem; margin-bottom:25px; opacity:0.9;">Direct connections with verified local travel agencies & registered hotels</p>
                 
-                <div class="card" style="background:white; padding:30px; border-radius:20px; display:flex; gap:15px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); flex-wrap:wrap;">
-                  <div style="flex:1; min-width:200px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
-                      <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
-                         <option value="">Select State</option>
-                         ${stateOptions}
-                      </select>
-                   </div>
-                   <div style="flex:1; min-width:200px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT CITY</label>
-                      <select id="search-start" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
-                         <option value="">Select City First</option>
-                      </select>
-                   </div>
-                  <div style="flex:1; min-width:250px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">TOUR DESTINATION</label>
-                      <select id="search-dest" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
-                          <option value="">Select Destination</option>
-                          ${destOptions}
-                      </select>
+                <div class="card" style="background:white; padding:25px; border-radius:20px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                  
+                  <!-- SEARCH TYPE SELECTION BOX (AGENCY vs HOTEL) -->
+                  <div style="margin-bottom:20px; background:#f8f9fa; padding:12px 20px; border-radius:12px; border:2px solid #ff9f43; display:flex; align-items:center; gap:15px; justify-content:space-between; flex-wrap:wrap;">
+                      <label style="color:#2d3436; font-weight:bold; font-size:14px; display:flex; align-items:center; gap:6px;">
+                          🔍 <span>SELECT SEARCH TYPE:</span>
+                      </label>
+                      <div style="display:flex; gap:20px;">
+                          <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
+                              <input type="radio" name="search-type" value="agency" checked onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
+                              🎒 Agency Packages
+                          </label>
+                          <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
+                              <input type="radio" name="search-type" value="hotel" onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
+                              🏨 Registered Hotels
+                          </label>
+                      </div>
                   </div>
-                  <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 40px; border-radius:12px; font-weight:bold; cursor:pointer; height:55px; margin-top:22px; font-size:16px;">FIND AGENCIES</button>
+
+                  <!-- AGENCY FILTERS CONTAINER -->
+                  <div id="agency-filter-box" style="display:flex; gap:15px; flex-wrap:wrap;">
+                      <div style="flex:1; min-width:200px; text-align:left;">
+                          <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
+                          <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
+                             <option value="">Select State</option>
+                             ${stateOptions}
+                          </select>
+                       </div>
+                       <div style="flex:1; min-width:200px; text-align:left;">
+                          <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT CITY</label>
+                          <select id="search-start" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
+                             <option value="">Select City First</option>
+                          </select>
+                       </div>
+                      <div style="flex:1; min-width:250px; text-align:left;">
+                          <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">TOUR DESTINATION</label>
+                          <select id="search-dest" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
+                              <option value="">Select Destination</option>
+                              ${destOptions}
+                          </select>
+                      </div>
+                      <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 35px; border-radius:12px; font-weight:bold; cursor:pointer; height:48px; margin-top:22px; font-size:15px;">FIND AGENCIES</button>
+                  </div>
+
               </div>
             </div>
 
-            <div style="max-width:1200px; margin:auto; padding:50px 20px;">
-               <div style="display:flex; justify-content:space-between; align-items:end; margin-bottom:40px; border-bottom:2px solid #eee; padding-bottom:15px;">
+            <div style="max-width:1200px; margin:auto; padding:40px 20px;">
+               <div style="display:flex; justify-content:space-between; align-items:end; margin-bottom:30px; border-bottom:2px solid #eee; padding-bottom:15px; flex-wrap:wrap; gap:15px;">
                   <div>
                       <h2 id="result-title" style="margin:0; color:#2d3436; font-size:2rem;">Popular Packages</h2>
                       <p id="result-subtitle" style="color:#636e72; margin-top:5px;">Explore tours from all over India</p>
                   </div>
                   <div style="display:flex; gap:10px; align-items:center;">
                     <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
-                    <button onclick="confirmAndExecuteLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
-                    <button onclick="triggerDeactivateModalPopup()" style="background:#ff7675; color:white; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
+                    <button onclick="confirmAndExecuteLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
+                    <button onclick="triggerDeactivateModalPopup()" style="background:#ff7675; color:white; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
                   </div>
               </div>
-               <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap:30px;"></div>
+               <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap:25px;"></div>
             </div>
         </div>
 
@@ -437,6 +458,92 @@ function renderCustomerHomepage(user) {
     `;
     loadAllPackages();
 }
+
+/**
+ * Dynamic Switch Logic (Agency vs Hotel)
+ */
+window.toggleCustomerSearchType = function() {
+    const selectedType = document.querySelector('input[name="search-type"]:checked')?.value;
+    const filterBox = document.getElementById('agency-filter-box');
+    const resultTitle = document.getElementById('result-title');
+    const resultSubtitle = document.getElementById('result-subtitle');
+
+    if (selectedType === 'hotel') {
+        if(filterBox) filterBox.style.display = 'none';
+        if(resultTitle) resultTitle.innerText = "Registered Hotels Inventory";
+        if(resultSubtitle) resultSubtitle.innerText = "Live room availability directly from verified hotel partners";
+        loadCustomerHotelPackages();
+    } else {
+        if(filterBox) filterBox.style.display = 'flex';
+        if(resultTitle) resultTitle.innerText = "Popular Packages";
+        if(resultSubtitle) resultSubtitle.innerText = "Explore tours from all over India";
+        loadAllPackages();
+    }
+};
+
+/**
+ * Fetch & Render Registered Hotels Stock (Same Detailed View as Agency Dashboard)
+ */
+window.loadCustomerHotelPackages = async function() {
+    const container = document.getElementById('customer-pkg-list');
+    if (!container) return;
+
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px;"><h3>Loading Registered Hotels Inventory...</h3></div>`;
+
+    try {
+        const client = getClient();
+        const { data, error } = await client
+            .from('room_categories')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align:center; padding:50px; background:white; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
+                    <h3>🏨 No Registered Hotel Packages Available</h3>
+                    <p style="color:#636e72;">Abhi kisi hotel partner dwara live inventory stock publish nahi kiya gaya hai.</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = data.map(item => {
+            const price = item.price || item.room_price || 0;
+            const availableRooms = item.available_rooms || item.total_rooms || 0;
+            const hotelName = item.hotel_name || item.property_name || 'Registered Hotel Partner 🏨';
+            const location = item.city || item.location || item.address || 'N/A';
+            const roomType = item.category_name || item.room_type || item.title || 'Standard Room';
+
+            return `
+            <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">
+                <div style="padding:25px;">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <span style="background:#e8f5e9; color:#2e7d32; font-size:11px; padding:4px 10px; border-radius:12px; font-weight:bold;">REGISTERED HOTEL</span>
+                        <span style="font-size:20px; font-weight:bold; color:#2ecc71;">₹${price}<small style="font-size:12px; color:#666;">/night</small></span>
+                    </div>
+                    
+                    <h3 style="margin:15px 0 5px 0; color:#2d3436;">${roomType}</h3>
+                    <p style="margin:0; color:#ff9f43; font-weight:bold; font-size:15px;">🏨 ${hotelName}</p>
+                    
+                    <div style="font-size:13px; color:#636e72; margin:15px 0;">
+                        <div>📍 <b>Location:</b> ${location}</div>
+                        <div style="margin-top:5px;">🛏️ <b>Available Rooms:</b> <span style="color:#d35400; font-weight:bold;">${availableRooms} Left</span></div>
+                        ${item.amenities ? `<div style="margin-top:5px;">✨ <b>Amenities:</b> ${Array.isArray(item.amenities) ? item.amenities.join(', ') : item.amenities}</div>` : ''}
+                    </div>
+                </div>
+
+                <div style="padding:15px 25px; background:#f9f9f9; border-top:1px solid #eee;">
+                    <button onclick="alert('Hotel Booking Request sent! Our hotel manager will reach out shortly.')" style="background:#3498db; color:white; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">BOOK ROOM STOCK</button>
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error loading hotel inventory for customer:", err);
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
+    }
+};
 
 /**
  * Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
@@ -694,7 +801,7 @@ window.showPackageDetails = function(pEncoded) {
                         <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
-             `).join('');
+              `).join('');
         }
     }
 
@@ -722,7 +829,7 @@ window.showPackageDetails = function(pEncoded) {
                         <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
-             `).join('');
+              `).join('');
         }
     }
 
@@ -842,32 +949,15 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
         return; 
     }
 
-    const ghodaChecked = document.getElementById('check-ghoda') && document.getElementById('check-ghoda').checked;
-    const dandiChecked = document.getElementById('check-dandi') && document.getElementById('check-dandi').checked;
-    const kandiChecked = document.getElementById('check-kandi') && document.getElementById('check-kandi').checked;
-    const pitthuChecked = document.getElementById('check-pitthu') && document.getElementById('check-pitthu').checked;
+    // Safely extract optional trekking counts
+    const ghodaQty = document.getElementById('qty-ghoda') ? parseInt(document.getElementById('qty-ghoda').value) || 0 : 0;
+    const dandiQty = document.getElementById('qty-dandi') ? parseInt(document.getElementById('qty-dandi').value) || 0 : 0;
+    const kandiQty = document.getElementById('qty-kandi') ? parseInt(document.getElementById('qty-kandi').value) || 0 : 0;
+    const pitthuQty = document.getElementById('qty-pitthu') ? parseInt(document.getElementById('qty-pitthu').value) || 0 : 0;
 
-    const vGhodaChecked = document.getElementById('check-vaishno_ghoda') && document.getElementById('check-vaishno_ghoda').checked;
-    const vPalkiChecked = document.getElementById('check-vaishno_palki') && document.getElementById('check-vaishno_palki').checked;
-    const vPitthuChecked = document.getElementById('check-vaishno_pitthu') && document.getElementById('check-vaishno_pitthu').checked;
-
-    const ghodaQty = ghodaChecked ? (parseInt(document.getElementById('qty-ghoda').value) || 1) : 0;
-    const dandiQty = dandiChecked ? (parseInt(document.getElementById('qty-dandi').value) || 1) : 0;
-    const kandiQty = kandiChecked ? (parseInt(document.getElementById('qty-kandi').value) || 1) : 0;
-    const pitthuQty = pitthuChecked ? (parseInt(document.getElementById('qty-pitthu').value) || 1) : 0;
-
-    const vGhodaQty = vGhodaChecked ? (parseInt(document.getElementById('qty-vaishno_ghoda').value) || 1) : 0;
-    const vPalkiQty = vPalkiChecked ? (parseInt(document.getElementById('qty-vaishno_palki').value) || 1) : 0;
-    const vPitthuQty = vPitthuChecked ? (parseInt(document.getElementById('qty-vaishno_pitthu').value) || 1) : 0;
-
-    if (ghodaChecked) totalPrice += (parseFloat(document.getElementById('check-ghoda').dataset.rate) * ghodaQty);
-    if (dandiChecked) totalPrice += (parseFloat(document.getElementById('check-dandi').dataset.rate) * dandiQty);
-    if (kandiChecked) totalPrice += (parseFloat(document.getElementById('check-kandi').dataset.rate) * kandiQty);
-    if (pitthuChecked) totalPrice += (parseFloat(document.getElementById('check-pitthu').dataset.rate) * pitthuQty);
-
-    if (vGhodaChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_ghoda').dataset.rate) * vGhodaQty);
-    if (vPalkiChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_palki').dataset.rate) * vPalkiQty);
-    if (vPitthuChecked) totalPrice += (parseFloat(document.getElementById('check-vaishno_pitthu').dataset.rate) * vPitthuQty);
+    const vGhodaQty = document.getElementById('qty-vaishno_ghoda') ? parseInt(document.getElementById('qty-vaishno_ghoda').value) || 0 : 0;
+    const vPalkiQty = document.getElementById('qty-vaishno_palki') ? parseInt(document.getElementById('qty-vaishno_palki').value) || 0 : 0;
+    const vPitthuQty = document.getElementById('qty-vaishno_pitthu') ? parseInt(document.getElementById('qty-vaishno_pitthu').value) || 0 : 0;
 
     try {
         const { error } = await client.from('bookings').insert([{
