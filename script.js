@@ -1467,8 +1467,6 @@ async function renderAgencyHotelPackages() {
         container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
     }
 }
-
-
 // 9. AGENCY DASHBOARD
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
@@ -1764,7 +1762,7 @@ window.renderAgencyHotelPackages = async function() {
     listContainer.innerHTML = dataToRender.map(pkg => {
         // Dynamic price per night fallback check
         const price = pkg.price_per_night || pkg.price || pkg.room_price || 0;
-        
+
         // Dynamic city location fetch from joined hotels table
         const cityLocation = pkg.hotels?.city || pkg.city || pkg.location || 'N/A';
         const hotelName = pkg.hotels?.hotel_name || pkg.hotel_name || pkg.title || 'Hotel Partner';
