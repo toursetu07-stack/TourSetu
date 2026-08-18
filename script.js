@@ -363,8 +363,7 @@ async function handleAuth() {
     } finally {
         btn.disabled = false;
     }
-}
-/* =========================================
+}/* =========================================
    6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
    ========================================= */
 
@@ -384,48 +383,70 @@ function renderCustomerHomepage(user) {
     app.innerHTML = `
         <div style="font-family:'Inter', sans-serif; background:#f4f7f6; min-height:100vh; margin:-20px;">
             <div style="background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80');
-                    height:450px; background-size:cover; background-position:center; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; padding:20px;">
-                <h1 style="font-size:3rem; margin-bottom:10px; text-align:center;">Find Your Perfect Match</h1>
-                <p style="font-size:1.2rem; margin-bottom:40px; opacity:0.9;">Direct connections with verified local travel agencies</p>
+                    height:auto; min-height:480px; background-size:cover; background-position:center; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; padding:30px 20px;">
+                <h1 style="font-size:2.8rem; margin-bottom:10px; text-align:center;">Find Your Perfect Match</h1>
+                <p style="font-size:1.1rem; margin-bottom:25px; opacity:0.9;">Direct connections with verified local travel agencies & registered hotels</p>
                 
-                <div class="card" style="background:white; padding:30px; border-radius:20px; display:flex; gap:15px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); flex-wrap:wrap;">
-                  <div style="flex:1; min-width:200px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
-                      <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
-                         <option value="">Select State</option>
-                         ${stateOptions}
-                      </select>
-                   </div>
-                   <div style="flex:1; min-width:200px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT CITY</label>
-                      <select id="search-start" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
-                         <option value="">Select City First</option>
-                      </select>
-                   </div>
-                  <div style="flex:1; min-width:250px; text-align:left;">
-                      <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">TOUR DESTINATION</label>
-                      <select id="search-dest" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px;">
-                          <option value="">Select Destination</option>
-                          ${destOptions}
-                      </select>
+                <div class="card" style="background:white; padding:25px; border-radius:20px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                  
+                  <!-- SEARCH TYPE SELECTION BOX (AGENCY vs HOTEL) -->
+                  <div style="margin-bottom:20px; background:#f8f9fa; padding:12px 20px; border-radius:12px; border:2px solid #ff9f43; display:flex; align-items:center; gap:15px; justify-content:space-between; flex-wrap:wrap;">
+                      <label style="color:#2d3436; font-weight:bold; font-size:14px; display:flex; align-items:center; gap:6px;">
+                          🔍 <span>SELECT SEARCH TYPE:</span>
+                      </label>
+                      <div style="display:flex; gap:20px;">
+                          <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
+                              <input type="radio" name="search-type" value="agency" checked onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
+                              🎒 Agency Packages
+                          </label>
+                          <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
+                              <input type="radio" name="search-type" value="hotel" onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
+                              🏨 Registered Hotels
+                          </label>
+                      </div>
                   </div>
-                  <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 40px; border-radius:12px; font-weight:bold; cursor:pointer; height:55px; margin-top:22px; font-size:16px;">FIND AGENCIES</button>
+
+                  <!-- AGENCY FILTERS CONTAINER -->
+                  <div id="agency-filter-box" style="display:flex; gap:15px; flex-wrap:wrap;">
+                      <div style="flex:1; min-width:200px; text-align:left;">
+                          <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
+                          <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
+                             <option value="">Select State</option>
+                             ${stateOptions}
+                          </select>
+                       </div>
+                       <div style="flex:1; min-width:200px; text-align:left;">
+                          <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT CITY</label>
+                          <select id="search-start" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
+                             <option value="">Select City First</option>
+                          </select>
+                       </div>
+                      <div style="flex:1; min-width:250px; text-align:left;">
+                          <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">TOUR DESTINATION</label>
+                          <select id="search-dest" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
+                              <option value="">Select Destination</option>
+                              ${destOptions}
+                          </select>
+                      </div>
+                      <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 35px; border-radius:12px; font-weight:bold; cursor:pointer; height:48px; margin-top:22px; font-size:15px;">FIND AGENCIES</button>
+                  </div>
+
               </div>
             </div>
 
-            <div style="max-width:1200px; margin:auto; padding:50px 20px;">
-               <div style="display:flex; justify-content:space-between; align-items:end; margin-bottom:40px; border-bottom:2px solid #eee; padding-bottom:15px;">
+            <div style="max-width:1200px; margin:auto; padding:40px 20px;">
+               <div style="display:flex; justify-content:space-between; align-items:end; margin-bottom:30px; border-bottom:2px solid #eee; padding-bottom:15px; flex-wrap:wrap; gap:15px;">
                   <div>
                       <h2 id="result-title" style="margin:0; color:#2d3436; font-size:2rem;">Popular Packages</h2>
                       <p id="result-subtitle" style="color:#636e72; margin-top:5px;">Explore tours from all over India</p>
                   </div>
                   <div style="display:flex; gap:10px; align-items:center;">
                     <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
-                    <button onclick="confirmAndExecuteLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
-                    <button onclick="triggerDeactivateModalPopup()" style="background:#ff7675; color:white; width:auto; padding:10px 25px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
+                    <button onclick="confirmAndExecuteLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
+                    <button onclick="triggerDeactivateModalPopup()" style="background:#ff7675; color:white; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
                   </div>
               </div>
-               <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap:30px;"></div>
+               <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap:25px;"></div>
             </div>
         </div>
 
@@ -437,6 +458,92 @@ function renderCustomerHomepage(user) {
     `;
     loadAllPackages();
 }
+
+/**
+ * Dynamic Switch Logic (Agency vs Hotel)
+ */
+window.toggleCustomerSearchType = function() {
+    const selectedType = document.querySelector('input[name="search-type"]:checked')?.value;
+    const filterBox = document.getElementById('agency-filter-box');
+    const resultTitle = document.getElementById('result-title');
+    const resultSubtitle = document.getElementById('result-subtitle');
+
+    if (selectedType === 'hotel') {
+        if(filterBox) filterBox.style.display = 'none';
+        if(resultTitle) resultTitle.innerText = "Registered Hotels Inventory";
+        if(resultSubtitle) resultSubtitle.innerText = "Live room availability directly from verified hotel partners";
+        loadCustomerHotelPackages();
+    } else {
+        if(filterBox) filterBox.style.display = 'flex';
+        if(resultTitle) resultTitle.innerText = "Popular Packages";
+        if(resultSubtitle) resultSubtitle.innerText = "Explore tours from all over India";
+        loadAllPackages();
+    }
+};
+
+/**
+ * Fetch & Render Registered Hotels Stock (Same Detailed View as Agency Dashboard)
+ */
+window.loadCustomerHotelPackages = async function() {
+    const container = document.getElementById('customer-pkg-list');
+    if (!container) return;
+
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px;"><h3>Loading Registered Hotels Inventory...</h3></div>`;
+
+    try {
+        const client = getClient();
+        const { data, error } = await client
+            .from('room_categories')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align:center; padding:50px; background:white; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
+                    <h3>🏨 No Registered Hotel Packages Available</h3>
+                    <p style="color:#636e72;">Abhi kisi hotel partner dwara live inventory stock publish nahi kiya gaya hai.</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = data.map(item => {
+            const price = item.price || item.room_price || 0;
+            const availableRooms = item.available_rooms || item.total_rooms || 0;
+            const hotelName = item.hotel_name || item.property_name || 'Registered Hotel Partner 🏨';
+            const location = item.city || item.location || item.address || 'N/A';
+            const roomType = item.category_name || item.room_type || item.title || 'Standard Room';
+
+            return `
+            <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">
+                <div style="padding:25px;">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <span style="background:#e8f5e9; color:#2e7d32; font-size:11px; padding:4px 10px; border-radius:12px; font-weight:bold;">REGISTERED HOTEL</span>
+                        <span style="font-size:20px; font-weight:bold; color:#2ecc71;">₹${price}<small style="font-size:12px; color:#666;">/night</small></span>
+                    </div>
+                    
+                    <h3 style="margin:15px 0 5px 0; color:#2d3436;">${roomType}</h3>
+                    <p style="margin:0; color:#ff9f43; font-weight:bold; font-size:15px;">🏨 ${hotelName}</p>
+                    
+                    <div style="font-size:13px; color:#636e72; margin:15px 0;">
+                        <div>📍 <b>Location:</b> ${location}</div>
+                        <div style="margin-top:5px;">🛏️ <b>Available Rooms:</b> <span style="color:#d35400; font-weight:bold;">${availableRooms} Left</span></div>
+                        ${item.amenities ? `<div style="margin-top:5px;">✨ <b>Amenities:</b> ${Array.isArray(item.amenities) ? item.amenities.join(', ') : item.amenities}</div>` : ''}
+                    </div>
+                </div>
+
+                <div style="padding:15px 25px; background:#f9f9f9; border-top:1px solid #eee;">
+                    <button onclick="alert('Hotel Booking Request sent! Our hotel manager will reach out shortly.')" style="background:#3498db; color:white; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">BOOK ROOM STOCK</button>
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        console.error("Error loading hotel inventory for customer:", err);
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
+    }
+};
 
 /**
  * Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
@@ -621,56 +728,6 @@ window.cancelBookingWithPenalty = async function(id) {
     }
 };
 
-/**
- * Same Agency Detailed View & Dynamic Switch Feature Helper
- */
-window.viewAgencyProfile = async function(agencyId) {
-    const modal = document.getElementById('detail-modal');
-    const body = document.getElementById('detail-view-body');
-    body.innerHTML = '<div style="text-align:center; padding:30px;"><h3>Loading Agency Packages...</h3></div>';
-    modal.style.display = 'flex';
-
-    const client = getClient();
-    const { data: packages, error } = await client.from('packages').select('*').eq('agency_id', agencyId);
-
-    if (error || !packages || packages.length === 0) {
-        body.innerHTML = `
-            <div style="text-align:center;">
-                <h3>No additional packages found for this agency.</h3>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="margin-top:15px; padding:10px 20px; background:#eee; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Close</button>
-            </div>`;
-        return;
-    }
-
-    const agencyName = packages[0].agency_email ? packages[0].agency_email.split('@')[0] : 'Travel Agency';
-    const pkgListHtml = packages.map(pkg => `
-        <div style="padding:15px; border:1px solid #eee; border-radius:10px; margin-bottom:12px; background:#f9f9f9; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <h4 style="margin:0 0 5px 0; color:#2d3436;">${pkg.title}</h4>
-                <small style="color:#636e72;">📍 Route: ${pkg.starting_location} ➔ ${Array.isArray(pkg.destination) ? pkg.destination.join(', ') : pkg.destination}</small>
-            </div>
-            <button onclick="switchModalPackage('${encodeURIComponent(JSON.stringify(pkg))}')" style="background:#ff9f43; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer;">View Package</button>
-        </div>
-    `).join('');
-
-    body.innerHTML = `
-        <div style="text-align:left;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="margin:0; color:#2d3436;">🏢 ${agencyName.toUpperCase()} - Tour Packages</h2>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:28px; color:#999; cursor:pointer;">✕</button>
-            </div>
-            <div style="max-height:400px; overflow-y:auto; padding-right:5px;">${pkgListHtml}</div>
-            <div style="margin-top:20px; text-align:right;">
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:#eee; padding:10px 20px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; color:#666;">Close</button>
-            </div>
-        </div>
-    `;
-};
-
-window.switchModalPackage = function(pEncoded) {
-    showPackageDetails(pEncoded);
-};
-
 window.showPackageDetails = function(pEncoded) {
     const p = JSON.parse(decodeURIComponent(pEncoded));
     const modal = document.getElementById('detail-modal');
@@ -696,24 +753,20 @@ window.showPackageDetails = function(pEncoded) {
         </div>`;
     }
 
-    // Default Selection Applied: First vehicle auto-checked by default
-    const vehicleListHtml = (p.vehicles || []).map((v, index) => {
-        const isDefault = index === 0;
-        return `
+    const vehicleListHtml = (p.vehicles || []).map(v => `
         <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" ${isDefault ? 'checked' : ''} onchange="toggleQtyInput('${v.id}')" style="width:20px; height:20px; cursor:pointer;">
+                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')" style="width:20px; height:20px; cursor:pointer;">
                     <span><b>${v.name}</b> <br> <small style="color:#666;">Available Units: ${v.max_cars || 1}</small></span>
                 </div>
                 <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
             </div>
-            <div id="qty-container-${v.id}" style="display:${isDefault ? 'block' : 'none'}; margin-top:15px; padding-top:15px; border-top:1px solid #f0f0f0;">
+            <div id="qty-container-${v.id}" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid #f0f0f0;">
                 <label style="font-size:12px; color:#636e72; display:block; margin-bottom:5px;">Quantity (Max: ${v.max_cars || 1})</label>
                 <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:80px; padding:8px; border:2px solid #ff9f43; border-radius:5px;">
             </div>
-        </div>`;
-    }).join('');
+        </div>`).join('');
 
     const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
     const escapedTitle = p.title.replace(/'/g, "\\'");
@@ -748,7 +801,7 @@ window.showPackageDetails = function(pEncoded) {
                         <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
-             `).join('');
+              `).join('');
         }
     }
 
@@ -776,7 +829,7 @@ window.showPackageDetails = function(pEncoded) {
                         <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
                     </div>
                 </div>
-             `).join('');
+              `).join('');
         }
     }
 
@@ -788,10 +841,7 @@ window.showPackageDetails = function(pEncoded) {
                 <h2 style="margin:0; color:#2d3436;">${p.title}</h2>
                 <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:28px; color:#999; cursor:pointer; line-height:1;">✕</button>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin:10px 0;">
-                <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:0;">Routes: ${routeInfo}</p>
-                <button onclick="viewAgencyProfile('${p.agency_id}')" style="background:#3498db; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">🏢 View More Packages From Same Agency</button>
-            </div>
+            <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
             
             <div style="margin:20px 0; padding:15px; background:#f9f9f9; border-radius:12px; font-size:14px;">
                 <h4 style="margin-top:0;">Itinerary / Description</h4>
@@ -841,7 +891,6 @@ window.showPackageDetails = function(pEncoded) {
         </div>
     `;
     modal.style.display = 'flex';
-    updateLivePrice(); // Calculate initial live price based on default selection
 };
 
 window.updateLivePrice = () => {
@@ -900,15 +949,15 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
         return; 
     }
 
-    // Capture trek quantities for Kedarnath & Vaishno Devi
-    const ghodaQty = document.getElementById('qty-ghoda') ? (parseInt(document.getElementById('qty-ghoda').value) || 0) : 0;
-    const dandiQty = document.getElementById('qty-dandi') ? (parseInt(document.getElementById('qty-dandi').value) || 0) : 0;
-    const kandiQty = document.getElementById('qty-kandi') ? (parseInt(document.getElementById('qty-kandi').value) || 0) : 0;
-    const pitthuQty = document.getElementById('qty-pitthu') ? (parseInt(document.getElementById('qty-pitthu').value) || 0) : 0;
+    // Safely extract optional trekking counts
+    const ghodaQty = document.getElementById('qty-ghoda') ? parseInt(document.getElementById('qty-ghoda').value) || 0 : 0;
+    const dandiQty = document.getElementById('qty-dandi') ? parseInt(document.getElementById('qty-dandi').value) || 0 : 0;
+    const kandiQty = document.getElementById('qty-kandi') ? parseInt(document.getElementById('qty-kandi').value) || 0 : 0;
+    const pitthuQty = document.getElementById('qty-pitthu') ? parseInt(document.getElementById('qty-pitthu').value) || 0 : 0;
 
-    const vGhodaQty = document.getElementById('qty-vaishno_ghoda') ? (parseInt(document.getElementById('qty-vaishno_ghoda').value) || 0) : 0;
-    const vPalkiQty = document.getElementById('qty-vaishno_palki') ? (parseInt(document.getElementById('qty-vaishno_palki').value) || 0) : 0;
-    const vPitthuQty = document.getElementById('qty-vaishno_pitthu') ? (parseInt(document.getElementById('qty-vaishno_pitthu').value) || 0) : 0;
+    const vGhodaQty = document.getElementById('qty-vaishno_ghoda') ? parseInt(document.getElementById('qty-vaishno_ghoda').value) || 0 : 0;
+    const vPalkiQty = document.getElementById('qty-vaishno_palki') ? parseInt(document.getElementById('qty-vaishno_palki').value) || 0 : 0;
+    const vPitthuQty = document.getElementById('qty-vaishno_pitthu') ? parseInt(document.getElementById('qty-vaishno_pitthu').value) || 0 : 0;
 
     try {
         const { error } = await client.from('bookings').insert([{
