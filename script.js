@@ -1215,7 +1215,13 @@ window.showPackageDetails = function(pEncoded) {
     const limitStr = limitDate.toISOString().split('T')[0];
 
     // Check if the destinations list includes Kedarnath or Vaishno Devi (Robust check to ensure it shows up)
-   // Pre-build Vehicle HTML
+    const pkgDestinations = Array.isArray(p.destination) ? p.destination : [p.destination];
+    const destStringLower = pkgDestinations.join(' ').toLowerCase();
+    const isKedarnath = destStringLower.includes('kedarnath') || destStringLower.includes('char dham');
+    const isVaishno = destStringLower.includes('vaishno') || destStringLower.includes('katra');
+    const showTrekServices = isKedarnath || isVaishno;
+
+    // Pre-build Vehicle HTML
     const vehicleHtml = vehicleList.map(v => `
         <div style="padding:12px; border:1px solid #eee; border-radius:10px; margin-bottom:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1382,7 +1388,17 @@ window.updateLivePrice = function() {
         const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
         grandTotal += (rate * qty);
     });
-   const displayElement = document.getElementById('live-total-display');
+
+    // Calculate mountain trek service choices
+    document.querySelectorAll('.book-trek-check:checked').forEach(el => {
+        const id = el.dataset.id;
+        const rate = parseFloat(el.dataset.rate) || 0;
+        const qtyInput = document.getElementById(`qty-${id}`);
+        const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+        grandTotal += (rate * qty);
+    });
+
+    const displayElement = document.getElementById('live-total-display');
     if (displayElement) {
         displayElement.innerText = `₹${grandTotal}`;
     }
