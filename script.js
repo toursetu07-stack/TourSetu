@@ -563,7 +563,7 @@ window.loadCustomerHotelPackages = async function() {
     }
 };
 
-*/ Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
+// Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
 window.triggerDeactivateModalPopup = function() {
     let modal = document.getElementById('deactivate-confirmation-modal');
     if(!modal) {
