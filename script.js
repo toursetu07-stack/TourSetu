@@ -562,8 +562,8 @@ window.loadCustomerHotelPackages = async function() {
         container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
     }
 };
- * Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
- */
+
+*/ Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
 window.triggerDeactivateModalPopup = function() {
     let modal = document.getElementById('deactivate-confirmation-modal');
     if(!modal) {
