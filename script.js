@@ -363,7 +363,8 @@ async function handleAuth() {
     } finally {
         btn.disabled = false;
     }
-}/* =========================================
+}
+/* =========================================
    6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
    ========================================= */
 
@@ -482,8 +483,9 @@ window.toggleCustomerSearchType = function() {
 };
 
 /**
- * Fetch & Render Registered Hotels Stock (Same Detailed View as Agency Dashboard)
- */
+ /* =========================================
+   Fetch & Render Registered Hotels Stock (Same Detailed View as Agency Dashboard)
+   ========================================= */
 window.loadCustomerHotelPackages = async function() {
     const container = document.getElementById('customer-pkg-list');
     if (!container) return;
@@ -492,9 +494,19 @@ window.loadCustomerHotelPackages = async function() {
 
     try {
         const client = getClient();
+        
+        // Updated Supabase Relational Query: hotels table se city aur address fetch karne ke liye
         const { data, error } = await client
             .from('room_categories')
-            .select('*')
+            .select(`
+                *,
+                hotels (
+                    city,
+                    address,
+                    hotel_name,
+                    property_name
+                )
+            `)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -509,10 +521,18 @@ window.loadCustomerHotelPackages = async function() {
         }
 
         container.innerHTML = data.map(item => {
-            const price = item.price || item.room_price || 0;
+            // Price Fix: Strictly fetching price_per_night from room_categories
+            const price = item.price_per_night || 0;
             const availableRooms = item.available_rooms || item.total_rooms || 0;
-            const hotelName = item.hotel_name || item.property_name || 'Registered Hotel Partner 🏨';
-            const location = item.city || item.location || item.address || 'N/A';
+            
+            // Hotel Details & Location Mapping (city/address format)
+            const hotelObj = item.hotels || {};
+            const hotelName = item.hotel_name || item.property_name || hotelObj.hotel_name || hotelObj.property_name || 'Registered Hotel Partner 🏨';
+            
+            const city = hotelObj.city || item.city || 'N/A';
+            const address = hotelObj.address || item.address || 'N/A';
+            const location = `${city}/${address}`;
+
             const roomType = item.category_name || item.room_type || item.title || 'Standard Room';
 
             return `
@@ -544,7 +564,6 @@ window.loadCustomerHotelPackages = async function() {
         container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
     }
 };
-
 /**
  * Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
  */
