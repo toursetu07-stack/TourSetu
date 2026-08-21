@@ -483,7 +483,7 @@ window.toggleCustomerSearchType = function() {
 };
 
 /**
- /* =========================================
+/* =========================================
    Fetch & Render Registered Hotels Stock (Same Detailed View as Agency Dashboard)
    ========================================= */
 window.loadCustomerHotelPackages = async function() {
@@ -495,16 +495,14 @@ window.loadCustomerHotelPackages = async function() {
     try {
         const client = getClient();
         
-        // Updated Supabase Relational Query: hotels table se city aur address fetch karne ke liye
+        // Query Fixed: Sirf safe columns (city, address) fetch kar rahe hain
         const { data, error } = await client
             .from('room_categories')
             .select(`
                 *,
                 hotels (
                     city,
-                    address,
-                    hotel_name,
-                    property_name
+                    address
                 )
             `)
             .order('created_at', { ascending: false });
@@ -521,13 +519,13 @@ window.loadCustomerHotelPackages = async function() {
         }
 
         container.innerHTML = data.map(item => {
-            // Price Fix: Strictly fetching price_per_night from room_categories
-            const price = item.price_per_night || 0;
+            // Price: strictly fetching price_per_night from room_categories
+            const price = item.price_per_night || item.price || 0;
             const availableRooms = item.available_rooms || item.total_rooms || 0;
             
             // Hotel Details & Location Mapping (city/address format)
             const hotelObj = item.hotels || {};
-            const hotelName = item.hotel_name || item.property_name || hotelObj.hotel_name || hotelObj.property_name || 'Registered Hotel Partner 🏨';
+            const hotelName = item.hotel_name || item.property_name || 'Registered Hotel Partner 🏨';
             
             const city = hotelObj.city || item.city || 'N/A';
             const address = hotelObj.address || item.address || 'N/A';
@@ -564,7 +562,6 @@ window.loadCustomerHotelPackages = async function() {
         container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
     }
 };
-/**
  * Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
  */
 window.triggerDeactivateModalPopup = function() {
