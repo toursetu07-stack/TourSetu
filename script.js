@@ -583,20 +583,43 @@ function getHotelRoomImageUrl(imagePath) {
     
     try {
         const client = getClient();
-        // Corrected bucket name from 'room' to 'hotel-media' based on your Supabase storage
-        const { data } = client.storage.from('hotel-media').getPublicUrl(imagePath);
+        let cleanPath = imagePath.trim();
+        if (!cleanPath.includes('/')) {
+            cleanPath = `rooms/${cleanPath}`;
+        }
+        const { data } = client.storage.from('hotel-media').getPublicUrl(cleanPath);
         return data?.publicUrl || FALLBACK_ROOM_IMAGE;
     } catch(e) {
         return FALLBACK_ROOM_IMAGE;
     }
 }
 
+// Helper: Dates Format String (YYYY-MM-DD)
+function formatDateString(dateObj) {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // 2. Open Modal Function
-window.openHotelBookingModal = function(hotelName, city, address, roomType, pricePerNight, maxAvailableRooms, imagePath) {
+window.openHotelBookingModal = function(hotelName, city, address, roomType, pricePerNight, maxAvailableRooms, imagePath, roomCategoryId) {
     const existingModal = document.getElementById('hotel-booking-modal');
     if (existingModal) existingModal.remove();
 
     const imageUrl = getHotelRoomImageUrl(imagePath);
+
+    // Today & 7-Days Date Restrictions Calculation
+    const today = new Date();
+    const minDateStr = formatDateString(today);
+
+    const maxDate = new Date();
+    maxDate.setDate(today.getDate() + 7);
+    const maxDateStr = formatDateString(maxDate);
+
+    const nextDay = new Date();
+    nextDay.setDate(today.getDate() + 1);
+    const nextDayStr = formatDateString(nextDay);
 
     const modalHTML = `
     <div id="hotel-booking-modal" class="custom-modal-overlay">
@@ -613,6 +636,22 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
                 
                 <div style="background:#f8f9fa; padding:10px 15px; border-radius:8px; margin-bottom:15px; border-left:4px solid #3498db;">
                     <span style="font-weight:bold; color:#2c3e50;">🛏️ Category: ${roomType}</span>
+                </div>
+
+                <!-- Calendar Section: Check-In & Check-Out (Limited to Today + 7 Days) -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:15px;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:bold; color:#636e72; margin-bottom:5px;">📅 CHECK-IN DATE</label>
+                        <input type="date" id="modal-checkin-date" min="${minDateStr}" max="${maxDateStr}" value="${minDateStr}" 
+                               onchange="calculateHotelTotalPrice(${pricePerNight}, ${maxAvailableRooms})" 
+                               style="width:100%; padding:8px 10px; border:2px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:bold; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:bold; color:#636e72; margin-bottom:5px;">📅 CHECK-OUT DATE</label>
+                        <input type="date" id="modal-checkout-date" min="${minDateStr}" max="${maxDateStr}" value="${nextDayStr}" 
+                               onchange="calculateHotelTotalPrice(${pricePerNight}, ${maxAvailableRooms})" 
+                               style="width:100%; padding:8px 10px; border:2px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:bold; box-sizing:border-box;">
+                    </div>
                 </div>
 
                 <div class="booking-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; align-items:center; margin-bottom:15px;">
@@ -632,8 +671,8 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
                 <!-- Live Dynamic Calculation Display -->
                 <div style="margin:15px 0; padding:12px 15px; background:#eef2f7; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:13px; color:#34495e; font-weight:bold;">Total Amount:</span>
-                    <span id="modal-total-price-display" style="font-size:18px; font-weight:bold; color:#e67e22;">
-                        ₹${pricePerNight} x 1 = ₹${pricePerNight}
+                    <span id="modal-total-price-display" style="font-size:16px; font-weight:bold; color:#e67e22;">
+                        ₹${pricePerNight} x 1 Room(s) x 1 Night(s) = ₹${pricePerNight}
                     </span>
                 </div>
 
@@ -645,7 +684,7 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
                     </label>
                 </div>
 
-                <button id="modal-confirm-btn" onclick="submitHotelRoomBooking(${pricePerNight}, ${maxAvailableRooms})" 
+                <button id="modal-confirm-btn" onclick="submitHotelRoomBooking('${hotelName.replace(/'/g, "\\'")}', '${roomType.replace(/'/g, "\\'")}', '${city.replace(/'/g, "\\'")}, ${address.replace(/'/g, "\\'")}', ${pricePerNight}, ${maxAvailableRooms}, '${roomCategoryId || ''}')" 
                         style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer;">
                     CONFIRM & PROCEED TO BOOK
                 </button>
@@ -656,17 +695,14 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 };
 
-// 3. Calculation Handler (Zero allowed in field, but validates limit)
+// 3. Calculation Handler (Calculates Rooms × Nights)
 window.calculateHotelTotalPrice = function(pricePerNight, maxAvailableRooms) {
     const qtyInput = document.getElementById('modal-room-qty');
+    const checkInInput = document.getElementById('modal-checkin-date');
+    const checkOutInput = document.getElementById('modal-checkout-date');
     const display = document.getElementById('modal-total-price-display');
+
     let val = qtyInput.value;
-
-    if (val === '') {
-        display.innerHTML = `₹${pricePerNight} x 0 = ₹0`;
-        return;
-    }
-
     let qty = parseInt(val) || 0;
 
     if (qty > maxAvailableRooms) {
@@ -678,17 +714,36 @@ window.calculateHotelTotalPrice = function(pricePerNight, maxAvailableRooms) {
         qtyInput.value = 0;
     }
 
-    const total = pricePerNight * qty;
-    display.innerHTML = `₹${pricePerNight} x ${qty} = ₹${total}`;
+    // Calculating Nights Between Dates
+    let nights = 1;
+    if (checkInInput && checkOutInput && checkInInput.value && checkOutInput.value) {
+        const d1 = new Date(checkInInput.value);
+        const d2 = new Date(checkOutInput.value);
+        const diffTime = d2 - d1;
+        nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (nights <= 0) nights = 1;
+    }
+
+    const total = pricePerNight * qty * nights;
+    display.innerHTML = `₹${pricePerNight} x ${qty} Room(s) x ${nights} Night(s) = ₹${total}`;
 };
 
-// 4. Booking Submission Handler
-window.submitHotelRoomBooking = function(pricePerNight, maxAvailableRooms) {
+// 4. Booking Submission Handler (Saves direct to Supabase SQL Table)
+window.submitHotelRoomBooking = async function(hotelName, roomType, location, pricePerNight, maxAvailableRooms, roomCategoryId) {
     const checkbox = document.getElementById('modal-agree-terms');
     const qtyInput = document.getElementById('modal-room-qty');
+    const checkInInput = document.getElementById('modal-checkin-date');
+    const checkOutInput = document.getElementById('modal-checkout-date');
+    
     const qty = parseInt(qtyInput.value) || 0;
+    const checkIn = checkInInput.value;
+    const checkOut = checkOutInput.value;
 
-    // Minimum 1 room required for booking validation
+    if (!checkIn || !checkOut) {
+        alert("Please select both Check-In and Check-Out dates.");
+        return;
+    }
+
     if (qty <= 0) {
         alert("Please select at least 1 room to book.");
         return;
@@ -699,10 +754,61 @@ window.submitHotelRoomBooking = function(pricePerNight, maxAvailableRooms) {
         return;
     }
 
-    const totalAmount = pricePerNight * qty;
-    alert(`🎉 Booking Request Sent!\n\nRooms Requested: ${qty}\nTotal Amount: ₹${totalAmount}\n\nOur representative will contact you shortly.`);
-    
-    document.getElementById('hotel-booking-modal').remove();
+    // Calculating total nights
+    const d1 = new Date(checkIn);
+    const d2 = new Date(checkOut);
+    const diffTime = d2 - d1;
+    let nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (nights <= 0) {
+        alert("Check-Out date must be after Check-In date.");
+        return;
+    }
+
+    const subtotal = pricePerNight * qty * nights;
+    const gatewayFee = subtotal * 0.02; // 2%
+    const serviceFee = subtotal * 0.07; // 7%
+    const grandTotal = subtotal;
+
+    try {
+        const client = getClient();
+        const { data: { user } } = await client.auth.getUser();
+
+        // Exact Payload mapping with SQL schema fields
+        const bookingPayload = {
+            customer_id: user ? user.id : null,
+            room_category_id: roomCategoryId ? parseInt(roomCategoryId) : null,
+            hotel_name: hotelName,
+            room_type: roomType,
+            location: location,
+            check_in_date: checkIn,
+            check_out_date: checkOut,
+            rooms_booked: qty,
+            price_per_night: pricePerNight,
+            total_nights: nights,
+            subtotal_amount: subtotal,
+            gateway_fee: gatewayFee,
+            service_fee: serviceFee,
+            total_amount: grandTotal,
+            cancellation_policy_agreed: true,
+            booking_status: 'pending',
+            payment_status: 'unpaid'
+        };
+
+        const { data, error } = await client
+            .from('hotel_bookings')
+            .insert([bookingPayload])
+            .select();
+
+        if (error) throw error;
+
+        alert(`🎉 Booking Request Sent Successfully!\n\nBooking ID: ${data[0].id.slice(0, 8)}\nTotal Amount: ₹${grandTotal}`);
+        document.getElementById('hotel-booking-modal').remove();
+
+    } catch (err) {
+        console.error("Database Insert Error:", err);
+        alert(`Booking failed: ${err.message}`);
+    }
 };
 // Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
 window.triggerDeactivateModalPopup = function() {
