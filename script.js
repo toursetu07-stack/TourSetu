@@ -574,11 +574,12 @@ function getHotelRoomImageUrl(imagePath) {
     if (imagePath.startsWith('http')) return imagePath;
     
     try {
-        const client = getClient();
-        const { data } = client.storage.from('room').getPublicUrl(imagePath);
-        return data?.publicUrl || 'https://via.placeholder.com/600x300?text=No+Room+Image+Available';
+      const client = getClient();
+        // Corrected bucket name from 'room' to 'hotel-media' based on your Supabase storage
+        const { data } = client.storage.from('hotel-media').getPublicUrl(imagePath);
+        return data?.publicUrl || DEFAULT_PLACEHOLDER;
     } catch(e) {
-        return 'https://via.placeholder.com/600x300?text=No+Room+Image+Available';
+        return DEFAULT_PLACEHOLDER;
     }
 }
 
