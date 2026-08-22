@@ -568,18 +568,26 @@ window.loadCustomerHotelPackages = async function() {
    Hotel Booking Modal & Price Engine
    ========================================= */
 
+// Reliable Unsplash Fallback Image (No Timeout Issue)
+const FALLBACK_ROOM_IMAGE = "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=600&q=80";
+
 // 1. Storage bucket se image URL resolve karne ka helper
 function getHotelRoomImageUrl(imagePath) {
-    if (!imagePath) return 'https://via.placeholder.com/600x300?text=No+Room+Image+Available';
-    if (imagePath.startsWith('http')) return imagePath;
+    if (!imagePath || imagePath.trim() === '' || imagePath === 'undefined' || imagePath === 'null') {
+        return FALLBACK_ROOM_IMAGE;
+    }
+    
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return imagePath;
+    }
     
     try {
-      const client = getClient();
+        const client = getClient();
         // Corrected bucket name from 'room' to 'hotel-media' based on your Supabase storage
         const { data } = client.storage.from('hotel-media').getPublicUrl(imagePath);
-        return data?.publicUrl || DEFAULT_PLACEHOLDER;
+        return data?.publicUrl || FALLBACK_ROOM_IMAGE;
     } catch(e) {
-        return DEFAULT_PLACEHOLDER;
+        return FALLBACK_ROOM_IMAGE;
     }
 }
 
@@ -596,7 +604,7 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
             <button class="modal-close-btn" onclick="document.getElementById('hotel-booking-modal').remove()">✕</button>
             
             <div class="modal-image-wrapper">
-                <img src="${imageUrl}" alt="${roomType}" class="modal-room-img" onerror="this.src='https://via.placeholder.com/600x300?text=Hotel+Room'">
+                <img src="${imageUrl}" alt="${roomType}" class="modal-room-img" onerror="this.onerror=null; this.src='${FALLBACK_ROOM_IMAGE}';">
             </div>
 
             <div class="modal-content-body">
