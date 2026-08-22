@@ -525,13 +525,16 @@ window.loadCustomerHotelPackages = async function() {
             
             // Hotel Details & Location Mapping (city/address format)
             const hotelObj = item.hotels || {};
-            const hotelName = item.hotel_name || item.property_name || 'Registered Hotel Partner 🏨';
+            const hotelName = item.hotel_name || item.property_name || hotelObj.hotel_name || 'Registered Hotel Partner 🏨';
             
             const city = hotelObj.city || item.city || 'N/A';
             const address = hotelObj.address || item.address || 'N/A';
             const location = `${city}/${address}`;
 
             const roomType = item.category_name || item.room_type || item.title || 'Standard Room';
+
+            // Room Image Path Handling
+            const roomImg = item.image || item.image_url || item.room_image || '';
 
             return `
             <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">
@@ -552,7 +555,10 @@ window.loadCustomerHotelPackages = async function() {
                 </div>
 
                 <div style="padding:15px 25px; background:#f9f9f9; border-top:1px solid #eee;">
-                    <button onclick="alert('Hotel Booking Request sent! Our hotel manager will reach out shortly.')" style="background:#3498db; color:white; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">BOOK ROOM STOCK</button>
+                    <button onclick="openHotelBookingModal('${hotelName.replace(/'/g, "\\'")}', '${city.replace(/'/g, "\\'")}', '${address.replace(/'/g, "\\'")}', '${roomType.replace(/'/g, "\\'")}', ${price}, ${availableRooms}, '${roomImg}')" 
+                            style="background:#3498db; color:white; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
+                        BOOK ROOM STOCK
+                    </button>
                 </div>
             </div>`;
         }).join('');
@@ -562,7 +568,119 @@ window.loadCustomerHotelPackages = async function() {
         container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
     }
 };
+/* =========================================
+   Hotel Booking Modal & Price Engine
+   ========================================= */
 
+// 1. Storage bucket se image URL generate karne ka helper
+function getHotelRoomImageUrl(imagePath) {
+    if (!imagePath) return 'https://via.placeholder.com/600x300?text=No+Room+Image+Available';
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    const client = getClient();
+    const { data } = client.storage.from('room').getPublicUrl(imagePath);
+    return data?.publicUrl || 'https://via.placeholder.com/600x300?text=No+Room+Image+Available';
+}
+
+// 2. Booking Modal Open karne ka Main Engine
+window.openHotelBookingModal = function(hotelName, city, address, roomType, pricePerNight, maxAvailableRooms, imagePath) {
+    // Purana modal ho toh pehle remove karein
+    const existingModal = document.getElementById('hotel-booking-modal');
+    if (existingModal) existingModal.remove();
+
+    const imageUrl = getHotelRoomImageUrl(imagePath);
+
+    const modalHTML = `
+    <div id="hotel-booking-modal" class="custom-modal-overlay">
+        <div class="custom-modal-card">
+            <button class="modal-close-btn" onclick="document.getElementById('hotel-booking-modal').remove()">✕</button>
+            
+            <div class="modal-image-wrapper">
+                <img src="${imageUrl}" alt="${roomType}" class="modal-room-img" onerror="this.src='https://via.placeholder.com/600x300?text=Hotel+Room'">
+            </div>
+
+            <div class="modal-content-body">
+                <h2 style="margin:0 0 5px 0; color:#2d3436;">${hotelName}</h2>
+                <p style="margin:0 0 15px 0; color:#636e72; font-size:13px;">📍 ${city}, ${address}</p>
+                <div style="background:#f8f9fa; padding:10px 15px; border-radius:8px; margin-bottom:20px;">
+                    <span style="font-weight:bold; color:#2c3e50;">🛏️ Category: ${roomType}</span>
+                </div>
+
+                <div class="booking-form-grid">
+                    <div>
+                        <label style="display:block; font-size:12px; font-weight:bold; color:#636e72; margin-bottom:5px;">PRICE PER NIGHT</label>
+                        <div style="font-size:18px; font-weight:bold; color:#2ecc71;">₹${pricePerNight}</div>
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size:12px; font-weight:bold; color:#636e72; margin-bottom:5px;">ROOMS TO BOOK (Max: ${maxAvailableRooms})</label>
+                        <input type="number" id="modal-room-qty" min="1" max="${maxAvailableRooms}" value="1" 
+                               oninput="calculateHotelTotalPrice(${pricePerNight}, ${maxAvailableRooms})" 
+                               style="width:100%; padding:10px; border:2px solid #e2e8f0; border-radius:8px; font-size:15px; font-weight:bold;">
+                    </div>
+                </div>
+
+                <!-- Live Dynamic Calculation Screen -->
+                <div style="margin:20px 0; padding:15px; background:#eef2f7; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:14px; color:#34495e; font-weight:bold;">Total Amount:</span>
+                    <span id="modal-total-price-display" style="font-size:22px; font-weight:bold; color:#e67e22;">
+                        ₹${pricePerNight} x 1 = ₹${pricePerNight}
+                    </span>
+                </div>
+
+                <!-- Terms & Mandatory Checkbox -->
+                <div style="margin-bottom:20px;">
+                    <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; font-size:12px; color:#4a5568; line-height:1.4;">
+                        <input type="checkbox" id="modal-agree-terms" style="margin-top:3px; cursor:pointer;">
+                        <span>I agree to the <b>Cancellation & Refund Policy</b>. I understand that in case of cancellation, a non-refundable amount of <b>9% (2% Gateway + 7% Service & Facilitation Fee)</b> will be deducted from my total refund.</span>
+                    </label>
+                </div>
+
+                <button id="modal-confirm-btn" onclick="submitHotelRoomBooking(${pricePerNight})" 
+                        style="width:100%; padding:14px; background:#27ae60; color:white; border:none; border-radius:10px; font-weight:bold; font-size:16px; cursor:pointer;">
+                    CONFIRM & PROCEED TO BOOK
+                </button>
+            </div>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+};
+
+// 3. Real-time Price Validator Function
+window.calculateHotelTotalPrice = function(pricePerNight, maxAvailableRooms) {
+    const qtyInput = document.getElementById('modal-room-qty');
+    const display = document.getElementById('modal-total-price-display');
+    let qty = parseInt(qtyInput.value) || 0;
+
+    // Strict Max/Min Restraint Logic
+    if (qty > maxAvailableRooms) {
+        alert(`Maximum available rooms limit is ${maxAvailableRooms}`);
+        qty = maxAvailableRooms;
+        qtyInput.value = maxAvailableRooms;
+    } else if (qty < 1) {
+        qty = 1;
+        qtyInput.value = 1;
+    }
+
+    const total = pricePerNight * qty;
+    display.innerHTML = `₹${pricePerNight} x ${qty} = ₹${total}`;
+};
+
+// 4. Booking Form Validation Trigger
+window.submitHotelRoomBooking = function(pricePerNight) {
+    const checkbox = document.getElementById('modal-agree-terms');
+    const qty = parseInt(document.getElementById('modal-room-qty').value) || 1;
+
+    if (!checkbox.checked) {
+        alert("Please accept the Cancellation & Refund Policy terms to proceed.");
+        return;
+    }
+
+    const totalAmount = pricePerNight * qty;
+    alert(`🎉 Success! Booking request for ${qty} room(s) [Total: ₹${totalAmount}] has been submitted.`);
+    document.getElementById('hotel-booking-modal').remove();
+};
 // Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
 window.triggerDeactivateModalPopup = function() {
     let modal = document.getElementById('deactivate-confirmation-modal');
