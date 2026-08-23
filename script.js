@@ -810,6 +810,58 @@ window.submitHotelRoomBooking = async function(hotelName, roomType, location, pr
         alert(`Booking failed: ${err.message}`);
     }
 };
+// Customer ki hotel requests fetch karke UI par dikhane ka function
+async function loadCustomerRequests() {
+  const requestsListDiv = document.getElementById('requests-list');
+  requestsListDiv.innerHTML = '<p>Loading requests...</p>';
+
+  // 1. Current logged-in user get karein
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    requestsListDiv.innerHTML = '<p>User not logged in.</p>';
+    return;
+  }
+
+  // 2. hotel_bookings table se customer ki requests fetch karein
+  const { data: bookings, error } = await supabase
+    .from('hotel_bookings')
+    .select('*')
+    .eq('customer_id', user.id) // customer_id ki jagah apne user foreign key column ka naam rakhein
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching requests:', error.message);
+    requestsListDiv.innerHTML = '<p>Requests load karne me problem aayi.</p>';
+    return;
+  }
+
+  // 3. Agar koi request nahi hai
+  if (!bookings || bookings.length === 0) {
+    requestsListDiv.innerHTML = '<p>Aapki koi hotel request nahi hai.</p>';
+    return;
+  }
+
+  // 4. Data ko UI par render karein
+  requestsListDiv.innerHTML = bookings.map(booking => `
+    <div class="request-card" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+      <h4>Hotel Name: ${booking.hotel_name || 'N/A'}</h4>
+      <p><strong>Check-in:</strong> ${booking.check_in_date || 'N/A'}</p>
+      <p><strong>Check-out:</strong> ${booking.check_out_date || 'N/A'}</p>
+      <p><strong>Status:</strong> <span class="status-${booking.status}">${booking.status || 'Pending'}</span></p>
+      <p><strong>Price:</strong> ₹${booking.price || '0'}</p>
+    </div>
+  `).join('');
+}
+
+// 5. 'My Requests' button par Event Listener attach karein
+document.getElementById('my-requests-btn').addEventListener('click', () => {
+  // Baaki sections hide karke My Requests section show karein
+  showSection('my-requests-section'); 
+  
+  // Data fetch karein
+  loadCustomerRequests();
+});
 // Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
 window.triggerDeactivateModalPopup = function() {
     let modal = document.getElementById('deactivate-confirmation-modal');
