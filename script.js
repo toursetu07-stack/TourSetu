@@ -855,7 +855,13 @@ async function loadCustomerRequests() {
 }
 
 // 5. 'My Requests' button par Event Listener attach karein
-document.getElementById('my-requests-btn').addEventListener('click', () => {
+const myRequestsBtn = document.getElementById('my-requests-btn');
+if (myRequestsBtn) {
+    myRequestsBtn.addEventListener('click', () => {
+        showSection('my-requests-section');
+        loadCustomerRequests();
+    });
+}
   // Baaki sections hide karke My Requests section show karein
   showSection('my-requests-section'); 
   
