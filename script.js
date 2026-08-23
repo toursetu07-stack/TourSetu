@@ -853,21 +853,17 @@ async function loadCustomerRequests() {
     </div>
   `).join('');
 }
-
 // 5. 'My Requests' button par Event Listener attach karein
 const myRequestsBtn = document.getElementById('my-requests-btn');
 if (myRequestsBtn) {
     myRequestsBtn.addEventListener('click', () => {
-        showSection('my-requests-section');
+        // Baaki sections hide karke My Requests section show karein
+        showSection('my-requests-section'); 
+        
+        // Data fetch karein
         loadCustomerRequests();
     });
 }
-  // Baaki sections hide karke My Requests section show karein
-  showSection('my-requests-section'); 
-  
-  // Data fetch karein
-  loadCustomerRequests();
-);
 // Global Deactivation Popup Engine (Problem 3 Confirmation Modal)
 window.triggerDeactivateModalPopup = function() {
     let modal = document.getElementById('deactivate-confirmation-modal');
