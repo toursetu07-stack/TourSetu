@@ -6639,7 +6639,6 @@ async function renderArrivalsAndPayouts(container, user) {
 
     container.innerHTML = `
         <div style="max-width:1100px;margin:auto;">
-
             <h1 style="margin:0;color:#1e272e;">
                 📋 Arrivals & Payout
             </h1>
@@ -6656,13 +6655,11 @@ async function renderArrivalsAndPayouts(container, user) {
             <div id="hotel-arrivals-payout-list">
                 Loading requests...
             </div>
-
         </div>
     `;
 
     const list =
         document.getElementById('hotel-arrivals-payout-list');
-
 
     try {
 
@@ -6679,9 +6676,7 @@ async function renderArrivalsAndPayouts(container, user) {
 
         if (hotelError) throw hotelError;
 
-
         if (!hotel) {
-
             list.innerHTML = `
                 <div style="
                     background:white;
@@ -6692,130 +6687,87 @@ async function renderArrivalsAndPayouts(container, user) {
                     Hotel profile not found.
                 </div>
             `;
-
             return;
         }
 
-
-        /*
-         * IMPORTANT:
-         *
-         * Some code in your project uses hotel_id,
-         * some places use id.
-         *
-         * So we keep your existing fallback.
-         */
-
-        const hotelId =
-            hotel.hotel_id || hotel.id;
+        const hotelId = hotel.hotel_id || hotel.id;
 
 
         /* ============================================================
-           2. GET THIS HOTEL'S ROOM CATEGORIES FIRST
-           
-           THIS IS THE IMPORTANT FIX.
-           
-           We don't fetch every hotel booking and then guess
-           which hotel it belongs to.
-           
-           First we find room_categories belonging to THIS hotel.
-           Then we find hotel_bookings using those category IDs.
+           2. CUSTOMER DIRECT HOTEL BOOKINGS
+              hotel_bookings -> room_categories -> hotel_id
            ============================================================ */
 
-        const {
-            data: hotelCategories,
-            error: categoryError
-        } = await client
-            .from('room_categories')
-            .select('id, hotel_id, room_type')
-            .eq('hotel_id', hotelId);
+        const { data: hotelBookings, error: hotelBookingError } =
+            await client
+                .from('hotel_bookings')
+                .select('*')
+                .order('created_at', { ascending:false });
 
-
-        if (categoryError) throw categoryError;
+        if (hotelBookingError) throw hotelBookingError;
 
 
         const categoryIds =
-            (hotelCategories || [])
-                .map(category => category.id)
+            (hotelBookings || [])
+                .map(b => b.room_category_id)
                 .filter(Boolean);
+
+
+        let categories = [];
+
+        if (categoryIds.length > 0) {
+
+            const { data: categoryData, error: categoryError } =
+                await client
+                    .from('room_categories')
+                    .select('id,hotel_id,room_type')
+                    .in('id', categoryIds);
+
+            if (categoryError) throw categoryError;
+
+            categories = categoryData || [];
+        }
 
 
         const categoryMap = {};
 
-
-        (hotelCategories || []).forEach(category => {
-
-            categoryMap[String(category.id)] =
-                category;
-
+        categories.forEach(c => {
+            categoryMap[c.id] = c;
         });
 
 
-        /* ============================================================
-           3. CUSTOMER DIRECT HOTEL BOOKINGS
-           
-           ONLY FETCH BOOKINGS WHICH BELONG TO THIS HOTEL'S
-           ROOM CATEGORIES.
-           ============================================================ */
+        const customerHotelBookings =
+            (hotelBookings || []).filter(b => {
 
-        let customerHotelBookings = [];
+                const category =
+                    categoryMap[b.room_category_id];
 
-
-        if (categoryIds.length > 0) {
-
-            const {
-                data: hotelBookings,
-                error: hotelBookingError
-            } = await client
-                .from('hotel_bookings')
-                .select('*')
-                .in('room_category_id', categoryIds)
-                .order('created_at', {
-                    ascending: false
-                });
-
-
-            if (hotelBookingError) {
-
-                throw hotelBookingError;
-
-            }
-
-
-            customerHotelBookings =
-                hotelBookings || [];
-
-        }
-
-
-        /* ============================================================
-           4. AGENCY / EXISTING HOTEL REQUESTS
-           ============================================================ */
-
-        const {
-            data: agencyHotelRequests,
-            error: agencyError
-        } = await client
-            .from('hotel_requests')
-            .select('*, rooms(*)')
-            .eq('hotel_id', hotelId)
-            .order('created_at', {
-                ascending: false
+                return category &&
+                    String(category.hotel_id) === String(hotelId);
             });
 
 
-        if (agencyError) {
+        /* ============================================================
+           3. AGENCY / EXISTING HOTEL REQUESTS
+           ============================================================ */
 
+        const { data: agencyHotelRequests, error: agencyError } =
+            await client
+                .from('hotel_requests')
+                .select('*, rooms(*)')
+                .eq('hotel_id', hotelId)
+                .order('created_at', { ascending:false });
+
+        if (agencyError) {
             console.warn(
                 "hotel_requests fetch warning:",
                 agencyError.message
             );
-
         }
 
 
         /* ============================================================
-           5. CUSTOMER HOTEL BOOKING CARDS
+           4. CUSTOMER HOTEL BOOKING CARDS
            ============================================================ */
 
         let html = '';
@@ -6824,49 +6776,30 @@ async function renderArrivalsAndPayouts(container, user) {
         customerHotelBookings.forEach(b => {
 
             const status =
-                String(
-                    b.booking_status ||
-                    'pending'
-                ).toLowerCase();
-
+                String(b.booking_status || 'pending')
+                    .toLowerCase();
 
             const payment =
-                String(
-                    b.payment_status ||
-                    'unpaid'
-                ).toLowerCase();
-
+                String(b.payment_status || 'unpaid')
+                    .toLowerCase();
 
             const amount =
-                Number(
-                    b.total_amount || 0
-                );
-
+                Number(b.total_amount || 0);
 
             const canAct =
                 status === 'pending';
-
 
             const isCancelled =
                 status === 'cancelled' ||
                 status === 'cancelled_by_customer';
 
-
             const isDenied =
                 status === 'denied' ||
                 status === 'rejected';
 
-
             const isApproved =
                 status === 'approved' ||
                 status === 'confirmed';
-
-
-            const category =
-                categoryMap[
-                    String(b.room_category_id)
-                ] || {};
-
 
             html += `
                 <div style="
@@ -6907,28 +6840,21 @@ async function renderArrivalsAndPayouts(container, user) {
                                 🏨 CUSTOMER HOTEL REQUEST
                             </span>
 
-
                             <h3 style="
                                 margin:10px 0 5px;
                                 color:#2d3436;
                             ">
-                                ${
-                                    b.hotel_name ||
-                                    'Registered Hotel'
-                                }
+                                ${b.hotel_name || 'Registered Hotel'}
                             </h3>
-
 
                             <div style="
                                 font-size:13px;
                                 color:#636e72;
                             ">
-                                📍
-                                ${b.location || 'N/A'}
+                                📍 ${b.location || 'N/A'}
                             </div>
 
                         </div>
-
 
                         <div style="text-align:right;">
 
@@ -6939,7 +6865,6 @@ async function renderArrivalsAndPayouts(container, user) {
                             ">
                                 ₹${amount.toLocaleString('en-IN')}
                             </div>
-
 
                             <span style="
                                 display:inline-block;
@@ -6964,55 +6889,28 @@ async function renderArrivalsAndPayouts(container, user) {
                         padding:15px;
                         border-radius:10px;
                         display:grid;
-                        grid-template-columns:
-                            repeat(
-                                auto-fit,
-                                minmax(180px,1fr)
-                            );
+                        grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
                         gap:12px;
                         font-size:13px;
                     ">
 
                         <div>
-                            📅
-                            <b>Check-in</b>
-                            <br>
+                            📅 <b>Check-in</b><br>
                             ${b.check_in_date || 'N/A'}
                         </div>
 
-
                         <div>
-                            📅
-                            <b>Check-out</b>
-                            <br>
+                            📅 <b>Check-out</b><br>
                             ${b.check_out_date || 'N/A'}
                         </div>
 
-
                         <div>
-                            🛏️
-                            <b>Rooms</b>
-                            <br>
+                            🛏️ <b>Rooms</b><br>
                             ${b.rooms_booked || 0}
                         </div>
 
-
                         <div>
-                            🛏️
-                            <b>Room Type</b>
-                            <br>
-                            ${
-                                b.room_type ||
-                                category.room_type ||
-                                'N/A'
-                            }
-                        </div>
-
-
-                        <div>
-                            💳
-                            <b>Payment</b>
-                            <br>
+                            💳 <b>Payment</b><br>
                             ${payment.toUpperCase()}
                         </div>
 
@@ -7022,32 +6920,14 @@ async function renderArrivalsAndPayouts(container, user) {
                     ${
                         b.customer_email
                         ? `
-                            <div style="
-                                margin-top:12px;
-                                font-size:13px;
-                                color:#555;
-                            ">
-                                👤
-                                <b>Customer:</b>
-                                ${b.customer_email}
-                            </div>
-                        `
-                        : ''
-                    }
-
-
-                    ${
-                        b.customer_phone
-                        ? `
-                            <div style="
-                                margin-top:6px;
-                                font-size:13px;
-                                color:#555;
-                            ">
-                                📞
-                                <b>Phone:</b>
-                                ${b.customer_phone}
-                            </div>
+                        <div style="
+                            margin-top:12px;
+                            font-size:13px;
+                            color:#555;
+                        ">
+                            👤 <b>Customer:</b>
+                            ${b.customer_email}
+                        </div>
                         `
                         : ''
                     }
@@ -7056,30 +6936,28 @@ async function renderArrivalsAndPayouts(container, user) {
                     ${
                         isCancelled
                         ? `
+                        <div style="
+                            margin-top:15px;
+                            background:#fff5f5;
+                            color:#c0392b;
+                            padding:14px;
+                            border-radius:9px;
+                            border:1px solid #ff7675;
+                            font-size:13px;
+                            font-weight:bold;
+                        ">
+                            🚫 CUSTOMER CANCELLATION
+
                             <div style="
-                                margin-top:15px;
-                                background:#fff5f5;
-                                color:#c0392b;
-                                padding:14px;
-                                border-radius:9px;
-                                border:1px solid #ff7675;
-                                font-size:13px;
-                                font-weight:bold;
+                                margin-top:6px;
+                                font-weight:normal;
                             ">
-
-                                🚫 CUSTOMER CANCELLATION
-
-                                <div style="
-                                    margin-top:6px;
-                                    font-weight:normal;
-                                ">
-                                    ${
-                                        b.cancellation_reason ||
-                                        'Customer cancelled this booking request.'
-                                    }
-                                </div>
-
+                                ${
+                                    b.cancellation_reason ||
+                                    'Customer cancelled this booking request.'
+                                }
                             </div>
+                        </div>
                         `
                         : ''
                     }
@@ -7088,28 +6966,21 @@ async function renderArrivalsAndPayouts(container, user) {
                     ${
                         isDenied
                         ? `
-                            <div style="
-                                margin-top:15px;
-                                background:#fff5f5;
-                                color:#c0392b;
-                                padding:14px;
-                                border-radius:9px;
-                                border:1px solid #ff7675;
-                                font-size:13px;
-                            ">
+                        <div style="
+                            margin-top:15px;
+                            background:#fff5f5;
+                            color:#c0392b;
+                            padding:14px;
+                            border-radius:9px;
+                            border:1px solid #ff7675;
+                            font-size:13px;
+                        ">
+                            ❌ REQUEST DENIED
 
-                                ❌ REQUEST DENIED
-
-                                <div style="
-                                    margin-top:5px;
-                                ">
-                                    ${
-                                        b.owner_message ||
-                                        'Request was denied by hotel owner.'
-                                    }
-                                </div>
-
+                            <div style="margin-top:5px;">
+                                ${b.owner_message || 'Request was denied by hotel owner.'}
                             </div>
+                        </div>
                         `
                         : ''
                     }
@@ -7118,57 +6989,49 @@ async function renderArrivalsAndPayouts(container, user) {
                     ${
                         isApproved
                         ? `
+                        <div style="
+                            margin-top:15px;
+                            background:#f0fff4;
+                            color:#27ae60;
+                            padding:14px;
+                            border-radius:9px;
+                            border:1px solid #2ecc71;
+                            font-size:13px;
+                        ">
+                            ✅ REQUEST ACCEPTED
+
                             <div style="
-                                margin-top:15px;
-                                background:#f0fff4;
-                                color:#27ae60;
-                                padding:14px;
-                                border-radius:9px;
-                                border:1px solid #2ecc71;
-                                font-size:13px;
+                                margin-top:6px;
+                                color:#444;
                             ">
-
-                                ✅ REQUEST ACCEPTED
-
-                                <div style="
-                                    margin-top:6px;
-                                    color:#444;
-                                ">
-                                    ${
-                                        b.owner_message ||
-                                        'Request accepted. Customer can now proceed with payment.'
-                                    }
-                                </div>
-
-
                                 ${
-                                    b.payment_contact_number
-                                    ? `
-                                        <div style="margin-top:7px;">
-                                            📞
-                                            Payment Number:
-                                            <b>
-                                                ${b.payment_contact_number}
-                                            </b>
-                                        </div>
-                                    `
-                                    : ''
+                                    b.owner_message ||
+                                    'Request accepted. Customer can now proceed with payment.'
                                 }
-
-
-                                ${
-                                    b.payment_instructions
-                                    ? `
-                                        <div style="margin-top:7px;">
-                                            💳
-                                            Payment Instructions:
-                                            ${b.payment_instructions}
-                                        </div>
-                                    `
-                                    : ''
-                                }
-
                             </div>
+
+                            ${
+                                b.payment_contact_number
+                                ? `
+                                <div style="margin-top:7px;">
+                                    📞 Payment Number:
+                                    <b>${b.payment_contact_number}</b>
+                                </div>
+                                `
+                                : ''
+                            }
+
+                            ${
+                                b.payment_instructions
+                                ? `
+                                <div style="margin-top:7px;">
+                                    💳 Payment Instructions:
+                                    ${b.payment_instructions}
+                                </div>
+                                `
+                                : ''
+                            }
+                        </div>
                         `
                         : ''
                     }
@@ -7177,54 +7040,45 @@ async function renderArrivalsAndPayouts(container, user) {
                     ${
                         canAct
                         ? `
-                            <div style="
-                                display:flex;
-                                gap:10px;
-                                margin-top:18px;
-                            ">
+                        <div style="
+                            display:flex;
+                            gap:10px;
+                            margin-top:18px;
+                        ">
 
-                                <button
-                                    onclick="
-                                        approveCustomerHotelBooking(
-                                            '${b.id}'
-                                        )
-                                    "
-                                    style="
-                                        flex:1;
-                                        background:#2ecc71;
-                                        color:white;
-                                        border:none;
-                                        padding:12px;
-                                        border-radius:8px;
-                                        font-weight:bold;
-                                        cursor:pointer;
-                                    "
-                                >
-                                    ✅ APPROVE
-                                </button>
+                            <button
+                                onclick="approveCustomerHotelBooking('${b.id}')"
+                                style="
+                                    flex:1;
+                                    background:#2ecc71;
+                                    color:white;
+                                    border:none;
+                                    padding:12px;
+                                    border-radius:8px;
+                                    font-weight:bold;
+                                    cursor:pointer;
+                                "
+                            >
+                                ✅ APPROVE
+                            </button>
 
+                            <button
+                                onclick="denyCustomerHotelBooking('${b.id}')"
+                                style="
+                                    flex:1;
+                                    background:#e74c3c;
+                                    color:white;
+                                    border:none;
+                                    padding:12px;
+                                    border-radius:8px;
+                                    font-weight:bold;
+                                    cursor:pointer;
+                                "
+                            >
+                                ❌ DENY
+                            </button>
 
-                                <button
-                                    onclick="
-                                        denyCustomerHotelBooking(
-                                            '${b.id}'
-                                        )
-                                    "
-                                    style="
-                                        flex:1;
-                                        background:#e74c3c;
-                                        color:white;
-                                        border:none;
-                                        padding:12px;
-                                        border-radius:8px;
-                                        font-weight:bold;
-                                        cursor:pointer;
-                                    "
-                                >
-                                    ❌ DENY
-                                </button>
-
-                            </div>
+                        </div>
                         `
                         : ''
                     }
@@ -7238,50 +7092,30 @@ async function renderArrivalsAndPayouts(container, user) {
                         color:#999;
                     ">
                         Booking ID:
-                        ${
-                            b.id
-                            ? String(b.id).slice(0,8)
-                            : 'N/A'
-                        }
-
-                        <br>
-
-                        Room Category ID:
-                        ${
-                            b.room_category_id ||
-                            'N/A'
-                        }
-
+                        ${b.id ? String(b.id).slice(0,8) : 'N/A'}
                     </div>
 
                 </div>
             `;
-
         });
 
 
         /* ============================================================
-           6. AGENCY HOTEL REQUEST CARDS
+           5. AGENCY HOTEL REQUEST CARDS
            ============================================================ */
 
         (agencyHotelRequests || []).forEach(req => {
 
             const status =
-                String(
-                    req.status ||
-                    'pending'
-                ).toLowerCase();
+                String(req.status || 'pending')
+                    .toLowerCase();
 
-
-            const isPending =
-                status === 'pending';
-
+            const isPending = status === 'pending';
 
             const isCancelled =
                 status === 'cancelled' ||
                 status === 'denied' ||
                 status === 'rejected';
-
 
             html += `
                 <div style="
@@ -7298,7 +7132,6 @@ async function renderArrivalsAndPayouts(container, user) {
                     margin-bottom:18px;
                     box-shadow:0 3px 12px rgba(0,0,0,0.05);
                 ">
-
 
                     <div style="
                         display:flex;
@@ -7317,25 +7150,18 @@ async function renderArrivalsAndPayouts(container, user) {
                                 font-weight:bold;
                             ">
                                 ${
-                                    String(
-                                        req.requester_type ||
-                                        'agency'
-                                    ).toUpperCase()
+                                    String(req.requester_type || 'agency')
+                                        .toUpperCase()
                                 }
                                 HOTEL REQUEST
                             </span>
-
 
                             <h3 style="
                                 margin:10px 0 5px;
                                 color:#2d3436;
                             ">
-                                ${
-                                    req.rooms?.room_type ||
-                                    'Room Request'
-                                }
+                                ${req.rooms?.room_type || 'Room Request'}
                             </h3>
-
 
                             <div style="
                                 font-size:13px;
@@ -7353,16 +7179,11 @@ async function renderArrivalsAndPayouts(container, user) {
 
                         </div>
 
-
                         <div style="
                             font-weight:bold;
                             color:#2ecc71;
                         ">
-                            ₹${
-                                Number(
-                                    req.total_amount || 0
-                                ).toLocaleString('en-IN')
-                            }
+                            ₹${Number(req.total_amount || 0).toLocaleString('en-IN')}
                         </div>
 
                     </div>
@@ -7398,27 +7219,20 @@ async function renderArrivalsAndPayouts(container, user) {
                     ${
                         status === 'approved'
                         ? `
-                            <div style="
-                                margin-top:15px;
-                                background:#f0fff4;
-                                color:#27ae60;
-                                padding:13px;
-                                border-radius:8px;
-                            ">
+                        <div style="
+                            margin-top:15px;
+                            background:#f0fff4;
+                            color:#27ae60;
+                            padding:13px;
+                            border-radius:8px;
+                        ">
+                            ✅ REQUEST ACCEPTED
 
-                                ✅ REQUEST ACCEPTED
-
-                                <div style="margin-top:5px;">
-                                    Payment instructions:
-                                    <b>
-                                        ${
-                                            req.payment_details ||
-                                            'N/A'
-                                        }
-                                    </b>
-                                </div>
-
+                            <div style="margin-top:5px;">
+                                Payment instructions:
+                                <b>${req.payment_details || 'N/A'}</b>
                             </div>
+                        </div>
                         `
                         : ''
                     }
@@ -7427,24 +7241,22 @@ async function renderArrivalsAndPayouts(container, user) {
                     ${
                         isCancelled
                         ? `
-                            <div style="
-                                margin-top:15px;
-                                background:#fff5f5;
-                                color:#c0392b;
-                                padding:13px;
-                                border-radius:8px;
-                            ">
+                        <div style="
+                            margin-top:15px;
+                            background:#fff5f5;
+                            color:#c0392b;
+                            padding:13px;
+                            border-radius:8px;
+                        ">
+                            🚫 REQUEST CANCELLED / DENIED
 
-                                🚫 REQUEST CANCELLED / DENIED
-
-                                <div style="margin-top:5px;">
-                                    ${
-                                        req.cancellation_reason ||
-                                        'This hotel request was cancelled or denied.'
-                                    }
-                                </div>
-
+                            <div style="margin-top:5px;">
+                                ${
+                                    req.cancellation_reason ||
+                                    'This hotel request was cancelled or denied.'
+                                }
                             </div>
+                        </div>
                         `
                         : ''
                     }
@@ -7453,69 +7265,53 @@ async function renderArrivalsAndPayouts(container, user) {
                     ${
                         isPending
                         ? `
-                            <div style="
-                                display:flex;
-                                gap:10px;
-                                margin-top:18px;
-                            ">
+                        <div style="
+                            display:flex;
+                            gap:10px;
+                            margin-top:18px;
+                        ">
 
-                                <button
-                                    onclick="
-                                        processAgencyHotelRequestFromArrivals(
-                                            '${req.request_id}',
-                                            'approve'
-                                        )
-                                    "
-                                    style="
-                                        flex:1;
-                                        background:#2ecc71;
-                                        color:white;
-                                        border:none;
-                                        padding:12px;
-                                        border-radius:8px;
-                                        font-weight:bold;
-                                        cursor:pointer;
-                                    "
-                                >
-                                    ✅ APPROVE
-                                </button>
+                            <button
+                                onclick="processAgencyHotelRequestFromArrivals('${req.request_id}','approve')"
+                                style="
+                                    flex:1;
+                                    background:#2ecc71;
+                                    color:white;
+                                    border:none;
+                                    padding:12px;
+                                    border-radius:8px;
+                                    font-weight:bold;
+                                    cursor:pointer;
+                                "
+                            >
+                                ✅ APPROVE
+                            </button>
 
+                            <button
+                                onclick="processAgencyHotelRequestFromArrivals('${req.request_id}','deny')"
+                                style="
+                                    flex:1;
+                                    background:#e74c3c;
+                                    color:white;
+                                    border:none;
+                                    padding:12px;
+                                    border-radius:8px;
+                                    font-weight:bold;
+                                    cursor:pointer;
+                                "
+                            >
+                                ❌ DENY
+                            </button>
 
-                                <button
-                                    onclick="
-                                        processAgencyHotelRequestFromArrivals(
-                                            '${req.request_id}',
-                                            'deny'
-                                        )
-                                    "
-                                    style="
-                                        flex:1;
-                                        background:#e74c3c;
-                                        color:white;
-                                        border:none;
-                                        padding:12px;
-                                        border-radius:8px;
-                                        font-weight:bold;
-                                        cursor:pointer;
-                                    "
-                                >
-                                    ❌ DENY
-                                </button>
-
-                            </div>
+                        </div>
                         `
                         : ''
                     }
 
                 </div>
             `;
-
         });
 
-
-        /* ============================================================
-           7. NO REQUESTS
-           ============================================================ */
 
         if (!html) {
 
@@ -7527,16 +7323,10 @@ async function renderArrivalsAndPayouts(container, user) {
                     text-align:center;
                     color:#777;
                 ">
-
-                    <h3>
-                        No hotel booking requests yet.
-                    </h3>
-
+                    <h3>No hotel booking requests yet.</h3>
                     <p>
-                        Customer and agency hotel requests
-                        will appear here.
+                        Customer and agency hotel requests will appear here.
                     </p>
-
                 </div>
             `;
 
@@ -7545,7 +7335,6 @@ async function renderArrivalsAndPayouts(container, user) {
             list.innerHTML = html;
 
         }
-
 
     } catch (err) {
 
@@ -7561,14 +7350,10 @@ async function renderArrivalsAndPayouts(container, user) {
                 padding:20px;
                 border-radius:10px;
             ">
-
                 ❌ Failed to load Arrivals & Payout:
-
                 ${err.message}
-
             </div>
         `;
-
     }
 }
 
@@ -7587,10 +7372,8 @@ async function toggleStopSell(hotelId) {
             .eq('id', hotelId)
             .single();
 
-
     const newStatus =
         !hotel?.is_stop_sell;
-
 
     await client
         .from('hotels')
@@ -7599,27 +7382,23 @@ async function toggleStopSell(hotelId) {
         })
         .eq('id', hotelId);
 
+    if (newStatus) {
 
-    if (btn) {
-
-        if (newStatus) {
-
-            btn.style.background =
-                '#e74c3c';
+        if (btn) {
+            btn.style.background = '#e74c3c';
 
             btn.innerText =
                 '🔴 STOP SELL ACTIVE (Property Closed)';
+        }
 
-        } else {
+    } else {
 
-            btn.style.background =
-                '#2ecc71';
+        if (btn) {
+            btn.style.background = '#2ecc71';
 
             btn.innerText =
                 '🟢 Normal Selling Mode';
-
         }
-
     }
 }
 
@@ -7638,24 +7417,18 @@ async function fetchHotelProfile(userId) {
 
     try {
 
-        const client =
-            getClient();
+        const client = getClient();
 
         if (!client) return null;
 
-
-        const {
-            data: hotel,
-            error
-        } = await client
-            .from('hotels')
-            .select('*')
-            .eq('owner_id', userId)
-            .maybeSingle();
-
+        const { data: hotel, error } =
+            await client
+                .from('hotels')
+                .select('*')
+                .eq('owner_id', userId)
+                .maybeSingle();
 
         if (error) throw error;
-
 
         return hotel;
 
@@ -7667,7 +7440,6 @@ async function fetchHotelProfile(userId) {
         );
 
         return null;
-
     }
 }
 
@@ -7679,53 +7451,39 @@ async function fetchHotelProfile(userId) {
 window.showHotelTab = async function(tabName) {
 
     const container =
-        document.getElementById(
-            'hotel-main-content'
-        );
+        document.getElementById('hotel-main-content');
 
     if (!container) return;
 
-
-    const client =
-        getClient();
+    const client = getClient();
 
     if (!client) return;
 
-
-    const {
-        data: {
-            user
-        }
-    } = await client.auth.getUser();
-
+    const { data: { user } } =
+        await client.auth.getUser();
 
     if (!user) return;
 
-
     const hotel =
-        await fetchHotelProfile(
-            user.id
-        );
+        await fetchHotelProfile(user.id);
 
 
-    /* ============================================================
+    /* ========================================================
        TAB: OVERVIEW
-       ============================================================ */
+       ======================================================== */
 
     if (tabName === 'overview') {
 
         if (!hotel) {
 
             container.innerHTML = `
-                <div
-                    class="card"
+                <div class="card"
                     style="
                         background:white;
                         padding:40px;
                         border-radius:15px;
                         text-align:center;
-                    "
-                >
+                    ">
 
                     <h2>
                         Welcome Partner! 🏨
@@ -7737,9 +7495,7 @@ window.showHotelTab = async function(tabName) {
                     </p>
 
                     <button
-                        onclick="
-                            showHotelTab('property')
-                        "
+                        onclick="showHotelTab('property')"
                         style="
                             background:#ff9f43;
                             color:white;
@@ -7761,15 +7517,11 @@ window.showHotelTab = async function(tabName) {
         }
 
 
-        const {
-            data: requests
-        } = await client
-            .from('hotel_requests')
-            .select('*')
-            .eq(
-                'hotel_id',
-                hotel.hotel_id
-            );
+        const { data: requests } =
+            await client
+                .from('hotel_requests')
+                .select('*')
+                .eq('hotel_id', hotel.hotel_id);
 
 
         const pendingCount =
@@ -7789,11 +7541,9 @@ window.showHotelTab = async function(tabName) {
 
 
         container.innerHTML = `
-
             <h1>
                 Hotel Overview
             </h1>
-
 
             <div style="
                 display:grid;
@@ -7806,16 +7556,13 @@ window.showHotelTab = async function(tabName) {
                 margin-top:20px;
             ">
 
-
-                <div
-                    class="card"
+                <div class="card"
                     style="
                         background:white;
                         padding:25px;
                         border-radius:12px;
                         border-left:5px solid #ff9f43;
-                    "
-                >
+                    ">
 
                     <small style="color:#888;">
                         PROPERTY STATUS
@@ -7824,23 +7571,21 @@ window.showHotelTab = async function(tabName) {
                     <h3 style="margin:5px 0;">
                         ${
                             hotel.hide_from_search
-                            ? '🔴 Hidden (No Inventory)'
-                            : '🟢 Active & Listed'
+                                ? '🔴 Hidden (No Inventory)'
+                                : '🟢 Active & Listed'
                         }
                     </h3>
 
                 </div>
 
 
-                <div
-                    class="card"
+                <div class="card"
                     style="
                         background:white;
                         padding:25px;
                         border-radius:12px;
                         border-left:5px solid #3498db;
-                    "
-                >
+                    ">
 
                     <small style="color:#888;">
                         PENDING REQUESTS
@@ -7853,15 +7598,13 @@ window.showHotelTab = async function(tabName) {
                 </div>
 
 
-                <div
-                    class="card"
+                <div class="card"
                     style="
                         background:white;
                         padding:25px;
                         border-radius:12px;
                         border-left:5px solid #2ecc71;
-                    "
-                >
+                    ">
 
                     <small style="color:#888;">
                         CONFIRMED BOOKINGS
@@ -7875,13 +7618,12 @@ window.showHotelTab = async function(tabName) {
 
             </div>
         `;
-
     }
 
 
-    /* ============================================================
+    /* ========================================================
        TAB: PROPERTY / ROOM INVENTORY
-       ============================================================ */
+       ======================================================== */
 
     else if (
         tabName === 'property' ||
@@ -7891,24 +7633,25 @@ window.showHotelTab = async function(tabName) {
 
         const destSelectOptions =
             (
-                typeof FIXED_HOTEL_DESTINATIONS !==
-                'undefined'
-                ? FIXED_HOTEL_DESTINATIONS
-                : []
+                typeof FIXED_HOTEL_DESTINATIONS !== 'undefined'
+                    ? FIXED_HOTEL_DESTINATIONS
+                    : []
             )
-            .map(loc => `
+            .map(loc =>
+                `
                 <option
                     value="${loc}"
                     ${
                         hotel &&
                         hotel.city === loc
-                        ? 'selected'
-                        : ''
+                            ? 'selected'
+                            : ''
                     }
                 >
                     ${loc}
                 </option>
-            `)
+                `
+            )
             .join('');
 
 
@@ -7918,7 +7661,6 @@ window.showHotelTab = async function(tabName) {
                 Property & Inventory Management
             </h1>
 
-
             <div style="
                 display:grid;
                 grid-template-columns:1fr 1fr;
@@ -7927,14 +7669,12 @@ window.showHotelTab = async function(tabName) {
             ">
 
 
-                <div
-                    class="card"
+                <div class="card"
                     style="
                         background:white;
                         padding:25px;
                         border-radius:15px;
-                    "
-                >
+                    ">
 
                     <h3>
                         🏨 Property Profile
@@ -7957,13 +7697,15 @@ window.showHotelTab = async function(tabName) {
                     >
 
 
-                    <label style="
-                        font-size:12px;
-                        color:#666;
-                        font-weight:bold;
-                        display:block;
-                        margin-top:10px;
-                    ">
+                    <label
+                        style="
+                            font-size:12px;
+                            color:#666;
+                            font-weight:bold;
+                            display:block;
+                            margin-top:10px;
+                        "
+                    >
                         DESTINATION
                     </label>
 
@@ -8013,11 +7755,7 @@ window.showHotelTab = async function(tabName) {
 
 
                     <button
-                        onclick="
-                            saveHotelProfile(
-                                '${hotel?.hotel_id || ''}'
-                            )
-                        "
+                        onclick="saveHotelProfile('${hotel?.hotel_id || ''}')"
                         style="
                             width:100%;
                             background:#ff9f43;
@@ -8036,19 +7774,16 @@ window.showHotelTab = async function(tabName) {
                 </div>
 
 
-                <div
-                    class="card"
+                <div class="card"
                     style="
                         background:white;
                         padding:25px;
                         border-radius:15px;
-                    "
-                >
+                    ">
 
                     <h3>
                         🛏️ Add Room Category
                     </h3>
-
 
                     ${
                         !hotel
@@ -8060,96 +7795,92 @@ window.showHotelTab = async function(tabName) {
                         `
                         : `
 
-                            <input
-                                type="text"
-                                id="r-type"
-                                placeholder="Room Category (e.g. Deluxe AC)"
-                                style="
-                                    width:100%;
-                                    padding:10px;
-                                    margin:8px 0;
-                                    border:1px solid #ddd;
-                                    border-radius:8px;
-                                    box-sizing:border-box;
-                                "
-                            >
+                        <input
+                            type="text"
+                            id="r-type"
+                            placeholder="Room Category (e.g. Deluxe AC)"
+                            style="
+                                width:100%;
+                                padding:10px;
+                                margin:8px 0;
+                                border:1px solid #ddd;
+                                border-radius:8px;
+                                box-sizing:border-box;
+                            "
+                        >
 
 
-                            <input
-                                type="number"
-                                id="r-price"
-                                placeholder="Price per Night (₹)"
-                                style="
-                                    width:100%;
-                                    padding:10px;
-                                    margin:8px 0;
-                                    border:1px solid #ddd;
-                                    border-radius:8px;
-                                    box-sizing:border-box;
-                                "
-                            >
+                        <input
+                            type="number"
+                            id="r-price"
+                            placeholder="Price per Night (₹)"
+                            style="
+                                width:100%;
+                                padding:10px;
+                                margin:8px 0;
+                                border:1px solid #ddd;
+                                border-radius:8px;
+                                box-sizing:border-box;
+                            "
+                        >
 
 
-                            <input
-                                type="number"
-                                id="r-total"
-                                placeholder="Total Rooms Inventory"
-                                style="
-                                    width:100%;
-                                    padding:10px;
-                                    margin:8px 0;
-                                    border:1px solid #ddd;
-                                    border-radius:8px;
-                                    box-sizing:border-box;
-                                "
-                            >
+                        <input
+                            type="number"
+                            id="r-total"
+                            placeholder="Total Rooms Inventory"
+                            style="
+                                width:100%;
+                                padding:10px;
+                                margin:8px 0;
+                                border:1px solid #ddd;
+                                border-radius:8px;
+                                box-sizing:border-box;
+                            "
+                        >
 
 
-                            <input
-                                type="number"
-                                id="r-available"
-                                placeholder="Current Available Rooms"
-                                style="
-                                    width:100%;
-                                    padding:10px;
-                                    margin:8px 0;
-                                    border:1px solid #ddd;
-                                    border-radius:8px;
-                                    box-sizing:border-box;
-                                "
-                            >
+                        <input
+                            type="number"
+                            id="r-available"
+                            placeholder="Current Available Rooms"
+                            style="
+                                width:100%;
+                                padding:10px;
+                                margin:8px 0;
+                                border:1px solid #ddd;
+                                border-radius:8px;
+                                box-sizing:border-box;
+                            "
+                        >
 
 
-                            <input
-                                type="file"
-                                id="r-photos"
-                                multiple
-                                accept="image/*"
-                                style="margin:8px 0;"
-                            >
+                        <input
+                            type="file"
+                            id="r-photos"
+                            multiple
+                            accept="image/*"
+                            style="margin:8px 0;"
+                        >
 
 
-                            <button
-                                id="btn-save-room"
-                                onclick="
-                                    saveOrUpdateRoomCategory(
-                                        '${hotel.hotel_id}'
-                                    )
-                                "
-                                style="
-                                    width:100%;
-                                    background:#2ecc71;
-                                    color:white;
-                                    border:none;
-                                    padding:12px;
-                                    border-radius:8px;
-                                    cursor:pointer;
-                                    font-weight:bold;
-                                    margin-top:15px;
-                                "
-                            >
-                                + Add Room Type
-                            </button>
+                        <button
+                            id="btn-save-room"
+                            onclick="saveOrUpdateRoomCategory('${hotel.hotel_id}')"
+                            style="
+                                width:100%;
+                                background:#2ecc71;
+                                color:white;
+                                border:none;
+                                padding:12px;
+                                border-radius:8px;
+                                cursor:pointer;
+                                font-weight:bold;
+                                margin-top:15px;
+                            "
+                        >
+                            + Add Room Type
+                        </button>
 
                         `
                     }
@@ -8183,20 +7914,16 @@ window.showHotelTab = async function(tabName) {
             );
 
         }
-
     }
 
 
-    /* ============================================================
+    /* ========================================================
        TAB: REQUESTS
-       ============================================================ */
+       ======================================================== */
 
-    else if (
-        tabName === 'requests'
-    ) {
+    else if (tabName === 'requests') {
 
         container.innerHTML = `
-
             <h1>
                 Booking & Quote Requests
             </h1>
@@ -8207,7 +7934,6 @@ window.showHotelTab = async function(tabName) {
             >
                 Loading requests...
             </div>
-
         `;
 
 
@@ -8221,6 +7947,19 @@ window.showHotelTab = async function(tabName) {
             );
 
         }
+    }
+
+
+    /* ========================================================
+       FIX: TAB: ARRIVALS & PAYOUT
+       ======================================================== */
+
+    else if (tabName === 'bookings') {
+
+        await renderArrivalsAndPayouts(
+            container,
+            user
+        );
 
     }
 
@@ -8239,61 +7978,44 @@ function editRoomCategory(
     available
 ) {
 
-    currentEditingRoomId =
-        id;
+    currentEditingRoomId = id;
 
 
     if (
         document.getElementById('r-type')
     ) {
-
-        document.getElementById(
-            'r-type'
-        ).value = category;
-
+        document.getElementById('r-type').value =
+            category;
     }
 
 
     if (
         document.getElementById('r-price')
     ) {
-
-        document.getElementById(
-            'r-price'
-        ).value = price;
-
+        document.getElementById('r-price').value =
+            price;
     }
 
 
     if (
         document.getElementById('r-total')
     ) {
-
-        document.getElementById(
-            'r-total'
-        ).value = total;
-
+        document.getElementById('r-total').value =
+            total;
     }
 
 
     if (
         document.getElementById('r-available')
     ) {
-
-        document.getElementById(
-            'r-available'
-        ).value = available;
-
+        document.getElementById('r-available').value =
+            available;
     }
 
 
     const addBtn =
-        document.getElementById(
-            'btn-save-room'
-        ) ||
-        document.getElementById(
-            'addRoomBtn'
-        );
+        document.getElementById('btn-save-room') ||
+        document.getElementById('addRoomBtn');
 
 
     if (addBtn) {
@@ -8303,7 +8025,6 @@ function editRoomCategory(
 
         addBtn.style.backgroundColor =
             "#ff9800";
-
     }
 
 
@@ -8311,7 +8032,6 @@ function editRoomCategory(
         top:0,
         behavior:'smooth'
     });
-
 }
 
 
@@ -8319,13 +8039,9 @@ function editRoomCategory(
    4. ADD / UPDATE ROOM SAVE LOGIC
    ============================================================ */
 
-async function saveOrUpdateRoomCategory(
-    hotelId
-) {
+async function saveOrUpdateRoomCategory(hotelId) {
 
-    const client =
-        getClient();
-
+    const client = getClient();
 
     if (!client) {
 
@@ -8334,7 +8050,6 @@ async function saveOrUpdateRoomCategory(
         );
 
         return;
-
     }
 
 
@@ -8389,39 +8104,37 @@ async function saveOrUpdateRoomCategory(
         );
 
         return;
-
     }
 
 
-    /* ============================================================
+    /* ========================================================
        UPDATE MODE
-       ============================================================ */
+       ======================================================== */
 
     if (currentEditingRoomId) {
 
-        const {
-            error
-        } = await client
-            .from('room_categories')
-            .update({
+        const { error } =
+            await client
+                .from('room_categories')
+                .update({
 
-                room_type:
-                    category,
+                    room_type:
+                        category,
 
-                price_per_night:
-                    price,
+                    price_per_night:
+                        price,
 
-                total_rooms:
-                    total,
+                    total_rooms:
+                        total,
 
-                available_rooms:
-                    available
+                    available_rooms:
+                        available
 
-            })
-            .eq(
-                'id',
-                currentEditingRoomId
-            );
+                })
+                .eq(
+                    'id',
+                    currentEditingRoomId
+                );
 
 
         if (error) {
@@ -8437,7 +8150,6 @@ async function saveOrUpdateRoomCategory(
                 "Room details updated successfully!"
             );
 
-
             resetRoomForm();
 
 
@@ -8458,40 +8170,38 @@ async function saveOrUpdateRoomCategory(
                 loadInventory();
 
             }
-
         }
 
     }
 
 
-    /* ============================================================
+    /* ========================================================
        INSERT MODE
-       ============================================================ */
+       ======================================================== */
 
     else {
 
-        const {
-            error
-        } = await client
-            .from('room_categories')
-            .insert([{
+        const { error } =
+            await client
+                .from('room_categories')
+                .insert([{
 
-                hotel_id:
-                    hotelId,
+                    hotel_id:
+                        hotelId,
 
-                room_type:
-                    category,
+                    room_type:
+                        category,
 
-                price_per_night:
-                    price,
+                    price_per_night:
+                        price,
 
-                total_rooms:
-                    total,
+                    total_rooms:
+                        total,
 
-                available_rooms:
-                    available
+                    available_rooms:
+                        available
 
-            }]);
+                }]);
 
 
         if (error) {
@@ -8507,7 +8217,6 @@ async function saveOrUpdateRoomCategory(
                 "Room added successfully!"
             );
 
-
             resetRoomForm();
 
 
@@ -8528,16 +8237,13 @@ async function saveOrUpdateRoomCategory(
                 loadInventory();
 
             }
-
         }
-
     }
-
 }
 
 
 /* ============================================================
-   ALIAS FOR BACKWARDS COMPATIBILITY
+   5. ALIAS FOR BACKWARDS COMPATIBILITY
    ============================================================ */
 
 window.saveRoomCategory =
@@ -8545,22 +8251,20 @@ window.saveRoomCategory =
 
 
 /* ============================================================
-   5. FORM RESET FUNCTION
+   6. FORM RESET FUNCTION
    ============================================================ */
 
 function resetRoomForm() {
 
-    currentEditingRoomId =
-        null;
+    currentEditingRoomId = null;
 
 
     if (
         document.getElementById('r-type')
     ) {
 
-        document.getElementById(
-            'r-type'
-        ).value = '';
+        document.getElementById('r-type').value =
+            '';
 
     }
 
@@ -8569,9 +8273,8 @@ function resetRoomForm() {
         document.getElementById('r-price')
     ) {
 
-        document.getElementById(
-            'r-price'
-        ).value = '';
+        document.getElementById('r-price').value =
+            '';
 
     }
 
@@ -8580,9 +8283,8 @@ function resetRoomForm() {
         document.getElementById('r-total')
     ) {
 
-        document.getElementById(
-            'r-total'
-        ).value = '';
+        document.getElementById('r-total').value =
+            '';
 
     }
 
@@ -8591,20 +8293,15 @@ function resetRoomForm() {
         document.getElementById('r-available')
     ) {
 
-        document.getElementById(
-            'r-available'
-        ).value = '';
+        document.getElementById('r-available').value =
+            '';
 
     }
 
 
     const addBtn =
-        document.getElementById(
-            'btn-save-room'
-        ) ||
-        document.getElementById(
-            'addRoomBtn'
-        );
+        document.getElementById('btn-save-room') ||
+        document.getElementById('addRoomBtn');
 
 
     if (addBtn) {
@@ -8614,19 +8311,15 @@ function resetRoomForm() {
 
         addBtn.style.backgroundColor =
             "#2ecc71";
-
     }
-
 }
 
 
 /* ============================================================
-   6. AUTO LOAD ROOMS FUNCTION
+   7. AUTO LOAD ROOMS FUNCTION
    ============================================================ */
 
-async function loadHotelRooms(
-    hotelId
-) {
+async function loadHotelRooms(hotelId) {
 
     const listDiv =
         document.getElementById(
@@ -8644,16 +8337,14 @@ async function loadHotelRooms(
     if (!client) return;
 
 
-    const {
-        data: rooms,
-        error
-    } = await client
-        .from('room_categories')
-        .select('*')
-        .eq(
-            'hotel_id',
-            hotelId
-        );
+    const { data: rooms, error } =
+        await client
+            .from('room_categories')
+            .select('*')
+            .eq(
+                'hotel_id',
+                hotelId
+            );
 
 
     if (error) {
@@ -8666,7 +8357,6 @@ async function loadHotelRooms(
         `;
 
         return;
-
     }
 
 
@@ -8682,7 +8372,6 @@ async function loadHotelRooms(
         `;
 
         return;
-
     }
 
 
@@ -8720,13 +8409,16 @@ async function loadHotelRooms(
                         margin:5px 0 0;
                         color:#666;
                     ">
+
                         Price:
                         ₹${
                             room.price_per_night ||
                             room.price ||
                             0
                         }
+
                         / night
+
                     </p>
 
                 </div>
@@ -8775,24 +8467,14 @@ async function loadHotelRooms(
                         onclick="
                             editRoomCategory(
                                 '${room.id}',
-                                '${(
+                                '${String(
                                     room.room_type ||
                                     room.category_name ||
                                     ''
                                 ).replace(/'/g, "\\'")}',
-                                '${(
-                                    room.price_per_night ||
-                                    room.price ||
-                                    0
-                                )}',
-                                '${(
-                                    room.total_rooms ||
-                                    0
-                                )}',
-                                '${(
-                                    room.available_rooms ||
-                                    0
-                                )}'
+                                '${room.price_per_night || room.price || 0}',
+                                '${room.total_rooms || 0}',
+                                '${room.available_rooms || 0}'
                             )
                         "
                         style="
@@ -8813,7 +8495,6 @@ async function loadHotelRooms(
             </div>
 
         `).join('');
-
 }
 // 12. STYLES
 const styleTag = document.createElement('style');
