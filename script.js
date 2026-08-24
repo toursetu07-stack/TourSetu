@@ -1177,21 +1177,21 @@ window.confirmHotelPayment = async function(bookingId) {
     }
 };   
 // Calculating total nights
-    const d1 = new Date(checkIn);
-    const d2 = new Date(checkOut);
-    const diffTime = d2 - d1;
-    let nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+   // Calculating total nights
+const d1 = new Date(checkIn);
+const d2 = new Date(checkOut);
+const diffTime = d2 - d1;
+const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (nights <= 0) {
-        alert("Check-Out date must be after Check-In date.");
-        return;
-    }
+if (nights <= 0) {
+    alert("Check-Out date must be after Check-In date.");
+    return;
+}
 
-    const subtotal = pricePerNight * qty * nights;
-    const gatewayFee = subtotal * 0.02; // 2%
-    const serviceFee = subtotal * 0.07; // 7%
-    const grandTotal = subtotal;
-
+const subtotal = pricePerNight * qty * nights;
+const gatewayFee = subtotal * 0.02;
+const serviceFee = subtotal * 0.07;
+const grandTotal = subtotal + gatewayFee + serviceFee;
     try {
         const client = getClient();
         const { data: { user } } = await client.auth.getUser();
