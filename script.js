@@ -1221,6 +1221,9 @@ const grandTotal = subtotal + gatewayFee + serviceFee;
         alert(`Booking failed: ${err.message}`);
     }
 };
+window.confirmHotelPayment = async function(bookingId) {
+    ...
+}; 
 // Customer ki hotel requests fetch karke UI par dikhane ka function
 async function loadCustomerRequests() {
   const requestsListDiv = document.getElementById('requests-list');
