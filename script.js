@@ -551,7 +551,16 @@ window.loadCustomerHotelPackages = async function() {
                 </div>
 
                 <div style="padding:15px 25px; background:#f9f9f9; border-top:1px solid #eee;">
-                    <button onclick="openHotelBookingModal('${hotelName.replace(/'/g, "\\'")}', '${city.replace(/'/g, "\\'")}', '${address.replace(/'/g, "\\'")}', '${roomType.replace(/'/g, "\\'")}', ${price}, ${availableRooms}, '${roomImg}')" 
+                    <button onclick="openHotelBookingModal(
+    '${hotelName.replace(/'/g, "\\'")}',
+    '${city.replace(/'/g, "\\'")}',
+    '${address.replace(/'/g, "\\'")}',
+    '${roomType.replace(/'/g, "\\'")}',
+    ${price},
+    ${availableRooms},
+    '${roomImg}',
+    '${item.id || ''}'
+)"
                             style="background:#3498db; color:white; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
                         BOOK ROOM STOCK
                     </button>
