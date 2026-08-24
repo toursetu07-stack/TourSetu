@@ -939,6 +939,456 @@ window.renderCustomerRequests = async () => {
     
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
+
+    if (!user) {
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px;">
+            <p>Please login first.</p>
+        </div>`;
+        return;
+    }
+
+    /*
+    ============================================================
+    IMPORTANT:
+    Check which search type is currently selected.
+
+    🎒 Agency Packages  -> bookings table
+    🏨 Registered Hotels -> hotel_bookings table
+
+    This keeps both booking types completely separate.
+    ============================================================
+    */
+    const selectedType = document.querySelector('input[name="search-type"]:checked')?.value || 'agency';
+
+
+    /* ============================================================
+       🏨 REGISTERED HOTELS - MY REQUESTS
+       Source: hotel_bookings table ONLY
+       ============================================================ */
+
+    if (selectedType === 'hotel') {
+
+        resultTitle.innerText = "My Hotel Booking Requests";
+        resultSubtitle.innerText = "Track your Registered Hotel booking status";
+
+        container.innerHTML = `
+            <div style="grid-column:1/-1; text-align:center;">
+                <h3>Loading your hotel booking requests...</h3>
+            </div>
+        `;
+
+        try {
+
+            const { data: hotelBookings, error } = await client
+                .from('hotel_bookings')
+                .select('*')
+                .eq('customer_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Hotel booking fetch error:", error);
+                throw error;
+            }
+
+            if (!hotelBookings || hotelBookings.length === 0) {
+
+                container.innerHTML = `
+                    <div style="
+                        grid-column:1/-1;
+                        text-align:center;
+                        padding:50px;
+                        background:white;
+                        border-radius:15px;
+                        box-shadow:0 4px 15px rgba(0,0,0,0.05);
+                    ">
+                        <div style="font-size:45px;">🏨</div>
+
+                        <h3 style="color:#2d3436;">
+                            No Hotel Booking Requests
+                        </h3>
+
+                        <p style="color:#636e72;">
+                            Aapki koi Registered Hotel booking request nahi hai.
+                        </p>
+
+                        <span
+                            onclick="renderCustomerHomepage()"
+                            style="
+                                color:#3498db;
+                                cursor:pointer;
+                                font-weight:bold;
+                            "
+                        >
+                            Search Registered Hotels
+                        </span>
+                    </div>
+                `;
+
+                return;
+            }
+
+
+            /*
+            ========================================================
+            Render ONLY hotel_bookings records
+            ========================================================
+            */
+
+            container.innerHTML = hotelBookings.map(b => {
+
+                const bookingStatus = String(
+                    b.booking_status || 'pending'
+                ).toLowerCase();
+
+                const paymentStatus = String(
+                    b.payment_status || 'unpaid'
+                ).toLowerCase();
+
+
+                /* Booking status color */
+                let bookingStatusColor = '#ff9f43';
+
+                if (
+                    bookingStatus === 'confirmed' ||
+                    bookingStatus === 'approved'
+                ) {
+                    bookingStatusColor = '#3498db';
+                }
+
+                if (
+                    bookingStatus === 'completed'
+                ) {
+                    bookingStatusColor = '#2ecc71';
+                }
+
+                if (
+                    bookingStatus === 'cancelled' ||
+                    bookingStatus === 'rejected' ||
+                    bookingStatus === 'denied'
+                ) {
+                    bookingStatusColor = '#ff7675';
+                }
+
+
+                /* Payment status color */
+                let paymentStatusColor = '#ff9f43';
+
+                if (
+                    paymentStatus === 'paid' ||
+                    paymentStatus === 'success' ||
+                    paymentStatus === 'completed'
+                ) {
+                    paymentStatusColor = '#2ecc71';
+                }
+
+                if (
+                    paymentStatus === 'failed' ||
+                    paymentStatus === 'cancelled'
+                ) {
+                    paymentStatusColor = '#ff7675';
+                }
+
+
+                const totalAmount = Number(
+                    b.total_amount || 0
+                );
+
+                const roomsBooked = Number(
+                    b.rooms_booked || 0
+                );
+
+
+                return `
+                    <div
+                        class="card"
+                        style="
+                            background:white;
+                            padding:25px;
+                            border-left:5px solid #3498db;
+                            position:relative;
+                            box-shadow:0 4px 15px rgba(0,0,0,0.05);
+                            border-radius:15px;
+                        "
+                    >
+
+                        <!-- HOTEL HEADER -->
+                        <div style="
+                            display:flex;
+                            justify-content:space-between;
+                            align-items:start;
+                            gap:15px;
+                            flex-wrap:wrap;
+                        ">
+
+                            <div>
+
+                                <div style="
+                                    display:inline-block;
+                                    background:#e8f5e9;
+                                    color:#2e7d32;
+                                    padding:5px 10px;
+                                    border-radius:12px;
+                                    font-size:11px;
+                                    font-weight:bold;
+                                ">
+                                    🏨 REGISTERED HOTEL
+                                </div>
+
+                                <h3 style="
+                                    margin:12px 0 8px 0;
+                                    color:#2d3436;
+                                ">
+                                    ${b.hotel_name || 'Hotel Name Not Available'}
+                                </h3>
+
+                                <div style="
+                                    font-size:13px;
+                                    color:#636e72;
+                                ">
+                                    📍 <b>Location:</b>
+                                    ${b.location || 'Location not available'}
+                                </div>
+
+                            </div>
+
+                            <div style="
+                                background:#f0fff4;
+                                color:#27ae60;
+                                padding:8px 12px;
+                                border-radius:8px;
+                                font-weight:bold;
+                                white-space:nowrap;
+                            ">
+                                ₹${totalAmount.toLocaleString('en-IN')}
+                            </div>
+
+                        </div>
+
+
+                        <!-- HOTEL BOOKING DETAILS -->
+                        <div style="
+                            margin-top:20px;
+                            padding:18px;
+                            border-radius:10px;
+                            background:#f8f9fa;
+                            display:grid;
+                            grid-template-columns:repeat(
+                                auto-fit,
+                                minmax(180px, 1fr)
+                            );
+                            gap:15px;
+                        ">
+
+                            <!-- CHECK IN -->
+                            <div>
+                                <div style="
+                                    font-size:11px;
+                                    color:#888;
+                                    font-weight:bold;
+                                    margin-bottom:5px;
+                                ">
+                                    CHECK-IN DATE
+                                </div>
+
+                                <div style="
+                                    color:#2d3436;
+                                    font-weight:bold;
+                                ">
+                                    📅 ${b.check_in_date || 'N/A'}
+                                </div>
+                            </div>
+
+
+                            <!-- CHECK OUT -->
+                            <div>
+                                <div style="
+                                    font-size:11px;
+                                    color:#888;
+                                    font-weight:bold;
+                                    margin-bottom:5px;
+                                ">
+                                    CHECK-OUT DATE
+                                </div>
+
+                                <div style="
+                                    color:#2d3436;
+                                    font-weight:bold;
+                                ">
+                                    📅 ${b.check_out_date || 'N/A'}
+                                </div>
+                            </div>
+
+
+                            <!-- ROOMS -->
+                            <div>
+                                <div style="
+                                    font-size:11px;
+                                    color:#888;
+                                    font-weight:bold;
+                                    margin-bottom:5px;
+                                ">
+                                    ROOMS BOOKED
+                                </div>
+
+                                <div style="
+                                    color:#2d3436;
+                                    font-weight:bold;
+                                ">
+                                    🛏️ ${roomsBooked}
+                                </div>
+                            </div>
+
+
+                            <!-- TOTAL -->
+                            <div>
+                                <div style="
+                                    font-size:11px;
+                                    color:#888;
+                                    font-weight:bold;
+                                    margin-bottom:5px;
+                                ">
+                                    TOTAL AMOUNT
+                                </div>
+
+                                <div style="
+                                    color:#27ae60;
+                                    font-weight:bold;
+                                ">
+                                    ₹${totalAmount.toLocaleString('en-IN')}
+                                </div>
+                            </div>
+
+                        </div>
+
+
+                        <!-- STATUS -->
+                        <div style="
+                            margin-top:15px;
+                            display:flex;
+                            gap:10px;
+                            flex-wrap:wrap;
+                        ">
+
+                            <!-- BOOKING STATUS -->
+                            <div style="
+                                background:#f8f9fa;
+                                border:1px solid #eee;
+                                border-radius:10px;
+                                padding:10px 15px;
+                            ">
+
+                                <div style="
+                                    font-size:10px;
+                                    color:#888;
+                                    font-weight:bold;
+                                ">
+                                    BOOKING STATUS
+                                </div>
+
+                                <div style="
+                                    margin-top:4px;
+                                    color:${bookingStatusColor};
+                                    font-size:12px;
+                                    font-weight:bold;
+                                ">
+                                    ${bookingStatus.toUpperCase()}
+                                </div>
+
+                            </div>
+
+
+                            <!-- PAYMENT STATUS -->
+                            <div style="
+                                background:#f8f9fa;
+                                border:1px solid #eee;
+                                border-radius:10px;
+                                padding:10px 15px;
+                            ">
+
+                                <div style="
+                                    font-size:10px;
+                                    color:#888;
+                                    font-weight:bold;
+                                ">
+                                    PAYMENT STATUS
+                                </div>
+
+                                <div style="
+                                    margin-top:4px;
+                                    color:${paymentStatusColor};
+                                    font-size:12px;
+                                    font-weight:bold;
+                                ">
+                                    ${paymentStatus.toUpperCase()}
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- HOTEL BOOKING FOOTER -->
+                        <div style="
+                            margin-top:18px;
+                            padding-top:15px;
+                            border-top:1px solid #eee;
+                            color:#636e72;
+                            font-size:12px;
+                        ">
+
+                            🏨 This booking is from
+                            <b>Registered Hotels</b>.
+
+                            <span style="float:right;">
+                                Booking ID:
+                                <b>
+                                    ${b.id ? String(b.id).slice(0, 8) : 'N/A'}
+                                </b>
+                            </span>
+
+                        </div>
+
+                    </div>
+                `;
+
+            }).join('');
+
+            return;
+
+        } catch (e) {
+
+            console.error(
+                "Error loading hotel booking requests:",
+                e
+            );
+
+            container.innerHTML = `
+                <div style="
+                    grid-column:1/-1;
+                    text-align:center;
+                    padding:40px;
+                    color:#ff7675;
+                ">
+                    <h3>❌ Error loading hotel requests</h3>
+                    <p>${e.message}</p>
+                </div>
+            `;
+
+            return;
+        }
+    }
+
+
+    /* ============================================================
+       🎒 AGENCY PACKAGES - MY REQUESTS
+       Source: bookings table ONLY
+
+       ORIGINAL CODE BELOW IS KEPT SAME
+       ============================================================ */
+
+    resultTitle.innerText = "My Trip Requests";
+    resultSubtitle.innerText = "Track your inquiries and booking status";
+    container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Loading your requests...</h3></div>`;
     
     // Problem 2 Fix: Freshly fetch everything directly from database to avoid caching/sync issues
     const { data, error } = await client.from('bookings').select('*').eq('customer_id', user.id).order('created_at', {ascending: false});
