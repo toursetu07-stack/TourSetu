@@ -1177,8 +1177,7 @@ window.confirmHotelPayment = async function(bookingId) {
     }
 };   
 // Calculating total nights
-   // Calculating total nights
-const d1 = new Date(checkIn);
+   const d1 = new Date(checkIn);
 const d2 = new Date(checkOut);
 const diffTime = d2 - d1;
 const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
