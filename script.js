@@ -1100,19 +1100,9 @@ window.confirmHotelCancellation = async function(bookingId) {
    🏨 REGISTERED HOTEL - PAYMENT CONFIRMATION
    ============================================================ */
 
-window.confirmHotelPayment = async function(bookingId) {
-
-    const client = getClient();
-
-    const confirmed = confirm(
-        "Have you completed the payment using the payment details " +
-        "provided by the hotel owner?\n\n" +
-        "Click OK only after completing the payment."
-    );
-
-    if (!confirmed) return;
-
-    try {
+// Customer ki hotel requests fetch karke UI par dikhane ka function
+async function loadCustomerRequests() {
+        try {
 
         const { data: { user } } =
             await client.auth.getUser();
