@@ -8511,3 +8511,1294 @@ styleTag.innerHTML = `
 `;
 document.head.appendChild(styleTag); 
 initApp();
+/* ==========================================================================
+   TOURSETU - REGISTERED HOTEL CUSTOMER BOOKING TWO-WAY BRIDGE
+   --------------------------------------------------------------------------
+   IMPORTANT:
+   - Does NOT replace existing hotel_requests workflow.
+   - Does NOT change Agency booking workflow.
+   - Does NOT change Customer booking creation.
+   - Only connects:
+       customer hotel_bookings
+              ↕
+       Registered Hotel Dashboard
+   ========================================================================== */
+
+(function () {
+    'use strict';
+
+    const BRIDGE_SECTION_ID = 'toursetu-registered-hotel-bookings-bridge';
+    const BRIDGE_POLL_MS = 4000;
+
+    let bridgePollTimer = null;
+    let bridgeRendering = false;
+    let bridgeChannel = null;
+
+    /* ----------------------------------------------------------------------
+       BASIC HELPERS
+       ---------------------------------------------------------------------- */
+
+    function bridgeClient() {
+        try {
+            return typeof getClient === 'function' ? getClient() : null;
+        } catch (error) {
+            console.error('TourSetu hotel booking bridge client error:', error);
+            return null;
+        }
+    }
+
+    async function bridgeCurrentUser() {
+        const client = bridgeClient();
+
+        if (!client) return null;
+
+        try {
+            const result = await client.auth.getUser();
+
+            if (result.error) {
+                console.error(
+                    'TourSetu hotel booking bridge auth error:',
+                    result.error
+                );
+                return null;
+            }
+
+            return result.data?.user || null;
+        } catch (error) {
+            console.error(
+                'TourSetu hotel booking bridge auth exception:',
+                error
+            );
+            return null;
+        }
+    }
+
+    function bridgeEscape(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function bridgeStatusText(status) {
+        const value = String(status || 'pending').toLowerCase();
+
+        if (value === 'approved') return 'APPROVED';
+        if (value === 'confirmed') return 'CONFIRMED';
+        if (value === 'denied') return 'DENIED';
+        if (value === 'cancelled_by_customer') return 'CUSTOMER CANCELLED';
+        if (value === 'cancelled') return 'CANCELLED';
+
+        return 'PENDING';
+    }
+
+    function bridgeStatusColor(status) {
+        const value = String(status || 'pending').toLowerCase();
+
+        if (value === 'approved' || value === 'confirmed') {
+            return '#2ecc71';
+        }
+
+        if (value === 'denied') {
+            return '#e74c3c';
+        }
+
+        if (
+            value === 'cancelled_by_customer' ||
+            value === 'cancelled'
+        ) {
+            return '#636e72';
+        }
+
+        return '#ff9f43';
+    }
+
+    /* ----------------------------------------------------------------------
+       GET HOTEL OF CURRENT LOGGED-IN HOTEL OWNER
+       ---------------------------------------------------------------------- */
+
+    async function getCurrentHotelForBridge(user) {
+        const client = bridgeClient();
+
+        if (!client || !user) return null;
+
+        try {
+            const { data: hotel, error } = await client
+                .from('hotels')
+                .select('*')
+                .eq('owner_id', user.id)
+                .maybeSingle();
+
+            if (error) {
+                console.error(
+                    'TourSetu hotel bridge hotel fetch error:',
+                    error
+                );
+                return null;
+            }
+
+            return hotel || null;
+        } catch (error) {
+            console.error(
+                'TourSetu hotel bridge hotel fetch exception:',
+                error
+            );
+            return null;
+        }
+    }
+
+    /* ----------------------------------------------------------------------
+       GET REGISTERED HOTEL CUSTOMER BOOKINGS
+       ---------------------------------------------------------------------- */
+
+    async function getRegisteredHotelCustomerBookings(user) {
+        const client = bridgeClient();
+
+        if (!client || !user) {
+            return {
+                hotel: null,
+                bookings: []
+            };
+        }
+
+        const hotel = await getCurrentHotelForBridge(user);
+
+        if (!hotel) {
+            return {
+                hotel: null,
+                bookings: []
+            };
+        }
+
+        const hotelId = hotel.hotel_id || hotel.id;
+
+        if (!hotelId) {
+            console.error(
+                'TourSetu hotel bridge: hotel_id not found.'
+            );
+
+            return {
+                hotel,
+                bookings: []
+            };
+        }
+
+        try {
+            /*
+             * Customer booking stores room_category_id.
+             * room_categories stores hotel_id.
+             *
+             * Therefore:
+             *
+             * hotel owner
+             *      ↓
+             * hotels
+             *      ↓
+             * room_categories
+             *      ↓
+             * hotel_bookings
+             */
+
+            const {
+                data: categories,
+                error: categoryError
+            } = await client
+                .from('room_categories')
+                .select('id, room_type, hotel_id')
+                .eq('hotel_id', hotelId);
+
+            if (categoryError) {
+                console.error(
+                    'TourSetu hotel bridge room category error:',
+                    categoryError
+                );
+
+                return {
+                    hotel,
+                    bookings: []
+                };
+            }
+
+            const categoryIds = (categories || [])
+                .map(category => category.id)
+                .filter(Boolean);
+
+            if (categoryIds.length === 0) {
+                return {
+                    hotel,
+                    bookings: []
+                };
+            }
+
+            const {
+                data: bookings,
+                error: bookingError
+            } = await client
+                .from('hotel_bookings')
+                .select('*')
+                .in('room_category_id', categoryIds)
+                .order('created_at', {
+                    ascending: false
+                });
+
+            if (bookingError) {
+                console.error(
+                    'TourSetu hotel bridge hotel_bookings error:',
+                    bookingError
+                );
+
+                return {
+                    hotel,
+                    bookings: []
+                };
+            }
+
+            return {
+                hotel,
+                bookings: bookings || []
+            };
+
+        } catch (error) {
+            console.error(
+                'TourSetu hotel bridge booking fetch exception:',
+                error
+            );
+
+            return {
+                hotel,
+                bookings: []
+            };
+        }
+    }
+
+    /* ----------------------------------------------------------------------
+       RENDER CUSTOMER BOOKINGS INSIDE HOTEL DASHBOARD
+       ---------------------------------------------------------------------- */
+
+    async function renderRegisteredHotelCustomerBookings() {
+
+        if (bridgeRendering) return;
+
+        const mainContent =
+            document.getElementById('hotel-main-content');
+
+        if (!mainContent) return;
+
+        /*
+         * Only show this section when Hotel Dashboard is actually open.
+         */
+        const user = await bridgeCurrentUser();
+
+        if (!user) return;
+
+        if (
+            user.user_metadata?.role &&
+            user.user_metadata.role !== 'hotel'
+        ) {
+            return;
+        }
+
+        bridgeRendering = true;
+
+        try {
+
+            const result =
+                await getRegisteredHotelCustomerBookings(user);
+
+            const hotel = result.hotel;
+            const bookings = result.bookings;
+
+            if (!hotel) return;
+
+            /*
+             * Remove only our own section.
+             * Existing Hotel Dashboard content remains untouched.
+             */
+            const oldSection =
+                document.getElementById(BRIDGE_SECTION_ID);
+
+            if (oldSection) {
+                oldSection.remove();
+            }
+
+            const section =
+                document.createElement('div');
+
+            section.id = BRIDGE_SECTION_ID;
+
+            section.style.cssText = `
+                margin-top:25px;
+                padding:20px;
+                background:#ffffff;
+                border-radius:15px;
+                box-shadow:0 3px 12px rgba(0,0,0,0.08);
+                border-left:5px solid #ff9f43;
+            `;
+
+            let html = `
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    gap:15px;
+                    flex-wrap:wrap;
+                    margin-bottom:18px;
+                ">
+                    <div>
+                        <h2 style="
+                            margin:0;
+                            color:#2c3e50;
+                            font-size:21px;
+                        ">
+                            🏨 Registered Hotel Customer Requests
+                        </h2>
+
+                        <p style="
+                            margin:5px 0 0;
+                            color:#777;
+                            font-size:13px;
+                        ">
+                            Direct customer hotel booking requests
+                        </p>
+                    </div>
+
+                    <button
+                        onclick="window.TourSetuRefreshRegisteredHotelBookings()"
+                        style="
+                            background:#3498db;
+                            color:white;
+                            border:none;
+                            padding:9px 15px;
+                            border-radius:7px;
+                            cursor:pointer;
+                            font-weight:bold;
+                        "
+                    >
+                        🔄 Refresh
+                    </button>
+                </div>
+            `;
+
+            if (!bookings || bookings.length === 0) {
+
+                html += `
+                    <div style="
+                        padding:30px;
+                        text-align:center;
+                        background:#f8f9fa;
+                        border-radius:10px;
+                        color:#777;
+                    ">
+                        No direct customer hotel booking requests found.
+                    </div>
+                `;
+
+            } else {
+
+                html += `
+                    <div style="
+                        display:grid;
+                        gap:15px;
+                    ">
+                `;
+
+                bookings.forEach(function (booking) {
+
+                    const status =
+                        String(
+                            booking.booking_status || 'pending'
+                        ).toLowerCase();
+
+                    const statusColor =
+                        bridgeStatusColor(status);
+
+                    const statusText =
+                        bridgeStatusText(status);
+
+                    const customerEmail =
+                        booking.customer_email || 'Not provided';
+
+                    const customerPhone =
+                        booking.customer_phone || 'Not provided';
+
+                    const hotelName =
+                        booking.hotel_name || hotel.hotel_name || 'Registered Hotel';
+
+                    const roomType =
+                        booking.room_type || 'Room';
+
+                    const location =
+                        booking.location || hotel.city || 'Not provided';
+
+                    const checkIn =
+                        booking.check_in_date || 'Not provided';
+
+                    const checkOut =
+                        booking.check_out_date || 'Not provided';
+
+                    const roomsBooked =
+                        Number(booking.rooms_booked || 0);
+
+                    const pricePerNight =
+                        Number(booking.price_per_night || 0);
+
+                    const totalNights =
+                        Number(booking.total_nights || 0);
+
+                    const totalAmount =
+                        Number(booking.total_amount || 0);
+
+                    const cancellationReason =
+                        booking.cancellation_reason || '';
+
+                    const ownerMessage =
+                        booking.owner_message || '';
+
+                    html += `
+                        <div style="
+                            border:1px solid #e5e7eb;
+                            border-radius:12px;
+                            padding:18px;
+                            background:#fff;
+                        ">
+
+                            <div style="
+                                display:flex;
+                                justify-content:space-between;
+                                align-items:flex-start;
+                                gap:15px;
+                                flex-wrap:wrap;
+                            ">
+
+                                <div>
+                                    <h3 style="
+                                        margin:0 0 7px;
+                                        color:#2c3e50;
+                                    ">
+                                        ${bridgeEscape(hotelName)}
+                                    </h3>
+
+                                    <div style="
+                                        color:#666;
+                                        font-size:13px;
+                                        line-height:1.8;
+                                    ">
+                                        <div>
+                                            🛏️ Room:
+                                            <b>
+                                                ${bridgeEscape(roomType)}
+                                            </b>
+                                        </div>
+
+                                        <div>
+                                            📍 Location:
+                                            <b>
+                                                ${bridgeEscape(location)}
+                                            </b>
+                                        </div>
+
+                                        <div>
+                                            📅 Check-in:
+                                            <b>
+                                                ${bridgeEscape(checkIn)}
+                                            </b>
+                                        </div>
+
+                                        <div>
+                                            📅 Check-out:
+                                            <b>
+                                                ${bridgeEscape(checkOut)}
+                                            </b>
+                                        </div>
+
+                                        <div>
+                                            🚪 Rooms:
+                                            <b>
+                                                ${roomsBooked}
+                                            </b>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="
+                                    background:${statusColor};
+                                    color:white;
+                                    padding:7px 12px;
+                                    border-radius:20px;
+                                    font-size:12px;
+                                    font-weight:bold;
+                                    white-space:nowrap;
+                                ">
+                                    ${bridgeEscape(statusText)}
+                                </div>
+
+                            </div>
+
+                            <div style="
+                                margin-top:15px;
+                                padding:13px;
+                                background:#f8f9fa;
+                                border-radius:8px;
+                                font-size:13px;
+                                color:#555;
+                            ">
+
+                                <div>
+                                    👤 Customer:
+                                    <b>
+                                        ${bridgeEscape(customerEmail)}
+                                    </b>
+                                </div>
+
+                                <div>
+                                    📞 Phone:
+                                    <b>
+                                        ${bridgeEscape(customerPhone)}
+                                    </b>
+                                </div>
+
+                                <div>
+                                    💰 Price:
+                                    <b>
+                                        ₹${pricePerNight.toFixed(2)}
+                                    </b>
+                                    / night
+                                </div>
+
+                                <div>
+                                    🌙 Nights:
+                                    <b>
+                                        ${totalNights}
+                                    </b>
+                                </div>
+
+                                <div>
+                                    💵 Total:
+                                    <b>
+                                        ₹${totalAmount.toFixed(2)}
+                                    </b>
+                                </div>
+
+                            </div>
+                    `;
+
+                    /*
+                     * CUSTOMER CANCELLED
+                     */
+                    if (
+                        status === 'cancelled_by_customer' ||
+                        (
+                            status === 'cancelled' &&
+                            String(
+                                booking.cancelled_by || ''
+                            ).toLowerCase() === 'customer'
+                        )
+                    ) {
+
+                        html += `
+                            <div style="
+                                margin-top:15px;
+                                padding:13px;
+                                background:#fff5f5;
+                                border:1px solid #ff7675;
+                                color:#c0392b;
+                                border-radius:8px;
+                                font-weight:bold;
+                            ">
+                                🚫 CUSTOMER CANCELLED THIS BOOKING
+
+                                ${
+                                    cancellationReason
+                                        ? `
+                                            <div style="
+                                                margin-top:6px;
+                                                font-size:12px;
+                                                font-weight:normal;
+                                            ">
+                                                Reason:
+                                                ${bridgeEscape(
+                                                    cancellationReason
+                                                )}
+                                            </div>
+                                        `
+                                        : ''
+                                }
+                            </div>
+                        `;
+
+                    /*
+                     * PENDING
+                     */
+                    } else if (status === 'pending') {
+
+                        html += `
+                            <div style="
+                                display:flex;
+                                gap:10px;
+                                margin-top:15px;
+                                flex-wrap:wrap;
+                            ">
+
+                                <button
+                                    onclick="
+                                        window.TourSetuUpdateRegisteredHotelBooking(
+                                            '${bridgeEscape(booking.id)}',
+                                            'approved'
+                                        )
+                                    "
+                                    style="
+                                        background:#2ecc71;
+                                        color:white;
+                                        border:none;
+                                        padding:10px 20px;
+                                        border-radius:7px;
+                                        cursor:pointer;
+                                        font-weight:bold;
+                                    "
+                                >
+                                    ✅ Accept Request
+                                </button>
+
+                                <button
+                                    onclick="
+                                        window.TourSetuUpdateRegisteredHotelBooking(
+                                            '${bridgeEscape(booking.id)}',
+                                            'denied'
+                                        )
+                                    "
+                                    style="
+                                        background:#e74c3c;
+                                        color:white;
+                                        border:none;
+                                        padding:10px 20px;
+                                        border-radius:7px;
+                                        cursor:pointer;
+                                        font-weight:bold;
+                                    "
+                                >
+                                    ❌ Deny Request
+                                </button>
+
+                            </div>
+                        `;
+
+                    /*
+                     * APPROVED / CONFIRMED
+                     */
+                    } else if (
+                        status === 'approved' ||
+                        status === 'confirmed'
+                    ) {
+
+                        html += `
+                            <div style="
+                                margin-top:15px;
+                                padding:13px;
+                                background:#f0fff4;
+                                border:1px solid #2ecc71;
+                                color:#218c54;
+                                border-radius:8px;
+                            ">
+                                <b>✅ Booking approved</b>
+
+                                ${
+                                    booking.payment_instructions
+                                        ? `
+                                            <div style="
+                                                margin-top:6px;
+                                                font-size:12px;
+                                            ">
+                                                Payment Instructions:
+                                                ${bridgeEscape(
+                                                    booking.payment_instructions
+                                                )}
+                                            </div>
+                                        `
+                                        : ''
+                                }
+
+                                ${
+                                    ownerMessage
+                                        ? `
+                                            <div style="
+                                                margin-top:6px;
+                                                font-size:12px;
+                                            ">
+                                                ${bridgeEscape(ownerMessage)}
+                                            </div>
+                                        `
+                                        : ''
+                                }
+                            </div>
+                        `;
+
+                    /*
+                     * DENIED
+                     */
+                    } else if (status === 'denied') {
+
+                        html += `
+                            <div style="
+                                margin-top:15px;
+                                padding:13px;
+                                background:#fff5f5;
+                                border:1px solid #e74c3c;
+                                color:#c0392b;
+                                border-radius:8px;
+                            ">
+                                <b>❌ Booking denied</b>
+
+                                ${
+                                    ownerMessage
+                                        ? `
+                                            <div style="
+                                                margin-top:6px;
+                                                font-size:12px;
+                                            ">
+                                                ${bridgeEscape(ownerMessage)}
+                                            </div>
+                                        `
+                                        : ''
+                                }
+                            </div>
+                        `;
+                    }
+
+                    html += `
+                        </div>
+                    `;
+                });
+
+                html += `
+                    </div>
+                `;
+            }
+
+            section.innerHTML = html;
+
+            /*
+             * Add our section after the existing Hotel Dashboard content.
+             * Existing content is NOT replaced.
+             */
+            mainContent.appendChild(section);
+
+        } catch (error) {
+
+            console.error(
+                'TourSetu registered hotel bridge render error:',
+                error
+            );
+
+        } finally {
+
+            bridgeRendering = false;
+        }
+    }
+
+    /* ----------------------------------------------------------------------
+       ACCEPT / DENY CUSTOMER HOTEL BOOKING
+       ---------------------------------------------------------------------- */
+
+    window.TourSetuUpdateRegisteredHotelBooking =
+        async function (bookingId, newStatus) {
+
+            const client = bridgeClient();
+
+            if (!client) {
+                alert('Database connection is not available.');
+                return;
+            }
+
+            if (!bookingId) {
+                alert('Booking ID is missing.');
+                return;
+            }
+
+            if (
+                newStatus !== 'approved' &&
+                newStatus !== 'denied'
+            ) {
+                alert('Invalid booking status.');
+                return;
+            }
+
+            try {
+
+                const user = await bridgeCurrentUser();
+
+                if (!user) {
+                    alert('Please login again.');
+                    return;
+                }
+
+                /*
+                 * Verify that this booking belongs to this hotel owner.
+                 */
+                const hotel =
+                    await getCurrentHotelForBridge(user);
+
+                if (!hotel) {
+                    alert('Hotel profile not found.');
+                    return;
+                }
+
+                const hotelId =
+                    hotel.hotel_id || hotel.id;
+
+                const {
+                    data: booking,
+                    error: bookingFetchError
+                } = await client
+                    .from('hotel_bookings')
+                    .select('*')
+                    .eq('id', bookingId)
+                    .maybeSingle();
+
+                if (bookingFetchError) {
+                    throw bookingFetchError;
+                }
+
+                if (!booking) {
+                    alert('Hotel booking not found.');
+                    return;
+                }
+
+                const {
+                    data: category,
+                    error: categoryError
+                } = await client
+                    .from('room_categories')
+                    .select('id, hotel_id')
+                    .eq('id', booking.room_category_id)
+                    .maybeSingle();
+
+                if (categoryError) {
+                    throw categoryError;
+                }
+
+                if (
+                    !category ||
+                    String(category.hotel_id) !== String(hotelId)
+                ) {
+                    alert(
+                        'This booking does not belong to your hotel.'
+                    );
+                    return;
+                }
+
+                /*
+                 * ACCEPT
+                 */
+                if (newStatus === 'approved') {
+
+                    const paymentContact =
+                        window.prompt(
+                            'Enter payment contact number (GPay / PhonePe / UPI):',
+                            booking.payment_contact_number || ''
+                        );
+
+                    if (paymentContact === null) {
+                        return;
+                    }
+
+                    const paymentInstructions =
+                        window.prompt(
+                            'Enter payment instructions for the customer:',
+                            booking.payment_instructions || ''
+                        );
+
+                    if (paymentInstructions === null) {
+                        return;
+                    }
+
+                    const updatePayload = {
+                        booking_status: 'approved',
+                        payment_status: 'unpaid',
+
+                        payment_contact_number:
+                            paymentContact.trim() || null,
+
+                        payment_instructions:
+                            paymentInstructions.trim() || null,
+
+                        owner_message:
+                            'Your Registered Hotel booking request has been approved by the hotel. Please complete the payment using the payment instructions provided.',
+
+                        approved_at:
+                            new Date().toISOString(),
+
+                        denied_at: null
+                    };
+
+                    const {
+                        error: updateError
+                    } = await client
+                        .from('hotel_bookings')
+                        .update(updatePayload)
+                        .eq('id', bookingId)
+                        .eq(
+                            'room_category_id',
+                            booking.room_category_id
+                        );
+
+                    if (updateError) {
+                        throw updateError;
+                    }
+
+                    alert(
+                        'Hotel booking request approved successfully.'
+                    );
+
+                }
+
+                /*
+                 * DENY
+                 */
+                if (newStatus === 'denied') {
+
+                    const reason =
+                        window.prompt(
+                            'Enter reason for denying this booking request:',
+                            ''
+                        );
+
+                    if (reason === null) {
+                        return;
+                    }
+
+                    const cleanReason =
+                        reason.trim() ||
+                        'The hotel is unable to accept this booking request.';
+
+                    const updatePayload = {
+                        booking_status: 'denied',
+
+                        owner_message:
+                            cleanReason,
+
+                        cancellation_reason:
+                            cleanReason,
+
+                        approved_at: null,
+
+                        denied_at:
+                            new Date().toISOString()
+                    };
+
+                    const {
+                        error: updateError
+                    } = await client
+                        .from('hotel_bookings')
+                        .update(updatePayload)
+                        .eq('id', bookingId)
+                        .eq(
+                            'room_category_id',
+                            booking.room_category_id
+                        );
+
+                    if (updateError) {
+                        throw updateError;
+                    }
+
+                    alert(
+                        'Hotel booking request denied successfully.'
+                    );
+                }
+
+                /*
+                 * Immediately refresh Hotel Dashboard.
+                 */
+                await renderRegisteredHotelCustomerBookings();
+
+                /*
+                 * If customer dashboard is open in same browser/session,
+                 * refresh it too.
+                 */
+                if (
+                    typeof window.renderCustomerRequests ===
+                    'function'
+                ) {
+                    try {
+                        await window.renderCustomerRequests();
+                    } catch (customerRefreshError) {
+                        console.warn(
+                            'Customer dashboard refresh skipped:',
+                            customerRefreshError
+                        );
+                    }
+                }
+
+            } catch (error) {
+
+                console.error(
+                    'TourSetu hotel booking status update error:',
+                    error
+                );
+
+                alert(
+                    'Hotel booking update failed: ' +
+                    (
+                        error?.message ||
+                        'Unknown database error'
+                    )
+                );
+            }
+        };
+
+    /* ----------------------------------------------------------------------
+       MANUAL REFRESH
+       ---------------------------------------------------------------------- */
+
+    window.TourSetuRefreshRegisteredHotelBookings =
+        async function () {
+
+            await renderRegisteredHotelCustomerBookings();
+
+        };
+
+    /* ----------------------------------------------------------------------
+       WRAP EXISTING HOTEL TAB FUNCTIONS
+       ---------------------------------------------------------------------- */
+
+    function installHotelTabBridge(functionName) {
+
+        const original =
+            window[functionName];
+
+        if (typeof original !== 'function') {
+            return;
+        }
+
+        /*
+         * Prevent wrapping the same function more than once.
+         */
+        if (original.__toursetuHotelBridgeWrapped) {
+            return;
+        }
+
+        const wrapped =
+            async function () {
+
+                const args =
+                    Array.prototype.slice.call(arguments);
+
+                const result =
+                    await original.apply(this, args);
+
+                const tabName =
+                    String(args[0] || '').toLowerCase();
+
+                /*
+                 * Existing dashboard has two naming styles:
+                 *
+                 * showHotelTab('requests')
+                 * switchHotelTab('inbox')
+                 */
+                if (
+                    tabName === 'requests' ||
+                    tabName === 'inbox'
+                ) {
+
+                    setTimeout(
+                        function () {
+                            renderRegisteredHotelCustomerBookings();
+                        },
+                        100
+                    );
+                }
+
+                return result;
+            };
+
+        wrapped.__toursetuHotelBridgeWrapped = true;
+
+        window[functionName] = wrapped;
+    }
+
+    /*
+     * Wait a little because all existing script.js functions must
+     * already be available before wrapping them.
+     */
+    setTimeout(function () {
+
+        installHotelTabBridge('showHotelTab');
+
+        installHotelTabBridge('switchHotelTab');
+
+    }, 0);
+
+    /* ----------------------------------------------------------------------
+       REALTIME HOTEL_BOOKINGS LISTENER
+       ---------------------------------------------------------------------- */
+
+    async function startHotelBookingRealtimeBridge() {
+
+        const client = bridgeClient();
+
+        if (!client) return;
+
+        try {
+
+            if (bridgeChannel) {
+
+                try {
+                    await client.removeChannel(bridgeChannel);
+                } catch (removeError) {
+                    console.warn(
+                        'Previous hotel booking bridge channel cleanup warning:',
+                        removeError
+                    );
+                }
+
+                bridgeChannel = null;
+            }
+
+            bridgeChannel =
+                client
+                    .channel(
+                        'toursetu-registered-hotel-booking-bridge'
+                    )
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: '*',
+                            schema: 'public',
+                            table: 'hotel_bookings'
+                        },
+                        async function (payload) {
+
+                            console.log(
+                                '⚡ Registered Hotel Booking Update:',
+                                payload?.eventType || 'UPDATE'
+                            );
+
+                            /*
+                             * Only render if Hotel Dashboard exists.
+                             */
+                            if (
+                                document.getElementById(
+                                    'hotel-main-content'
+                                )
+                            ) {
+
+                                await renderRegisteredHotelCustomerBookings();
+                            }
+
+                            /*
+                             * Customer side.
+                             */
+                            if (
+                                document.getElementById(
+                                    'customer-pkg-list'
+                                ) &&
+                                typeof window.renderCustomerRequests ===
+                                'function'
+                            ) {
+
+                                try {
+
+                                    const selectedType =
+                                        document.querySelector(
+                                            'input[name="search-type"]:checked'
+                                        )?.value;
+
+                                    if (
+                                        selectedType === 'hotel'
+                                    ) {
+                                        await window.renderCustomerRequests();
+                                    }
+
+                                } catch (customerError) {
+
+                                    console.warn(
+                                        'Customer hotel booking realtime refresh warning:',
+                                        customerError
+                                    );
+                                }
+                            }
+                        }
+                    )
+                    .subscribe(function (status) {
+
+                        console.log(
+                            'TourSetu hotel booking realtime status:',
+                            status
+                        );
+
+                    });
+
+        } catch (error) {
+
+            console.warn(
+                'TourSetu hotel booking realtime setup failed. Polling will continue.',
+                error
+            );
+        }
+    }
+
+    /* ----------------------------------------------------------------------
+       POLLING FALLBACK
+       ---------------------------------------------------------------------- */
+
+    function startHotelBookingPolling() {
+
+        if (bridgePollTimer) {
+            clearInterval(bridgePollTimer);
+        }
+
+        bridgePollTimer =
+            setInterval(
+                async function () {
+
+                    const mainContent =
+                        document.getElementById(
+                            'hotel-main-content'
+                        );
+
+                    if (!mainContent) {
+                        return;
+                    }
+
+                    /*
+                     * Only refresh our section if it currently exists.
+                     * This prevents changing Overview / Property screens.
+                     */
+                    const existingSection =
+                        document.getElementById(
+                            BRIDGE_SECTION_ID
+                        );
+
+                    if (!existingSection) {
+                        return;
+                    }
+
+                    await renderRegisteredHotelCustomerBookings();
+
+                },
+                BRIDGE_POLL_MS
+            );
+    }
+
+    /* ----------------------------------------------------------------------
+       START BRIDGE
+       ---------------------------------------------------------------------- */
+
+    async function startBridge() {
+
+        await startHotelBookingRealtimeBridge();
+
+        startHotelBookingPolling();
+
+        console.log(
+            '✅ TourSetu Registered Hotel Customer Booking Bridge enabled.'
+        );
+    }
+
+    setTimeout(
+        startBridge,
+        1000
+    );
+
+})();
