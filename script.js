@@ -2646,7 +2646,7 @@ window.renderCustomerRequests = async () => {
             }
         ).join('');
 };
-    ============================================================
+
     IMPORTANT:
     Check which search type is currently selected.
 
