@@ -10190,5 +10190,4 @@ initApp();
         '✅ TourSetu Registered Hotel compatibility section loaded.'
     );
 
-})();
-                  
+})();            
