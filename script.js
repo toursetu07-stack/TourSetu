@@ -2647,13 +2647,7 @@ window.renderCustomerRequests = async () => {
         ).join('');
 };
 
-    IMPORTANT:
-    Check which search type is currently selected.
-
-    🎒 Agency Packages  -> bookings table
-    🏨 Registered Hotels -> hotel_bookings table
-
-    This keeps both booking types completely separate.
+ 
     ============================================================
     */
     const selectedType = document.querySelector('input[name="search-type"]:checked')?.value || 'agency';
