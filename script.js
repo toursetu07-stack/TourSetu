@@ -2646,7 +2646,14 @@ window.renderCustomerRequests = async () => {
             }
         ).join('');
 
-    const selectedType = document.querySelector('input[name="search-type"]:checked')?.value || 'agency';
+   window.renderCustomerRequests = async () => {
+
+    // ...
+
+    const selectedType =
+        document.querySelector(
+            'input[name="search-type"]:checked'
+        )?.value || 'agency';
 
     /* ============================================================
        🏨 REGISTERED HOTELS - MY REQUESTS
