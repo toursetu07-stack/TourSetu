@@ -1448,7 +1448,6 @@ window.confirmHotelPayment = async function(
         );
     }
 };
-};
 // Customer ki hotel requests fetch karke UI par dikhane ka function
 async function loadCustomerRequests() {
   const requestsListDiv = document.getElementById('requests-list');
