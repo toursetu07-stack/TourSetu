@@ -2648,7 +2648,7 @@ window.renderCustomerRequests = async () => {
 };
 
  
-    ============================================================
+  
     */
     const selectedType = document.querySelector('input[name="search-type"]:checked')?.value || 'agency';
 
