@@ -3301,7 +3301,6 @@ container.innerHTML = agencyBookings.map(b => {
             </div>
         </div>`;
     }).join('');
-};
 
 window.cancelBookingWithPenalty = async function(id) {
     const disclaimer = "In case of cancellation, a non-refundable amount of 9% (2% Gateway + 7% Service & Facilitation Fee) will be deducted from your total fund.\n\nDo you agree to proceed with the cancellation?";
