@@ -1176,62 +1176,7 @@ window.confirmHotelPayment = async function(bookingId) {
         );
     }
 };   
-// Calculating total nights
-   // Calculating total nights
-const d1 = new Date(checkIn);
-const d2 = new Date(checkOut);
-const diffTime = d2 - d1;
-const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-if (nights <= 0) {
-    alert("Check-Out date must be after Check-In date.");
-    return;
-}
-
-const subtotal = pricePerNight * qty * nights;
-const gatewayFee = subtotal * 0.02;
-const serviceFee = subtotal * 0.07;
-const grandTotal = subtotal + gatewayFee + serviceFee;
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-
-        // Exact Payload mapping with SQL schema fields
-        const bookingPayload = {
-            customer_id: user ? user.id : null,
-            room_category_id: roomCategoryId ? parseInt(roomCategoryId) : null,
-            hotel_name: hotelName,
-            room_type: roomType,
-            location: location,
-            check_in_date: checkIn,
-            check_out_date: checkOut,
-            rooms_booked: qty,
-            price_per_night: pricePerNight,
-            total_nights: nights,
-            subtotal_amount: subtotal,
-            gateway_fee: gatewayFee,
-            service_fee: serviceFee,
-            total_amount: grandTotal,
-            cancellation_policy_agreed: true,
-            booking_status: 'pending',
-            payment_status: 'unpaid'
-        };
-
-        const { data, error } = await client
-            .from('hotel_bookings')
-            .insert([bookingPayload])
-            .select();
-
-        if (error) throw error;
-
-        alert(`🎉 Booking Request Sent Successfully!\n\nBooking ID: ${data[0].id.slice(0, 8)}\nTotal Amount: ₹${grandTotal}`);
-        document.getElementById('hotel-booking-modal').remove();
-
-    } catch (err) {
-        console.error("Database Insert Error:", err);
-        alert(`Booking failed: ${err.message}`);
-    }
-};
 // Customer ki hotel requests fetch karke UI par dikhane ka function
 async function loadCustomerRequests() {
   const requestsListDiv = document.getElementById('requests-list');
