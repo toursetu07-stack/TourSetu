@@ -2633,18 +2633,6 @@ window.renderCustomerRequests = async () => {
                 `;
             }
         ).join('');
-};
-
-/* ============================================================
-   🏨 REGISTERED HOTELS - MY REQUESTS
-   ============================================================ */
-
-if (selectedType === 'hotel') {
-
-    /* ============================================================
-       🏨 REGISTERED HOTELS - MY REQUESTS
-       Source: hotel_bookings table ONLY
-       ============================================================ */
 
 if (selectedType === 'hotel') {
 
