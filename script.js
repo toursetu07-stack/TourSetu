@@ -2430,7 +2430,6 @@ window.renderCustomerRequests = async () => {
         }
     }
 
-
     /* ========================================================
        🎒 AGENCY FLOW
        ======================================================== */
@@ -2634,15 +2633,13 @@ window.renderCustomerRequests = async () => {
                 `;
             }
         ).join('');
+};
 
-   window.renderCustomerRequests = async () => {
+/* ============================================================
+   🏨 REGISTERED HOTELS - MY REQUESTS
+   ============================================================ */
 
-    // ...
-
-    const selectedType =
-        document.querySelector(
-            'input[name="search-type"]:checked'
-        )?.value || 'agency';
+if (selectedType === 'hotel') {
 
     /* ============================================================
        🏨 REGISTERED HOTELS - MY REQUESTS
