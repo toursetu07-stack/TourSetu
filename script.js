@@ -1185,7 +1185,6 @@ const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
 if (nights <= 0) {
     alert("Check-Out date must be after Check-In date.");
-    return;
 }
 
 const subtotal = pricePerNight * qty * nights;
