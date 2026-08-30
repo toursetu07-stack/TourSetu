@@ -1656,17 +1656,6 @@ window.renderCustomerRequests = async () => {
         return;
     }
 
-
-    /* ========================================================
-       SEARCH TYPE
-       ======================================================== */
-
-    const selectedType =
-        document.querySelector(
-            'input[name="search-type"]:checked'
-        )?.value || 'agency';
-
-
     /* ========================================================
        🏨 REGISTERED HOTELS
        ======================================================== */
@@ -10122,6 +10111,7 @@ initApp();
      * Expose a small diagnostic flag only.
      * No dashboard rendering happens here.
      */
+
     window[TOURSETU_REGISTERED_HOTEL_COMPATIBILITY] = true;
 
     /*
@@ -10131,6 +10121,7 @@ initApp();
      * It only refreshes the currently existing Hotel Arrivals screen
      * when the caller explicitly requests it.
      */
+
     window.TourSetuRefreshRegisteredHotelArrivals =
         async function () {
 
@@ -10142,9 +10133,11 @@ initApp();
                         : null;
 
                 if (!client) {
+
                     console.warn(
                         'TourSetu: Supabase client unavailable.'
                     );
+
                     return;
                 }
 
@@ -10153,9 +10146,11 @@ initApp();
                 } = await client.auth.getUser();
 
                 if (!user) {
+
                     console.warn(
                         'TourSetu: No logged-in user.'
                     );
+
                     return;
                 }
 
@@ -10168,6 +10163,7 @@ initApp();
                     !container ||
                     typeof renderArrivalsAndPayouts !== 'function'
                 ) {
+
                     return;
                 }
 
@@ -10190,4 +10186,4 @@ initApp();
         '✅ TourSetu Registered Hotel compatibility section loaded.'
     );
 
-})();            
+})(); 
