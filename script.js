@@ -3218,16 +3218,20 @@ if (selectedType === 'hotel') {
     container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Loading your requests...</h3></div>`;
     
     // Problem 2 Fix: Freshly fetch everything directly from database to avoid caching/sync issues
-    const { data, error } = await client.from('bookings').select('*').eq('customer_id', user.id).order('created_at', {ascending: false});
+  const { data: agencyBookings, error: agencyError } = await client
+    .from('bookings')
+    .select('*')
+    .eq('customer_id', user.id)
+    .order('created_at', { ascending: false });
     
-    if(!data || data.length === 0) {
+if (!agencyBookings || agencyBookings.length === 0)
         container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px;">
             <p>No requests found. <span onclick="renderCustomerHomepage()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">Search for packages</span></p>
         </div>`;
         return;
     }
 
-    container.innerHTML = data.map(b => {
+container.innerHTML = agencyBookings.map(b => {
         // Problem 2 Fix: Handle both 'confirmed' and 'approved' values cleanly for styling and buttons
         const isApprovedOrConfirmed = b.status === 'confirmed' || b.status === 'approved';
         const statusColor = b.status === 'paid' ? '#2ecc71' : (isApprovedOrConfirmed ? '#3498db' : (b.status === 'denied' || b.status === 'rejected' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43')));
