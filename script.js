@@ -7506,12 +7506,7 @@ async function renderArrivalsAndPayouts(container, user) {
 
         /* ============================================================
            2. CUSTOMER DIRECT HOTEL BOOKINGS
-
-           hotel_bookings
-               ↓
-           room_categories
-               ↓
-           hotel_id
+           hotel_bookings → room_categories → hotels
            ============================================================ */
 
         const {
@@ -7523,7 +7518,7 @@ async function renderArrivalsAndPayouts(container, user) {
             .order(
                 'created_at',
                 {
-                    ascending:false
+                    ascending: false
                 }
             );
 
@@ -7604,7 +7599,7 @@ async function renderArrivalsAndPayouts(container, user) {
 
 
         /* ============================================================
-           3. AGENCY / EXISTING HOTEL REQUESTS
+           3. AGENCY HOTEL REQUESTS
            ============================================================ */
 
         const {
@@ -7622,7 +7617,7 @@ async function renderArrivalsAndPayouts(container, user) {
             .order(
                 'created_at',
                 {
-                    ascending:false
+                    ascending: false
                 }
             );
 
@@ -7689,6 +7684,12 @@ async function renderArrivalsAndPayouts(container, user) {
                 const isApproved =
                     status === 'approved' ||
                     status === 'confirmed';
+
+
+                const isPaid =
+                    payment === 'paid' ||
+                    payment === 'success' ||
+                    payment === 'completed';
 
 
                 html += `
@@ -7834,7 +7835,20 @@ async function renderArrivalsAndPayouts(container, user) {
 
                             <div>
                                 💳 <b>Payment</b><br>
-                                ${payment.toUpperCase()}
+
+                                <span style="
+                                    color:${
+                                        isPaid
+                                            ? '#27ae60'
+                                            : payment === 'failed' ||
+                                              payment === 'cancelled'
+                                                ? '#e74c3c'
+                                                : '#ff9f43'
+                                    };
+                                    font-weight:bold;
+                                ">
+                                    ${payment.toUpperCase()}
+                                </span>
                             </div>
 
                         </div>
@@ -7851,6 +7865,24 @@ async function renderArrivalsAndPayouts(container, user) {
                             ">
                                 👤 <b>Customer:</b>
                                 ${b.customer_email}
+                            </div>
+
+                            `
+                            : ''
+                        }
+
+
+                        ${
+                            b.customer_id
+                            ? `
+
+                            <div style="
+                                margin-top:6px;
+                                font-size:11px;
+                                color:#999;
+                            ">
+                                Customer ID:
+                                ${String(b.customer_id).slice(0,8)}
                             </div>
 
                             `
@@ -7881,18 +7913,37 @@ async function renderArrivalsAndPayouts(container, user) {
                                 <div style="
                                     margin-top:6px;
                                     font-weight:normal;
+                                    line-height:1.6;
                                 ">
                                     ${
                                         b.cancellation_reason ||
+                                        b.owner_message ||
                                         'Customer cancelled this booking request.'
                                     }
                                 </div>
 
                                 ${
-                                    b.cancelled_at
+                                    b.cancelled_by
                                     ? `
                                     <div style="
                                         margin-top:7px;
+                                        font-size:11px;
+                                        color:#777;
+                                    ">
+                                        Cancelled by:
+                                        <b>
+                                            ${b.cancelled_by}
+                                        </b>
+                                    </div>
+                                    `
+                                    : ''
+                                }
+
+                                ${
+                                    b.cancelled_at
+                                    ? `
+                                    <div style="
+                                        margin-top:4px;
                                         font-size:11px;
                                         color:#777;
                                     ">
@@ -7937,6 +7988,7 @@ async function renderArrivalsAndPayouts(container, user) {
 
                                 <div style="
                                     margin-top:5px;
+                                    line-height:1.6;
                                 ">
                                     ${
                                         b.owner_message ||
@@ -7954,7 +8006,8 @@ async function renderArrivalsAndPayouts(container, user) {
                         <!-- APPROVED -->
 
                         ${
-                            isApproved
+                            isApproved &&
+                            !isCancelled
                             ? `
 
                             <div style="
@@ -7968,7 +8021,11 @@ async function renderArrivalsAndPayouts(container, user) {
                                 font-size:13px;
                             ">
 
-                                ✅ REQUEST ACCEPTED
+                                ${
+                                    isPaid
+                                    ? '✅ PAYMENT CONFIRMED'
+                                    : '✅ REQUEST ACCEPTED'
+                                }
 
                                 <div style="
                                     margin-top:6px;
@@ -7976,7 +8033,11 @@ async function renderArrivalsAndPayouts(container, user) {
                                 ">
                                     ${
                                         b.owner_message ||
-                                        'Request accepted. Customer can now proceed with payment.'
+                                        (
+                                            isPaid
+                                            ? 'Customer payment has been confirmed. Hotel booking is confirmed.'
+                                            : 'Request accepted. Customer can now proceed with payment.'
+                                        )
                                     }
                                 </div>
 
@@ -8127,14 +8188,36 @@ async function renderArrivalsAndPayouts(container, user) {
                         ).toLowerCase();
 
 
+                    const paymentStatus =
+                        String(
+                            req.payment_status ||
+                            'unpaid'
+                        ).toLowerCase();
+
+
                     const isPending =
                         status === 'pending';
 
 
+                    const isApproved =
+                        status === 'approved' ||
+                        status === 'confirmed';
+
+
                     const isCancelled =
                         status === 'cancelled' ||
+                        status === 'cancelled_by_customer';
+
+
+                    const isDenied =
                         status === 'denied' ||
                         status === 'rejected';
+
+
+                    const isPaid =
+                        paymentStatus === 'paid' ||
+                        paymentStatus === 'success' ||
+                        paymentStatus === 'completed';
 
 
                     html += `
@@ -8144,9 +8227,9 @@ async function renderArrivalsAndPayouts(container, user) {
                             padding:22px;
                             border-radius:15px;
                             border-left:6px solid ${
-                                isCancelled
+                                isCancelled || isDenied
                                     ? '#e74c3c'
-                                    : status === 'approved'
+                                    : isApproved
                                         ? '#3498db'
                                         : '#ff9f43'
                             };
@@ -8162,11 +8245,13 @@ async function renderArrivalsAndPayouts(container, user) {
                                     space-between;
                                 align-items:
                                     flex-start;
+                                gap:15px;
                             ">
 
                                 <div>
 
                                     <span style="
+                                        display:inline-block;
                                         background:#ebf5fb;
                                         color:#2980b9;
                                         padding:4px 10px;
@@ -8213,17 +8298,39 @@ async function renderArrivalsAndPayouts(container, user) {
 
 
                                 <div style="
-                                    font-weight:bold;
-                                    color:#2ecc71;
+                                    text-align:right;
                                 ">
-                                    ₹${
-                                        Number(
-                                            req.total_amount ||
-                                            0
-                                        ).toLocaleString(
-                                            'en-IN'
-                                        )
-                                    }
+
+                                    <div style="
+                                        font-weight:bold;
+                                        color:#2ecc71;
+                                        font-size:19px;
+                                    ">
+                                        ₹${
+                                            Number(
+                                                req.total_amount ||
+                                                0
+                                            ).toLocaleString(
+                                                'en-IN'
+                                            )
+                                        }
+                                    </div>
+
+                                    <div style="
+                                        margin-top:5px;
+                                        font-size:10px;
+                                        font-weight:bold;
+                                        color:${
+                                            isCancelled || isDenied
+                                                ? '#e74c3c'
+                                                : isApproved
+                                                    ? '#3498db'
+                                                    : '#ff9f43'
+                                        };
+                                    ">
+                                        ${status.toUpperCase()}
+                                    </div>
+
                                 </div>
 
                             </div>
@@ -8262,11 +8369,40 @@ async function renderArrivalsAndPayouts(container, user) {
                                     0
                                 }
 
+                                <br><br>
+
+                                💳
+                                <b>Payment:</b>
+                                ${
+                                    paymentStatus.toUpperCase()
+                                }
+
                             </div>
 
 
                             ${
-                                status === 'approved'
+                                req.agency_contact
+                                ? `
+
+                                <div style="
+                                    margin-top:12px;
+                                    font-size:13px;
+                                    color:#555;
+                                ">
+                                    👤 <b>Agency:</b>
+                                    ${req.agency_contact}
+                                </div>
+
+                                `
+                                : ''
+                            }
+
+
+                            <!-- AGENCY APPROVED -->
+
+                            ${
+                                isApproved &&
+                                !isCancelled
                                 ? `
 
                                 <div style="
@@ -8277,18 +8413,33 @@ async function renderArrivalsAndPayouts(container, user) {
                                     border-radius:8px;
                                 ">
 
-                                    ✅ REQUEST ACCEPTED
+                                    ${
+                                        isPaid
+                                        ? '✅ PAYMENT CONFIRMED'
+                                        : '✅ REQUEST ACCEPTED'
+                                    }
 
                                     <div style="
                                         margin-top:5px;
                                     ">
-                                        Payment instructions:
-                                        <b>
-                                            ${
-                                                req.payment_details ||
-                                                'N/A'
-                                            }
-                                        </b>
+
+                                        ${
+                                            req.payment_details
+                                            ? `
+                                                Payment instructions:
+                                                <b>
+                                                    ${
+                                                        req.payment_details
+                                                    }
+                                                </b>
+                                            `
+                                            : (
+                                                isPaid
+                                                ? 'Agency payment has been confirmed.'
+                                                : 'Request accepted.'
+                                            )
+                                        }
+
                                     </div>
 
                                 </div>
@@ -8298,8 +8449,10 @@ async function renderArrivalsAndPayouts(container, user) {
                             }
 
 
+                            <!-- AGENCY CANCELLATION / DENIAL -->
+
                             ${
-                                isCancelled
+                                isCancelled || isDenied
                                 ? `
 
                                 <div style="
@@ -8308,18 +8461,50 @@ async function renderArrivalsAndPayouts(container, user) {
                                     color:#c0392b;
                                     padding:13px;
                                     border-radius:8px;
+                                    border:1px solid #ff7675;
                                 ">
 
-                                    🚫 REQUEST CANCELLED / DENIED
+                                    ${
+                                        isCancelled
+                                        ? '🚫 REQUEST CANCELLED'
+                                        : '❌ REQUEST DENIED'
+                                    }
 
                                     <div style="
                                         margin-top:5px;
+                                        line-height:1.6;
                                     ">
                                         ${
                                             req.cancellation_reason ||
-                                            'This hotel request was cancelled or denied.'
+                                            req.owner_message ||
+                                            (
+                                                isCancelled
+                                                ? 'This hotel request was cancelled.'
+                                                : 'This hotel request was denied.'
+                                            )
                                         }
                                     </div>
+
+                                    ${
+                                        req.cancelled_at
+                                        ? `
+                                        <div style="
+                                            margin-top:7px;
+                                            font-size:11px;
+                                            color:#777;
+                                        ">
+                                            Cancelled at:
+                                            ${
+                                                new Date(
+                                                    req.cancelled_at
+                                                ).toLocaleString(
+                                                    'en-IN'
+                                                )
+                                            }
+                                        </div>
+                                        `
+                                        : ''
+                                    }
 
                                 </div>
 
@@ -8327,6 +8512,8 @@ async function renderArrivalsAndPayouts(container, user) {
                                 : ''
                             }
 
+
+                            <!-- APPROVE / DENY -->
 
                             ${
                                 isPending
@@ -8386,6 +8573,26 @@ async function renderArrivalsAndPayouts(container, user) {
                                 `
                                 : ''
                             }
+
+
+                            <div style="
+                                margin-top:15px;
+                                padding-top:10px;
+                                border-top:1px solid #eee;
+                                font-size:11px;
+                                color:#999;
+                            ">
+
+                                Request ID:
+                                ${
+                                    req.request_id
+                                        ? String(
+                                            req.request_id
+                                        ).slice(0,8)
+                                        : 'N/A'
+                                }
+
+                            </div>
 
                         </div>
 
