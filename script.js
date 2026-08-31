@@ -857,13 +857,17 @@ window.submitHotelRoomBooking = async function(hotelName, roomType, location, pr
 
 window.openHotelCancellationModal = function(bookingId) {
 
-    let modal = document.getElementById('hotel-cancel-confirm-modal');
+    let modal =
+        document.getElementById(
+            'hotel-cancel-confirm-modal'
+        );
 
     if (!modal) {
 
         modal = document.createElement('div');
 
-        modal.id = 'hotel-cancel-confirm-modal';
+        modal.id =
+            'hotel-cancel-confirm-modal';
 
         modal.style = `
             position:fixed;
@@ -931,6 +935,7 @@ window.openHotelCancellationModal = function(bookingId) {
                     cursor:pointer;
                     font-size:13px;
                 ">
+
                     <input
                         type="checkbox"
                         id="hotel-cancel-policy-check"
@@ -940,6 +945,7 @@ window.openHotelCancellationModal = function(bookingId) {
                     <span>
                         I agree to the Cancellation & Refund Policy.
                     </span>
+
                 </label>
 
                 <div style="
@@ -965,7 +971,13 @@ window.openHotelCancellationModal = function(bookingId) {
                     </button>
 
                     <button
-                        onclick="document.getElementById('hotel-cancel-confirm-modal').remove()"
+                        onclick="
+                            document
+                                .getElementById(
+                                    'hotel-cancel-confirm-modal'
+                                )
+                                .remove()
+                        "
                         style="
                             flex:1;
                             background:#eee;
@@ -992,10 +1004,16 @@ window.openHotelCancellationModal = function(bookingId) {
 };
 
 
+/* ============================================================
+   🏨 CONFIRM CUSTOMER HOTEL CANCELLATION
+   ============================================================ */
+
 window.confirmHotelCancellation = async function(bookingId) {
 
     const checkbox =
-        document.getElementById('hotel-cancel-policy-check');
+        document.getElementById(
+            'hotel-cancel-policy-check'
+        );
 
     if (!checkbox || !checkbox.checked) {
 
@@ -1006,6 +1024,7 @@ window.confirmHotelCancellation = async function(bookingId) {
         return;
     }
 
+
     const finalConfirm = confirm(
         "Cancellation confirmation:\n\n" +
         "9% (2% Gateway + 7% Service & Facilitation Fee) " +
@@ -1015,30 +1034,94 @@ window.confirmHotelCancellation = async function(bookingId) {
 
     if (!finalConfirm) return;
 
+
     const client = getClient();
+
+    if (!client) {
+
+        alert(
+            "Database connection error."
+        );
+
+        return;
+    }
+
 
     try {
 
-        const { data: { user } } =
-            await client.auth.getUser();
+        /* ========================================================
+           1. CURRENT LOGGED-IN USER
+           ======================================================== */
+
+        const {
+            data: {
+                user
+            },
+            error: userError
+        } = await client.auth.getUser();
+
+
+        if (userError) {
+            throw userError;
+        }
+
 
         if (!user) {
-            alert("Please login first.");
+
+            alert(
+                "Please login first."
+            );
+
             return;
         }
 
-        const { data: booking, error: fetchError } =
-            await client
-                .from('hotel_bookings')
-                .select('*')
-                .eq('id', bookingId)
-                .eq('customer_id', user.id)
-                .single();
 
-        if (fetchError) throw fetchError;
+        /* ========================================================
+           2. FETCH BOOKING
+           ======================================================== */
+
+        const {
+            data: booking,
+            error: fetchError
+        } = await client
+            .from('hotel_bookings')
+            .select('*')
+            .eq(
+                'id',
+                bookingId
+            )
+            .eq(
+                'customer_id',
+                user.id
+            )
+            .single();
+
+
+        if (fetchError) {
+            throw fetchError;
+        }
+
+
+        if (!booking) {
+
+            alert(
+                "Hotel booking request not found."
+            );
+
+            return;
+        }
+
+
+        /* ========================================================
+           3. CHECK CURRENT STATUS
+           ======================================================== */
 
         const currentStatus =
-            String(booking.booking_status || '').toLowerCase();
+            String(
+                booking.booking_status ||
+                ''
+            ).toLowerCase();
+
 
         if (
             [
@@ -1049,9 +1132,18 @@ window.confirmHotelCancellation = async function(bookingId) {
                 'completed'
             ].includes(currentStatus)
         ) {
-            alert("This booking can no longer be cancelled.");
+
+            alert(
+                "This booking can no longer be cancelled."
+            );
+
             return;
         }
+
+
+        /* ========================================================
+           4. CANCELLATION MESSAGE
+           ======================================================== */
 
         const cancellationMessage =
             "Customer cancelled this Registered Hotel booking. " +
@@ -1060,39 +1152,130 @@ window.confirmHotelCancellation = async function(bookingId) {
             "(2% Gateway + 7% Service & Facilitation Fee) " +
             "will be deducted from the total refund.";
 
-        const { error } = await client
+
+        /* ========================================================
+           5. UPDATE DATABASE
+           IMPORTANT:
+           cancelled_by = customer
+           ======================================================== */
+
+        const {
+            data: updatedBooking,
+            error: updateError
+        } = await client
             .from('hotel_bookings')
             .update({
-                booking_status: 'cancelled_by_customer',
-                cancellation_reason: cancellationMessage,
-                cancelled_by: 'customer',
-                cancelled_at: new Date().toISOString(),
-                owner_message: cancellationMessage
-            })
-            .eq('id', bookingId)
-            .eq('customer_id', user.id);
 
-        if (error) throw error;
+                booking_status:
+                    'cancelled_by_customer',
+
+                cancelled_by:
+                    'customer',
+
+                cancelled_at:
+                    new Date().toISOString(),
+
+                cancellation_reason:
+                    cancellationMessage,
+
+                owner_message:
+                    cancellationMessage
+
+            })
+            .eq(
+                'id',
+                bookingId
+            )
+            .eq(
+                'customer_id',
+                user.id
+            )
+            .select('*')
+            .single();
+
+
+        if (updateError) {
+
+            console.error(
+                "Hotel cancellation database update error:",
+                updateError
+            );
+
+            throw updateError;
+        }
+
+
+        /* ========================================================
+           6. VERIFY DATABASE UPDATE
+           ======================================================== */
+
+        if (
+            !updatedBooking ||
+            updatedBooking.cancelled_by !== 'customer'
+        ) {
+
+            console.error(
+                "Cancellation update verification failed:",
+                updatedBooking
+            );
+
+            throw new Error(
+                "Cancellation was processed, but cancelled_by was not saved as 'customer'."
+            );
+        }
+
+
+        /* ========================================================
+           7. CLOSE MODAL
+           ======================================================== */
 
         const modal =
-            document.getElementById('hotel-cancel-confirm-modal');
+            document.getElementById(
+                'hotel-cancel-confirm-modal'
+            );
 
-        if (modal) modal.remove();
+
+        if (modal) {
+            modal.remove();
+        }
+
+
+        /* ========================================================
+           8. SUCCESS
+           ======================================================== */
 
         alert(
             "✅ Hotel booking request cancelled successfully.\n\n" +
             "The hotel owner has been notified of the cancellation."
         );
 
-        window.renderCustomerRequests();
+
+        /* ========================================================
+           9. REFRESH CUSTOMER REQUESTS
+           ======================================================== */
+
+        if (
+            typeof window.renderCustomerRequests ===
+            'function'
+        ) {
+
+            await window.renderCustomerRequests();
+
+        }
 
     } catch (err) {
 
-        console.error("Hotel Cancellation Error:", err);
+        console.error(
+            "Hotel Cancellation Error:",
+            err
+        );
 
         alert(
             "Cancellation failed: " +
-            err.message
+            (
+                err?.message ||
+                "Unknown database error."
+            )
         );
     }
 };
