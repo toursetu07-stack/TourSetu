@@ -72,6 +72,7 @@
             gap: 12px;
             align-items: flex-start;
         }
+
         .policy-container input {
             width: 20px !important;
             height: 20px !important;
@@ -89,12 +90,14 @@
             transition: all 0.2s ease;
             color: #d1d5db;
         }
+
         .nav-item:hover {
             background: #374151;
             color: #ffffff;
         }
     </style>
 </head>
+
 <body>
 
 <div id="app">
@@ -148,9 +151,60 @@
 <!-- SIDEBAR NAVIGATION TEMPLATE (Used dynamically when Hotel Login happens) -->
 <template id="hotel-sidebar-template">
     <nav style="display: flex; flex-direction: column; gap: 5px;">
-        <div onclick="showHotelTab('overview')" class="nav-item">📊 Dashboard</div>
-        <div onclick="showHotelTab('property')" class="nav-item">🏨 Room Inventory & Lock</div>
-        <div onclick="showHotelTab('requests')" class="nav-item">📥 Booking Inbox</div>
+
+        <div onclick="showHotelTab('overview')" class="nav-item">
+            📊 Dashboard
+        </div>
+
+        <div onclick="showHotelTab('property')" class="nav-item">
+            🏨 Room Inventory & Lock
+        </div>
+
+        <!-- ============================================================
+             🏨 BOOKING REQUEST
+             ============================================================ -->
+
+        <div 
+            onclick="openHotelBookingRequestSection()" 
+            style="
+                cursor:pointer;
+                background:white;
+                padding:22px;
+                border-radius:15px;
+                box-shadow:0 4px 15px rgba(0,0,0,0.08);
+                border-left:5px solid #3498db;
+                transition:0.2s;
+            "
+        >
+
+            <div style="
+                font-size:32px;
+                margin-bottom:10px;
+            ">
+                🏨
+            </div>
+
+            <h3 style="
+                margin:0;
+                color:#2d3436;
+            ">
+                Booking Request
+            </h3>
+
+            <p style="
+                margin:7px 0 0;
+                color:#7f8c8d;
+                font-size:13px;
+            ">
+                View and manage customer and agency booking requests
+            </p>
+
+        </div>
+
+        <div onclick="showHotelTab('requests')" class="nav-item">
+            📥 Booking Inbox
+        </div>
+
     </nav>
 </template>
 
