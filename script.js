@@ -8986,47 +8986,189 @@ window.hotelBookingRequestItemHTML = `
 
 
 /* =========================================================================
-   🏨 HOTEL DASHBOARD — BOOKING REQUESTS
+   🏨 HOTEL DASHBOARD — BOOKING REQUEST
    CUSTOMER + AGENCY REQUESTS
    Source: hotel_bookings table
    ========================================================================= */
 
-window.renderHotelBookingRequests = async function(container, user) {
+
+/* =========================================================================
+   1. BOOKING REQUEST TAB
+   ========================================================================= */
+
+window.openHotelBookingRequestSection = async function () {
+
+    const userResult = await getClient().auth.getUser();
+    const user = userResult?.data?.user;
+
+    if (!user) {
+        console.error("Hotel user not found.");
+        return;
+    }
+
+    /*
+       Try to find the existing hotel dashboard content container.
+       We intentionally do not replace the whole dashboard.
+    */
+
+    let container =
+        document.getElementById('hotel-booking-request-section');
+
+    if (!container) {
+
+        container = document.createElement('div');
+
+        container.id =
+            'hotel-booking-request-section';
+
+        container.style.cssText = `
+            width:100%;
+            box-sizing:border-box;
+        `;
+
+        /*
+           Add the section to the existing dashboard.
+           This does NOT modify the existing dashboard HTML.
+        */
+
+        const possibleParents = [
+            document.getElementById('hotel-dashboard-content'),
+            document.getElementById('hotel-dashboard-main'),
+            document.getElementById('owner-dashboard-section'),
+            document.getElementById('app')
+        ];
+
+        const parent =
+            possibleParents.find(el => el);
+
+        if (!parent) {
+            console.error(
+                "Hotel dashboard content container not found."
+            );
+            return;
+        }
+
+        parent.appendChild(container);
+    }
+
+
+    /* Hide other dynamically displayed hotel sections
+       only if they use these known IDs. */
+
+    const existingSections = [
+        'hotel-overview-section',
+        'hotel-property-section',
+        'hotel-arrivals-section',
+        'hotel-checkin-section'
+    ];
+
+    existingSections.forEach(id => {
+
+        const section =
+            document.getElementById(id);
+
+        if (section) {
+            section.style.display = 'none';
+        }
+
+    });
+
+
+    container.style.display = 'block';
+
+
+    await window.renderHotelBookingRequests(
+        container,
+        user
+    );
+};
+
+
+/* =========================================================================
+   2. RENDER BOOKING REQUESTS
+   ========================================================================= */
+
+window.renderHotelBookingRequests = async function (
+    container,
+    user
+) {
 
     const client = getClient();
 
     if (!container) {
-        console.error("Booking Request container not found.");
+        console.error(
+            "Booking Request container not found."
+        );
         return;
     }
 
     container.innerHTML = `
+
         <div style="
             max-width:1100px;
-            margin:auto;
+            margin:20px auto;
+            padding:25px;
+            box-sizing:border-box;
         ">
 
-            <h1 style="
-                margin:0;
-                color:#1e272e;
-            ">
-                🏨 Booking Requests
-            </h1>
-
-            <p style="
-                color:#7f8c8d;
-                margin-top:6px;
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:15px;
+                flex-wrap:wrap;
                 margin-bottom:25px;
             ">
-                Manage customer and agency hotel booking requests.
-            </p>
+
+                <div>
+
+                    <h1 style="
+                        margin:0;
+                        color:#1e272e;
+                    ">
+                        🏨 Booking Requests
+                    </h1>
+
+                    <p style="
+                        color:#7f8c8d;
+                        margin-top:6px;
+                        margin-bottom:0;
+                    ">
+                        Customer and agency booking requests
+                    </p>
+
+                </div>
+
+                <button
+                    onclick="
+                        openHotelBookingRequestSection()
+                    "
+                    style="
+                        background:#ff9f43;
+                        color:white;
+                        border:none;
+                        padding:11px 18px;
+                        border-radius:8px;
+                        font-weight:bold;
+                        cursor:pointer;
+                    "
+                >
+                    🔄 Refresh
+                </button>
+
+            </div>
+
 
             <div id="hotel-booking-request-list">
+
                 Loading booking requests...
+
             </div>
 
         </div>
+
     `;
+
 
     const list =
         document.getElementById(
@@ -9038,9 +9180,9 @@ window.renderHotelBookingRequests = async function(container, user) {
 
     try {
 
-        /* ============================================================
-           1. HOTEL PROFILE
-           ============================================================ */
+        /* =============================================================
+           HOTEL PROFILE
+           ============================================================= */
 
         const {
             data: hotel,
@@ -9048,24 +9190,33 @@ window.renderHotelBookingRequests = async function(container, user) {
         } = await client
             .from('hotels')
             .select('*')
-            .eq('owner_id', user.id)
+            .eq(
+                'owner_id',
+                user.id
+            )
             .maybeSingle();
+
 
         if (hotelError) {
             throw hotelError;
         }
 
+
         if (!hotel) {
 
             list.innerHTML = `
+
                 <div style="
                     background:white;
                     padding:30px;
                     border-radius:15px;
                     color:#e74c3c;
                 ">
+
                     Hotel profile not found.
+
                 </div>
+
             `;
 
             return;
@@ -9073,12 +9224,13 @@ window.renderHotelBookingRequests = async function(container, user) {
 
 
         const hotelId =
-            hotel.hotel_id || hotel.id;
+            hotel.hotel_id ||
+            hotel.id;
 
 
-        /* ============================================================
-           2. FETCH HOTEL BOOKINGS
-           ============================================================ */
+        /* =============================================================
+           FETCH BOOKINGS
+           ============================================================= */
 
         const {
             data: bookings,
@@ -9093,19 +9245,21 @@ window.renderHotelBookingRequests = async function(container, user) {
                 }
             );
 
+
         if (bookingError) {
             throw bookingError;
         }
 
 
-        /* ============================================================
-           3. ROOM CATEGORY MAPPING
-           ============================================================ */
+        /* =============================================================
+           ROOM CATEGORY DATA
+           ============================================================= */
 
         const categoryIds =
             (bookings || [])
                 .map(
-                    b => b.room_category_id
+                    booking =>
+                        booking.room_category_id
                 )
                 .filter(Boolean);
 
@@ -9128,16 +9282,20 @@ window.renderHotelBookingRequests = async function(container, user) {
                     categoryIds
                 );
 
+
             if (categoryError) {
                 throw categoryError;
             }
 
+
             categories =
                 categoryData || [];
+
         }
 
 
         const categoryMap = {};
+
 
         categories.forEach(
             category => {
@@ -9150,9 +9308,9 @@ window.renderHotelBookingRequests = async function(container, user) {
         );
 
 
-        /* ============================================================
-           4. ONLY THIS HOTEL'S BOOKINGS
-           ============================================================ */
+        /* =============================================================
+           ONLY CURRENT HOTEL BOOKINGS
+           ============================================================= */
 
         const hotelBookings =
             (bookings || [])
@@ -9164,6 +9322,7 @@ window.renderHotelBookingRequests = async function(container, user) {
                                 booking.room_category_id
                             ];
 
+
                         const directHotelMatch =
                             booking.hotel_id &&
                             String(
@@ -9171,12 +9330,14 @@ window.renderHotelBookingRequests = async function(container, user) {
                             ) ===
                             String(hotelId);
 
+
                         const categoryHotelMatch =
                             category &&
                             String(
                                 category.hotel_id
                             ) ===
                             String(hotelId);
+
 
                         return (
                             directHotelMatch ||
@@ -9187,18 +9348,19 @@ window.renderHotelBookingRequests = async function(container, user) {
                 );
 
 
-        /* ============================================================
-           5. EMPTY STATE
-           ============================================================ */
+        /* =============================================================
+           EMPTY STATE
+           ============================================================= */
 
         if (
             hotelBookings.length === 0
         ) {
 
             list.innerHTML = `
+
                 <div style="
                     background:white;
-                    padding:45px;
+                    padding:50px 30px;
                     border-radius:15px;
                     text-align:center;
                     box-shadow:
@@ -9207,35 +9369,37 @@ window.renderHotelBookingRequests = async function(container, user) {
                 ">
 
                     <div style="
-                        font-size:50px;
+                        font-size:55px;
                     ">
                         🏨
                     </div>
 
                     <h3 style="
                         color:#2d3436;
-                        margin-bottom:8px;
+                        margin:12px 0 8px;
                     ">
                         No Booking Requests
                     </h3>
 
                     <p style="
                         color:#777;
+                        margin:0;
                     ">
-                        Customer and agency booking requests
-                        will appear here.
+                        Customer and agency booking
+                        requests will appear here.
                     </p>
 
                 </div>
+
             `;
 
             return;
         }
 
 
-        /* ============================================================
-           6. BUILD REQUEST CARDS
-           ============================================================ */
+        /* =============================================================
+           REQUEST CARDS
+           ============================================================= */
 
         list.innerHTML =
             hotelBookings
@@ -9276,7 +9440,8 @@ window.renderHotelBookingRequests = async function(container, user) {
 
                         const isCancelled =
                             status === 'cancelled' ||
-                            status === 'cancelled_by_customer';
+                            status ===
+                            'cancelled_by_customer';
 
 
                         const amount =
@@ -9323,6 +9488,14 @@ window.renderHotelBookingRequests = async function(container, user) {
                         }
 
 
+                        const roomType =
+                            booking.room_type ||
+                            categoryMap[
+                                booking.room_category_id
+                            ]?.room_type ||
+                            'Room Booking';
+
+
                         return `
 
                             <div style="
@@ -9338,6 +9511,41 @@ window.renderHotelBookingRequests = async function(container, user) {
                                     rgba(0,0,0,0.05);
                             ">
 
+
+                                <!-- REQUESTER TYPE -->
+
+                                <span style="
+                                    display:inline-block;
+                                    background:
+                                        ${
+                                            requesterType ===
+                                            'agency'
+                                                ? '#ebf5fb'
+                                                : '#e8f5e9'
+                                        };
+                                    color:
+                                        ${
+                                            requesterType ===
+                                            'agency'
+                                                ? '#2980b9'
+                                                : '#2e7d32'
+                                        };
+                                    padding:6px 12px;
+                                    border-radius:12px;
+                                    font-size:10px;
+                                    font-weight:bold;
+                                ">
+
+                                    ${
+                                        requesterType ===
+                                        'agency'
+                                            ? '🏢 AGENCY REQUEST'
+                                            : '👤 CUSTOMER REQUEST'
+                                    }
+
+                                </span>
+
+
                                 <!-- HEADER -->
 
                                 <div style="
@@ -9346,46 +9554,21 @@ window.renderHotelBookingRequests = async function(container, user) {
                                     align-items:flex-start;
                                     gap:20px;
                                     flex-wrap:wrap;
+                                    margin-top:12px;
                                 ">
 
                                     <div>
 
-                                        <span style="
-                                            display:inline-block;
-                                            background:
-                                                ${
-                                                    requesterType === 'agency'
-                                                        ? '#ebf5fb'
-                                                        : '#e8f5e9'
-                                                };
-                                            color:
-                                                ${
-                                                    requesterType === 'agency'
-                                                        ? '#2980b9'
-                                                        : '#2e7d32'
-                                                };
-                                            padding:5px 11px;
-                                            border-radius:12px;
-                                            font-size:10px;
-                                            font-weight:bold;
-                                        ">
-                                            ${
-                                                requesterType === 'agency'
-                                                    ? '🏢 AGENCY REQUEST'
-                                                    : '👤 CUSTOMER REQUEST'
-                                            }
-                                        </span>
-
-
                                         <h3 style="
-                                            margin:
-                                                12px 0 6px;
+                                            margin:0 0 7px;
                                             color:#2d3436;
                                         ">
+
                                             ${
                                                 booking.hotel_name ||
                                                 'Registered Hotel Booking'
                                             }
+
                                         </h3>
 
 
@@ -9393,13 +9576,9 @@ window.renderHotelBookingRequests = async function(container, user) {
                                             color:#636e72;
                                             font-size:13px;
                                         ">
-                                            ${
-                                                booking.room_type ||
-                                                categoryMap[
-                                                    booking.room_category_id
-                                                ]?.room_type ||
-                                                'Room Booking'
-                                            }
+
+                                            ${roomType}
+
                                         </div>
 
                                     </div>
@@ -9414,7 +9593,11 @@ window.renderHotelBookingRequests = async function(container, user) {
                                             font-weight:bold;
                                             color:#27ae60;
                                         ">
-                                            ₹${amount.toLocaleString('en-IN')}
+
+                                            ₹${amount.toLocaleString(
+                                                'en-IN'
+                                            )}
+
                                         </div>
 
 
@@ -9428,7 +9611,9 @@ window.renderHotelBookingRequests = async function(container, user) {
                                             font-weight:bold;
                                             color:${borderColor};
                                         ">
+
                                             ${status.toUpperCase()}
+
                                         </div>
 
                                     </div>
@@ -9468,11 +9653,13 @@ window.renderHotelBookingRequests = async function(container, user) {
                                             color:#2d3436;
                                             font-weight:bold;
                                         ">
+
                                             📅
                                             ${
                                                 booking.check_in_date ||
                                                 'N/A'
                                             }
+
                                         </div>
 
                                     </div>
@@ -9493,11 +9680,13 @@ window.renderHotelBookingRequests = async function(container, user) {
                                             color:#2d3436;
                                             font-weight:bold;
                                         ">
+
                                             📅
                                             ${
                                                 booking.check_out_date ||
                                                 'N/A'
                                             }
+
                                         </div>
 
                                     </div>
@@ -9518,7 +9707,9 @@ window.renderHotelBookingRequests = async function(container, user) {
                                             color:#2d3436;
                                             font-weight:bold;
                                         ">
+
                                             🛏️ ${rooms}
+
                                         </div>
 
                                     </div>
@@ -9539,7 +9730,9 @@ window.renderHotelBookingRequests = async function(container, user) {
                                             color:#2d3436;
                                             font-weight:bold;
                                         ">
+
                                             🌙 ${totalNights}
+
                                         </div>
 
                                     </div>
@@ -9560,7 +9753,11 @@ window.renderHotelBookingRequests = async function(container, user) {
                                             color:#27ae60;
                                             font-weight:bold;
                                         ">
-                                            ₹${amount.toLocaleString('en-IN')}
+
+                                            ₹${amount.toLocaleString(
+                                                'en-IN'
+                                            )}
+
                                         </div>
 
                                     </div>
@@ -9568,14 +9765,14 @@ window.renderHotelBookingRequests = async function(container, user) {
                                 </div>
 
 
-                                <!-- REQUESTER -->
+                                <!-- CUSTOMER / AGENCY -->
 
                                 ${
                                     booking.customer_email ||
                                     booking.agency_contact ||
                                     booking.customer_id ||
                                     booking.agency_id
-                                    ? `
+                                        ? `
 
                                     <div style="
                                         margin-top:15px;
@@ -9587,12 +9784,16 @@ window.renderHotelBookingRequests = async function(container, user) {
                                     ">
 
                                         <b>
+
                                             ${
-                                                requesterType === 'agency'
+                                                requesterType ===
+                                                'agency'
                                                     ? '🏢 Agency'
                                                     : '👤 Customer'
                                             }
+
                                         </b>
+
 
                                         ${
                                             booking.customer_email
@@ -9605,6 +9806,7 @@ window.renderHotelBookingRequests = async function(container, user) {
                                                 `
                                                 : ''
                                         }
+
 
                                         ${
                                             booking.agency_contact
@@ -9621,15 +9823,15 @@ window.renderHotelBookingRequests = async function(container, user) {
                                     </div>
 
                                     `
-                                    : ''
+                                        : ''
                                 }
 
 
-                                <!-- APPROVED INFORMATION -->
+                                <!-- APPROVED -->
 
                                 ${
                                     isApproved
-                                    ? `
+                                        ? `
 
                                     <div style="
                                         margin-top:18px;
@@ -9645,36 +9847,39 @@ window.renderHotelBookingRequests = async function(container, user) {
                                             ✅ BOOKING APPROVED
                                         </b>
 
+
                                         ${
                                             booking.payment_contact_number
-                                            ? `
-                                            <div style="
-                                                margin-top:7px;
-                                                color:#444;
-                                            ">
-                                                📞 Payment Contact:
-                                                <b>
-                                                    ${
-                                                        booking.payment_contact_number
-                                                    }
-                                                </b>
-                                            </div>
-                                            `
-                                            : ''
+                                                ? `
+                                                <div style="
+                                                    margin-top:7px;
+                                                    color:#444;
+                                                ">
+
+                                                    📞 Payment Contact:
+                                                    <b>
+                                                        ${
+                                                            booking.payment_contact_number
+                                                        }
+                                                    </b>
+
+                                                </div>
+                                                `
+                                                : ''
                                         }
 
                                     </div>
 
                                     `
-                                    : ''
+                                        : ''
                                 }
 
 
-                                <!-- DENIED INFORMATION -->
+                                <!-- DENIED -->
 
                                 ${
                                     isDenied
-                                    ? `
+                                        ? `
 
                                     <div style="
                                         margin-top:18px;
@@ -9690,24 +9895,10 @@ window.renderHotelBookingRequests = async function(container, user) {
                                             ❌ BOOKING DENIED
                                         </b>
 
-                                        ${
-                                            booking.owner_message
-                                            ? `
-                                            <div style="
-                                                margin-top:7px;
-                                            ">
-                                                ${
-                                                    booking.owner_message
-                                                }
-                                            </div>
-                                            `
-                                            : ''
-                                        }
-
                                     </div>
 
                                     `
-                                    : ''
+                                        : ''
                                 }
 
 
@@ -9715,7 +9906,7 @@ window.renderHotelBookingRequests = async function(container, user) {
 
                                 ${
                                     isCancelled
-                                    ? `
+                                        ? `
 
                                     <div style="
                                         margin-top:18px;
@@ -9734,15 +9925,15 @@ window.renderHotelBookingRequests = async function(container, user) {
                                     </div>
 
                                     `
-                                    : ''
+                                        : ''
                                 }
 
 
-                                <!-- ACTION BUTTONS -->
+                                <!-- ACCEPT / DENY -->
 
                                 ${
                                     isPending
-                                    ? `
+                                        ? `
 
                                     <div style="
                                         display:flex;
@@ -9767,7 +9958,9 @@ window.renderHotelBookingRequests = async function(container, user) {
                                                 cursor:pointer;
                                             "
                                         >
+
                                             ✅ ACCEPT
+
                                         </button>
 
 
@@ -9788,13 +9981,15 @@ window.renderHotelBookingRequests = async function(container, user) {
                                                 cursor:pointer;
                                             "
                                         >
+
                                             ❌ DENY
+
                                         </button>
 
                                     </div>
 
                                     `
-                                    : ''
+                                        : ''
                                 }
 
 
@@ -9825,6 +10020,7 @@ window.renderHotelBookingRequests = async function(container, user) {
                 )
                 .join('');
 
+
     } catch (err) {
 
         console.error(
@@ -9832,7 +10028,9 @@ window.renderHotelBookingRequests = async function(container, user) {
             err
         );
 
+
         list.innerHTML = `
+
             <div style="
                 background:#fff5f5;
                 color:#c0392b;
@@ -9845,15 +10043,287 @@ window.renderHotelBookingRequests = async function(container, user) {
                 <div style="
                     margin-top:7px;
                 ">
+
                     ${err.message}
+
                 </div>
 
             </div>
+
         `;
 
     }
+
 };
 
+
+/* =========================================================================
+   3. ACCEPT BOOKING
+   ========================================================================= */
+
+window.openHotelBookingApproval = async function (
+    bookingId
+) {
+
+    const client = getClient();
+
+
+    const paymentNumber =
+        window.prompt(
+            "Enter customer/agency contact number for payment:"
+        );
+
+
+    if (paymentNumber === null) {
+        return;
+    }
+
+
+    const cleanNumber =
+        String(paymentNumber).trim();
+
+
+    if (!cleanNumber) {
+
+        alert(
+            "Please enter a valid contact number."
+        );
+
+        return;
+    }
+
+
+    const confirmApproval =
+        window.confirm(
+            "Confirm this booking as APPROVED?"
+        );
+
+
+    if (!confirmApproval) {
+        return;
+    }
+
+
+    try {
+
+        const {
+            error
+        } = await client
+            .from('hotel_bookings')
+            .update({
+
+                booking_status:
+                    'approved',
+
+                payment_contact_number:
+                    cleanNumber
+
+            })
+            .eq(
+                'id',
+                bookingId
+            );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        alert(
+            "Booking approved successfully."
+        );
+
+
+        await openHotelBookingRequestSection();
+
+
+    } catch (error) {
+
+        console.error(
+            "Booking approval failed:",
+            error
+        );
+
+
+        alert(
+            "Booking approval failed: " +
+            error.message
+        );
+
+    }
+
+};
+
+
+/* =========================================================================
+   4. DENY BOOKING
+   ========================================================================= */
+
+window.denyHotelBookingRequest = async function (
+    bookingId
+) {
+
+    const confirmDeny =
+        window.confirm(
+            "Are you sure you want to DENY this booking request?"
+        );
+
+
+    if (!confirmDeny) {
+        return;
+    }
+
+
+    const client = getClient();
+
+
+    try {
+
+        const {
+            error
+        } = await client
+            .from('hotel_bookings')
+            .update({
+
+                booking_status:
+                    'denied'
+
+            })
+            .eq(
+                'id',
+                bookingId
+            );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        alert(
+            "Booking request denied."
+        );
+
+
+        await openHotelBookingRequestSection();
+
+
+    } catch (error) {
+
+        console.error(
+            "Booking deny failed:",
+            error
+        );
+
+
+        alert(
+            "Booking deny failed: " +
+            error.message
+        );
+
+    }
+
+};
+
+
+/* =========================================================================
+   5. HOTEL DASHBOARD BOOKING REQUEST NAVIGATION
+   ========================================================================= */
+
+window.addHotelBookingRequestNavigation =
+function () {
+
+    /*
+       Do not duplicate the item.
+    */
+
+    if (
+        document.getElementById(
+            'hotel-booking-request-nav'
+        )
+    ) {
+        return;
+    }
+
+
+    /*
+       Find existing hotel sidebar.
+    */
+
+    const sidebar =
+        document.querySelector(
+            '#hotel-sidebar-template'
+        );
+
+
+    /*
+       If sidebar is template, modify only its
+       navigation structure for this new item.
+    */
+
+    if (sidebar) {
+
+        const nav =
+            sidebar.content
+                ? sidebar.content.querySelector('nav')
+                : sidebar.querySelector('nav');
+
+
+        if (nav) {
+
+            const item =
+                document.createElement('div');
+
+            item.id =
+                'hotel-booking-request-nav';
+
+            item.className =
+                'nav-item';
+
+            item.innerHTML =
+                '🏨 Booking Request';
+
+            item.onclick =
+                function () {
+
+                    openHotelBookingRequestSection();
+
+                };
+
+
+            nav.appendChild(item);
+
+        }
+
+    }
+
+};
+
+
+/* =========================================================================
+   6. AUTO REGISTER NAV ITEM
+   ========================================================================= */
+
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+
+        try {
+
+            addHotelBookingRequestNavigation();
+
+        } catch (error) {
+
+            console.error(
+                "Booking Request navigation error:",
+                error
+            );
+
+        }
+
+    }
+);
 
 /* =========================================================================
    🏨 ACCEPT HOTEL BOOKING — PAYMENT CONTACT NUMBER
