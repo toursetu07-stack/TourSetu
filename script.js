@@ -5711,6 +5711,22 @@ async function renderHotelDashboard(user) {
                         <div onclick="showHotelTab('inventory')" class="hotel-nav-btn" id="nav-inventory" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>🏨</span> Room Inventory & Lock
                         </div>
+                       <div
+    onclick="openHotelBookingRequestSection()"
+    class="hotel-nav-btn"
+    id="nav-booking-request"
+    style="
+        padding:14px;
+        cursor:pointer;
+        border-radius:10px;
+        font-weight:600;
+        display:flex;
+        align-items:center;
+        gap:10px;
+    "
+>
+    <span>📋</span> Booking Request
+</div>
                         <div onclick="showHotelTab('bookings')" class="hotel-nav-btn" id="nav-bookings" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>📋</span> Arrivals & Payouts
                         </div>
