@@ -8871,6 +8871,121 @@ styleTag.innerHTML = `
 document.head.appendChild(styleTag); 
 initApp();
 /* =========================================================================
+   🏨 HOTEL DASHBOARD — BOOKING REQUEST ITEM
+   CUSTOMER + AGENCY REQUESTS
+   ========================================================================= */
+
+window.openHotelBookingRequestSection = function() {
+
+    /*
+     * Find the main Hotel Dashboard content container.
+     * These common IDs are checked so existing dashboard structure
+     * does not need to be changed.
+     */
+
+    const container =
+        document.getElementById('hotel-dashboard-content') ||
+        document.getElementById('hotel-dashboard-main') ||
+        document.getElementById('owner-dashboard-section') ||
+        document.getElementById('app');
+
+    if (!container) {
+        console.error(
+            "Hotel Dashboard content container not found."
+        );
+        return;
+    }
+
+    /*
+     * Get currently logged-in user
+     */
+
+    const client = getClient();
+
+    client.auth.getUser()
+        .then(({ data, error }) => {
+
+            if (error) {
+                console.error(
+                    "Hotel user fetch error:",
+                    error
+                );
+                return;
+            }
+
+            const user = data?.user;
+
+            if (!user) {
+                alert("Please login first.");
+                return;
+            }
+
+            window.renderHotelBookingRequests(
+                container,
+                user
+            );
+
+        })
+        .catch(err => {
+
+            console.error(
+                "Opening Booking Request Error:",
+                err
+            );
+
+        });
+
+};
+
+
+/* =========================================================================
+   🏨 HOTEL DASHBOARD — BOOKING REQUEST ITEM
+   ========================================================================= */
+
+window.hotelBookingRequestItemHTML = `
+
+    <div
+        onclick="openHotelBookingRequestSection()"
+        style="
+            cursor:pointer;
+            background:white;
+            padding:22px;
+            border-radius:15px;
+            box-shadow:0 4px 15px rgba(0,0,0,0.08);
+            border-left:5px solid #3498db;
+            transition:0.2s;
+            margin-bottom:15px;
+        "
+    >
+
+        <div style="
+            font-size:32px;
+            margin-bottom:10px;
+        ">
+            🏨
+        </div>
+
+        <h3 style="
+            margin:0;
+            color:#2d3436;
+        ">
+            Booking Request
+        </h3>
+
+        <p style="
+            margin:7px 0 0;
+            color:#7f8c8d;
+            font-size:13px;
+        ">
+            View and manage customer and agency booking requests
+        </p>
+
+    </div>
+
+`;
+
+
+/* =========================================================================
    🏨 HOTEL DASHBOARD — BOOKING REQUESTS
    CUSTOMER + AGENCY REQUESTS
    Source: hotel_bookings table
