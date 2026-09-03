@@ -3384,9 +3384,20 @@ window.renderAgencyHotelPackages = async function() {
                         <span>🛏️</span> <span>Available Rooms: <b style="color:#e74c3c;">${totalRooms} Left</b></span>
                     </div>
 
-                    <button style="width:100%; background:#3498db; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
-                        BOOK ROOM STOCK
-                    </button>
+                  <button
+    onclick="openHotelBookingModal(
+        '${hotelName.replace(/'/g, "\\'")}',
+        '${cityName.replace(/'/g, "\\'")}',
+        '${hotelInfo.address ? hotelInfo.address.replace(/'/g, "\\'") : ''}',
+        '${categoryName.replace(/'/g, "\\'")}',
+        ${price},
+        ${totalRooms},
+        '${hotelInfo.image_url || ''}',
+        '${cat.id || ''}'
+    )"
+    style="width:100%; background:#3498db; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+    BOOK ROOM STOCK
+</button>
                 </div>
             `;
         }).join('');
