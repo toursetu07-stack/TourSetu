@@ -10930,26 +10930,17 @@ window.openHotelBookingRequestSection = async function() {
     }
 
 
-    /*
-     * IMPORTANT:
-     * Ye dashboard ke main content container ko find karta hai.
-     *
-     * Agar tumhare dashboard me already koi main content container
-     * use ho raha hai, usko yahan use karo.
-     */
-
     const container =
         document.getElementById(
-            'hotel-dashboard-content'
+            'hotel-main-content'
         );
 
 
     if (!container) {
 
-     const container =
-    document.getElementById(
-        'hotel-main-content'
-    );
+        console.error(
+            "hotel-main-content not found."
+        );
 
         alert(
             "Hotel dashboard content container not found."
