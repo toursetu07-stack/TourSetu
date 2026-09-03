@@ -10946,9 +10946,10 @@ window.openHotelBookingRequestSection = async function() {
 
     if (!container) {
 
-        console.error(
-            "hotel-dashboard-content not found."
-        );
+     const container =
+    document.getElementById(
+        'hotel-main-content'
+    );
 
         alert(
             "Hotel dashboard content container not found."
