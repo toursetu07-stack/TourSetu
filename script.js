@@ -3286,6 +3286,7 @@ window.showTab = async function(tabName) {
             </div>`;
         }).join('');
     }
+else if (tabName === 'hotels') {
    container.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <h1 style="color:#e67e22; display:flex; align-items:center; gap:10px;">
