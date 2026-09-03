@@ -10752,55 +10752,6 @@ window.confirmHotelBookingApproval =
         }
 
     };
-            /* ========================================================
-               VERIFY BOOKING BELONGS TO THIS HOTEL
-               ======================================================== */
-
-            const {
-                data: booking,
-                error: fetchError
-            } =
-                await client
-                    .from('hotel_bookings')
-                    .select('*')
-                    .eq(
-                        'id',
-                        bookingId
-                    )
-                    .single();
-
-
-            if (fetchError) {
-                throw fetchError;
-            }
-
-
-            if (!booking) {
-
-                alert(
-                    "Booking request not found."
-                );
-
-                return;
-            }
-
-
-            const currentStatus =
-                String(
-                    booking.booking_status ||
-                    'pending'
-                ).toLowerCase();
-
-
-            if (currentStatus !== 'pending') {
-
-                alert(
-                    "This booking request has already been processed."
-                );
-
-                return;
-            }
-
 
             /* ========================================================
                UPDATE APPROVED BOOKING
