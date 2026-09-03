@@ -3286,13 +3286,32 @@ window.showTab = async function(tabName) {
             </div>`;
         }).join('');
     }
-    else if (tabName === 'hotels') {
-        container.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h1 style="color:#e67e22; display:flex; align-items:center; gap:10px;">🏨 Hotel Packages (Live Stock)</h1>
-            </div>
-            <div id="agency-hotel-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:25px;"></div>`;
+   container.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h1 style="color:#e67e22; display:flex; align-items:center; gap:10px;">
+            🏨 Hotel Packages (Live Stock)
+        </h1>
 
+        <button
+            onclick="renderAgencyHotelBookingRequests()"
+            style="
+                background:#3498db;
+                color:white;
+                border:none;
+                padding:10px 18px;
+                border-radius:8px;
+                font-weight:bold;
+                cursor:pointer;
+                font-size:13px;
+            "
+        >
+            📋 My Hotel Requests
+        </button>
+    </div>
+
+    <div id="agency-hotel-pkg-list"
+         style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:25px;">
+    </div>`;
         // Fetch and display hotel room inventory
         renderAgencyHotelPackages();
     }
@@ -10966,4 +10985,489 @@ window.openHotelBookingRequestSection = async function() {
         user
     );
 
+};
+/* =========================================================================
+   🏨 AGENCY HOTEL BOOKING REQUESTS
+   Shows Agency's own Registered Hotel booking requests
+   Source: hotel_bookings table ONLY
+   ========================================================================= */
+
+window.renderAgencyHotelBookingRequests = async function () {
+
+    try {
+
+        const client = getClient();
+
+        if (!client) {
+            alert("Database connection error.");
+            return;
+        }
+
+        const {
+            data: {
+                user
+            },
+            error: authError
+        } = await client.auth.getUser();
+
+        if (authError || !user) {
+            alert("Please login again.");
+            return;
+        }
+
+        const container =
+            document.getElementById('main-content');
+
+        if (!container) {
+            console.error(
+                "Agency main content container not found."
+            );
+
+            alert(
+                "Agency dashboard content container not found."
+            );
+
+            return;
+        }
+
+        /* ============================================================
+           FETCH AGENCY'S HOTEL BOOKING REQUESTS
+           hotel_bookings table ONLY
+           ============================================================ */
+
+        const {
+            data: bookings,
+            error
+        } = await client
+            .from('hotel_bookings')
+            .select('*')
+            .eq('customer_id', user.id)
+            .order('created_at', {
+                ascending: false
+            });
+
+        if (error) {
+            console.error(
+                "Agency hotel booking request error:",
+                error
+            );
+
+            throw error;
+        }
+
+        /* ============================================================
+           HEADER
+           ============================================================ */
+
+        container.innerHTML = `
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-bottom:20px;
+                gap:15px;
+                flex-wrap:wrap;
+            ">
+
+                <div>
+                    <h1 style="
+                        margin:0;
+                        color:#e67e22;
+                    ">
+                        📋 My Hotel Booking Requests
+                    </h1>
+
+                    <p style="
+                        margin:6px 0 0;
+                        color:#777;
+                        font-size:14px;
+                    ">
+                        Track all your Registered Hotel booking requests
+                    </p>
+                </div>
+
+                <button
+                    onclick="showTab('hotels')"
+                    style="
+                        background:#f1f2f6;
+                        color:#2d3436;
+                        border:none;
+                        padding:10px 18px;
+                        border-radius:8px;
+                        font-weight:bold;
+                        cursor:pointer;
+                    "
+                >
+                    ← Back to Hotels
+                </button>
+
+            </div>
+
+            <div id="agency-hotel-request-list"></div>
+        `;
+
+        const list =
+            document.getElementById(
+                'agency-hotel-request-list'
+            );
+
+        /* ============================================================
+           NO REQUESTS
+           ============================================================ */
+
+        if (!bookings || bookings.length === 0) {
+
+            list.innerHTML = `
+                <div style="
+                    background:white;
+                    padding:40px;
+                    border-radius:12px;
+                    text-align:center;
+                    color:#777;
+                    box-shadow:0 2px 8px rgba(0,0,0,0.05);
+                ">
+                    <div style="
+                        font-size:45px;
+                        margin-bottom:10px;
+                    ">
+                        📋
+                    </div>
+
+                    <h3 style="
+                        margin:0 0 8px;
+                        color:#444;
+                    ">
+                        No Hotel Booking Requests
+                    </h3>
+
+                    <p style="margin:0;">
+                        Your hotel booking requests will appear here.
+                    </p>
+                </div>
+            `;
+
+            return;
+        }
+
+        /* ============================================================
+           RENDER ALL REQUESTS
+           ============================================================ */
+
+        list.innerHTML = bookings.map(booking => {
+
+            const bookingStatus =
+                String(
+                    booking.booking_status || 'pending'
+                ).toLowerCase();
+
+            const paymentStatus =
+                String(
+                    booking.payment_status || 'unpaid'
+                ).toLowerCase();
+
+            let statusColor = '#f39c12';
+
+            if (
+                bookingStatus === 'approved' ||
+                bookingStatus === 'confirmed'
+            ) {
+                statusColor = '#27ae60';
+            }
+
+            if (
+                bookingStatus === 'denied' ||
+                bookingStatus === 'cancelled'
+            ) {
+                statusColor = '#e74c3c';
+            }
+
+            let paymentColor = '#f39c12';
+
+            if (paymentStatus === 'paid') {
+                paymentColor = '#27ae60';
+            }
+
+            return `
+                <div style="
+                    background:white;
+                    border-radius:14px;
+                    padding:20px;
+                    margin-bottom:18px;
+                    border-left:5px solid ${statusColor};
+                    box-shadow:0 3px 10px rgba(0,0,0,0.07);
+                ">
+
+                    <div style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:flex-start;
+                        gap:15px;
+                        flex-wrap:wrap;
+                    ">
+
+                        <div>
+
+                            <h3 style="
+                                margin:0 0 6px;
+                                color:#2d3436;
+                            ">
+                                🏨 ${booking.hotel_name || 'Registered Hotel'}
+                            </h3>
+
+                            <div style="
+                                color:#777;
+                                font-size:13px;
+                            ">
+                                Booking ID:
+                                ${booking.id || '-'}
+                            </div>
+
+                        </div>
+
+                        <div style="
+                            text-align:right;
+                        ">
+
+                            <div style="
+                                display:inline-block;
+                                background:${statusColor};
+                                color:white;
+                                padding:6px 12px;
+                                border-radius:20px;
+                                font-size:11px;
+                                font-weight:bold;
+                                text-transform:uppercase;
+                            ">
+                                ${bookingStatus}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div style="
+                        display:grid;
+                        grid-template-columns:
+                            repeat(auto-fit, minmax(150px, 1fr));
+                        gap:12px;
+                        margin-top:18px;
+                        background:#f8f9fa;
+                        padding:15px;
+                        border-radius:10px;
+                    ">
+
+                        <div>
+                            <small style="color:#888;">
+                                CHECK-IN
+                            </small>
+
+                            <div style="
+                                font-weight:bold;
+                                margin-top:4px;
+                            ">
+                                📅 ${booking.check_in_date || '-'}
+                            </div>
+                        </div>
+
+
+                        <div>
+                            <small style="color:#888;">
+                                CHECK-OUT
+                            </small>
+
+                            <div style="
+                                font-weight:bold;
+                                margin-top:4px;
+                            ">
+                                📅 ${booking.check_out_date || '-'}
+                            </div>
+                        </div>
+
+
+                        <div>
+                            <small style="color:#888;">
+                                ROOMS
+                            </small>
+
+                            <div style="
+                                font-weight:bold;
+                                margin-top:4px;
+                            ">
+                                🛏️ ${booking.rooms_booked || 0}
+                            </div>
+                        </div>
+
+
+                        <div>
+                            <small style="color:#888;">
+                                NIGHTS
+                            </small>
+
+                            <div style="
+                                font-weight:bold;
+                                margin-top:4px;
+                            ">
+                                🌙 ${booking.total_nights || 0}
+                            </div>
+                        </div>
+
+
+                        <div>
+                            <small style="color:#888;">
+                                TOTAL AMOUNT
+                            </small>
+
+                            <div style="
+                                font-weight:bold;
+                                color:#27ae60;
+                                margin-top:4px;
+                            ">
+                                ₹${Number(
+                                    booking.total_amount || 0
+                                ).toLocaleString('en-IN')}
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <div style="
+                        margin-top:15px;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:10px;
+                        flex-wrap:wrap;
+                    ">
+
+                        <div>
+                            <strong>
+                                Payment:
+                            </strong>
+
+                            <span style="
+                                color:${paymentColor};
+                                font-weight:bold;
+                                text-transform:uppercase;
+                            ">
+                                ${paymentStatus}
+                            </span>
+                        </div>
+
+                        ${
+                            booking.payment_contact_number
+                            ? `
+                                <div style="
+                                    font-size:13px;
+                                    color:#555;
+                                ">
+                                    📞 Payment Contact:
+                                    <strong>
+                                        ${booking.payment_contact_number}
+                                    </strong>
+                                </div>
+                            `
+                            : ''
+                        }
+
+                    </div>
+
+
+                    ${
+                        booking.owner_message
+                        ? `
+                            <div style="
+                                margin-top:15px;
+                                padding:12px;
+                                background:#fff8e1;
+                                border-radius:8px;
+                                font-size:13px;
+                                color:#555;
+                            ">
+                                <strong>
+                                    🏨 Hotel Message:
+                                </strong>
+
+                                <div style="
+                                    margin-top:5px;
+                                ">
+                                    ${booking.owner_message}
+                                </div>
+                            </div>
+                        `
+                        : ''
+                    }
+
+
+                    ${
+                        bookingStatus === 'denied'
+                        ? `
+                            <div style="
+                                margin-top:15px;
+                                padding:12px;
+                                background:#fff0f0;
+                                border-radius:8px;
+                                color:#c0392b;
+                                font-weight:bold;
+                            ">
+                                ❌ Your hotel booking request was denied.
+                            </div>
+                        `
+                        : ''
+                    }
+
+
+                    ${
+                        bookingStatus === 'approved'
+                        ? `
+                            <div style="
+                                margin-top:15px;
+                                padding:12px;
+                                background:#effaf3;
+                                border-radius:8px;
+                                color:#27ae60;
+                                font-weight:bold;
+                            ">
+                                ✅ Your hotel booking request has been approved.
+                            </div>
+                        `
+                        : ''
+                    }
+
+
+                    ${
+                        bookingStatus === 'cancelled'
+                        ? `
+                            <div style="
+                                margin-top:15px;
+                                padding:12px;
+                                background:#fff0f0;
+                                border-radius:8px;
+                                color:#c0392b;
+                                font-weight:bold;
+                            ">
+                                ❌ This hotel booking has been cancelled.
+                            </div>
+                        `
+                        : ''
+                    }
+
+                </div>
+            `;
+
+        }).join('');
+
+    } catch (err) {
+
+        console.error(
+            "Render Agency Hotel Booking Requests Error:",
+            err
+        );
+
+        alert(
+            "Failed to load hotel booking requests: " +
+            err.message
+        );
+    }
 };
