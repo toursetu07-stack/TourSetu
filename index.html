@@ -148,39 +148,6 @@
 <!-- LIVE HOTEL INVENTORY CONTAINER (JS will render items here) -->
 <div id="live-hotel-inventory-list"></div>
 
-<!-- SIDEBAR NAVIGATION TEMPLATE (Used dynamically when Hotel Login happens) -->
-<template id="hotel-sidebar-template">
-    <nav style="display: flex; flex-direction: column; gap: 5px;">
-
-        <div onclick="showHotelTab('overview')" class="nav-item">
-            📊 Dashboard
-        </div>
-
-        <div onclick="showHotelTab('property')" class="nav-item">
-            🏨 Room Inventory & Lock
-        </div>
-
-        <!-- ============================================================
-             🏨 BOOKING REQUEST
-             ============================================================ -->
-
-        <div
-            onclick="openHotelBookingRequestSection()"
-            class="nav-item"
-            style="
-                cursor:pointer;
-            "
-        >
-            📋 Booking Request
-        </div>
-
-        <div onclick="showHotelTab('requests')" class="nav-item">
-            📥 Booking Inbox
-        </div>
-
-    </nav>
-</template>
-
 <!-- Hotel Owner Dashboard UI (Initially Hidden) -->
 <div id="owner-dashboard-section" style="display: none; max-width: 800px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
     <h2>Incoming Booking Requests</h2>
