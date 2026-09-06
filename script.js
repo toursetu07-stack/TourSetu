@@ -4918,336 +4918,728 @@ window.updateCities = function() {
     }
 };
 
-// Dynamically shows/hides Mountain Trek Add-ons based on destination selections
-window.toggleTrekPricingSection = function() {
-    const kedarSection = document.getElementById('trek-pricing-section-kedar');
-    const vaishnoSection = document.getElementById('trek-pricing-section-vaishno');
-    
-    if (!kedarSection || !vaishnoSection) return;
 
-    let isKedarSelected = false;
-    let isVaishnoSelected = false;
-
-    document.querySelectorAll('.d-check:checked').forEach(cb => {
-        if (cb.value === "Kedarnath (Uttarakhand)" || cb.value === "Char Dham Yatra (Uttarakhand)") {
-            isKedarSelected = true;
-        }
-        if (cb.value === "Vaishno Devi (Katra)") {
-            isVaishnoSelected = true;
-        }
-    });
-
-    // Handle Kedarnath View Section
-    if (isKedarSelected) {
-        kedarSection.style.display = 'block';
-    } else {
-        kedarSection.style.display = 'none';
-        if(document.getElementById('p-ghoda-enable')) document.getElementById('p-ghoda-enable').checked = false;
-        if(document.getElementById('p-dandi-enable')) document.getElementById('p-dandi-enable').checked = false;
-        if(document.getElementById('p-kandi-enable')) document.getElementById('p-kandi-enable').checked = false;
-        if(document.getElementById('p-pitthu-enable')) document.getElementById('p-pitthu-enable').checked = false;
-
-        if(document.getElementById('p-ghoda-price')) document.getElementById('p-ghoda-price').value = '';
-        if(document.getElementById('p-dandi-price')) document.getElementById('p-dandi-price').value = '';
-        if(document.getElementById('p-kandi-price')) document.getElementById('p-kandi-price').value = '';
-        if(document.getElementById('p-pitthu-price')) document.getElementById('p-pitthu-price').value = '';
-        if(document.getElementById('p-ghoda-max')) document.getElementById('p-ghoda-max').value = '1';
-        if(document.getElementById('p-dandi-max')) document.getElementById('p-dandi-max').value = '1';
-        if(document.getElementById('p-kandi-max')) document.getElementById('p-kandi-max').value = '1';
-        if(document.getElementById('p-pitthu-max')) document.getElementById('p-pitthu-max').value = '1';
-    }
-
-    // Handle Vaishno Devi View Section
-    if (isVaishnoSelected) {
-        vaishnoSection.style.display = 'block';
-    } else {
-        vaishnoSection.style.display = 'none';
-        if(document.getElementById('p-vaishno-ghoda-enable')) document.getElementById('p-vaishno-ghoda-enable').checked = false;
-        if(document.getElementById('p-vaishno-palki-enable')) document.getElementById('p-vaishno-palki-enable').checked = false;
-        if(document.getElementById('p-vaishno-pitthu-enable')) document.getElementById('p-vaishno-pitthu-enable').checked = false;
-
-        if(document.getElementById('p-vaishno-ghoda-price')) document.getElementById('p-vaishno-ghoda-price').value = '';
-        if(document.getElementById('p-vaishno-palki-price')) document.getElementById('p-vaishno-palki-price').value = '';
-        if(document.getElementById('p-vaishno-pitthu-price')) document.getElementById('p-vaishno-pitthu-price').value = '';
-        if(document.getElementById('p-vaishno-ghoda-max')) document.getElementById('p-vaishno-ghoda-max').value = '1';
-        if(document.getElementById('p-vaishno-palki-max')) document.getElementById('p-vaishno-palki-max').value = '1';
-        if(document.getElementById('p-vaishno-pitthu-max')) document.getElementById('p-vaishno-pitthu-max').value = '1';
-    }
-};
-
+// =========================================
 // RENDER FORM: Shows the Create/Edit UI
+// =========================================
 window.showPackageForm = function(pEncoded = null) {
     let pkg = null;
+
     try {
         pkg = pEncoded ? JSON.parse(decodeURIComponent(pEncoded)) : null;
-    } catch (e) { 
-        console.error("Decoding error:", e); 
+    } catch (e) {
+        console.error("Decoding error:", e);
     }
-    
+
     const isEdit = (pkg && pkg.id);
     const area = document.getElementById('main-content');
+
     if (!area) return;
-    
-    const pkgDestinations = isEdit ? (pkg.destinations || pkg.destination || []) : [];
-    const pkgVehicles = isEdit ? (pkg.vehicles || []) : [];
-    
+
+    const pkgDestinations = isEdit
+        ? (pkg.destinations || pkg.destination || [])
+        : [];
+
+    const pkgVehicles = isEdit
+        ? (pkg.vehicles || [])
+        : [];
+
+
     // --- ROBUST PARSING FOR DESTINATIONS ARRAY ---
     let activeDests = [];
+
     if (typeof pkgDestinations === 'string') {
         try {
             activeDests = JSON.parse(pkgDestinations);
         } catch(e) {
-            activeDests = pkgDestinations.split(',').map(d => d.trim());
+            activeDests = pkgDestinations
+                .split(',')
+                .map(d => d.trim());
         }
     } else if (Array.isArray(pkgDestinations)) {
         activeDests = pkgDestinations;
     } else {
         activeDests = [pkgDestinations];
     }
-    
+
+
+    // =========================================
+    // FIND SELECTED STATE DURING EDIT
+    // =========================================
     let selectedState = "";
+
     if (isEdit && pkg.starting_location) {
         for (let s in locationData) {
-            if (locationData[s].includes(pkg.starting_location)) { 
-                selectedState = s; 
-                break; 
+            if (locationData[s].includes(pkg.starting_location)) {
+                selectedState = s;
+                break;
             }
         }
     }
 
-    const stateOptions = Object.keys(locationData).map(s => 
+
+    // =========================================
+    // STATE OPTIONS
+    // =========================================
+    const stateOptions = Object.keys(locationData).map(s =>
         `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`
     ).join('');
 
+
+    // =========================================
+    // DESTINATION CHECKBOXES
+    // =========================================
     const destHtml = tourDestinations.map(d => `
-        <label style="display:flex; align-items:center; gap:5px; padding:5px 10px; background:white; border-radius:5px; border:1px solid #ddd; font-size:13px; cursor:pointer;">
-            <input type="checkbox" class="d-check" value="${d}" ${activeDests.includes(d) ? 'checked' : ''} onchange="window.toggleTrekPricingSection()"> ${d}
+        <label style="
+            display:flex;
+            align-items:center;
+            gap:5px;
+            padding:5px 10px;
+            background:white;
+            border-radius:5px;
+            border:1px solid #ddd;
+            font-size:13px;
+            cursor:pointer;
+        ">
+            <input
+                type="checkbox"
+                class="d-check"
+                value="${d}"
+                ${activeDests.includes(d) ? 'checked' : ''}
+            >
+            ${d}
         </label>
     `).join('');
 
+
+    // =========================================
+    // VEHICLE PRICING
+    // =========================================
     const vehicleHtml = vehicleTypes.map(v => {
+
         const existing = pkgVehicles.find(ev => ev.id === v.id);
+
         return `
-        <div style="display:flex; align-items:center; gap:10px; background:#fff8f0; padding:10px; border-radius:10px; border:1px solid #ffeaa7; margin-bottom:8px;">
-            <input type="checkbox" class="v-enable" data-id="${v.id}" ${existing ? 'checked' : ''}>
-            <span style="font-size:20px;">${v.icon || '🚗'}</span>
-            <b style="flex:1;">${v.name}</b>
-            <input type="number" class="v-rate" data-id="${v.id}" placeholder="Rate" style="width:80px; padding:5px;" value="${existing ? existing.rate : ''}">
-            <input type="number" class="v-max" data-id="${v.id}" placeholder="Max" style="width:60px; padding:5px;" value="${existing ? existing.max_cars : '1'}">
+        <div style="
+            display:flex;
+            align-items:center;
+            gap:10px;
+            background:#fff8f0;
+            padding:10px;
+            border-radius:10px;
+            border:1px solid #ffeaa7;
+            margin-bottom:8px;
+        ">
+
+            <input
+                type="checkbox"
+                class="v-enable"
+                data-id="${v.id}"
+                ${existing ? 'checked' : ''}
+            >
+
+            <span style="font-size:20px;">
+                ${v.icon || '🚗'}
+            </span>
+
+            <b style="flex:1;">
+                ${v.name}
+            </b>
+
+            <input
+                type="number"
+                class="v-rate"
+                data-id="${v.id}"
+                placeholder="Rate"
+                style="width:80px; padding:5px;"
+                value="${existing ? existing.rate : ''}"
+            >
+
+            <input
+                type="number"
+                class="v-max"
+                data-id="${v.id}"
+                placeholder="Max"
+                style="width:60px; padding:5px;"
+                value="${existing ? existing.max_cars : '1'}"
+            >
+
         </div>`;
     }).join('');
 
-    // Pre-determine status flags during edits
-    const shouldShowKedarInitial = activeDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
-    const shouldShowVaishnoInitial = activeDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
 
-    // Logic to pre-check service tick boxes if values already exist during Edit
-    const hasKedarGhoda = isEdit && (parseFloat(pkg.ghoda_price) > 0);
-    const hasKedarDandi = isEdit && (parseFloat(pkg.dandi_price) > 0);
-    const hasKedarKandi = isEdit && (parseFloat(pkg.kandi_price) > 0);
-    const hasKedarPitthu = isEdit && (parseFloat(pkg.pitthu_price) > 0);
+    // =========================================
+    // TOUR DURATION VALUE
+    // =========================================
+    const existingTourDays = isEdit
+        ? (pkg.tour_days || '')
+        : '';
 
-    const hasVaishnoGhoda = isEdit && (parseFloat(pkg.vaishno_ghoda_price) > 0);
-    const hasVaishnoPalki = isEdit && (parseFloat(pkg.vaishno_palki_price) > 0);
-    const hasVaishnoPitthu = isEdit && (parseFloat(pkg.vaishno_pitthu_price) > 0);
 
+    // =========================================
+    // BUILD COMPLETE PACKAGE FORM
+    // =========================================
     area.innerHTML = `
-        <div class="card" style="background:white; padding:30px; border:1px solid #ff9f43; border-radius:12px; max-width:800px; margin:auto; box-shadow:0 10px 25px rgba(0,0,0,0.1);">
-            <h3 style="color:#ff9f43; margin-top:0;">${isEdit ? '✏️ Edit Package' : '🚀 Create New Package'}</h3>
-            
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+        <div
+            class="card"
+            style="
+                background:white;
+                padding:30px;
+                border:1px solid #ff9f43;
+                border-radius:12px;
+                max-width:800px;
+                margin:auto;
+                box-shadow:0 10px 25px rgba(0,0,0,0.1);
+            "
+        >
+
+            <h3 style="
+                color:#ff9f43;
+                margin-top:0;
+                margin-bottom:25px;
+            ">
+                ${isEdit ? '✏️ Edit Package' : '🚀 Create New Package'}
+            </h3>
+
+
+            <!-- PACKAGE BASIC INFORMATION -->
+            <div style="
+                display:grid;
+                grid-template-columns:1fr 1fr;
+                gap:15px;
+                margin-bottom:15px;
+            ">
+
+                <!-- PACKAGE TITLE -->
                 <div>
-                    <label style="font-size:11px; font-weight:bold; color:#666;">PACKAGE TITLE</label>
-                    <input type="text" id="p-title" placeholder="e.g. 3 Days Kedarnath Trip" value="${isEdit ? pkg.title : ''}" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <label style="
+                        font-size:11px;
+                        font-weight:bold;
+                        color:#666;
+                        display:block;
+                        margin-bottom:5px;
+                    ">
+                        PACKAGE TITLE
+                    </label>
+
+                    <input
+                        type="text"
+                        id="p-title"
+                        placeholder="e.g. 5 Days Kedarnath Trip"
+                        value="${isEdit ? (pkg.title || '') : ''}"
+                        style="
+                            width:100%;
+                            padding:10px;
+                            border:1px solid #ccc;
+                            border-radius:6px;
+                            box-sizing:border-box;
+                        "
+                    >
                 </div>
+
+
+                <!-- PICKUP STATE -->
                 <div>
-                    <label style="font-size:11px; font-weight:bold; color:#666;">PICKUP STATE</label>
-                    <select id="p-state" onchange="window.updateCities()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                        <option value="">Select State</option>
+                    <label style="
+                        font-size:11px;
+                        font-weight:bold;
+                        color:#666;
+                        display:block;
+                        margin-bottom:5px;
+                    ">
+                        PICKUP STATE
+                    </label>
+
+                    <select
+                        id="p-state"
+                        onchange="window.updateCities()"
+                        style="
+                            width:100%;
+                            padding:10px;
+                            border:1px solid #ccc;
+                            border-radius:6px;
+                            box-sizing:border-box;
+                            background:white;
+                        "
+                    >
+                        <option value="">
+                            Select State
+                        </option>
+
                         ${stateOptions}
                     </select>
                 </div>
+
             </div>
 
-            <label style="font-size:11px; font-weight:bold; color:#666;">STARTING CITY</label>
-            <select id="p-city" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-bottom:15px;">
-                ${isEdit && selectedState ? locationData[selectedState].map(c => `<option value="${c}" ${pkg.starting_location === c ? 'selected' : ''}>${c}</option>`).join('') : '<option value="">Select City</option>'}
+
+            <!-- TOUR DURATION -->
+            <div style="
+                margin-bottom:15px;
+                max-width:50%;
+            ">
+
+                <label style="
+                    font-size:11px;
+                    font-weight:bold;
+                    color:#666;
+                    display:block;
+                    margin-bottom:5px;
+                ">
+                    TOUR DURATION
+                </label>
+
+                <div style="
+                    position:relative;
+                    display:flex;
+                    align-items:center;
+                ">
+
+                    <input
+                        type="number"
+                        id="p-tour-days"
+                        min="1"
+                        max="365"
+                        step="1"
+                        inputmode="numeric"
+                        placeholder="e.g. 5"
+                        value="${existingTourDays}"
+                        style="
+                            width:100%;
+                            padding:10px 70px 10px 10px;
+                            border:1px solid #ccc;
+                            border-radius:6px;
+                            box-sizing:border-box;
+                            font-size:14px;
+                        "
+                    >
+
+                    <span style="
+                        position:absolute;
+                        right:12px;
+                        color:#777;
+                        font-size:13px;
+                        pointer-events:none;
+                    ">
+                        Days
+                    </span>
+
+                </div>
+
+                <small style="
+                    display:block;
+                    margin-top:5px;
+                    color:#888;
+                    font-size:11px;
+                ">
+                    Enter the total number of days for this tour package.
+                </small>
+
+            </div>
+
+
+            <!-- STARTING CITY -->
+            <label style="
+                font-size:11px;
+                font-weight:bold;
+                color:#666;
+                display:block;
+                margin-bottom:5px;
+            ">
+                STARTING CITY
+            </label>
+
+            <select
+                id="p-city"
+                style="
+                    width:100%;
+                    padding:10px;
+                    border:1px solid #ccc;
+                    border-radius:6px;
+                    margin-bottom:20px;
+                    background:white;
+                    box-sizing:border-box;
+                "
+            >
+                ${
+                    isEdit && selectedState
+                        ? locationData[selectedState]
+                            .map(c =>
+                                `<option
+                                    value="${c}"
+                                    ${pkg.starting_location === c ? 'selected' : ''}
+                                >
+                                    ${c}
+                                </option>`
+                            )
+                            .join('')
+                        : '<option value="">Select City</option>'
+                }
             </select>
-            
-            <p><b>Destinations:</b></p>
-            <div style="background:#f9f9f9; padding:15px; border-radius:10px; max-height:150px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:8px; border:1px solid #eee; margin-bottom:20px;">
+
+
+            <!-- DESTINATIONS -->
+            <p style="
+                margin-bottom:8px;
+            ">
+                <b>Destinations:</b>
+            </p>
+
+            <div style="
+                background:#f9f9f9;
+                padding:15px;
+                border-radius:10px;
+                max-height:150px;
+                overflow-y:auto;
+                display:flex;
+                flex-wrap:wrap;
+                gap:8px;
+                border:1px solid #eee;
+                margin-bottom:20px;
+            ">
                 ${destHtml}
             </div>
 
-            <p><b>Vehicle Pricing:</b></p>
-            <div style="margin-bottom:20px;">${vehicleHtml}</div>
 
-            <label style="font-size:11px; font-weight:bold; color:#666;">ITINERARY DETAILS</label>
-            <textarea id="p-desc" style="height:120px; width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Describe the trip...">${isEdit ? (pkg.description || '') : ''}</textarea>
-            
-            <div style="display:flex; gap:10px; margin-top:25px;">
-                <button id="save-btn" onclick="window.processSave('${isEdit ? pkg.id : ''}')" style="background:#2ecc71; color:white; flex:2; height:50px; font-weight:bold; border:none; border-radius:8px; cursor:pointer;">
+            <!-- VEHICLE PRICING -->
+            <p style="
+                margin-bottom:8px;
+            ">
+                <b>Vehicle Pricing:</b>
+            </p>
+
+            <div style="
+                margin-bottom:20px;
+            ">
+                ${vehicleHtml}
+            </div>
+
+
+            <!-- ITINERARY DETAILS -->
+            <label style="
+                font-size:11px;
+                font-weight:bold;
+                color:#666;
+                display:block;
+                margin-bottom:5px;
+            ">
+                ITINERARY DETAILS
+            </label>
+
+            <textarea
+                id="p-desc"
+                style="
+                    height:120px;
+                    width:100%;
+                    padding:10px;
+                    border:1px solid #ccc;
+                    border-radius:6px;
+                    box-sizing:border-box;
+                    resize:vertical;
+                "
+                placeholder="Describe the trip day-by-day..."
+            >${isEdit ? (pkg.description || '') : ''}</textarea>
+
+
+            <!-- ACTION BUTTONS -->
+            <div style="
+                display:flex;
+                gap:10px;
+                margin-top:25px;
+            ">
+
+                <button
+                    id="save-btn"
+                    onclick="window.processSave('${isEdit ? pkg.id : ''}')"
+                    style="
+                        background:#2ecc71;
+                        color:white;
+                        flex:2;
+                        height:50px;
+                        font-weight:bold;
+                        border:none;
+                        border-radius:8px;
+                        cursor:pointer;
+                    "
+                >
                     ${isEdit ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'}
                 </button>
-                ${isEdit ? `
-                <button onclick="if(confirm('Are you sure you want to delete this package?')) window.deletePackage('${pkg.id}')" style="background:#e74c3c; color:white; flex:1; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">
-                    🗑️ Delete
+
+
+                ${
+                    isEdit
+                    ? `
+                    <button
+                        onclick="if(confirm('Are you sure you want to delete this package?')) window.deletePackage('${pkg.id}')"
+                        style="
+                            background:#e74c3c;
+                            color:white;
+                            flex:1;
+                            border:none;
+                            border-radius:8px;
+                            cursor:pointer;
+                            font-weight:bold;
+                        "
+                    >
+                        🗑️ Delete
+                    </button>
+                    `
+                    : ''
+                }
+
+
+                <button
+                    onclick="window.showTab('packages')"
+                    style="
+                        background:#eee;
+                        flex:1;
+                        border:none;
+                        border-radius:8px;
+                        cursor:pointer;
+                    "
+                >
+                    Cancel
                 </button>
-                ` : ''}
-                <button onclick="window.showTab('packages')" style="background:#eee; flex:1; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
+
             </div>
-        </div>`;
+
+        </div>
+    `;
 };
 
-// PROCESS SAVE: Collects form data and updates/inserts into Supabase 'packages' table
+
+// =========================================
+// PROCESS SAVE
+// Collects form data and updates/inserts
+// into Supabase 'packages' table
+// =========================================
 window.processSave = async function(packageId = '') {
+
     const saveBtn = document.getElementById('save-btn');
+
     if (saveBtn) {
         saveBtn.disabled = true;
         saveBtn.innerText = "Saving...";
     }
 
+
     try {
+
+        // =====================================
+        // GET FORM VALUES
+        // =====================================
         const title = document.getElementById('p-title').value.trim();
+
         const city = document.getElementById('p-city').value;
+
         const desc = document.getElementById('p-desc').value.trim();
 
+        const tourDaysInput = document.getElementById('p-tour-days');
+
+        const tourDays = tourDaysInput
+            ? parseInt(tourDaysInput.value, 10)
+            : NaN;
+
+
+        // =====================================
+        // BASIC VALIDATION
+        // =====================================
         if (!title || !city) {
+
             alert("Please fill Package Title and Starting City.");
-            if (saveBtn) { saveBtn.disabled = false; saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'; }
+
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = packageId
+                    ? 'SAVE CHANGES'
+                    : 'PUBLISH PACKAGE';
+            }
+
             return;
         }
 
-        // Gather Destinations
+
+        // =====================================
+        // TOUR DURATION VALIDATION
+        // =====================================
+        if (
+            !Number.isInteger(tourDays) ||
+            tourDays < 1 ||
+            tourDays > 365
+        ) {
+
+            alert("Please enter a valid Tour Duration between 1 and 365 days.");
+
+            if (tourDaysInput) {
+                tourDaysInput.focus();
+            }
+
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = packageId
+                    ? 'SAVE CHANGES'
+                    : 'PUBLISH PACKAGE';
+            }
+
+            return;
+        }
+
+
+        // =====================================
+        // GATHER DESTINATIONS
+        // =====================================
         const selectedDests = [];
-        document.querySelectorAll('.d-check:checked').forEach(cb => {
-            selectedDests.push(cb.value);
-        });
+
+        document
+            .querySelectorAll('.d-check:checked')
+            .forEach(cb => {
+                selectedDests.push(cb.value);
+            });
+
 
         if (selectedDests.length === 0) {
+
             alert("Please select at least one destination.");
-            if (saveBtn) { saveBtn.disabled = false; saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE'; }
+
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = packageId
+                    ? 'SAVE CHANGES'
+                    : 'PUBLISH PACKAGE';
+            }
+
             return;
         }
 
-        // Gather Vehicles
+
+        // =====================================
+        // GATHER VEHICLES
+        // =====================================
         const vehicles = [];
-        document.querySelectorAll('.v-enable:checked').forEach(cb => {
-            const vid = cb.getAttribute('data-id');
-            const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
-            const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
-            vehicles.push({
-                id: vid,
-                rate: parseFloat(rateInput.value) || 0,
-                max_cars: parseInt(maxInput.value) || 1
+
+        document
+            .querySelectorAll('.v-enable:checked')
+            .forEach(cb => {
+
+                const vid = cb.getAttribute('data-id');
+
+                const rateInput = document.querySelector(
+                    `.v-rate[data-id="${vid}"]`
+                );
+
+                const maxInput = document.querySelector(
+                    `.v-max[data-id="${vid}"]`
+                );
+
+
+                vehicles.push({
+                    id: vid,
+                    rate: parseFloat(rateInput.value) || 0,
+                    max_cars: parseInt(maxInput.value) || 1
+                });
+
             });
-        });
 
-        // Track changes conditions
-        const isKedarActive = selectedDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
-        const isVaishnoActive = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
 
-        // 1. GATHER KEDARNATH RATES (Exclusively saves if Kedarnath destination is active)
-        let ghoda_price = 0, dandi_price = 0, kandi_price = 0, pitthu_price = 0;
-        let ghoda_max = 1, dandi_max = 1, kandi_max = 1, pitthu_max = 1;
-
-        if (isKedarActive) {
-            const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked || false;
-            const dandiEnabled = document.getElementById('p-dandi-enable')?.checked || false;
-            const kandiEnabled = document.getElementById('p-kandi-enable')?.checked || false;
-            const pitthuEnabled = document.getElementById('p-pitthu-enable')?.checked || false;
-
-            ghoda_price = ghodaEnabled ? (parseFloat(document.getElementById('p-ghoda-price').value) || 0) : 0;
-            dandi_price = dandiEnabled ? (parseFloat(document.getElementById('p-dandi-price').value) || 0) : 0;
-            kandi_price = kandiEnabled ? (parseFloat(document.getElementById('p-kandi-price').value) || 0) : 0;
-            pitthu_price = pitthuEnabled ? (parseFloat(document.getElementById('p-pitthu-price').value) || 0) : 0;
-
-            ghoda_max = ghodaEnabled ? (parseInt(document.getElementById('p-ghoda-max').value) || 1) : 1;
-            dandi_max = dandiEnabled ? (parseInt(document.getElementById('p-dandi-max').value) || 1) : 1;
-            kandi_max = kandiEnabled ? (parseInt(document.getElementById('p-kandi-max').value) || 1) : 1;
-            pitthu_max = pitthuEnabled ? (parseInt(document.getElementById('p-pitthu-max').value) || 1) : 1;
-        }
-
-        // 2. GATHER VAISHNO DEVI RATES (Exclusively saves if Vaishno Devi destination is active)
-        let vaishno_ghoda_price = 0, vaishno_palki_price = 0, vaishno_pitthu_price = 0;
-        let vaishno_ghoda_max = 1, vaishno_palki_max = 1, vaishno_pitthu_max = 1;
-
-        if (isVaishnoActive) {
-            const vaishnoGhodaEnabled = document.getElementById('p-vaishno-ghoda-enable')?.checked || false;
-            const vaishnoPalkiEnabled = document.getElementById('p-vaishno-palki-enable')?.checked || false;
-            const vaishnoPitthuEnabled = document.getElementById('p-vaishno-pitthu-enable')?.checked || false;
-
-            vaishno_ghoda_price = vaishnoGhodaEnabled ? (parseFloat(document.getElementById('p-vaishno-ghoda-price').value) || 0) : 0;
-            vaishno_palki_price = vaishnoPalkiEnabled ? (parseFloat(document.getElementById('p-vaishno-palki-price').value) || 0) : 0;
-            vaishno_pitthu_price = vaishnoPitthuEnabled ? (parseFloat(document.getElementById('p-vaishno-pitthu-price').value) || 0) : 0;
-
-            vaishno_ghoda_max = vaishnoGhodaEnabled ? (parseInt(document.getElementById('p-vaishno-ghoda-max').value) || 1) : 1;
-            vaishno_palki_max = vaishnoPalkiEnabled ? (parseInt(document.getElementById('p-vaishno-palki-max').value) || 1) : 1;
-            vaishno_pitthu_max = vaishnoPitthuEnabled ? (parseInt(document.getElementById('p-vaishno-pitthu-max').value) || 1) : 1;
-        }
-
-        // Get Agency Session Data
+        // =====================================
+        // GET AGENCY SESSION DATA
+        // =====================================
         const sessionStr = localStorage.getItem('agency_session');
-        if (!sessionStr) throw new Error("No active session found.");
+
+        if (!sessionStr) {
+            throw new Error("No active session found.");
+        }
+
         const session = JSON.parse(sessionStr);
 
-        // Map payload exactly to database columns
-        const payload = {
-            title: title,
-            starting_location: city,
-            destinations: selectedDests, 
-            vehicles: vehicles,           
-            description: desc,
-            agency_id: session.id,
-            
-            // Kedarnath Fields mapping
-            ghoda_price,
-            dandi_price,
-            kandi_price,
-            pitthu_price,
-            ghoda_max,
-            dandi_max,
-            kandi_max,
-            pitthu_max,
 
-            // Vaishno Devi Fields mapping (Matching table structure)
-            vaishno_ghoda_price,
-            vaishno_palki_price,
-            vaishno_pitthu_price,
-            vaishno_ghoda_max,
-            vaishno_palki_max,
-            vaishno_pitthu_max
+        // =====================================
+        // DATABASE PAYLOAD
+        // =====================================
+        const payload = {
+
+            title: title,
+
+            // New professional field
+            tour_days: tourDays,
+
+            starting_location: city,
+
+            destinations: selectedDests,
+
+            vehicles: vehicles,
+
+            description: desc,
+
+            agency_id: session.id
         };
 
+
+        // =====================================
+        // SAVE / UPDATE PACKAGE
+        // =====================================
         let resultError = null;
 
+
         if (packageId) {
+
             // Update Existing Package
             const { error } = await _supabase
                 .from('packages')
                 .update(payload)
                 .eq('id', packageId);
+
             resultError = error;
+
         } else {
+
             // Insert New Package
             const { error } = await _supabase
                 .from('packages')
                 .insert([payload]);
+
             resultError = error;
         }
 
-        if (resultError) throw resultError;
 
-        alert(packageId ? "Package updated successfully!" : "Package published successfully!");
-        window.showTab('packages'); 
+        // =====================================
+        // ERROR HANDLING
+        // =====================================
+        if (resultError) {
+            throw resultError;
+        }
+
+
+        // =====================================
+        // SUCCESS
+        // =====================================
+        alert(
+            packageId
+                ? "Package updated successfully!"
+                : "Package published successfully!"
+        );
+
+        window.showTab('packages');
+
 
     } catch (err) {
+
         console.error("Save Error:", err);
-        alert("Error saving package: " + err.message);
+
+        alert(
+            "Error saving package: " +
+            err.message
+        );
+
     } finally {
+
         if (saveBtn) {
+
             saveBtn.disabled = false;
-            saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
+
+            saveBtn.innerText = packageId
+                ? 'SAVE CHANGES'
+                : 'PUBLISH PACKAGE';
         }
     }
 };
