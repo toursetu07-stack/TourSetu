@@ -2725,80 +2725,9 @@ window.showPackageDetails = function(pEncoded) {
             </div>
         </div>`).join('');
 
-    // Pre-build Special Trek Services HTML (Separated by destination blocks)
-    let trekServicesHtml = '';
-    if (showTrekServices) {
-        
-        // 1. KEDARNATH SERVICES BLOCK
-        let kedaHtmlBlock = '';
-        if (isKedarnath) {
-            const kedarnathServices = [
-                { id: 'ghoda', name: '🐴 Khachhar / Ghoda (Horse)', price: parseFloat(p.ghoda_price) || 0, maxLimit: parseInt(p.ghoda_max) || 1 },
-                { id: 'dandi', name: '🪑 Dandi (Palanquin)', price: parseFloat(p.dandi_price) || 0, maxLimit: parseInt(p.dandi_max) || 1 },
-                { id: 'kandi', name: '🧺 Kandi (Wicker Cradle)', price: parseFloat(p.kandi_price) || 0, maxLimit: parseInt(p.kandi_max) || 1 },
-                { id: 'pitthu', name: '🎒 Pitthu (Porter Service)', price: parseFloat(p.pitthu_price) || 0, maxLimit: parseInt(p.pitthu_max) || 1 }
-            ].filter(s => s.price > 0);
-
-            if (kedarnathServices.length > 0) {
-                kedaHtmlBlock = `<h4 style="margin-top:15px; color:#e67e22;">Mountain Trek Services (Only for Kedarnath)</h4>`;
-                kedaHtmlBlock += kedarnathServices.map(s => `
-                    <div style="padding:12px; border:1px solid #ffeaa7; background:#fffdf0; border-radius:10px; margin-bottom:8px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.price}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
-                                <b>${s.name}</b>
-                            </div>
-                            <span style="color:#e67e22; font-weight:bold;">₹${s.price} / person</span>
-                        </div>
-                        <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                            <div style="display:flex; align-items:center; justify-content:space-between;">
-                                <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
-                                <small style="color:#7f8c8d; font-weight:bold; margin-right:10px;">Allowed Max: ${s.maxLimit}</small>
-                            </div>
-                            <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.maxLimit}" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="if(parseInt(this.value) > ${s.maxLimit}) this.value = ${s.maxLimit}; if(parseInt(this.value) < 1 || isNaN(parseInt(this.value))) this.value = 1; updateLivePrice();" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-
-        // 2. VAISHNO DEVI SERVICES BLOCK
-        let vaishnoHtmlBlock = '';
-        if (isVaishno) {
-            const vaishnoServices = [
-                { id: 'vaishno_ghoda', name: '🐴 Horse (Ghora) - Vaishno Devi', price: parseFloat(p.vaishno_ghoda_price) || 0, maxLimit: parseInt(p.vaishno_ghoda_max || p.ghoda_max) || 1 },
-                { id: 'vaishno_dandi', name: '🪑 Palanquin (Palki) - Vaishno Devi', price: parseFloat(p.vaishno_dandi_price) || 0, maxLimit: parseInt(p.vaishno_dandi_max || p.dandi_max) || 1 },
-                { id: 'vaishno_pitthu', name: '🎒 Porters (Pithoo) - Vaishno Devi', price: parseFloat(p.vaishno_pitthu_price) || 0, maxLimit: parseInt(p.vaishno_pitthu_max || p.pitthu_max) || 1 }
-            ].filter(s => s.price > 0);
-
-            if (vaishnoServices.length > 0) {
-                vaishnoHtmlBlock = `<h4 style="margin-top:15px; color:#2980b9;">Mountain Trek Services (Only for Vaishno Devi)</h4>`;
-                vaishnoHtmlBlock += vaishnoServices.map(s => `
-                    <div style="padding:12px; border:1px solid #b2bec3; background:#f5f6fa; border-radius:10px; margin-bottom:8px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.price}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
-                                <b>${s.name}</b>
-                            </div>
-                            <span style="color:#2980b9; font-weight:bold;">₹${s.price} / person</span>
-                        </div>
-                        <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                            <div style="display:flex; align-items:center; justify-content:space-between;">
-                                <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity:</label>
-                                <small style="color:#7f8c8d; font-weight:bold; margin-right:10px;">Allowed Max: ${s.maxLimit}</small>
-                            </div>
-                            <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.maxLimit}" onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="if(parseInt(this.value) > ${s.maxLimit}) this.value = ${s.maxLimit}; if(parseInt(this.value) < 1 || isNaN(parseInt(this.value))) this.value = 1; updateLivePrice();" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-
-        // Combine both separate blocks inside the main variable seamlessly
-        trekServicesHtml = kedaHtmlBlock + vaishnoHtmlBlock;
-    }
-
-    body.innerHTML = `
+   const trekServicesHtml = '';
+   
+   body.innerHTML = `
         <div style="text-align:left;">
             <div style="display:flex; justify-content:space-between;">
                 <h2 style="margin:0;">${p.title}</h2>
