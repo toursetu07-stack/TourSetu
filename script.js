@@ -3718,7 +3718,7 @@ window.showPackageDetails = function(pEncoded) {
        9. INITIAL PRICE 
        ========================================================= */ 
  
-    if (typeof window.updateLivePrice = function() {
+    window.updateLivePrice = function() {
     let total=0;
     document.querySelectorAll('.book-v-check:checked').forEach(checkbox=>{
         const id=checkbox.dataset.id;
