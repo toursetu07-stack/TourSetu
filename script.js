@@ -6423,9 +6423,9 @@ window.processSave = async function(packageId = '') {
             tour_days: tourDays,
             starting_location: city,
 
-            // Keep both fields for compatibility with the existing package UI.
+            // Use the existing packages.destination column.
+            // The database does not have a "destinations" column.
             destination: selectedDests,
-            destinations: selectedDests,
 
             vehicles,
             description: desc,
