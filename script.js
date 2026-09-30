@@ -2390,26 +2390,25 @@ window.showPackageDetails = function(pEncoded) {
     modal.style.display = 'flex';
 };
 
-window.updateLivePrice = () => {
-    let total = 0;
-    
-    document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
-        const id = checkbox.dataset.id;
-        const rate = parseFloat(checkbox.dataset.rate) || 0;
-        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
-        const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
-        total += (rate * qty);
+window.updateLivePrice = function() {
+    let total=0;
+    document.querySelectorAll('.book-v-check:checked').forEach(checkbox=>{
+        const id=checkbox.dataset.id;
+        const rate=parseFloat(checkbox.dataset.rate)||0;
+        const qtyInput=document.querySelector(`.book-v-qty[data-id="${id}"]`);
+        const qty=qtyInput?(parseInt(qtyInput.value,10)||1):1;
+        total+=rate*qty;
     });
-
-    document.querySelectorAll('.book-trek-check:checked').forEach(checkbox => {
-        const id = checkbox.dataset.id;
-        const rate = parseFloat(checkbox.dataset.rate) || 0;
-        const qtyInput = document.getElementById(`qty-${id}`);
-        const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
-        total += (rate * qty);
+    document.querySelectorAll('.book-trek-check:checked').forEach(checkbox=>{
+        const id=checkbox.dataset.id;
+        const rate=parseFloat(checkbox.dataset.rate)||0;
+        const qtyInput=document.getElementById(`qty-${id}`);
+        const qty=qtyInput?(parseInt(qtyInput.value,10)||1):1;
+        total+=rate*qty;
     });
-
-    document.getElementById('live-total-display').innerText = `₹${total.toLocaleString('en-IN')}`;
+    total+=Number(window.currentPickupDistanceCharge)||0;
+    const totalEl=document.getElementById('live-total-display');
+    if(totalEl)totalEl.innerText=`₹${total.toLocaleString('en-IN')}`;
 };
 
 window.toggleQtyInput = (id) => {
@@ -2423,6 +2422,49 @@ window.toggleQtyInput = (id) => {
    CUSTOMER PICKUP DISTANCE PRICING
    Uses Nominatim geocoding + OSRM road distance.
    ============================================================ */
+const UTTARAKHAND_PICKUP_CITIES = ["Almora","Ranikhet","Dwarahat","Chaukhutia","Bhikiyasen","Bageshwar","Kapkot","Garur","Champawat","Banbasa","Tanakpur","Lohaghat","Pati","Gopeshwar","Joshimath","Gauchar","Karnaprayag","Nandprayag","Badrinath","Pokhari","Tharali","Gairsain","Pipalkoti","Nandanagar","Dehradun","Rishikesh","Vikasnagar","Mussoorie","Herbertpur","Selaqui","Doiwala","Haridwar","Roorkee","Adampur-Sultanpur","Dhandera","Imlikhera","Padligurjar","Rampur","Manglaur","Jhabreda","Laksar","Landhaura","Shivalik Nagar","Bhagwanpur","Piran Kaliyer","Haldwani","Ramnagar","Bhowali","Kaladhungi","Lalkuan","Nainital","Bhimtal","Pauri","Srinagar","Swargashram-Jaunk","Satpuli","Dogadda","Kotdwar","Thalisain","Pithoragarh","Dharchula","Didihat","Gangolihat","Berinag","Munsyari","Rudraprayag","Kedarnath","Augustmuni","Tilwara","Ukhimath","Guptkashi","Tehri","Narendranagar","Chamba","Muni-ki-Reti","Kirtinagar","Devprayag","Gaja","Ghansali","Lambgaon","Chamiyala","Tapovan","Gadarpur","Jaspur","Kichha","Sitarganj","Bazpur","Khatima","Mahuakheraganj","Mahuwadawara","Sultanpur","Kelakheda","Dineshpur","Shaktigarh","Nanakmatta","Gularbhoj","Kashipur","Rudrapur","Nagla","Lalpur","Garhinegi","Seroli Kalan","Uttarkashi","Barkot","Chinyalisaur","Gangotri","Purola","Naugaon"];
+window.currentPickupDistanceCharge = 0;
+window.currentPickupDistanceKm = 0;
+window.pickupDistanceRequestId = 0;
+
+window.updatePickupDistancePreview = async function() {
+    const cityEl=document.getElementById('cust-city');
+    const distanceEl=document.getElementById('pickup-distance-value');
+    const chargeEl=document.getElementById('pickup-distance-charge');
+    if(!cityEl||!distanceEl||!chargeEl) return;
+
+    const customerCity=cityEl.value.trim();
+    const packageData=window.currentBookingPackage||{};
+    const startingCity=String(packageData.starting_location||'').trim();
+    const pickupKmRate=Number(packageData.pickup_km_rate)||0;
+    const requestId=++window.pickupDistanceRequestId;
+
+    window.currentPickupDistanceCharge=0;
+    window.currentPickupDistanceKm=0;
+    if(typeof window.updateLivePrice==='function') window.updateLivePrice();
+
+    if(!customerCity){distanceEl.innerText='Select a city';chargeEl.innerText='₹0';return;}
+    if(!startingCity){distanceEl.innerText='Agency starting city unavailable';chargeEl.innerText='₹0';return;}
+    if(pickupKmRate<=0){distanceEl.innerText='Rate not configured';chargeEl.innerText='₹0';return;}
+    if(startingCity.toLowerCase()===customerCity.toLowerCase()){distanceEl.innerText='0 km';chargeEl.innerText='₹0';return;}
+
+    distanceEl.innerText='Calculating...';chargeEl.innerText='...';
+    try{
+        const result=await calculatePackagePickupDistance(startingCity,customerCity,pickupKmRate);
+        if(requestId!==window.pickupDistanceRequestId)return;
+        window.currentPickupDistanceKm=result.distanceKm;
+        window.currentPickupDistanceCharge=result.charge;
+        distanceEl.innerText=`${result.distanceKm.toLocaleString('en-IN')} km`;
+        chargeEl.innerText=`₹${result.charge.toLocaleString('en-IN')}`;
+        if(typeof window.updateLivePrice==='function')window.updateLivePrice();
+    }catch(error){
+        if(requestId!==window.pickupDistanceRequestId)return;
+        console.error('Pickup distance preview error:',error);
+        distanceEl.innerText='Distance unavailable';chargeEl.innerText='₹0';
+        if(typeof window.updateLivePrice==='function')window.updateLivePrice();
+    }
+};
+
 async function calculatePackagePickupDistance(packageStartLocation, customerPickupAddress, pickupKmRate) {
     const rate=Number(pickupKmRate)||0;
     if(rate<=0) return {distanceKm:0,charge:0,origin:packageStartLocation,destination:customerPickupAddress};
@@ -2433,8 +2475,8 @@ async function calculatePackagePickupDistance(packageStartLocation, customerPick
         if(!results.length) throw new Error(`Location not found: ${query}`);
         return {lat:Number(results[0].lat),lon:Number(results[0].lon),displayName:results[0].display_name};
     };
-    const origin=await geocode(packageStartLocation+", India");
-    const destination=await geocode(customerPickupAddress+", India");
+    const origin=await geocode(packageStartLocation+", Uttarakhand, India");
+    const destination=await geocode(customerPickupAddress+", Uttarakhand, India");
     const routeResponse=await fetch(`https://router.project-osrm.org/route/v1/driving/${origin.lon},${origin.lat};${destination.lon},${destination.lat}?overview=false`);
     if(!routeResponse.ok) throw new Error("Unable to calculate pickup road distance.");
     const routeData=await routeResponse.json();
@@ -2444,15 +2486,18 @@ async function calculatePackagePickupDistance(packageStartLocation, customerPick
     return {distanceKm,charge:Number((distanceKm*rate).toFixed(2)),origin:origin.displayName,destination:destination.displayName};
 }
 
-window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, agencyEmail) {
+window.handleBookingInquiry = async function(packageId,packageTitle,agencyId,agencyEmail){
     const client=getClient();
     const {data:{user}}=await client.auth.getUser();
     if(!user){alert("❌ Please login again before sending a booking request.");return;}
 
-    const address=document.getElementById('cust-address').value.trim();
-    const phone=document.getElementById('cust-phone').value.trim();
-    const travelDate=document.getElementById('cust-travel-date').value;
-    if(!address||!phone||!travelDate){alert("❌ Please provide travel date, pickup address and phone number!");return;}
+    const city=document.getElementById('cust-city')?.value.trim()||'';
+    const phone=document.getElementById('cust-phone')?.value.trim()||'';
+    const travelDate=document.getElementById('cust-travel-date')?.value||'';
+    if(!city||!phone||!travelDate){alert("❌ Please select pickup city, travel date and enter your 10-digit phone number!");return;}
+    if(!/^[6-9]\d{9}$/.test(phone)){alert("❌ Please enter a valid 10-digit mobile number.");return;}
+    const policy=document.getElementById('policy-consent');
+    if(policy&&!policy.checked){alert("❌ Please accept the Cancellation & Refund Policy.");return;}
 
     let totalPrice=0;
     const selectedVehicles=Array.from(document.querySelectorAll('.book-v-check:checked')).map(el=>{
@@ -2464,6 +2509,7 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
     });
     if(selectedVehicles.length===0){alert("❌ Please select at least one vehicle to book.");return;}
 
+    // Preserve existing trekking/add-on quantities.
     const ghodaQty=parseInt(document.getElementById('qty-ghoda')?.value,10)||0;
     const dandiQty=parseInt(document.getElementById('qty-dandi')?.value,10)||0;
     const kandiQty=parseInt(document.getElementById('qty-kandi')?.value,10)||0;
@@ -2474,44 +2520,44 @@ window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, 
 
     const packageData=window.currentBookingPackage||{};
     const pickupKmRate=Number(packageData.pickup_km_rate)||0;
-    let pickupDistanceKm=0, pickupDistanceCharge=0;
-    let pickupOrigin=packageData.starting_location||'', pickupDestination=address;
+    let pickupDistanceKm=Number(window.currentPickupDistanceKm)||0;
+    let pickupDistanceCharge=Number(window.currentPickupDistanceCharge)||0;
+    let pickupOrigin=packageData.starting_location||'';
+    let pickupDestination=city;
 
     try{
-        if(pickupKmRate>0){
-            const distanceResult=await calculatePackagePickupDistance(packageData.starting_location||'',address,pickupKmRate);
-            pickupDistanceKm=distanceResult.distanceKm;
-            pickupDistanceCharge=distanceResult.charge;
-            pickupOrigin=distanceResult.origin;
-            pickupDestination=distanceResult.destination;
-            totalPrice+=pickupDistanceCharge;
+        if(pickupKmRate>0&&pickupDistanceKm<=0&&pickupOrigin.toLowerCase()!==city.toLowerCase()){
+            const result=await calculatePackagePickupDistance(pickupOrigin,city,pickupKmRate);
+            pickupDistanceKm=result.distanceKm;
+            pickupDistanceCharge=result.charge;
+            pickupOrigin=result.origin;
+            pickupDestination=result.destination;
         }
+        totalPrice+=pickupDistanceCharge;
 
         const {error}=await client.from('bookings').insert([{
-            package_id:packageId, package_title:packageTitle, customer_id:user.id,
-            customer_email:user.email, customer_address:address, customer_phone:phone,
-            travel_date:travelDate, selected_vehicles:selectedVehicles.join(', '),
-            total_price:Number(totalPrice.toFixed(2)), status:'pending',
-            agency_id:agencyId, agency_email:agencyEmail,
-            pickup_km_rate:Number(pickupKmRate.toFixed(2)),
-            pickup_distance_km:pickupDistanceKm,
-            pickup_distance_charge:pickupDistanceCharge,
-            pickup_distance_origin:pickupOrigin,
+            package_id:packageId,package_title:packageTitle,customer_id:user.id,customer_email:user.email,
+            customer_address:city,customer_phone:phone,travel_date:travelDate,
+            selected_vehicles:selectedVehicles.join(', '),total_price:Number(totalPrice.toFixed(2)),status:'pending',
+            agency_id:agencyId,agency_email:agencyEmail,
+            pickup_km_rate:Number(pickupKmRate.toFixed(2)),pickup_distance_km:Number(pickupDistanceKm.toFixed(2)),
+            pickup_distance_charge:Number(pickupDistanceCharge.toFixed(2)),pickup_distance_origin:pickupOrigin,
             pickup_distance_destination:pickupDestination,
-            keda_ghoda_qty:ghodaQty, keda_dandi_qty:dandiQty, keda_kandi_qty:kandiQty, keda_pitthu_qty:pitthuQty,
-            vaishno_ghoda_qty:vGhodaQty, vaishno_palki_qty:vPalkiQty, vaishno_pitthu_qty:vPitthuQty
+            keda_ghoda_qty:ghodaQty,keda_dandi_qty:dandiQty,keda_kandi_qty:kandiQty,keda_pitthu_qty:pitthuQty,
+            vaishno_ghoda_qty:vGhodaQty,vaishno_palki_qty:vPalkiQty,vaishno_pitthu_qty:vPitthuQty
         }]);
-        if(error) throw error;
+        if(error)throw error;
 
-        const distanceMessage=pickupDistanceKm>0 ? `\nPickup distance: ${pickupDistanceKm} km\nDistance charge: ₹${pickupDistanceCharge.toLocaleString('en-IN')}` : '';
-        alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString()}.`+`\nTotal: ₹${Number(totalPrice).toLocaleString('en-IN')}`+distanceMessage);
+        alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString('en-IN')}.
+Pickup city: ${city}
+Pickup distance: ${pickupDistanceKm} km
+Pickup charge: ₹${pickupDistanceCharge.toLocaleString('en-IN')}
+Total: ₹${Number(totalPrice).toLocaleString('en-IN')}`);
         document.getElementById('detail-modal').style.display='none';
-        if(typeof window.renderCustomerRequests==='function') window.renderCustomerRequests();
-    }catch(e){
-        console.error("Booking distance/save error:",e);
-        alert("❌ "+e.message);
-    }
+        if(typeof window.renderCustomerRequests==='function')window.renderCustomerRequests();
+    }catch(e){console.error("Booking distance/save error:",e);alert("❌ "+e.message);}
 };
+
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
     const start = document.getElementById('search-start').value;
@@ -2715,7 +2761,8 @@ function renderPackageCards(data, isFiltered) {
  
 window.showPackageDetails = function(pEncoded) { 
  
-    const p = JSON.parse(decodeURIComponent(pEncoded)); 
+    const p = JSON.parse(decodeURIComponent(pEncoded));
+    window.currentBookingPackage = p; 
  
     const modal = document.getElementById('detail-modal'); 
     const body = document.getElementById('detail-view-body'); 
@@ -3477,43 +3524,27 @@ window.showPackageDetails = function(pEncoded) {
  
                 <div> 
  
-                    <!-- PICKUP ADDRESS --> 
-                    <div 
-                        style=" 
-                            margin-bottom:14px; 
-                        " 
-                    > 
- 
-                        <label 
-                            style=" 
-                                display:block; 
-                                font-size:11px; 
-                                color:#636e72; 
-                                font-weight:800; 
-                                margin-bottom:6px; 
-                            " 
-                        > 
-                            🏠 FULL PICKUP ADDRESS 
-                        </label> 
- 
-                        <textarea 
-                            id="cust-address" 
-                            placeholder="e.g. Hotel name, house number, street, landmark..." 
-                            style=" 
-                                width:100%; 
-                                height:75px; 
-                                padding:12px; 
-                                border:1px solid #dfe6e9; 
-                                border-radius:9px; 
-                                box-sizing:border-box; 
-                                font-family:inherit; 
-                                resize:vertical; 
-                            " 
-                        ></textarea> 
- 
-                    </div> 
- 
- 
+                    <!-- CUSTOMER PICKUP CITY -->
+                    <div style="margin-bottom:14px;">
+                        <label style="display:block;font-size:11px;color:#636e72;font-weight:800;margin-bottom:6px;">🏠 CUSTOMER PICKUP CITY</label>
+                        <select id="cust-city" onchange="updatePickupDistancePreview()" style="width:100%;padding:12px;border:2px solid #ff9f43;border-radius:9px;box-sizing:border-box;font-family:inherit;background:white;cursor:pointer;">
+                            <option value="">Select your Uttarakhand city</option>
+                            <option value="Almora">Almora</option><option value="Ranikhet">Ranikhet</option><option value="Dwarahat">Dwarahat</option><option value="Chaukhutia">Chaukhutia</option><option value="Bhikiyasen">Bhikiyasen</option><option value="Bageshwar">Bageshwar</option><option value="Kapkot">Kapkot</option><option value="Garur">Garur</option><option value="Champawat">Champawat</option><option value="Banbasa">Banbasa</option><option value="Tanakpur">Tanakpur</option><option value="Lohaghat">Lohaghat</option><option value="Pati">Pati</option><option value="Gopeshwar">Gopeshwar</option><option value="Joshimath">Joshimath</option><option value="Gauchar">Gauchar</option><option value="Karnaprayag">Karnaprayag</option><option value="Nandprayag">Nandprayag</option><option value="Badrinath">Badrinath</option><option value="Pokhari">Pokhari</option><option value="Tharali">Tharali</option><option value="Gairsain">Gairsain</option><option value="Pipalkoti">Pipalkoti</option><option value="Nandanagar">Nandanagar</option><option value="Dehradun">Dehradun</option><option value="Rishikesh">Rishikesh</option><option value="Vikasnagar">Vikasnagar</option><option value="Mussoorie">Mussoorie</option><option value="Herbertpur">Herbertpur</option><option value="Selaqui">Selaqui</option><option value="Doiwala">Doiwala</option><option value="Haridwar">Haridwar</option><option value="Roorkee">Roorkee</option><option value="Adampur-Sultanpur">Adampur-Sultanpur</option><option value="Dhandera">Dhandera</option><option value="Imlikhera">Imlikhera</option><option value="Padligurjar">Padligurjar</option><option value="Rampur">Rampur</option><option value="Manglaur">Manglaur</option><option value="Jhabreda">Jhabreda</option><option value="Laksar">Laksar</option><option value="Landhaura">Landhaura</option><option value="Shivalik Nagar">Shivalik Nagar</option><option value="Bhagwanpur">Bhagwanpur</option><option value="Piran Kaliyer">Piran Kaliyer</option><option value="Haldwani">Haldwani</option><option value="Ramnagar">Ramnagar</option><option value="Bhowali">Bhowali</option><option value="Kaladhungi">Kaladhungi</option><option value="Lalkuan">Lalkuan</option><option value="Nainital">Nainital</option><option value="Bhimtal">Bhimtal</option><option value="Pauri">Pauri</option><option value="Srinagar">Srinagar</option><option value="Swargashram-Jaunk">Swargashram-Jaunk</option><option value="Satpuli">Satpuli</option><option value="Dogadda">Dogadda</option><option value="Kotdwar">Kotdwar</option><option value="Thalisain">Thalisain</option><option value="Pithoragarh">Pithoragarh</option><option value="Dharchula">Dharchula</option><option value="Didihat">Didihat</option><option value="Gangolihat">Gangolihat</option><option value="Berinag">Berinag</option><option value="Munsyari">Munsyari</option><option value="Rudraprayag">Rudraprayag</option><option value="Kedarnath">Kedarnath</option><option value="Augustmuni">Augustmuni</option><option value="Tilwara">Tilwara</option><option value="Ukhimath">Ukhimath</option><option value="Guptkashi">Guptkashi</option><option value="Tehri">Tehri</option><option value="Narendranagar">Narendranagar</option><option value="Chamba">Chamba</option><option value="Muni-ki-Reti">Muni-ki-Reti</option><option value="Kirtinagar">Kirtinagar</option><option value="Devprayag">Devprayag</option><option value="Gaja">Gaja</option><option value="Ghansali">Ghansali</option><option value="Lambgaon">Lambgaon</option><option value="Chamiyala">Chamiyala</option><option value="Tapovan">Tapovan</option><option value="Gadarpur">Gadarpur</option><option value="Jaspur">Jaspur</option><option value="Kichha">Kichha</option><option value="Sitarganj">Sitarganj</option><option value="Bazpur">Bazpur</option><option value="Khatima">Khatima</option><option value="Mahuakheraganj">Mahuakheraganj</option><option value="Mahuwadawara">Mahuwadawara</option><option value="Sultanpur">Sultanpur</option><option value="Kelakheda">Kelakheda</option><option value="Dineshpur">Dineshpur</option><option value="Shaktigarh">Shaktigarh</option><option value="Nanakmatta">Nanakmatta</option><option value="Gularbhoj">Gularbhoj</option><option value="Kashipur">Kashipur</option><option value="Rudrapur">Rudrapur</option><option value="Nagla">Nagla</option><option value="Lalpur">Lalpur</option><option value="Garhinegi">Garhinegi</option><option value="Seroli Kalan">Seroli Kalan</option><option value="Uttarkashi">Uttarkashi</option><option value="Barkot">Barkot</option><option value="Chinyalisaur">Chinyalisaur</option><option value="Gangotri">Gangotri</option><option value="Purola">Purola</option><option value="Naugaon">Naugaon</option>
+                        </select>
+                        <small style="display:block;margin-top:6px;color:#777;font-size:11px;line-height:1.45;">Agency starting city se selected pickup city tak road distance automatically calculate hoga.</small>
+                    </div>
+
+                    <div id="pickup-distance-preview" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px;background:#f5fff8;border:1px solid #b7ebc6;border-radius:9px;">
+                        <div>
+                            <div style="font-size:11px;color:#636e72;font-weight:800;">🚗 PICKUP DISTANCE</div>
+                            <div id="pickup-distance-value" style="font-size:14px;font-weight:800;color:#2d3436;margin-top:3px;">Select a city</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:11px;color:#636e72;font-weight:800;">PICKUP CHARGE</div>
+                            <div id="pickup-distance-charge" style="font-size:17px;font-weight:900;color:#2ecc71;margin-top:3px;">₹0</div>
+                        </div>
+                    </div>
+
                     <!-- PHONE --> 
                     <div> 
  
@@ -3667,6 +3698,10 @@ window.showPackageDetails = function(pEncoded) {
        7. OPEN MODAL 
        ========================================================= */ 
  
+    window.currentPickupDistanceCharge=0;
+    window.currentPickupDistanceKm=0;
+    window.pickupDistanceRequestId=(window.pickupDistanceRequestId||0)+1;
+
     modal.style.display = 'flex'; 
  
  
@@ -3683,88 +3718,27 @@ window.showPackageDetails = function(pEncoded) {
        9. INITIAL PRICE 
        ========================================================= */ 
  
-    if (typeof window.updateLivePrice === 'function') { 
-        window.updateLivePrice(); 
-    } 
- 
-}; 
- 
- 
-/* ========================================================================= 
-   TOUR END DATE CALCULATOR 
-   ========================================================================= */ 
- 
-window.updateTourEndDate = function(tourDays) { 
- 
-    const startInput = 
-        document.getElementById('cust-travel-date'); 
- 
-    const endDisplay = 
-        document.getElementById('tour-end-date-display'); 
- 
-    if (!startInput || !endDisplay) { 
-        return; 
-    } 
- 
- 
-    const startDateValue = 
-        startInput.value; 
- 
-    if (!startDateValue) { 
- 
-        endDisplay.innerText = 
-            'Select start date'; 
- 
-        return; 
- 
-    } 
- 
- 
-    const days = 
-        parseInt(tourDays, 10) || 1; 
- 
- 
-    const startDate = 
-        new Date(startDateValue + 'T00:00:00'); 
- 
- 
-    /* 
-       Example: 
-       1 Day  = same day 
-       2 Days = start + 1 day 
-       5 Days = start + 4 days 
-    */ 
- 
-    const endDate = 
-        new Date(startDate); 
- 
-    endDate.setDate( 
-        startDate.getDate() + (days - 1) 
-    ); 
- 
- 
-    const formatted = 
-        endDate.toLocaleDateString( 
-            'en-IN', 
-            { 
-                weekday: 'short', 
-                day: '2-digit', 
-                month: 'short', 
-                year: 'numeric' 
-            } 
-        ); 
- 
- 
-    endDisplay.innerHTML = 
-        `📅 ${formatted}`; 
- 
-}; 
- 
- 
-/* ========================================================================= 
-   VEHICLE QUANTITY TOGGLE 
-   ========================================================================= */ 
- 
+    if (typeof window.updateLivePrice = function() {
+    let total=0;
+    document.querySelectorAll('.book-v-check:checked').forEach(checkbox=>{
+        const id=checkbox.dataset.id;
+        const rate=parseFloat(checkbox.dataset.rate)||0;
+        const qtyInput=document.querySelector(`.book-v-qty[data-id="${id}"]`);
+        const qty=qtyInput?(parseInt(qtyInput.value,10)||1):1;
+        total+=rate*qty;
+    });
+    document.querySelectorAll('.book-trek-check:checked').forEach(checkbox=>{
+        const id=checkbox.dataset.id;
+        const rate=parseFloat(checkbox.dataset.rate)||0;
+        const qtyInput=document.getElementById(`qty-${id}`);
+        const qty=qtyInput?(parseInt(qtyInput.value,10)||1):1;
+        total+=rate*qty;
+    });
+    total+=Number(window.currentPickupDistanceCharge)||0;
+    const totalEl=document.getElementById('live-total-display');
+    if(totalEl)totalEl.innerText=`₹${total.toLocaleString('en-IN')}`;
+};
+
 window.toggleQtyInput = function(id) { 
  
     const container = 
