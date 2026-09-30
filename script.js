@@ -6566,7 +6566,10 @@ window.processSave = async function(pkgId) {
         if (!title || !city) throw new Error("Title and Starting City are required!");
 
         const pickupRateInput = document.getElementById('p-pickup-km-rate');
-        const pickupKmRate = pickupRateInput && pickupRateInput.value !== '' ? parseFloat(pickupRateInput.value) : 0;
+        const pickupKmRate = pickupRateInput && pickupRateInput.value !== ''
+            ? parseFloat(pickupRateInput.value)
+            : 0;
+
         if (!Number.isFinite(pickupKmRate) || pickupKmRate < 0) {
             if (pickupRateInput) pickupRateInput.focus();
             throw new Error("Please enter a valid pickup distance rate (₹/km).");
@@ -6581,10 +6584,14 @@ window.processSave = async function(pkgId) {
             const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`)?.value) || 0;
             const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`)?.value) || 1;
             const vType = vehicleTypes.find(vt => vt.id === vId);
-            if (vType && rate > 0) selectedVehicles.push({ id:vId, name:vType.name, rate, max_cars:max, icon:vType.icon });
+            if (vType && rate > 0) {
+                selectedVehicles.push({ id:vId, name:vType.name, rate, max_cars:max, icon:vType.icon });
+            }
         });
 
-        const isKedarSelected = selectedDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
+        const isKedarSelected = selectedDests.some(d =>
+            ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d)
+        );
         const isVaishnoSelected = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
 
         let ghodaPrice=0, ghodaMax=1, dandiPrice=0, dandiMax=1, kandiPrice=0, kandiMax=1, pitthuPrice=0, pitthuMax=1;
@@ -6599,10 +6606,10 @@ window.processSave = async function(pkgId) {
             dandiMax=parseInt(document.getElementById('p-dandi-max')?.value)||1;
             kandiMax=parseInt(document.getElementById('p-kandi-max')?.value)||1;
             pitthuMax=parseInt(document.getElementById('p-pitthu-max')?.value)||1;
-            if (ghodaEnabled) ghodaPrice=parseFloat(document.getElementById('p-ghoda-price')?.value)||0;
-            if (dandiEnabled) dandiPrice=parseFloat(document.getElementById('p-dandi-price')?.value)||0;
-            if (kandiEnabled) kandiPrice=parseFloat(document.getElementById('p-kandi-price')?.value)||0;
-            if (pitthuEnabled) pitthuPrice=parseFloat(document.getElementById('p-pitthu-price')?.value)||0;
+            if(ghodaEnabled) ghodaPrice=parseFloat(document.getElementById('p-ghoda-price')?.value)||0;
+            if(dandiEnabled) dandiPrice=parseFloat(document.getElementById('p-dandi-price')?.value)||0;
+            if(kandiEnabled) kandiPrice=parseFloat(document.getElementById('p-kandi-price')?.value)||0;
+            if(pitthuEnabled) pitthuPrice=parseFloat(document.getElementById('p-pitthu-price')?.value)||0;
         }
 
         if (isVaishnoSelected) {
@@ -6612,68 +6619,65 @@ window.processSave = async function(pkgId) {
             vaishnoGhodaMax=parseInt(document.getElementById('p-vaishno-ghoda-max')?.value)||1;
             vaishnoPalkiMax=parseInt(document.getElementById('p-vaishno-palki-max')?.value)||1;
             vaishnoPitthuMax=parseInt(document.getElementById('p-vaishno-pitthu-max')?.value)||1;
-            if (vaishnoGhodaEnabled) vaishnoGhodaPrice=parseFloat(document.getElementById('p-vaishno-ghoda-price')?.value)||0;
-            if (vaishnoPalkiEnabled) vaishnoPalkiPrice=parseFloat(document.getElementById('p-vaishno-palki-price')?.value)||0;
-            if (vaishnoPitthuEnabled) vaishnoPitthuPrice=parseFloat(document.getElementById('p-vaishno-pitthu-price')?.value)||0;
+            if(vaishnoGhodaEnabled) vaishnoGhodaPrice=parseFloat(document.getElementById('p-vaishno-ghoda-price')?.value)||0;
+            if(vaishnoPalkiEnabled) vaishnoPalkiPrice=parseFloat(document.getElementById('p-vaishno-palki-price')?.value)||0;
+            if(vaishnoPitthuEnabled) vaishnoPitthuPrice=parseFloat(document.getElementById('p-vaishno-pitthu-price')?.value)||0;
         }
 
         const tourDays=parseInt(document.getElementById('p-tour-days')?.value,10);
-        if (!Number.isInteger(tourDays)||tourDays<1||tourDays>365) throw new Error("Please enter a valid Tour Duration between 1 and 365 days.");
+        if(!Number.isInteger(tourDays)||tourDays<1||tourDays>365) {
+            throw new Error("Please enter a valid Tour Duration between 1 and 365 days.");
+        }
 
-        const pkgData = {
-            title, tour_days:tourDays, starting_location:city,
-            destination:selectedDests, destinations:selectedDests,
-            vehicles:selectedVehicles, description:desc, agency_id:user.id,
+        const pkgData={
+            title,
+            tour_days:tourDays,
+            starting_location:city,
+            destination:selectedDests,
+            destinations:selectedDests,
+            vehicles:selectedVehicles,
+            description:desc,
+            agency_id:user.id,
             pickup_km_rate:Number(pickupKmRate.toFixed(2)),
-            ghoda_price:ghodaPrice, ghoda_max:ghodaMax, dandi_price:dandiPrice, dandi_max:dandiMax,
-            kandi_price:kandiPrice, kandi_max:kandiMax, pitthu_price:pitthuPrice, pitthu_max:pitthuMax,
-            vaishno_ghoda_price:vaishnoGhodaPrice, vaishno_ghoda_max:vaishnoGhodaMax,
-            vaishno_palki_price:vaishnoPalkiPrice, vaishno_palki_max:vaishnoPalkiMax,
-            vaishno_pitthu_price:vaishnoPitthuPrice, vaishno_pitthu_max:vaishnoPitthuMax
+            ghoda_price:ghodaPrice,
+            ghoda_max:ghodaMax,
+            dandi_price:dandiPrice,
+            dandi_max:dandiMax,
+            kandi_price:kandiPrice,
+            kandi_max:kandiMax,
+            pitthu_price:pitthuPrice,
+            pitthu_max:pitthuMax,
+            vaishno_ghoda_price:vaishnoGhodaPrice,
+            vaishno_ghoda_max:vaishnoGhodaMax,
+            vaishno_palki_price:vaishnoPalkiPrice,
+            vaishno_palki_max:vaishnoPalkiMax,
+            vaishno_pitthu_price:vaishnoPitthuPrice,
+            vaishno_pitthu_max:vaishnoPitthuMax
         };
 
         let error;
-        if (pkgId && pkgId !== "" && pkgId !== "undefined" && pkgId !== null) {
+        if(pkgId && pkgId!=="" && pkgId!=="undefined" && pkgId!==null) {
             error=(await client.from('packages').update(pkgData).eq('id',pkgId)).error;
         } else {
             error=(await client.from('packages').insert([pkgData])).error;
         }
-        if (error) throw error;
+
+        if(error) throw error;
 
         alert(pkgId ? "✅ Package updated successfully." : "✅ Package published successfully.");
         window.showTab('packages');
-    } catch (err) {
+
+    } catch(err) {
         console.error("Save Error:",err);
         alert("❌ Error: "+err.message);
     } finally {
-        if (btn) { btn.innerText=pkgId ? "SAVE CHANGES" : "PUBLISH PACKAGE"; btn.disabled=false; }
-    }
-};
-
-        let error;
-        // Logic to either Update (Edit) or Insert (New)
-        if (pkgId && pkgId !== "" && pkgId !== "undefined" && pkgId !== null) {
-            const result = await client.from('packages').update(pkgData).eq('id', pkgId);
-            error = result.error;
-        } else {
-            const result = await client.from('packages').insert([pkgData]);
-            error = result.error;
-        }
-
-        if (error) throw error;
-        
-        alert("✅ Success! Package saved.");
-        window.showTab('packages'); // Go back to the list
-
-    } catch (err) {
-        console.error("Save Error:", err);
-        alert("❌ Error: " + err.message);
-        if (btn) {
-            btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE";
-            btn.disabled = false;
+        if(btn) {
+            btn.innerText=pkgId ? "SAVE CHANGES" : "PUBLISH PACKAGE";
+            btn.disabled=false;
         }
     }
 };
+
 /* =========================================
    12. BOOKING RENDER LOGIC (ENHANCED WITH DATE)
    ========================================= */
