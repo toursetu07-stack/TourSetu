@@ -2509,6 +2509,15 @@ window.handleBookingInquiry = async function(packageId,packageTitle,agencyId,age
     });
     if(selectedVehicles.length===0){alert("❌ Please select at least one vehicle to book.");return;}
 
+    // Preserve existing trekking/add-on quantities.
+    const ghodaQty=parseInt(document.getElementById('qty-ghoda')?.value,10)||0;
+    const dandiQty=parseInt(document.getElementById('qty-dandi')?.value,10)||0;
+    const kandiQty=parseInt(document.getElementById('qty-kandi')?.value,10)||0;
+    const pitthuQty=parseInt(document.getElementById('qty-pitthu')?.value,10)||0;
+    const vGhodaQty=parseInt(document.getElementById('qty-vaishno_ghoda')?.value,10)||0;
+    const vPalkiQty=parseInt(document.getElementById('qty-vaishno_palki')?.value,10)||0;
+    const vPitthuQty=parseInt(document.getElementById('qty-vaishno_pitthu')?.value,10)||0;
+
     const packageData=window.currentBookingPackage||{};
     const pickupKmRate=Number(packageData.pickup_km_rate)||0;
     let pickupDistanceKm=Number(window.currentPickupDistanceKm)||0;
@@ -2533,7 +2542,9 @@ window.handleBookingInquiry = async function(packageId,packageTitle,agencyId,age
             agency_id:agencyId,agency_email:agencyEmail,
             pickup_km_rate:Number(pickupKmRate.toFixed(2)),pickup_distance_km:Number(pickupDistanceKm.toFixed(2)),
             pickup_distance_charge:Number(pickupDistanceCharge.toFixed(2)),pickup_distance_origin:pickupOrigin,
-            pickup_distance_destination:pickupDestination
+            pickup_distance_destination:pickupDestination,
+            keda_ghoda_qty:ghodaQty,keda_dandi_qty:dandiQty,keda_kandi_qty:kandiQty,keda_pitthu_qty:pitthuQty,
+            vaishno_ghoda_qty:vGhodaQty,vaishno_palki_qty:vPalkiQty,vaishno_pitthu_qty:vPitthuQty
         }]);
         if(error)throw error;
 
