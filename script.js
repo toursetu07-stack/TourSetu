@@ -2761,7 +2761,8 @@ function renderPackageCards(data, isFiltered) {
  
 window.showPackageDetails = function(pEncoded) { 
  
-    const p = JSON.parse(decodeURIComponent(pEncoded)); 
+    const p = JSON.parse(decodeURIComponent(pEncoded));
+    window.currentBookingPackage = p; 
  
     const modal = document.getElementById('detail-modal'); 
     const body = document.getElementById('detail-view-body'); 
