@@ -3718,25 +3718,10 @@ window.showPackageDetails = function(pEncoded) {
        9. INITIAL PRICE 
        ========================================================= */ 
  
-    window.updateLivePrice = function() {
-    let total=0;
-    document.querySelectorAll('.book-v-check:checked').forEach(checkbox=>{
-        const id=checkbox.dataset.id;
-        const rate=parseFloat(checkbox.dataset.rate)||0;
-        const qtyInput=document.querySelector(`.book-v-qty[data-id="${id}"]`);
-        const qty=qtyInput?(parseInt(qtyInput.value,10)||1):1;
-        total+=rate*qty;
-    });
-    document.querySelectorAll('.book-trek-check:checked').forEach(checkbox=>{
-        const id=checkbox.dataset.id;
-        const rate=parseFloat(checkbox.dataset.rate)||0;
-        const qtyInput=document.getElementById(`qty-${id}`);
-        const qty=qtyInput?(parseInt(qtyInput.value,10)||1):1;
-        total+=rate*qty;
-    });
-    total+=Number(window.currentPickupDistanceCharge)||0;
-    const totalEl=document.getElementById('live-total-display');
-    if(totalEl)totalEl.innerText=`₹${total.toLocaleString('en-IN')}`;
+    if (typeof window.updateLivePrice === 'function') {
+        window.updateLivePrice();
+    }
+
 };
 
 window.toggleQtyInput = function(id) { 
