@@ -2218,6 +2218,7 @@ window.cancelBookingWithPenalty = async function(id) {
 
 window.showPackageDetails = function(pEncoded) {
     const p = JSON.parse(decodeURIComponent(pEncoded));
+    window.currentBookingPackage = p;
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
     
@@ -2330,6 +2331,14 @@ window.showPackageDetails = function(pEncoded) {
                 <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:28px; color:#999; cursor:pointer; line-height:1;">✕</button>
             </div>
             <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
+            ${Number(p.pickup_km_rate) > 0 ? `
+                <div style="margin:10px 0 20px; padding:12px 15px; background:#fff8f0; border:1px solid #ffeaa7; border-radius:10px;">
+                    <b style="color:#e67e22;">🚗 Customer Pickup Distance Charge: ₹${Number(p.pickup_km_rate).toLocaleString('en-IN')} / km</b>
+                    <div style="font-size:12px; color:#666; margin-top:5px; line-height:1.5;">
+                        We will calculate the road distance from the package starting location to your pickup location and add the applicable distance charge to your package total.
+                    </div>
+                </div>
+            ` : ''}
             
             <div style="margin:20px 0; padding:15px; background:#f9f9f9; border-radius:12px; font-size:14px;">
                 <h4 style="margin-top:0;">Itinerary / Description</h4>
@@ -2352,7 +2361,7 @@ window.showPackageDetails = function(pEncoded) {
             </div>
 
             <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold;">ESTIMATED TOTAL:</span>
+                <span style="font-weight:bold;">ESTIMATED PACKAGE TOTAL:</span>
                 <span id="live-total-display" style="font-size:22px; font-weight:bold; color:#ff9f43;">₹0</span>
             </div>
 
@@ -2361,7 +2370,7 @@ window.showPackageDetails = function(pEncoded) {
                 <div style="display:grid; gap:15px;">
                     <div>
                         <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">🏠 FULL PICKUP ADDRESS</label>
-                        <textarea id="cust-address" placeholder="e.g. Flat 101, Sunny Heights, Sector 15, Meerut..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;"></textarea>
+                        <textarea id="cust-address" placeholder="e.g. Flat 101, Sunny Heights, Sector 15, Meerut..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;"></textarea><small style="display:block; margin-top:6px; color:#777; font-size:11px;">Pickup distance charge is calculated after you enter your address and send the booking request.</small>
                     </div>
                     <div>
                         <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">📞 MOBILE NUMBER</label>
@@ -2410,80 +2419,97 @@ window.toggleQtyInput = (id) => {
     updateLivePrice();
 };
 
+/* ============================================================
+   CUSTOMER PICKUP DISTANCE PRICING
+   Uses Nominatim geocoding + OSRM road distance.
+   ============================================================ */
+async function calculatePackagePickupDistance(packageStartLocation, customerPickupAddress, pickupKmRate) {
+    const rate=Number(pickupKmRate)||0;
+    if(rate<=0) return {distanceKm:0,charge:0,origin:packageStartLocation,destination:customerPickupAddress};
+    const geocode=async(query)=>{
+        const response=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(query)}`,{headers:{'Accept-Language':'en-IN'}});
+        if(!response.ok) throw new Error("Unable to find pickup location.");
+        const results=await response.json();
+        if(!results.length) throw new Error(`Location not found: ${query}`);
+        return {lat:Number(results[0].lat),lon:Number(results[0].lon),displayName:results[0].display_name};
+    };
+    const origin=await geocode(packageStartLocation+", India");
+    const destination=await geocode(customerPickupAddress+", India");
+    const routeResponse=await fetch(`https://router.project-osrm.org/route/v1/driving/${origin.lon},${origin.lat};${destination.lon},${destination.lat}?overview=false`);
+    if(!routeResponse.ok) throw new Error("Unable to calculate pickup road distance.");
+    const routeData=await routeResponse.json();
+    const route=routeData.routes?.[0];
+    if(!route) throw new Error("No drivable route found between package and pickup locations.");
+    const distanceKm=Number((route.distance/1000).toFixed(2));
+    return {distanceKm,charge:Number((distanceKm*rate).toFixed(2)),origin:origin.displayName,destination:destination.displayName};
+}
+
 window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, agencyEmail) {
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-    const address = document.getElementById('cust-address').value;
-    const phone = document.getElementById('cust-phone').value;
-    const travelDate = document.getElementById('cust-travel-date').value;
+    const client=getClient();
+    const {data:{user}}=await client.auth.getUser();
+    if(!user){alert("❌ Please login again before sending a booking request.");return;}
 
-    if (!address.trim() || !phone.trim() || !travelDate) {
-        alert("❌ Please provide travel date, pickup address and phone number!"); 
-        return;
-    }
+    const address=document.getElementById('cust-address').value.trim();
+    const phone=document.getElementById('cust-phone').value.trim();
+    const travelDate=document.getElementById('cust-travel-date').value;
+    if(!address||!phone||!travelDate){alert("❌ Please provide travel date, pickup address and phone number!");return;}
 
-    let totalPrice = 0;
-    const selectedVehicles = Array.from(document.querySelectorAll('.book-v-check:checked')).map(el => {
-        const id = el.dataset.id;
-        const rate = parseFloat(el.dataset.rate) || 0;
-        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
-        const qty = parseInt(qtyInput.value) || 1;
-        totalPrice += (rate * qty);
+    let totalPrice=0;
+    const selectedVehicles=Array.from(document.querySelectorAll('.book-v-check:checked')).map(el=>{
+        const id=el.dataset.id;
+        const rate=parseFloat(el.dataset.rate)||0;
+        const qty=parseInt(document.querySelector(`.book-v-qty[data-id="${id}"]`)?.value,10)||1;
+        totalPrice+=rate*qty;
         return `${qty}x vehicle_id:${id}`;
     });
+    if(selectedVehicles.length===0){alert("❌ Please select at least one vehicle to book.");return;}
 
-    if (selectedVehicles.length === 0) { 
-        alert("❌ Please select at least one vehicle to book."); 
-        return; 
-    }
+    const ghodaQty=parseInt(document.getElementById('qty-ghoda')?.value,10)||0;
+    const dandiQty=parseInt(document.getElementById('qty-dandi')?.value,10)||0;
+    const kandiQty=parseInt(document.getElementById('qty-kandi')?.value,10)||0;
+    const pitthuQty=parseInt(document.getElementById('qty-pitthu')?.value,10)||0;
+    const vGhodaQty=parseInt(document.getElementById('qty-vaishno_ghoda')?.value,10)||0;
+    const vPalkiQty=parseInt(document.getElementById('qty-vaishno_palki')?.value,10)||0;
+    const vPitthuQty=parseInt(document.getElementById('qty-vaishno_pitthu')?.value,10)||0;
 
-    // Safely extract optional trekking counts
-    const ghodaQty = document.getElementById('qty-ghoda') ? parseInt(document.getElementById('qty-ghoda').value) || 0 : 0;
-    const dandiQty = document.getElementById('qty-dandi') ? parseInt(document.getElementById('qty-dandi').value) || 0 : 0;
-    const kandiQty = document.getElementById('qty-kandi') ? parseInt(document.getElementById('qty-kandi').value) || 0 : 0;
-    const pitthuQty = document.getElementById('qty-pitthu') ? parseInt(document.getElementById('qty-pitthu').value) || 0 : 0;
+    const packageData=window.currentBookingPackage||{};
+    const pickupKmRate=Number(packageData.pickup_km_rate)||0;
+    let pickupDistanceKm=0, pickupDistanceCharge=0;
+    let pickupOrigin=packageData.starting_location||'', pickupDestination=address;
 
-    const vGhodaQty = document.getElementById('qty-vaishno_ghoda') ? parseInt(document.getElementById('qty-vaishno_ghoda').value) || 0 : 0;
-    const vPalkiQty = document.getElementById('qty-vaishno_palki') ? parseInt(document.getElementById('qty-vaishno_palki').value) || 0 : 0;
-    const vPitthuQty = document.getElementById('qty-vaishno_pitthu') ? parseInt(document.getElementById('qty-vaishno_pitthu').value) || 0 : 0;
-
-    try {
-        const { error } = await client.from('bookings').insert([{
-            package_id: packageId, 
-            package_title: packageTitle,
-            customer_id: user.id, 
-            customer_email: user.email, 
-            customer_address: address, 
-            customer_phone: phone,
-            travel_date: travelDate, 
-            selected_vehicles: selectedVehicles.join(', '),
-            total_price: totalPrice, 
-            status: 'pending',
-            agency_id: agencyId,
-            agency_email: agencyEmail,
-            
-            keda_ghoda_qty: ghodaQty,
-            keda_dandi_qty: dandiQty,
-            keda_kandi_qty: kandiQty,
-            keda_pitthu_qty: pitthuQty,
-
-            vaishno_ghoda_qty: vGhodaQty,
-            vaishno_palki_qty: vPalkiQty,
-            vaishno_pitthu_qty: vPitthuQty,
-        }]);
-
-        if (!error) {
-            alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString()}. Total: ₹${totalPrice}`);
-            document.getElementById('detail-modal').style.display = 'none';
-            
-            if (typeof window.renderCustomerRequests === 'function') {
-                window.renderCustomerRequests();
-            }
-        } else {
-            alert("Booking Error: " + error.message);
+    try{
+        if(pickupKmRate>0){
+            const distanceResult=await calculatePackagePickupDistance(packageData.starting_location||'',address,pickupKmRate);
+            pickupDistanceKm=distanceResult.distanceKm;
+            pickupDistanceCharge=distanceResult.charge;
+            pickupOrigin=distanceResult.origin;
+            pickupDestination=distanceResult.destination;
+            totalPrice+=pickupDistanceCharge;
         }
-    } catch (e) {
-        alert("An error occurred. Please check your connection.");
+
+        const {error}=await client.from('bookings').insert([{
+            package_id:packageId, package_title:packageTitle, customer_id:user.id,
+            customer_email:user.email, customer_address:address, customer_phone:phone,
+            travel_date:travelDate, selected_vehicles:selectedVehicles.join(', '),
+            total_price:Number(totalPrice.toFixed(2)), status:'pending',
+            agency_id:agencyId, agency_email:agencyEmail,
+            pickup_km_rate:Number(pickupKmRate.toFixed(2)),
+            pickup_distance_km:pickupDistanceKm,
+            pickup_distance_charge:pickupDistanceCharge,
+            pickup_distance_origin:pickupOrigin,
+            pickup_distance_destination:pickupDestination,
+            keda_ghoda_qty:ghodaQty, keda_dandi_qty:dandiQty, keda_kandi_qty:kandiQty, keda_pitthu_qty:pitthuQty,
+            vaishno_ghoda_qty:vGhodaQty, vaishno_palki_qty:vPalkiQty, vaishno_pitthu_qty:vPitthuQty
+        }]);
+        if(error) throw error;
+
+        const distanceMessage=pickupDistanceKm>0 ? `\nPickup distance: ${pickupDistanceKm} km\nDistance charge: ₹${pickupDistanceCharge.toLocaleString('en-IN')}` : '';
+        alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString()}.`+`\nTotal: ₹${Number(totalPrice).toLocaleString('en-IN')}`+distanceMessage);
+        document.getElementById('detail-modal').style.display='none';
+        if(typeof window.renderCustomerRequests==='function') window.renderCustomerRequests();
+    }catch(e){
+        console.error("Booking distance/save error:",e);
+        alert("❌ "+e.message);
     }
 };
 // 7. MATCHING & CARD RENDERING
@@ -6173,6 +6199,27 @@ window.showPackageForm = function(pEncoded = null) {
             </div>
 
 
+
+            <!-- CUSTOMER PICKUP DISTANCE PRICING -->
+            <div style="margin:0 0 20px; padding:15px; background:#fff8f0; border:1px solid #ffeaa7; border-radius:10px;">
+                <label style="font-size:11px; font-weight:bold; color:#666; display:block; margin-bottom:6px;">
+                    CUSTOMER PICKUP DISTANCE CHARGE
+                </label>
+                <div style="position:relative; max-width:320px;">
+                    <input type="number" id="p-pickup-km-rate" min="0" step="0.01" inputmode="decimal"
+                        placeholder="e.g. 20"
+                        value="${isEdit ? (Number(pkg.pickup_km_rate) || 0) : ''}"
+                        style="width:100%; padding:10px 65px 10px 10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:14px;">
+                    <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#777; font-size:13px; pointer-events:none;">₹ / km</span>
+                </div>
+                <small style="display:block; margin-top:7px; color:#777; font-size:11px; line-height:1.5;">
+                    Enter only the amount you charge per kilometer.
+                    <br>
+                    <b>Note:</b> We will calculate the distance from your package starting location to the customer's pickup location and automatically add the distance charge to the package booking price.
+                </small>
+            </div>
+
+
             <!-- ITINERARY DETAILS -->
             <label style="
                 font-size:11px;
@@ -6272,7 +6319,6 @@ window.showPackageForm = function(pEncoded = null) {
 // into Supabase 'packages' table
 // =========================================
 window.processSave = async function(packageId = '') {
-
     const saveBtn = document.getElementById('save-btn');
 
     if (saveBtn) {
@@ -6280,178 +6326,108 @@ window.processSave = async function(packageId = '') {
         saveBtn.innerText = "Saving...";
     }
 
-
     try {
-
-        // =====================================
-        // GET FORM VALUES
-        // =====================================
         const title = document.getElementById('p-title').value.trim();
-
         const city = document.getElementById('p-city').value;
-
         const desc = document.getElementById('p-desc').value.trim();
-
         const tourDaysInput = document.getElementById('p-tour-days');
+        const tourDays = tourDaysInput ? parseInt(tourDaysInput.value, 10) : NaN;
 
-        const tourDays = tourDaysInput
-            ? parseInt(tourDaysInput.value, 10)
-            : NaN;
-
-
-        // =====================================
-        // BASIC VALIDATION
-        // =====================================
         if (!title || !city) {
-
             alert("Please fill Package Title and Starting City.");
-
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerText = packageId
-                    ? 'SAVE CHANGES'
-                    : 'PUBLISH PACKAGE';
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
             }
-
             return;
         }
 
-
-        // =====================================
-        // TOUR DURATION VALIDATION
-        // =====================================
-        if (
-            !Number.isInteger(tourDays) ||
-            tourDays < 1 ||
-            tourDays > 365
-        ) {
-
+        if (!Number.isInteger(tourDays) || tourDays < 1 || tourDays > 365) {
             alert("Please enter a valid Tour Duration between 1 and 365 days.");
-
-            if (tourDaysInput) {
-                tourDaysInput.focus();
-            }
-
+            if (tourDaysInput) tourDaysInput.focus();
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerText = packageId
-                    ? 'SAVE CHANGES'
-                    : 'PUBLISH PACKAGE';
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
             }
-
             return;
         }
 
+        const pickupRateInput = document.getElementById('p-pickup-km-rate');
+        const pickupKmRate = pickupRateInput && pickupRateInput.value !== ''
+            ? parseFloat(pickupRateInput.value)
+            : 0;
 
-        // =====================================
-        // GATHER DESTINATIONS
-        // =====================================
+        if (!Number.isFinite(pickupKmRate) || pickupKmRate < 0) {
+            alert("Please enter a valid pickup distance rate (₹/km).");
+            if (pickupRateInput) pickupRateInput.focus();
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
+            }
+            return;
+        }
+
         const selectedDests = [];
-
-        document
-            .querySelectorAll('.d-check:checked')
-            .forEach(cb => {
-                selectedDests.push(cb.value);
-            });
-
+        document.querySelectorAll('.d-check:checked').forEach(cb => {
+            selectedDests.push(cb.value);
+        });
 
         if (selectedDests.length === 0) {
-
             alert("Please select at least one destination.");
-
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerText = packageId
-                    ? 'SAVE CHANGES'
-                    : 'PUBLISH PACKAGE';
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
             }
-
             return;
         }
 
-
-        // =====================================
-        // GATHER VEHICLES
-        // =====================================
         const vehicles = [];
+        document.querySelectorAll('.v-enable:checked').forEach(cb => {
+            const vid = cb.getAttribute('data-id');
+            const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
+            const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
 
-        document
-            .querySelectorAll('.v-enable:checked')
-            .forEach(cb => {
-
-                const vid = cb.getAttribute('data-id');
-
-                const rateInput = document.querySelector(
-                    `.v-rate[data-id="${vid}"]`
-                );
-
-                const maxInput = document.querySelector(
-                    `.v-max[data-id="${vid}"]`
-                );
-
-
-                vehicles.push({
-                    id: vid,
-                    rate: parseFloat(rateInput.value) || 0,
-                    max_cars: parseInt(maxInput.value) || 1
-                });
-
+            vehicles.push({
+                id: vid,
+                rate: parseFloat(rateInput?.value) || 0,
+                max_cars: parseInt(maxInput?.value, 10) || 1
             });
+        });
 
-
-        // =====================================
-        // GET AGENCY SESSION DATA
-        // =====================================
         const sessionStr = localStorage.getItem('agency_session');
-
         if (!sessionStr) {
             throw new Error("No active session found.");
         }
 
         const session = JSON.parse(sessionStr);
 
-
-        // =====================================
-        // DATABASE PAYLOAD
-        // =====================================
         const payload = {
-
-            title: title,
-
-            // New professional field
+            title,
             tour_days: tourDays,
-
             starting_location: city,
 
+            // Keep both fields for compatibility with the existing package UI.
+            destination: selectedDests,
             destinations: selectedDests,
 
-            vehicles: vehicles,
-
+            vehicles,
             description: desc,
+            agency_id: session.id,
 
-            agency_id: session.id
+            // CUSTOMER PICKUP DISTANCE PRICING
+            pickup_km_rate: Number(pickupKmRate.toFixed(2))
         };
 
-
-        // =====================================
-        // SAVE / UPDATE PACKAGE
-        // =====================================
         let resultError = null;
 
-
         if (packageId) {
-
-            // Update Existing Package
             const { error } = await _supabase
                 .from('packages')
                 .update(payload)
                 .eq('id', packageId);
 
             resultError = error;
-
         } else {
-
-            // Insert New Package
             const { error } = await _supabase
                 .from('packages')
                 .insert([payload]);
@@ -6459,18 +6435,10 @@ window.processSave = async function(packageId = '') {
             resultError = error;
         }
 
-
-        // =====================================
-        // ERROR HANDLING
-        // =====================================
         if (resultError) {
             throw resultError;
         }
 
-
-        // =====================================
-        // SUCCESS
-        // =====================================
         alert(
             packageId
                 ? "Package updated successfully!"
@@ -6479,166 +6447,23 @@ window.processSave = async function(packageId = '') {
 
         window.showTab('packages');
 
-
     } catch (err) {
-
         console.error("Save Error:", err);
-
-        alert(
-            "Error saving package: " +
-            err.message
-        );
-
+        alert("Error saving package: " + err.message);
     } finally {
-
         if (saveBtn) {
-
             saveBtn.disabled = false;
-
             saveBtn.innerText = packageId
                 ? 'SAVE CHANGES'
                 : 'PUBLISH PACKAGE';
         }
     }
 };
+
 /* =========================================
-   11. SAVE LOGIC: Package Management
-   ========================================= */
-window.processSave = async function(pkgId) {
-    const btn = document.getElementById('save-btn');
-    if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
-
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("User session not found.");
-
-        const title = document.getElementById('p-title').value.trim();
-        const city = document.getElementById('p-city').value;
-        const desc = document.getElementById('p-desc').value;
-
-        if (!title || !city) throw new Error("Title and Starting City are required!");
-
-        const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
-        const selectedVehicles = [];
-        document.querySelectorAll('.v-enable:checked').forEach(el => {
-            const vId = el.dataset.id;
-            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`).value) || 0;
-            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`).value) || 1;
-            const vType = vehicleTypes.find(vt => vt.id === vId);
-            if (rate > 0) {
-                selectedVehicles.push({ id: vId, name: vType.name, rate: rate, max_cars: max, icon: vType.icon });
-            }
-        });
-
-        // --- Dynamic Trek Pricing & Max Member Extraction ---
-        const isKedarSelected = selectedDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
-        const isVaishnoSelected = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
-
-        // Kedarnath Variables
-        let ghodaPrice = 0, ghodaMax = 1;
-        let dandiPrice = 0, dandiMax = 1;
-        let kandiPrice = 0, kandiMax = 1;
-        let pitthuPrice = 0, pitthuMax = 1;
-
-        // Vaishno Devi Variables
-        let vaishnoGhodaPrice = 0, vaishnoGhodaMax = 1;
-        let vaishnoPalkiPrice = 0, vaishnoPalkiMax = 1;
-        let vaishnoPitthuPrice = 0, vaishnoPitthuMax = 1;
-
-        if (isKedarSelected) {
-            const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked;
-            const dandiEnabled = document.getElementById('p-dandi-enable')?.checked;
-            const kandiEnabled = document.getElementById('p-kandi-enable')?.checked;
-            const pitthuEnabled = document.getElementById('p-pitthu-enable')?.checked;
-
-            const ghodaMaxInput = document.getElementById('p-ghoda-max');
-            const dandiMaxInput = document.getElementById('p-dandi-max');
-            const kandiMaxInput = document.getElementById('p-kandi-max');
-            const pitthuMaxInput = document.getElementById('p-pitthu-max');
-
-            ghodaMax = ghodaMaxInput ? (parseInt(ghodaMaxInput.value) || 1) : 1;
-            dandiMax = dandiMaxInput ? (parseInt(dandiMaxInput.value) || 1) : 1;
-            kandiMax = kandiMaxInput ? (parseInt(kandiMaxInput.value) || 1) : 1;
-            pitthuMax = pitthuMaxInput ? (parseInt(pitthuMaxInput.value) || 1) : 1;
-
-            if (ghodaEnabled) ghodaPrice = parseFloat(document.getElementById('p-ghoda-price')?.value) || 0;
-            if (dandiEnabled) dandiPrice = parseFloat(document.getElementById('p-dandi-price')?.value) || 0;
-            if (kandiEnabled) kandiPrice = parseFloat(document.getElementById('p-kandi-price')?.value) || 0;
-            if (pitthuEnabled) pitthuPrice = parseFloat(document.getElementById('p-pitthu-price')?.value) || 0;
-        } 
-        
-        if (isVaishnoSelected) {
-            const vaishnoGhodaEnabled = document.getElementById('p-vaishno-ghoda-enable')?.checked;
-            const vaishnoPalkiEnabled = document.getElementById('p-vaishno-palki-enable')?.checked;
-            const vaishnoPitthuEnabled = document.getElementById('p-vaishno-pitthu-enable')?.checked;
-
-            const vaishnoGhodaMaxInput = document.getElementById('p-vaishno-ghoda-max');
-            const vaishnoPalkiMaxInput = document.getElementById('p-vaishno-palki-max');
-            const vaishnoPitthuMaxInput = document.getElementById('p-vaishno-pitthu-max');
-
-            vaishnoGhodaMax = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
-            vaishnoPalkiMax = vaishnoPalkiMaxInput ? (parseInt(vaishnoPalkiMaxInput.value) || 1) : 1;
-            vaishnoPitthuMax = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
-
-            if (vaishnoGhodaEnabled) vaishnoGhodaPrice = parseFloat(document.getElementById('p-vaishno-ghoda-price')?.value) || 0;
-            if (vaishnoPalkiEnabled) vaishnoPalkiPrice = parseFloat(document.getElementById('p-vaishno-palki-price')?.value) || 0;
-            if (vaishnoPitthuEnabled) vaishnoPitthuPrice = parseFloat(document.getElementById('p-vaishno-pitthu-price')?.value) || 0;
-        }
-
-        const pkgData = {
-            title: title,
-            starting_location: city,
-            destination: selectedDests, 
-            vehicles: selectedVehicles,
-            description: desc,
-            agency_id: user.id,
-            
-            // KEDARNATH DATABASE MAPPING
-            ghoda_price: ghodaPrice,
-            ghoda_max: ghodaMax,
-            dandi_price: dandiPrice,
-            dandi_max: dandiMax,
-            kandi_price: kandiPrice,
-            kandi_max: kandiMax,
-            pitthu_price: pitthuPrice,
-            pitthu_max: pitthuMax,
-
-            // VAISHNO DEVI DATABASE MAPPING (EXACT MATCHES TO YOUR SQL SCHEMA)
-            vaishno_ghoda_price: vaishnoGhodaPrice, 
-            vaishno_ghoda_max: vaishnoGhodaMax,
-            vaishno_palki_price: vaishnoPalkiPrice,
-            vaishno_palki_max: vaishnoPalkiMax,
-            vaishno_pitthu_price: vaishnoPitthuPrice,
-            vaishno_pitthu_max: vaishnoPitthuMax
-        };
-
-        let error;
-        // Logic to either Update (Edit) or Insert (New)
-        if (pkgId && pkgId !== "" && pkgId !== "undefined" && pkgId !== null) {
-            const result = await client.from('packages').update(pkgData).eq('id', pkgId);
-            error = result.error;
-        } else {
-            const result = await client.from('packages').insert([pkgData]);
-            error = result.error;
-        }
-
-        if (error) throw error;
-        
-        alert("✅ Success! Package saved.");
-        window.showTab('packages'); // Go back to the list
-
-    } catch (err) {
-        console.error("Save Error:", err);
-        alert("❌ Error: " + err.message);
-        if (btn) {
-            btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE";
-            btn.disabled = false;
-        }
-    }
-};
-/* =========================================
-   12. BOOKING RENDER LOGIC (ENHANCED WITH DATE)
+   12. BOOKING RENDER LOGIC
+   =========================================
+ RENDER LOGIC (ENHANCED WITH DATE)
    ========================================= */
 window.renderAgencyBookings = function(bookings) {
     const container = document.getElementById('main-content');
