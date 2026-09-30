@@ -6394,12 +6394,29 @@ window.processSave = async function(packageId = '') {
             });
         });
 
-        const sessionStr = localStorage.getItem('agency_session');
-        if (!sessionStr) {
-            throw new Error("No active session found.");
+        // Use the same Supabase Auth session used by the rest of TourSetu.
+        const client = getClient();
+
+        if (!client) {
+            throw new Error("Supabase client is not available. Please refresh and login again.");
         }
 
-        const session = JSON.parse(sessionStr);
+        const { data: { user }, error: authError } =
+            await client.auth.getUser();
+
+        if (authError) {
+            console.error("Auth error while saving package:", authError);
+            throw new Error("Your login session could not be verified. Please login again.");
+        }
+
+        if (!user) {
+            throw new Error("Your login session has expired. Please login again.");
+        }
+
+        const role = user.user_metadata?.role || '';
+        if (role !== 'agency') {
+            throw new Error("Only an agency account can create or edit packages.");
+        }
 
         const payload = {
             title,
@@ -6412,7 +6429,7 @@ window.processSave = async function(packageId = '') {
 
             vehicles,
             description: desc,
-            agency_id: session.id,
+            agency_id: user.id,
 
             // CUSTOMER PICKUP DISTANCE PRICING
             pickup_km_rate: Number(pickupKmRate.toFixed(2))
