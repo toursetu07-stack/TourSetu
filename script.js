@@ -6319,7 +6319,6 @@ window.showPackageForm = function(pEncoded = null) {
 // into Supabase 'packages' table
 // =========================================
 window.processSave = async function(packageId = '') {
-
     const saveBtn = document.getElementById('save-btn');
 
     if (saveBtn) {
@@ -6327,178 +6326,108 @@ window.processSave = async function(packageId = '') {
         saveBtn.innerText = "Saving...";
     }
 
-
     try {
-
-        // =====================================
-        // GET FORM VALUES
-        // =====================================
         const title = document.getElementById('p-title').value.trim();
-
         const city = document.getElementById('p-city').value;
-
         const desc = document.getElementById('p-desc').value.trim();
-
         const tourDaysInput = document.getElementById('p-tour-days');
+        const tourDays = tourDaysInput ? parseInt(tourDaysInput.value, 10) : NaN;
 
-        const tourDays = tourDaysInput
-            ? parseInt(tourDaysInput.value, 10)
-            : NaN;
-
-
-        // =====================================
-        // BASIC VALIDATION
-        // =====================================
         if (!title || !city) {
-
             alert("Please fill Package Title and Starting City.");
-
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerText = packageId
-                    ? 'SAVE CHANGES'
-                    : 'PUBLISH PACKAGE';
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
             }
-
             return;
         }
 
-
-        // =====================================
-        // TOUR DURATION VALIDATION
-        // =====================================
-        if (
-            !Number.isInteger(tourDays) ||
-            tourDays < 1 ||
-            tourDays > 365
-        ) {
-
+        if (!Number.isInteger(tourDays) || tourDays < 1 || tourDays > 365) {
             alert("Please enter a valid Tour Duration between 1 and 365 days.");
-
-            if (tourDaysInput) {
-                tourDaysInput.focus();
-            }
-
+            if (tourDaysInput) tourDaysInput.focus();
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerText = packageId
-                    ? 'SAVE CHANGES'
-                    : 'PUBLISH PACKAGE';
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
             }
-
             return;
         }
 
+        const pickupRateInput = document.getElementById('p-pickup-km-rate');
+        const pickupKmRate = pickupRateInput && pickupRateInput.value !== ''
+            ? parseFloat(pickupRateInput.value)
+            : 0;
 
-        // =====================================
-        // GATHER DESTINATIONS
-        // =====================================
+        if (!Number.isFinite(pickupKmRate) || pickupKmRate < 0) {
+            alert("Please enter a valid pickup distance rate (₹/km).");
+            if (pickupRateInput) pickupRateInput.focus();
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
+            }
+            return;
+        }
+
         const selectedDests = [];
-
-        document
-            .querySelectorAll('.d-check:checked')
-            .forEach(cb => {
-                selectedDests.push(cb.value);
-            });
-
+        document.querySelectorAll('.d-check:checked').forEach(cb => {
+            selectedDests.push(cb.value);
+        });
 
         if (selectedDests.length === 0) {
-
             alert("Please select at least one destination.");
-
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerText = packageId
-                    ? 'SAVE CHANGES'
-                    : 'PUBLISH PACKAGE';
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
             }
-
             return;
         }
 
-
-        // =====================================
-        // GATHER VEHICLES
-        // =====================================
         const vehicles = [];
+        document.querySelectorAll('.v-enable:checked').forEach(cb => {
+            const vid = cb.getAttribute('data-id');
+            const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
+            const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
 
-        document
-            .querySelectorAll('.v-enable:checked')
-            .forEach(cb => {
-
-                const vid = cb.getAttribute('data-id');
-
-                const rateInput = document.querySelector(
-                    `.v-rate[data-id="${vid}"]`
-                );
-
-                const maxInput = document.querySelector(
-                    `.v-max[data-id="${vid}"]`
-                );
-
-
-                vehicles.push({
-                    id: vid,
-                    rate: parseFloat(rateInput.value) || 0,
-                    max_cars: parseInt(maxInput.value) || 1
-                });
-
+            vehicles.push({
+                id: vid,
+                rate: parseFloat(rateInput?.value) || 0,
+                max_cars: parseInt(maxInput?.value, 10) || 1
             });
+        });
 
-
-        // =====================================
-        // GET AGENCY SESSION DATA
-        // =====================================
         const sessionStr = localStorage.getItem('agency_session');
-
         if (!sessionStr) {
             throw new Error("No active session found.");
         }
 
         const session = JSON.parse(sessionStr);
 
-
-        // =====================================
-        // DATABASE PAYLOAD
-        // =====================================
         const payload = {
-
-            title: title,
-
-            // New professional field
+            title,
             tour_days: tourDays,
-
             starting_location: city,
 
+            // Keep both fields for compatibility with the existing package UI.
+            destination: selectedDests,
             destinations: selectedDests,
 
-            vehicles: vehicles,
-
+            vehicles,
             description: desc,
+            agency_id: session.id,
 
-            agency_id: session.id
+            // CUSTOMER PICKUP DISTANCE PRICING
+            pickup_km_rate: Number(pickupKmRate.toFixed(2))
         };
 
-
-        // =====================================
-        // SAVE / UPDATE PACKAGE
-        // =====================================
         let resultError = null;
 
-
         if (packageId) {
-
-            // Update Existing Package
             const { error } = await _supabase
                 .from('packages')
                 .update(payload)
                 .eq('id', packageId);
 
             resultError = error;
-
         } else {
-
-            // Insert New Package
             const { error } = await _supabase
                 .from('packages')
                 .insert([payload]);
@@ -6506,18 +6435,10 @@ window.processSave = async function(packageId = '') {
             resultError = error;
         }
 
-
-        // =====================================
-        // ERROR HANDLING
-        // =====================================
         if (resultError) {
             throw resultError;
         }
 
-
-        // =====================================
-        // SUCCESS
-        // =====================================
         alert(
             packageId
                 ? "Package updated successfully!"
@@ -6526,160 +6447,23 @@ window.processSave = async function(packageId = '') {
 
         window.showTab('packages');
 
-
     } catch (err) {
-
         console.error("Save Error:", err);
-
-        alert(
-            "Error saving package: " +
-            err.message
-        );
-
+        alert("Error saving package: " + err.message);
     } finally {
-
         if (saveBtn) {
-
             saveBtn.disabled = false;
-
             saveBtn.innerText = packageId
                 ? 'SAVE CHANGES'
                 : 'PUBLISH PACKAGE';
         }
     }
 };
-/* =========================================
-   11. SAVE LOGIC: Package Management
-   ========================================= */
-window.processSave = async function(pkgId) {
-    const btn = document.getElementById('save-btn');
-    if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
-
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("User session not found.");
-
-        const title = document.getElementById('p-title').value.trim();
-        const city = document.getElementById('p-city').value;
-        const desc = document.getElementById('p-desc').value.trim();
-        if (!title || !city) throw new Error("Title and Starting City are required!");
-
-        const pickupRateInput = document.getElementById('p-pickup-km-rate');
-        const pickupKmRate = pickupRateInput && pickupRateInput.value !== ''
-            ? parseFloat(pickupRateInput.value)
-            : 0;
-
-        if (!Number.isFinite(pickupKmRate) || pickupKmRate < 0) {
-            if (pickupRateInput) pickupRateInput.focus();
-            throw new Error("Please enter a valid pickup distance rate (₹/km).");
-        }
-
-        const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
-        if (selectedDests.length === 0) throw new Error("Please select at least one destination.");
-
-        const selectedVehicles = [];
-        document.querySelectorAll('.v-enable:checked').forEach(el => {
-            const vId = el.dataset.id;
-            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`)?.value) || 0;
-            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`)?.value) || 1;
-            const vType = vehicleTypes.find(vt => vt.id === vId);
-            if (vType && rate > 0) {
-                selectedVehicles.push({ id:vId, name:vType.name, rate, max_cars:max, icon:vType.icon });
-            }
-        });
-
-        const isKedarSelected = selectedDests.some(d =>
-            ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d)
-        );
-        const isVaishnoSelected = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
-
-        let ghodaPrice=0, ghodaMax=1, dandiPrice=0, dandiMax=1, kandiPrice=0, kandiMax=1, pitthuPrice=0, pitthuMax=1;
-        let vaishnoGhodaPrice=0, vaishnoGhodaMax=1, vaishnoPalkiPrice=0, vaishnoPalkiMax=1, vaishnoPitthuPrice=0, vaishnoPitthuMax=1;
-
-        if (isKedarSelected) {
-            const ghodaEnabled=document.getElementById('p-ghoda-enable')?.checked;
-            const dandiEnabled=document.getElementById('p-dandi-enable')?.checked;
-            const kandiEnabled=document.getElementById('p-kandi-enable')?.checked;
-            const pitthuEnabled=document.getElementById('p-pitthu-enable')?.checked;
-            ghodaMax=parseInt(document.getElementById('p-ghoda-max')?.value)||1;
-            dandiMax=parseInt(document.getElementById('p-dandi-max')?.value)||1;
-            kandiMax=parseInt(document.getElementById('p-kandi-max')?.value)||1;
-            pitthuMax=parseInt(document.getElementById('p-pitthu-max')?.value)||1;
-            if(ghodaEnabled) ghodaPrice=parseFloat(document.getElementById('p-ghoda-price')?.value)||0;
-            if(dandiEnabled) dandiPrice=parseFloat(document.getElementById('p-dandi-price')?.value)||0;
-            if(kandiEnabled) kandiPrice=parseFloat(document.getElementById('p-kandi-price')?.value)||0;
-            if(pitthuEnabled) pitthuPrice=parseFloat(document.getElementById('p-pitthu-price')?.value)||0;
-        }
-
-        if (isVaishnoSelected) {
-            const vaishnoGhodaEnabled=document.getElementById('p-vaishno-ghoda-enable')?.checked;
-            const vaishnoPalkiEnabled=document.getElementById('p-vaishno-palki-enable')?.checked;
-            const vaishnoPitthuEnabled=document.getElementById('p-vaishno-pitthu-enable')?.checked;
-            vaishnoGhodaMax=parseInt(document.getElementById('p-vaishno-ghoda-max')?.value)||1;
-            vaishnoPalkiMax=parseInt(document.getElementById('p-vaishno-palki-max')?.value)||1;
-            vaishnoPitthuMax=parseInt(document.getElementById('p-vaishno-pitthu-max')?.value)||1;
-            if(vaishnoGhodaEnabled) vaishnoGhodaPrice=parseFloat(document.getElementById('p-vaishno-ghoda-price')?.value)||0;
-            if(vaishnoPalkiEnabled) vaishnoPalkiPrice=parseFloat(document.getElementById('p-vaishno-palki-price')?.value)||0;
-            if(vaishnoPitthuEnabled) vaishnoPitthuPrice=parseFloat(document.getElementById('p-vaishno-pitthu-price')?.value)||0;
-        }
-
-        const tourDays=parseInt(document.getElementById('p-tour-days')?.value,10);
-        if(!Number.isInteger(tourDays)||tourDays<1||tourDays>365) {
-            throw new Error("Please enter a valid Tour Duration between 1 and 365 days.");
-        }
-
-        const pkgData={
-            title,
-            tour_days:tourDays,
-            starting_location:city,
-            destination:selectedDests,
-            destinations:selectedDests,
-            vehicles:selectedVehicles,
-            description:desc,
-            agency_id:user.id,
-            pickup_km_rate:Number(pickupKmRate.toFixed(2)),
-            ghoda_price:ghodaPrice,
-            ghoda_max:ghodaMax,
-            dandi_price:dandiPrice,
-            dandi_max:dandiMax,
-            kandi_price:kandiPrice,
-            kandi_max:kandiMax,
-            pitthu_price:pitthuPrice,
-            pitthu_max:pitthuMax,
-            vaishno_ghoda_price:vaishnoGhodaPrice,
-            vaishno_ghoda_max:vaishnoGhodaMax,
-            vaishno_palki_price:vaishnoPalkiPrice,
-            vaishno_palki_max:vaishnoPalkiMax,
-            vaishno_pitthu_price:vaishnoPitthuPrice,
-            vaishno_pitthu_max:vaishnoPitthuMax
-        };
-
-        let error;
-        if(pkgId && pkgId!=="" && pkgId!=="undefined" && pkgId!==null) {
-            error=(await client.from('packages').update(pkgData).eq('id',pkgId)).error;
-        } else {
-            error=(await client.from('packages').insert([pkgData])).error;
-        }
-
-        if(error) throw error;
-
-        alert(pkgId ? "✅ Package updated successfully." : "✅ Package published successfully.");
-        window.showTab('packages');
-
-    } catch(err) {
-        console.error("Save Error:",err);
-        alert("❌ Error: "+err.message);
-    } finally {
-        if(btn) {
-            btn.innerText=pkgId ? "SAVE CHANGES" : "PUBLISH PACKAGE";
-            btn.disabled=false;
-        }
-    }
-};
 
 /* =========================================
-   12. BOOKING RENDER LOGIC (ENHANCED WITH DATE)
+   12. BOOKING RENDER LOGIC
+   =========================================
+ RENDER LOGIC (ENHANCED WITH DATE)
    ========================================= */
 window.renderAgencyBookings = function(bookings) {
     const container = document.getElementById('main-content');
