@@ -367,211 +367,162 @@ async function handleLogout() {
 function renderAuthUI() {
     const app = document.getElementById('app');
     if (!app) return;
-    app.innerHTML = `
-        <div class="card" style="max-width:450px; margin: 80px auto; padding:40px; background:white; text-align:center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius:15px; font-family: sans-serif;">
-            <h1 style="color:#ff9f43; margin-bottom:10px;">TourSetu</h1>
-            <h2 id="form-title">${isLoginMode ? "Welcome Back" : "Create Account"}</h2>
-            <input type="email" id="email" placeholder="Email Address" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-            <input type="password" id="password" placeholder="Password" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-            
-            <div id="role-selection" style="display: ${isLoginMode ? 'none' : 'block'}; margin: 10px 0;">
-                <label style="display:block; margin-bottom:5px; font-size:12px; color:#666;">REGISTER AS</label>
-                <select id="role" onchange="toggleBusinessFields()" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
-                    <option value="customer">Traveler</option>
-                    <option value="agency">Travel Agency</option>
-                    <option value="hotel">Hotel Partner 🏨</option>
-                </select>
-            </div>
 
-            <div id="business-fields" style="display:none;">
-                <input type="text" id="gst-no" placeholder="GST Number" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-reg" placeholder="Business Reg No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-lic" placeholder="Trade License" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <input type="text" id="biz-phone" placeholder="Mobile / Contact No" style="width:100%; padding:12px; margin:5px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-            </div>
+    const selectedRole = document.getElementById('role')?.value || 'customer';
+    const agency = !isLoginMode && selectedRole === 'agency';
 
-            <button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43; color:white; width:100%; padding:14px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; margin-top:20px; font-size:16px;">
-                ${isLoginMode ? "Login" : "Register"}
-            </button>
-            
-            <p style="margin-top:20px; font-size:14px; color:#636e72;">
-                ${isLoginMode ? "Don't have an account?" : "Already have account?"} 
-                <span onclick="toggleMode()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">${isLoginMode ? "Create Account" : "Login"}</span>
-            </p>
-            <div id="status" style="margin-top:15px; font-size:13px; font-weight:bold;"></div>
-        </div>
-    `;
-}
+    const fileBox = (id, label) =>
+        '<label style="display:block;text-align:left;font-size:12px;font-weight:800;color:#444;margin:12px 0 5px;">' + label + ' <span style="color:#e74c3c">*</span></label>' +
+        '<input type="file" id="' + id + '" accept="image/*,.pdf" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;background:#fff;">';
 
-/* Helper function to handle field visibility for Agency & Hotel */
-function toggleBusinessFields() {
-    const role = document.getElementById('role')?.value;
-    const businessFields = document.getElementById('business-fields');
-    if (!businessFields) return;
+    let html = '<div class="card" style="max-width:520px;margin:40px auto;padding:32px;background:white;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.1);border-radius:15px;font-family:sans-serif;">' +
+        '<h1 style="color:#ff9f43;margin-bottom:10px;">TourSetu</h1>' +
+        '<h2>Create Account</h2>' +
+        '<input type="email" id="email" placeholder="Email Address" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
+        '<input type="password" id="password" placeholder="Password" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
+        '<div style="margin:10px 0;text-align:left;"><label style="display:block;margin-bottom:5px;font-size:12px;color:#666;">REGISTER AS</label>' +
+        '<select id="role" onchange="if(this.value===\'agency\'){agencyRegistrationStep=1;}else{agencyRegistrationStep=1;}renderAuthUI();" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;">' +
+        '<option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option></select></div>';
 
-    if (role === 'agency' || role === 'hotel') {
-        businessFields.style.display = 'block';
-        if (role === 'hotel') {
-            document.getElementById('gst-no').placeholder = "Hotel GSTIN / FSSAI License";
-            document.getElementById('biz-reg').placeholder = "Property Registration No";
-            document.getElementById('biz-lic').placeholder = "Nearest Temple / Landmark Point";
-            document.getElementById('biz-phone').placeholder = "Hotel Front Desk / Owner Phone";
-        } else {
-            document.getElementById('gst-no').placeholder = "GST Number";
-            document.getElementById('biz-reg').placeholder = "Business Reg No";
-            document.getElementById('biz-lic').placeholder = "Trade License";
-            document.getElementById('biz-phone').placeholder = "Mobile / Contact No";
-        }
+    if (agency && agencyRegistrationStep === 1) {
+        html += '<div style="text-align:left;background:#f8f9fa;border:1px solid #eee;border-radius:12px;padding:14px;margin:15px 0;">' +
+            '<div style="font-weight:900;">STEP 1 OF 2 — BUSINESS & ID DOCUMENTS</div>' +
+            '<div style="font-size:11px;color:#777;margin-top:4px;">Clear photo/PDF upload karein. Documents Supabase ke private verification storage mein save honge.</div>' +
+            '<input type="text" id="gst-no" placeholder="GST Number" style="width:100%;padding:11px;margin:12px 0 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
+            fileBox('doc-gst','GST Certificate / GST Number proof') +
+            '<input type="text" id="biz-reg" placeholder="Business Registration No" style="width:100%;padding:11px;margin:12px 0 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
+            fileBox('doc-business-reg','Business Registration Certificate copy') +
+            fileBox('doc-utdb-certificate','UTDB / Uttarakhand Tourism Registration Certificate') +
+            fileBox('doc-pan','PAN Card') +
+            fileBox('doc-aadhaar','Aadhaar Card') +
+            fileBox('doc-cancelled-cheque','Cancelled Cheque / Bank Passbook') +
+            '</div>' +
+            '<button onclick="goToAgencyRegistrationStep2()" style="width:100%;background:#ff9f43;color:white;border:none;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;">NEXT →</button>';
+    } else if (agency && agencyRegistrationStep === 2) {
+        html += '<div style="text-align:left;background:#f8f9fa;border:1px solid #eee;border-radius:12px;padding:14px;margin:15px 0;">' +
+            '<div style="font-weight:900;">STEP 2 OF 2 — VEHICLE & DRIVER DOCUMENTS</div>' +
+            '<div style="font-size:11px;color:#777;margin-top:4px;">Har document ki clear photo/PDF upload karein.</div>' +
+            fileBox('doc-commercial-rc','Commercial RC / Registration Certificate copy') +
+            fileBox('doc-aitp-permit','AITP / Commercial Permit copy') +
+            fileBox('doc-vehicle-insurance','Vehicle Insurance copy') +
+            fileBox('doc-fitness-certificate','Vehicle Fitness Certificate copy') +
+            fileBox('doc-commercial-driving-license','Commercial Driving License copy') +
+            fileBox('doc-police-verification','Police Verification Certificate / ID Proof') +
+            '</div>' +
+            '<div style="display:flex;gap:10px;margin-top:18px;">' +
+            '<button onclick="agencyRegistrationStep=1;renderAuthUI();" style="flex:1;background:#eee;color:#333;border:none;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;">← BACK</button>' +
+            '<button id="auth-btn" onclick="handleAuth()" style="flex:1;background:#ff9f43;color:white;border:none;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;">REGISTER</button></div>';
     } else {
-        businessFields.style.display = 'none';
+        html += '<button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:20px;font-size:16px;">REGISTER</button>';
     }
+
+    html += '<p style="margin-top:20px;font-size:14px;color:#636e72;">Already have account? <span onclick="toggleMode()" style="color:#ff9f43;cursor:pointer;font-weight:bold;">Login</span></p>' +
+        '<div id="status" style="margin-top:15px;font-size:13px;font-weight:bold;"></div></div>';
+
+    app.innerHTML = html;
+    document.getElementById('role').value = selectedRole;
 }
 
-/* =========================================
-   5. AUTHENTICATION (With Email Confirmation Logic)
-   ========================================= */
+async function goToAgencyRegistrationStep2() {
+    const email = document.getElementById('email')?.value.trim();
+    const password = document.getElementById('password')?.value || '';
+    const gstNo = document.getElementById('gst-no')?.value.trim() || '';
+    const regNo = document.getElementById('biz-reg')?.value.trim() || '';
+    const ids = ['doc-gst','doc-business-reg','doc-utdb-certificate','doc-pan','doc-aadhaar','doc-cancelled-cheque'];
+    if (!email || !password || !gstNo || !regNo) return alert('Please fill Email, Password, GST Number and Business Registration Number.');
+    if (ids.some(id => !document.getElementById(id)?.files?.[0])) return alert('Please upload all Step 1 documents.');
+    window._agencyStep1Draft = {
+        email, password, gstNo, regNo,
+        files: {
+            gstDocument: document.getElementById('doc-gst').files[0],
+            businessRegDocument: document.getElementById('doc-business-reg').files[0],
+            utdbCertificate: document.getElementById('doc-utdb-certificate').files[0],
+            panCard: document.getElementById('doc-pan').files[0],
+            aadhaarCard: document.getElementById('doc-aadhaar').files[0],
+            cancelledCheque: document.getElementById('doc-cancelled-cheque').files[0]
+        }
+    };
+    agencyRegistrationStep = 2;
+    renderAuthUI();
+    document.getElementById('email').value = email;
+    document.getElementById('password').value = password;
+}
 
 async function handleAuth() {
     const status = document.getElementById('status');
     const btn = document.getElementById('auth-btn');
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-
-    if (!email || !password) {
-        status.innerText = "⚠️ Please enter email and password";
-        return;
-    }
-
     const client = getClient();
-    btn.disabled = true;
-    status.innerText = "⏳ Processing...";
+    if (!client) { if(status) status.innerText='❌ Supabase not initialized'; return; }
 
-    try {
-        if (isLoginMode) {
+    const email = document.getElementById('email')?.value.trim();
+    const password = document.getElementById('password')?.value || '';
+    const role = document.getElementById('role')?.value || 'customer';
+    if (!email || !password) { if(status) status.innerText='⚠️ Please enter email and password'; return; }
+
+    if (isLoginMode) {
+        btn.disabled = true; status.innerText='⏳ Logging in...';
+        try {
             const { data, error } = await client.auth.signInWithPassword({ email, password });
             if (error) throw error;
             await recordReferralLogin();
+            await completePendingAgencyVerificationUpload(data.user);
             showDashboard(data.user);
-        } else {
-            const role = document.getElementById('role').value;
-            const metadata = { role, is_approved: (role === 'customer') };
-            
-            // Agency or Hotel attributes mapping
-            if (role === 'agency' || role === 'hotel') {
-                metadata.gst = document.getElementById('gst-no').value || "N/A";
-                metadata.reg_no = document.getElementById('biz-reg').value || "N/A";
-                metadata.license = document.getElementById('biz-lic').value || "N/A";
-                metadata.phone = document.getElementById('biz-phone').value || "N/A";
-            }
-            
-            // Clean Redirect URL (removes any existing hash/query params that might corrupt URL)
-            const redirectUrl = window.location.origin + window.location.pathname;
-
-            // SIGNUP WITH REDIRECT
-            const { data, error } = await client.auth.signUp({ 
-                email, 
-                password, 
-                options: { 
-                    data: metadata,
-                    emailRedirectTo: redirectUrl // Sends user back safely after confirmation
-                } 
-            });
-
-            if (error) throw error;
-            
-            status.innerHTML = `
-                <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
-                    <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
-                    A link was sent to <b>${email}</b>. You must verify your email before you can log in to TourSetu.
-                </div>`;
-            
-            // Clear inputs for security
-            document.getElementById('email').value = "";
-            document.getElementById('password').value = "";
-        }
-    } catch (err) {
-        status.innerText = "❌ " + err.message;
-    } finally {
-        btn.disabled = false;
-    }
-}
-/* =========================================
-   5. AUTHENTICATION (The "handleAuth" Function)
-   ========================================= */
-
-async function handleAuth() {
-    const status = document.getElementById('status');
-    const btn = document.getElementById('auth-btn');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-
-    if (!email || !password) {
-        status.innerText = "⚠️ Please enter email and password";
+        } catch (err) { status.innerText='❌ '+err.message; }
+        finally { btn.disabled=false; }
         return;
     }
 
-    const client = getClient();
-    if (!client) {
-        status.innerText = "❌ Supabase not initialized";
-        return;
+    if (role === 'agency') {
+        if (agencyRegistrationStep !== 2) return alert('Please complete both agency registration steps.');
+        const ids = ['doc-commercial-rc','doc-aitp-permit','doc-vehicle-insurance','doc-fitness-certificate','doc-commercial-driving-license','doc-police-verification'];
+        if (ids.some(id => !document.getElementById(id)?.files?.[0])) return alert('Please upload all Step 2 documents before registering.');
+
+        const step1 = window._agencyStep1Draft;
+        if (!step1) return alert('Step 1 data missing. Please go back and complete Step 1 again.');
+
+        await saveAgencyRegistrationDraft({
+            userEmail: email,
+            gstNo: step1.gstNo,
+            regNo: step1.regNo,
+            files: Object.assign({}, step1.files, {
+                commercialRc: document.getElementById('doc-commercial-rc').files[0],
+                aitpPermit: document.getElementById('doc-aitp-permit').files[0],
+                vehicleInsurance: document.getElementById('doc-vehicle-insurance').files[0],
+                fitnessCertificate: document.getElementById('doc-fitness-certificate').files[0],
+                commercialDrivingLicense: document.getElementById('doc-commercial-driving-license').files[0],
+                policeVerification: document.getElementById('doc-police-verification').files[0]
+            })
+        });
     }
 
-    btn.disabled = true;
-    status.innerText = "⏳ Processing...";
-
+    btn.disabled=true; status.innerText='⏳ Creating account...';
     try {
-        if (isLoginMode) {
-            // LOGIN LOGIC
-            const { data, error } = await client.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-
-            // --- ONESIGNAL INTEGRATION START ---
-            // This links the Supabase User ID to the OneSignal Notification ID
-            if (data.user) {
-                window.OneSignal = window.OneSignal || [];
-                OneSignal.push(function() {
-                    OneSignal.login(data.user.id);
-                });
-            }
-            // --- ONESIGNAL INTEGRATION END ---
-
-            await recordReferralLogin();
-            showDashboard(data.user);
-        } else {
-            // SIGNUP LOGIC
-            const role = document.getElementById('role').value;
-            const metadata = { role, is_approved: (role === 'customer') };
-            
-            if (role === 'agency') {
-                metadata.gst = document.getElementById('gst-no').value || "N/A";
-                metadata.reg_no = document.getElementById('biz-reg').value || "N/A";
-                metadata.license = document.getElementById('biz-lic').value || "N/A";
-                metadata.phone = document.getElementById('biz-phone').value || "N/A";
-            }
-            
-            const { data, error } = await client.auth.signUp({ email, password, options: { data: metadata, emailRedirectTo: "https://toursetu-app.netlify.app" } });
-            if (error) throw error;
-            if (data?.user) await recordReferralLogin();
-            
-            // Success UI for Email Confirmation
-            status.innerHTML = `
-                <div style="background:#fff4e6; padding:15px; border-radius:10px; border:1px solid #ffd8a8; color:#d9480f; text-align:left; margin-top:10px;">
-                    <strong style="display:block; margin-bottom:5px;">✉️ Check your Inbox!</strong>
-                    A link was sent to <b>${email}</b>. You must verify your email before you can log in to TourSetu.
-                </div>`;
-            
-            // Clear inputs for security and better UI
-            emailInput.value = "";
-            passwordInput.value = "";
+        const metadata = { role, is_approved: role === 'customer' };
+        if (role === 'agency') {
+            metadata.gst = window._agencyStep1Draft.gstNo || 'N/A';
+            metadata.reg_no = window._agencyStep1Draft.regNo || 'N/A';
         }
-    } catch (err) {
-        status.innerText = "❌ " + err.message;
-    } finally {
-        btn.disabled = false;
-    }
+        const redirectUrl = window.location.origin + window.location.pathname;
+        const { data, error } = await client.auth.signUp({ email, password, options:{data:metadata,emailRedirectTo:redirectUrl} });
+        if (error) throw error;
+
+        if (data?.user) {
+            await recordReferralLogin();
+            if (role === 'agency' && data.session) {
+                await completePendingAgencyVerificationUpload(data.user);
+                window._agencyStep1Draft = null;
+                showDashboard(data.user);
+                return;
+            }
+        }
+
+        status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;margin-top:10px;"><strong>✉️ Check your Inbox!</strong><br>A verification link was sent to <b>'+email+'</b>.' +
+            (role==='agency' ? '<br><br>Your document files are stored safely in this browser until email verification/login. After login they will upload to Supabase automatically.' : '') +
+            '</div>';
+        document.getElementById('email').value='';
+        document.getElementById('password').value='';
+    } catch(err) { status.innerText='❌ '+err.message; }
+    finally { btn.disabled=false; }
 }
 /* =========================================
    6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
