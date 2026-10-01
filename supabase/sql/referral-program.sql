@@ -87,10 +87,10 @@ begin
   select user_id into rid from public.referral_codes where upper(code)=upper(trim(p_code));
   if rid is null or rid=uid then return; end if;
   insert into public.referral_login_events(referrer_user_id,referred_user_id,referral_code) values(rid,uid,trim(p_code));
-  insert into public.referrals(referral_code,referrer_user_id,referred_user_id,first_login_at)
+  insert into public.referrals as r(referral_code,referrer_user_id,referred_user_id,first_login_at)
   values(trim(p_code),rid,uid,now())
   on conflict(referred_user_id) do update
-    set first_login_at=coalesce(public.referrals.first_login_at,excluded.first_login_at);
+    set first_login_at=coalesce(r.first_login_at,excluded.first_login_at);
 end; $$;
 
 create or replace function public.create_referral_reward(
@@ -172,3 +172,11 @@ returns table(
     coalesce((select sum(rr.platform_commission_amount) from public.referral_rewards rr where rr.referrer_user_id=auth.uid()),0)::numeric(12,2),
     coalesce((select sum(rr.referral_reward_amount) from public.referral_rewards rr where rr.referrer_user_id=auth.uid()),0)::numeric(12,2);
 $$;
+
+revoke all on function public.create_referral_reward(text,text,uuid,numeric,numeric) from public;
+revoke all on function public.trg_agency_referral_reward() from public;
+revoke all on function public.trg_hotel_referral_reward() from public;
+grant execute on function public.get_or_create_referral_code() to authenticated;
+grant execute on function public.record_referral_visit(text,text) to anon, authenticated;
+grant execute on function public.record_referral_login(text) to authenticated;
+grant execute on function public.get_referral_dashboard_stats() to authenticated;
