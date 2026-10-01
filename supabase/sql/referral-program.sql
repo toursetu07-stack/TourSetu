@@ -222,7 +222,7 @@ alter table public.agency_verification_requests enable row level security;
 revoke all on public.agency_verification_requests from anon, authenticated;
 grant select on public.agency_verification_requests to authenticated;
 grant execute on function public.save_agency_verification_documents(
-  text,text,text,text,text,text,text,text,text,text,text
+  text,text,text,text,text,text,text,text,text,text,text,text
 ) to authenticated;
 
 drop policy if exists "Agency can view own verification request" on public.agency_verification_requests;
