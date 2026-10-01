@@ -482,6 +482,7 @@ async function handleAuth() {
 function renderCustomerHomepage(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
+    window.mountDashboardUtilityMenu('customer');
     
     // Get all unique states from locationData
     const stateOptions = Object.keys(locationData).sort().map(state => 
@@ -3933,6 +3934,7 @@ async function renderAgencyHotelPackages() {
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
+    window.mountDashboardUtilityMenu('agency');
 
     app.innerHTML = `
         <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
@@ -6700,6 +6702,7 @@ let ackTimer = null;
 async function renderHotelDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
+    window.mountDashboardUtilityMenu('hotel');
 
     app.innerHTML = `
         <div style="display:flex; min-height:100vh; background:#f4f6f9; font-family:'Inter', sans-serif; margin:-20px;">
