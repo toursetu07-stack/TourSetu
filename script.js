@@ -92,6 +92,133 @@ function getClient() {
     return _supabase;
 }
 
+
+/* =========================================================================
+   🔗 REFERRAL PROGRAM + DASHBOARD UTILITY MENU
+   ========================================================================= */
+const REFERRAL_STORAGE_KEY = 'toursetu_referral_code';
+
+function captureReferralCodeFromUrl() {
+    try {
+        const code = new URLSearchParams(window.location.search).get('ref');
+        if (code) {
+            localStorage.setItem(REFERRAL_STORAGE_KEY, code.trim());
+            const visitorKey = localStorage.getItem('toursetu_referral_visitor') || crypto.randomUUID();
+            localStorage.setItem('toursetu_referral_visitor', visitorKey);
+            const client = getClient();
+            if (client) client.rpc('record_referral_visit', { p_code: code.trim(), p_visitor_key: visitorKey }).catch(() => {});
+        }
+    } catch (e) { console.warn('Referral capture skipped:', e); }
+}
+
+async function recordReferralLogin() {
+    try {
+        const code = localStorage.getItem(REFERRAL_STORAGE_KEY);
+        if (!code) return;
+        await getClient().rpc('record_referral_login', { p_code: code });
+    } catch (e) { console.warn('Referral attribution skipped:', e); }
+}
+
+async function getMyReferralCode() {
+    const { data, error } = await getClient().rpc('get_or_create_referral_code');
+    if (error) throw error;
+    return data;
+}
+
+window.copyMyReferralLink = async function() {
+    const input = document.getElementById('toursetu-referral-link');
+    if (!input) return;
+    try { await navigator.clipboard.writeText(input.value); }
+    catch (e) { input.select(); document.execCommand('copy'); }
+    alert('✅ Referral link copied!');
+};
+
+window.shareMyReferralLink = async function() {
+    const input = document.getElementById('toursetu-referral-link');
+    if (!input) return;
+    const link = input.value;
+    if (navigator.share) {
+        try { await navigator.share({title:'Join TourSetu',text:'Join TourSetu using my referral link.',url:link}); } catch (e) {}
+    } else {
+        try { await navigator.clipboard.writeText(link); } catch (e) {}
+        alert('Referral link copied. Ab aap share kar sakte hain.');
+    }
+};
+
+window.toggleDashboardUtilityMenu = async function(forceOpen) {
+    const drawer = document.getElementById('toursetu-utility-drawer');
+    if (!drawer) return;
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : drawer.style.display !== 'flex';
+    drawer.style.display = shouldOpen ? 'flex' : 'none';
+    if (!shouldOpen) return;
+    const linkInput = document.getElementById('toursetu-referral-link');
+    const statsEl = document.getElementById('toursetu-referral-stats');
+    try {
+        const code = await getMyReferralCode();
+        if (linkInput) linkInput.value = window.location.origin + window.location.pathname + '?ref=' + encodeURIComponent(code);
+        const { data, error: statsError } = await getClient().rpc('get_referral_dashboard_stats');
+        if (statsError) throw statsError;
+        const row = Array.isArray(data) ? (data[0] || {}) : (data || {});
+        if (statsEl) {
+            statsEl.innerHTML = '🔗 Link visits: <b>' + Number(row.referral_visits || 0) + '</b><br>🔐 Login events: <b>' + Number(row.login_events || 0) + '</b><br>👥 Referred users: <b>' + Number(row.referred_users || 0) + '</b><br>💰 Referral earnings: <b>₹' + Number(row.referral_earnings || 0).toLocaleString('en-IN') + '</b>';
+        }
+    } catch (e) {
+        if (linkInput) linkInput.value = 'Referral link unavailable until referral database migration is applied.';
+        if (statsEl) statsEl.innerText = 'Referral analytics will appear here after the Supabase referral migration is applied.';
+    }
+};
+
+window.mountDashboardUtilityMenu = function(role) {
+    const existing = document.getElementById('toursetu-utility-menu-root');
+    if (existing) existing.remove();
+    const root = document.createElement('div');
+    root.id = 'toursetu-utility-menu-root';
+    const accountLabel = role === 'hotel' ? 'Hotel Owner' : role === 'agency' ? 'Agency' : 'Customer';
+    root.innerHTML = '<button onclick="toggleDashboardUtilityMenu()" aria-label="Open menu" style="position:fixed;left:14px;top:14px;z-index:1000000;width:42px;height:42px;border-radius:50%;border:2px solid #ff9f43;background:#2d3436;color:white;font-size:15px;font-weight:900;letter-spacing:2px;box-shadow:0 5px 18px rgba(0,0,0,.25);cursor:pointer;">••</button>' +
+        '<div id="toursetu-utility-drawer" style="display:none;position:fixed;left:0;top:0;bottom:0;width:min(360px,92vw);z-index:999999;background:#fff;box-shadow:12px 0 35px rgba(0,0,0,.22);padding:26px 20px;box-sizing:border-box;overflow-y:auto;font-family:Inter,sans-serif;">' +
+        '<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:18px;"><button onclick="toggleDashboardUtilityMenu(false)" aria-label="Close menu" style="width:36px;height:36px;border-radius:50%;background:#f1f2f6;color:#2d3436;font-size:20px;border:0;cursor:pointer;">×</button></div>' +
+        '<div style="padding:16px;background:#fff8ef;border:1px solid #ffd39b;border-radius:12px;margin-bottom:16px;"><div style="font-weight:900;color:#e67e22;">🔗 Your Specific Referral Link</div><p style="font-size:12px;color:#666;line-height:1.5;margin:8px 0;">Is link ko share karne par referral attribution save hoga. Eligible paid booking par platform commission ka 10% referral earning mein record hoga.</p><input id="toursetu-referral-link" readonly value="Generating..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;font-size:11px;background:white;"><div style="display:flex;gap:8px;margin-top:9px;"><button onclick="copyMyReferralLink()" style="flex:1;background:#ff9f43;color:white;padding:10px;">COPY LINK</button><button onclick="shareMyReferralLink()" style="flex:1;background:#2d3436;color:white;padding:10px;">SHARE</button></div><div id="toursetu-referral-stats" style="margin-top:12px;padding-top:10px;border-top:1px solid #f0d9b5;font-size:12px;color:#555;">Loading referral analytics...</div></div>' +
+        '<div style="display:flex;flex-direction:column;gap:10px;width:100%;">' +
+        '<button onclick="openTourSetuLegalPanel(\'referral\')" style="width:100%;text-align:left;padding:14px;background:#fff3e0;border:1px solid #ffd39b;font-weight:800;box-sizing:border-box;cursor:pointer;">🔗 Referral Program & Commission Flow</button>' +
+        '<button onclick="openTourSetuLegalPanel(\'terms\')" style="width:100%;text-align:left;padding:14px;background:#f8f9fa;border:1px solid #e5e5e5;font-weight:700;box-sizing:border-box;cursor:pointer;">📄 Terms & Conditions</button>' +
+        '<button onclick="openTourSetuLegalPanel(\'privacy\')" style="width:100%;text-align:left;padding:14px;background:#f8f9fa;border:1px solid #e5e5e5;font-weight:700;box-sizing:border-box;cursor:pointer;">🔒 Privacy Policy</button>' +
+        '</div></div>';
+    document.body.appendChild(root);
+};
+
+window.openTourSetuLegalPanel = function(type) {
+    const existing = document.getElementById('toursetu-legal-modal');
+    if (existing) existing.remove();
+    const content = {
+        referral: '<div style="font-family:Arial,sans-serif;">' +
+            '<div style="text-align:center;margin-bottom:18px;"><div style="font-size:30px;">🔗</div><h2 style="margin:4px 0;color:#2d3436;">TourSetu Referral Program</h2><p style="margin:0;color:#666;font-size:13px;">User A shares a personal referral link → User B joins and completes an eligible paid booking → User A receives 10% of the platform commission.</p></div>' +
+            '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin:20px 0;">' +
+                '<div style="width:100%;padding:14px;border:2px solid #ff9f43;border-radius:12px;background:#fff8ef;text-align:center;"><b>👤 USER A</b><br><span style="font-size:12px;color:#666;">Gets a unique referral link</span><br><code style="font-size:11px;">toursetu.pages.dev/?ref=TS-XXXXXXXXXX</code></div>' +
+                '<div style="font-size:24px;color:#ff9f43;">↓ SHARE LINK ↓</div>' +
+                '<div style="width:100%;padding:14px;border:2px solid #3498db;border-radius:12px;background:#f4faff;text-align:center;"><b>👤 USER B</b><br><span style="font-size:12px;color:#666;">Opens the link, signs in/signs up and makes a booking</span></div>' +
+                '<div style="font-size:24px;color:#ff9f43;">↓ PAYMENT SUCCESS ↓</div>' +
+                '<div style="width:100%;padding:14px;border:2px solid #2ecc71;border-radius:12px;background:#f3fff7;text-align:center;"><b>💳 ELIGIBLE PAID BOOKING</b><br><span style="font-size:12px;color:#666;">TourSetu records the payment and referral attribution</span></div>' +
+                '<div style="display:flex;width:100%;gap:10px;flex-wrap:wrap;justify-content:center;">' +
+                    '<div style="flex:1;min-width:210px;padding:14px;border-radius:12px;background:#fafafa;border:1px solid #ddd;text-align:center;"><b>🏢 AGENCY BOOKING</b><br><span style="font-size:12px;">Platform commission = <b>15%</b><br>User A gets <b>10% of that 15%</b><br><strong>Effective referral earning = 1.5% of payment</strong></span></div>' +
+                    '<div style="flex:1;min-width:210px;padding:14px;border-radius:12px;background:#fafafa;border:1px solid #ddd;text-align:center;"><b>🏨 HOTEL BOOKING</b><br><span style="font-size:12px;">Platform commission = <b>4%</b><br>User A gets <b>10% of that 4%</b><br><strong>Effective referral earning = 0.4% of payment</strong></span></div>' +
+                '</div>' +
+                '<div style="width:100%;padding:14px;border:2px solid #9b59b6;border-radius:12px;background:#fbf6ff;text-align:center;"><b>💰 USER A REFERRAL EARNING</b><br><span style="font-size:12px;color:#666;">The earning is recorded in the TourSetu referral ledger after the eligible payment is recorded as paid.</span></div>' +
+            '</div>' +
+            '<div style="padding:14px;background:#f8f9fa;border-radius:12px;font-size:12px;color:#555;"><b>Example — Agency:</b> ₹10,000 payment → 15% platform commission = ₹1,500 → 10% of ₹1,500 = <b>₹150 referral earning for User A</b>.<br><br><b>Example — Hotel:</b> ₹10,000 payment → 4% platform commission = ₹400 → 10% of ₹400 = <b>₹40 referral earning for User A</b>.</div>' +
+            '<h3 style="margin-bottom:8px;">Referral Rules</h3><ul style="font-size:12px;color:#555;line-height:1.7;"><li>Referral attribution is linked to the referral code used by User B.</li><li>The reward is created only for an eligible paid booking.</li><li>A booking can create the referral reward only once.</li><li>Referral earnings are recorded in the platform ledger; actual payout/withdrawal is subject to TourSetu payout rules and availability.</li><li>Self-referrals are not eligible.</li></ul>' +
+        '</div>',
+        terms: '<h2>📄 Terms & Conditions</h2><p>By using TourSetu, users agree to provide accurate account, booking and payment information. Customers, agencies and hotel owners are responsible for the information and transactions they submit through the platform.</p><p>Referral rewards apply only to eligible paid bookings that are successfully recorded by TourSetu. TourSetu may reject or reverse referral attribution for cancelled, refunded, fraudulent, self-referred or otherwise ineligible transactions.</p><p>Referral earnings shown in the dashboard are ledger amounts and do not by themselves constitute an instant bank/UPI transfer. Any payout is subject to applicable TourSetu payout procedures, verification and minimum payout requirements.</p>',
+        privacy: '<h2>🔒 Privacy Policy</h2><p>TourSetu may process account, booking, payment-status and referral information to provide platform services, maintain security, prevent abuse, support users and calculate referral attribution.</p><p>When a referral link is opened, TourSetu may record the referral code, visit event and relevant attribution information. When a referred user signs in or signs up, the referral relationship may be associated with the account for eligible future bookings.</p><p>Referral and booking records are stored in the TourSetu/Supabase database and are used for platform operations, analytics, commission calculation and fraud prevention. TourSetu should only collect and retain information necessary for these purposes and should protect it using appropriate access controls.</p>'
+    };
+    const modal=document.createElement('div');
+    modal.id='toursetu-legal-modal';
+    modal.style.cssText='position:fixed;inset:0;z-index:1000001;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML='<div style="background:white;max-width:650px;width:100%;max-height:85vh;overflow:auto;border-radius:16px;padding:28px;line-height:1.65;color:#444;">'+(content[type]||content.privacy)+'<button onclick="document.getElementById(\'toursetu-legal-modal\').remove()" style="display:block;margin:20px auto 0;background:#ff9f43;color:white;padding:11px 25px;">CLOSE</button></div>';
+    document.body.appendChild(modal);
+};
+
+captureReferralCodeFromUrl();
+
 function toggleMode() { 
     isLoginMode = !isLoginMode; 
     renderAuthUI(); 
@@ -236,6 +363,7 @@ async function handleAuth() {
         if (isLoginMode) {
             const { data, error } = await client.auth.signInWithPassword({ email, password });
             if (error) throw error;
+            await recordReferralLogin();
             showDashboard(data.user);
         } else {
             const role = document.getElementById('role').value;
@@ -323,6 +451,7 @@ async function handleAuth() {
             }
             // --- ONESIGNAL INTEGRATION END ---
 
+            await recordReferralLogin();
             showDashboard(data.user);
         } else {
             // SIGNUP LOGIC
@@ -336,16 +465,9 @@ async function handleAuth() {
                 metadata.phone = document.getElementById('biz-phone').value || "N/A";
             }
             
-            const { error } = await client.auth.signUp({ 
-                email, 
-                password, 
-                options: { 
-                    data: metadata,
-                    emailRedirectTo: "https://toursetu-app.netlify.app"
-                } 
-            });
-
+            const { data, error } = await client.auth.signUp({ email, password, options: { data: metadata, emailRedirectTo: "https://toursetu-app.netlify.app" } });
             if (error) throw error;
+            if (data?.user) await recordReferralLogin();
             
             // Success UI for Email Confirmation
             status.innerHTML = `
@@ -371,6 +493,7 @@ async function handleAuth() {
 function renderCustomerHomepage(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
+    window.mountDashboardUtilityMenu('customer');
     
     // Get all unique states from locationData
     const stateOptions = Object.keys(locationData).sort().map(state => 
@@ -2193,6 +2316,47 @@ if (selectedType === 'hotel') {
     }).join('');
 };
 
+
+/* =========================================================================
+   🎒 AGENCY BOOKING PAYMENT CONFIRMATION
+   ========================================================================= */
+window.simulatePayment = async function(bookingId) {
+    const client = getClient();
+    const confirmed = confirm("Have you completed the payment using the agency payment details?\n\nClick OK only after payment is actually completed.");
+    if (!confirmed) return;
+    try {
+        const { data: { user } } = await client.auth.getUser();
+        if (!user) { alert("Please login first."); return; }
+
+        const { data: booking, error: fetchError } = await client
+            .from('bookings')
+            .select('*')
+            .eq('id', bookingId)
+            .eq('customer_id', user.id)
+            .single();
+
+        if (fetchError) throw fetchError;
+        if (!['approved','confirmed'].includes(String(booking.status || '').toLowerCase())) {
+            alert("Payment cannot be confirmed until the agency approves the booking.");
+            return;
+        }
+
+        const { error } = await client
+            .from('bookings')
+            .update({ status: 'paid' })
+            .eq('id', bookingId)
+            .eq('customer_id', user.id);
+
+        if (error) throw error;
+
+        alert("✅ Payment marked as paid. The referral commission ledger has been updated.");
+        await renderCustomerRequests();
+    } catch (err) {
+        console.error("Agency Payment Confirmation Error:", err);
+        alert("Payment confirmation failed: " + err.message);
+    }
+};
+
 window.cancelBookingWithPenalty = async function(id) {
     const disclaimer = "In case of cancellation, a non-refundable amount of 9% (2% Gateway + 7% Service & Facilitation Fee) will be deducted from your total fund.\n\nDo you agree to proceed with the cancellation?";
     
@@ -2218,6 +2382,7 @@ window.cancelBookingWithPenalty = async function(id) {
 
 window.showPackageDetails = function(pEncoded) {
     const p = JSON.parse(decodeURIComponent(pEncoded));
+    window.currentBookingPackage = p;
     const modal = document.getElementById('detail-modal');
     const body = document.getElementById('detail-view-body');
     
@@ -2330,6 +2495,14 @@ window.showPackageDetails = function(pEncoded) {
                 <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:28px; color:#999; cursor:pointer; line-height:1;">✕</button>
             </div>
             <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
+            ${Number(p.pickup_km_rate) > 0 ? `
+                <div style="margin:10px 0 20px; padding:12px 15px; background:#fff8f0; border:1px solid #ffeaa7; border-radius:10px;">
+                    <b style="color:#e67e22;">🚗 Customer Pickup Distance Charge: ₹${Number(p.pickup_km_rate).toLocaleString('en-IN')} / km</b>
+                    <div style="font-size:12px; color:#666; margin-top:5px; line-height:1.5;">
+                        We will calculate the road distance from the package starting location to your pickup location and add the applicable distance charge to your package total.
+                    </div>
+                </div>
+            ` : ''}
             
             <div style="margin:20px 0; padding:15px; background:#f9f9f9; border-radius:12px; font-size:14px;">
                 <h4 style="margin-top:0;">Itinerary / Description</h4>
@@ -2352,7 +2525,7 @@ window.showPackageDetails = function(pEncoded) {
             </div>
 
             <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold;">ESTIMATED TOTAL:</span>
+                <span style="font-weight:bold;">ESTIMATED PACKAGE TOTAL:</span>
                 <span id="live-total-display" style="font-size:22px; font-weight:bold; color:#ff9f43;">₹0</span>
             </div>
 
@@ -2361,7 +2534,7 @@ window.showPackageDetails = function(pEncoded) {
                 <div style="display:grid; gap:15px;">
                     <div>
                         <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">🏠 FULL PICKUP ADDRESS</label>
-                        <textarea id="cust-address" placeholder="e.g. Flat 101, Sunny Heights, Sector 15, Meerut..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;"></textarea>
+                        <textarea id="cust-address" placeholder="e.g. Flat 101, Sunny Heights, Sector 15, Meerut..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;"></textarea><small style="display:block; margin-top:6px; color:#777; font-size:11px;">Pickup distance charge is calculated after you enter your address and send the booking request.</small>
                     </div>
                     <div>
                         <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">📞 MOBILE NUMBER</label>
@@ -2381,26 +2554,25 @@ window.showPackageDetails = function(pEncoded) {
     modal.style.display = 'flex';
 };
 
-window.updateLivePrice = () => {
-    let total = 0;
-    
-    document.querySelectorAll('.book-v-check:checked').forEach(checkbox => {
-        const id = checkbox.dataset.id;
-        const rate = parseFloat(checkbox.dataset.rate) || 0;
-        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
-        const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
-        total += (rate * qty);
+window.updateLivePrice = function() {
+    let total=0;
+    document.querySelectorAll('.book-v-check:checked').forEach(checkbox=>{
+        const id=checkbox.dataset.id;
+        const rate=parseFloat(checkbox.dataset.rate)||0;
+        const qtyInput=document.querySelector(`.book-v-qty[data-id="${id}"]`);
+        const qty=qtyInput?(parseInt(qtyInput.value,10)||1):1;
+        total+=rate*qty;
     });
-
-    document.querySelectorAll('.book-trek-check:checked').forEach(checkbox => {
-        const id = checkbox.dataset.id;
-        const rate = parseFloat(checkbox.dataset.rate) || 0;
-        const qtyInput = document.getElementById(`qty-${id}`);
-        const qty = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
-        total += (rate * qty);
+    document.querySelectorAll('.book-trek-check:checked').forEach(checkbox=>{
+        const id=checkbox.dataset.id;
+        const rate=parseFloat(checkbox.dataset.rate)||0;
+        const qtyInput=document.getElementById(`qty-${id}`);
+        const qty=qtyInput?(parseInt(qtyInput.value,10)||1):1;
+        total+=rate*qty;
     });
-
-    document.getElementById('live-total-display').innerText = `₹${total.toLocaleString('en-IN')}`;
+    total+=Number(window.currentPickupDistanceCharge)||0;
+    const totalEl=document.getElementById('live-total-display');
+    if(totalEl)totalEl.innerText=`₹${total.toLocaleString('en-IN')}`;
 };
 
 window.toggleQtyInput = (id) => {
@@ -2410,82 +2582,146 @@ window.toggleQtyInput = (id) => {
     updateLivePrice();
 };
 
-window.handleBookingInquiry = async function(packageId, packageTitle, agencyId, agencyEmail) {
-    const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
-    const address = document.getElementById('cust-address').value;
-    const phone = document.getElementById('cust-phone').value;
-    const travelDate = document.getElementById('cust-travel-date').value;
+/* ============================================================
+   CUSTOMER PICKUP DISTANCE PRICING
+   Uses Nominatim geocoding + OSRM road distance.
+   ============================================================ */
+const UTTARAKHAND_PICKUP_CITIES = ["Almora","Ranikhet","Dwarahat","Chaukhutia","Bhikiyasen","Bageshwar","Kapkot","Garur","Champawat","Banbasa","Tanakpur","Lohaghat","Pati","Gopeshwar","Joshimath","Gauchar","Karnaprayag","Nandprayag","Badrinath","Pokhari","Tharali","Gairsain","Pipalkoti","Nandanagar","Dehradun","Rishikesh","Vikasnagar","Mussoorie","Herbertpur","Selaqui","Doiwala","Haridwar","Roorkee","Adampur-Sultanpur","Dhandera","Imlikhera","Padligurjar","Rampur","Manglaur","Jhabreda","Laksar","Landhaura","Shivalik Nagar","Bhagwanpur","Piran Kaliyer","Haldwani","Ramnagar","Bhowali","Kaladhungi","Lalkuan","Nainital","Bhimtal","Pauri","Srinagar","Swargashram-Jaunk","Satpuli","Dogadda","Kotdwar","Thalisain","Pithoragarh","Dharchula","Didihat","Gangolihat","Berinag","Munsyari","Rudraprayag","Kedarnath","Augustmuni","Tilwara","Ukhimath","Guptkashi","Tehri","Narendranagar","Chamba","Muni-ki-Reti","Kirtinagar","Devprayag","Gaja","Ghansali","Lambgaon","Chamiyala","Tapovan","Gadarpur","Jaspur","Kichha","Sitarganj","Bazpur","Khatima","Mahuakheraganj","Mahuwadawara","Sultanpur","Kelakheda","Dineshpur","Shaktigarh","Nanakmatta","Gularbhoj","Kashipur","Rudrapur","Nagla","Lalpur","Garhinegi","Seroli Kalan","Uttarkashi","Barkot","Chinyalisaur","Gangotri","Purola","Naugaon"];
+window.currentPickupDistanceCharge = 0;
+window.currentPickupDistanceKm = 0;
+window.pickupDistanceRequestId = 0;
 
-    if (!address.trim() || !phone.trim() || !travelDate) {
-        alert("❌ Please provide travel date, pickup address and phone number!"); 
-        return;
-    }
+window.updatePickupDistancePreview = async function() {
+    const cityEl=document.getElementById('cust-city');
+    const distanceEl=document.getElementById('pickup-distance-value');
+    const chargeEl=document.getElementById('pickup-distance-charge');
+    if(!cityEl||!distanceEl||!chargeEl) return;
 
-    let totalPrice = 0;
-    const selectedVehicles = Array.from(document.querySelectorAll('.book-v-check:checked')).map(el => {
-        const id = el.dataset.id;
-        const rate = parseFloat(el.dataset.rate) || 0;
-        const qtyInput = document.querySelector(`.book-v-qty[data-id="${id}"]`);
-        const qty = parseInt(qtyInput.value) || 1;
-        totalPrice += (rate * qty);
-        return `${qty}x vehicle_id:${id}`;
-    });
+    const customerCity=cityEl.value.trim();
+    const packageData=window.currentBookingPackage||{};
+    const startingCity=String(packageData.starting_location||'').trim();
+    const pickupKmRate=Number(packageData.pickup_km_rate)||0;
+    const requestId=++window.pickupDistanceRequestId;
 
-    if (selectedVehicles.length === 0) { 
-        alert("❌ Please select at least one vehicle to book."); 
-        return; 
-    }
+    window.currentPickupDistanceCharge=0;
+    window.currentPickupDistanceKm=0;
+    if(typeof window.updateLivePrice==='function') window.updateLivePrice();
 
-    // Safely extract optional trekking counts
-    const ghodaQty = document.getElementById('qty-ghoda') ? parseInt(document.getElementById('qty-ghoda').value) || 0 : 0;
-    const dandiQty = document.getElementById('qty-dandi') ? parseInt(document.getElementById('qty-dandi').value) || 0 : 0;
-    const kandiQty = document.getElementById('qty-kandi') ? parseInt(document.getElementById('qty-kandi').value) || 0 : 0;
-    const pitthuQty = document.getElementById('qty-pitthu') ? parseInt(document.getElementById('qty-pitthu').value) || 0 : 0;
+    if(!customerCity){distanceEl.innerText='Select a city';chargeEl.innerText='₹0';return;}
+    if(!startingCity){distanceEl.innerText='Agency starting city unavailable';chargeEl.innerText='₹0';return;}
+    if(pickupKmRate<=0){distanceEl.innerText='Rate not configured';chargeEl.innerText='₹0';return;}
+    if(startingCity.toLowerCase()===customerCity.toLowerCase()){distanceEl.innerText='0 km';chargeEl.innerText='₹0';return;}
 
-    const vGhodaQty = document.getElementById('qty-vaishno_ghoda') ? parseInt(document.getElementById('qty-vaishno_ghoda').value) || 0 : 0;
-    const vPalkiQty = document.getElementById('qty-vaishno_palki') ? parseInt(document.getElementById('qty-vaishno_palki').value) || 0 : 0;
-    const vPitthuQty = document.getElementById('qty-vaishno_pitthu') ? parseInt(document.getElementById('qty-vaishno_pitthu').value) || 0 : 0;
-
-    try {
-        const { error } = await client.from('bookings').insert([{
-            package_id: packageId, 
-            package_title: packageTitle,
-            customer_id: user.id, 
-            customer_email: user.email, 
-            customer_address: address, 
-            customer_phone: phone,
-            travel_date: travelDate, 
-            selected_vehicles: selectedVehicles.join(', '),
-            total_price: totalPrice, 
-            status: 'pending',
-            agency_id: agencyId,
-            agency_email: agencyEmail,
-            
-            keda_ghoda_qty: ghodaQty,
-            keda_dandi_qty: dandiQty,
-            keda_kandi_qty: kandiQty,
-            keda_pitthu_qty: pitthuQty,
-
-            vaishno_ghoda_qty: vGhodaQty,
-            vaishno_palki_qty: vPalkiQty,
-            vaishno_pitthu_qty: vPitthuQty,
-        }]);
-
-        if (!error) {
-            alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString()}. Total: ₹${totalPrice}`);
-            document.getElementById('detail-modal').style.display = 'none';
-            
-            if (typeof window.renderCustomerRequests === 'function') {
-                window.renderCustomerRequests();
-            }
-        } else {
-            alert("Booking Error: " + error.message);
-        }
-    } catch (e) {
-        alert("An error occurred. Please check your connection.");
+    distanceEl.innerText='Calculating...';chargeEl.innerText='...';
+    try{
+        const result=await calculatePackagePickupDistance(startingCity,customerCity,pickupKmRate);
+        if(requestId!==window.pickupDistanceRequestId)return;
+        window.currentPickupDistanceKm=result.distanceKm;
+        window.currentPickupDistanceCharge=result.charge;
+        distanceEl.innerText=`${result.distanceKm.toLocaleString('en-IN')} km`;
+        chargeEl.innerText=`₹${result.charge.toLocaleString('en-IN')}`;
+        if(typeof window.updateLivePrice==='function')window.updateLivePrice();
+    }catch(error){
+        if(requestId!==window.pickupDistanceRequestId)return;
+        console.error('Pickup distance preview error:',error);
+        distanceEl.innerText='Distance unavailable';chargeEl.innerText='₹0';
+        if(typeof window.updateLivePrice==='function')window.updateLivePrice();
     }
 };
+
+async function calculatePackagePickupDistance(packageStartLocation, customerPickupAddress, pickupKmRate) {
+    const rate=Number(pickupKmRate)||0;
+    if(rate<=0) return {distanceKm:0,charge:0,origin:packageStartLocation,destination:customerPickupAddress};
+    const geocode=async(query)=>{
+        const response=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(query)}`,{headers:{'Accept-Language':'en-IN'}});
+        if(!response.ok) throw new Error("Unable to find pickup location.");
+        const results=await response.json();
+        if(!results.length) throw new Error(`Location not found: ${query}`);
+        return {lat:Number(results[0].lat),lon:Number(results[0].lon),displayName:results[0].display_name};
+    };
+    const origin=await geocode(packageStartLocation+", Uttarakhand, India");
+    const destination=await geocode(customerPickupAddress+", Uttarakhand, India");
+    const routeResponse=await fetch(`https://router.project-osrm.org/route/v1/driving/${origin.lon},${origin.lat};${destination.lon},${destination.lat}?overview=false`);
+    if(!routeResponse.ok) throw new Error("Unable to calculate pickup road distance.");
+    const routeData=await routeResponse.json();
+    const route=routeData.routes?.[0];
+    if(!route) throw new Error("No drivable route found between package and pickup locations.");
+    const distanceKm=Number((route.distance/1000).toFixed(2));
+    return {distanceKm,charge:Number((distanceKm*rate).toFixed(2)),origin:origin.displayName,destination:destination.displayName};
+}
+
+window.handleBookingInquiry = async function(packageId,packageTitle,agencyId,agencyEmail){
+    const client=getClient();
+    const {data:{user}}=await client.auth.getUser();
+    if(!user){alert("❌ Please login again before sending a booking request.");return;}
+
+    const city=document.getElementById('cust-city')?.value.trim()||'';
+    const phone=document.getElementById('cust-phone')?.value.trim()||'';
+    const travelDate=document.getElementById('cust-travel-date')?.value||'';
+    if(!city||!phone||!travelDate){alert("❌ Please select pickup city, travel date and enter your 10-digit phone number!");return;}
+    if(!/^[6-9]\d{9}$/.test(phone)){alert("❌ Please enter a valid 10-digit mobile number.");return;}
+    const policy=document.getElementById('policy-consent');
+    if(policy&&!policy.checked){alert("❌ Please accept the Cancellation & Refund Policy.");return;}
+
+    let totalPrice=0;
+    const selectedVehicles=Array.from(document.querySelectorAll('.book-v-check:checked')).map(el=>{
+        const id=el.dataset.id;
+        const rate=parseFloat(el.dataset.rate)||0;
+        const qty=parseInt(document.querySelector(`.book-v-qty[data-id="${id}"]`)?.value,10)||1;
+        totalPrice+=rate*qty;
+        return `${qty}x vehicle_id:${id}`;
+    });
+    if(selectedVehicles.length===0){alert("❌ Please select at least one vehicle to book.");return;}
+
+    // Preserve existing trekking/add-on quantities.
+    const ghodaQty=parseInt(document.getElementById('qty-ghoda')?.value,10)||0;
+    const dandiQty=parseInt(document.getElementById('qty-dandi')?.value,10)||0;
+    const kandiQty=parseInt(document.getElementById('qty-kandi')?.value,10)||0;
+    const pitthuQty=parseInt(document.getElementById('qty-pitthu')?.value,10)||0;
+    const vGhodaQty=parseInt(document.getElementById('qty-vaishno_ghoda')?.value,10)||0;
+    const vPalkiQty=parseInt(document.getElementById('qty-vaishno_palki')?.value,10)||0;
+    const vPitthuQty=parseInt(document.getElementById('qty-vaishno_pitthu')?.value,10)||0;
+
+    const packageData=window.currentBookingPackage||{};
+    const pickupKmRate=Number(packageData.pickup_km_rate)||0;
+    let pickupDistanceKm=Number(window.currentPickupDistanceKm)||0;
+    let pickupDistanceCharge=Number(window.currentPickupDistanceCharge)||0;
+    let pickupOrigin=packageData.starting_location||'';
+    let pickupDestination=city;
+
+    try{
+        if(pickupKmRate>0&&pickupDistanceKm<=0&&pickupOrigin.toLowerCase()!==city.toLowerCase()){
+            const result=await calculatePackagePickupDistance(pickupOrigin,city,pickupKmRate);
+            pickupDistanceKm=result.distanceKm;
+            pickupDistanceCharge=result.charge;
+            pickupOrigin=result.origin;
+            pickupDestination=result.destination;
+        }
+        totalPrice+=pickupDistanceCharge;
+
+        const {error}=await client.from('bookings').insert([{
+            package_id:packageId,package_title:packageTitle,customer_id:user.id,customer_email:user.email,
+            customer_address:city,customer_phone:phone,travel_date:travelDate,
+            selected_vehicles:selectedVehicles.join(', '),total_price:Number(totalPrice.toFixed(2)),status:'pending',
+            agency_id:agencyId,agency_email:agencyEmail,
+            pickup_km_rate:Number(pickupKmRate.toFixed(2)),pickup_distance_km:Number(pickupDistanceKm.toFixed(2)),
+            pickup_distance_charge:Number(pickupDistanceCharge.toFixed(2)),pickup_distance_origin:pickupOrigin,
+            pickup_distance_destination:pickupDestination,
+            keda_ghoda_qty:ghodaQty,keda_dandi_qty:dandiQty,keda_kandi_qty:kandiQty,keda_pitthu_qty:pitthuQty,
+            vaishno_ghoda_qty:vGhodaQty,vaishno_palki_qty:vPalkiQty,vaishno_pitthu_qty:vPitthuQty
+        }]);
+        if(error)throw error;
+
+        alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString('en-IN')}.
+Pickup city: ${city}
+Pickup distance: ${pickupDistanceKm} km
+Pickup charge: ₹${pickupDistanceCharge.toLocaleString('en-IN')}
+Total: ₹${Number(totalPrice).toLocaleString('en-IN')}`);
+        document.getElementById('detail-modal').style.display='none';
+        if(typeof window.renderCustomerRequests==='function')window.renderCustomerRequests();
+    }catch(e){console.error("Booking distance/save error:",e);alert("❌ "+e.message);}
+};
+
 // 7. MATCHING & CARD RENDERING
 window.searchMatchedAgencies = async function() {
     const start = document.getElementById('search-start').value;
@@ -2689,7 +2925,8 @@ function renderPackageCards(data, isFiltered) {
  
 window.showPackageDetails = function(pEncoded) { 
  
-    const p = JSON.parse(decodeURIComponent(pEncoded)); 
+    const p = JSON.parse(decodeURIComponent(pEncoded));
+    window.currentBookingPackage = p; 
  
     const modal = document.getElementById('detail-modal'); 
     const body = document.getElementById('detail-view-body'); 
@@ -3451,43 +3688,27 @@ window.showPackageDetails = function(pEncoded) {
  
                 <div> 
  
-                    <!-- PICKUP ADDRESS --> 
-                    <div 
-                        style=" 
-                            margin-bottom:14px; 
-                        " 
-                    > 
- 
-                        <label 
-                            style=" 
-                                display:block; 
-                                font-size:11px; 
-                                color:#636e72; 
-                                font-weight:800; 
-                                margin-bottom:6px; 
-                            " 
-                        > 
-                            🏠 FULL PICKUP ADDRESS 
-                        </label> 
- 
-                        <textarea 
-                            id="cust-address" 
-                            placeholder="e.g. Hotel name, house number, street, landmark..." 
-                            style=" 
-                                width:100%; 
-                                height:75px; 
-                                padding:12px; 
-                                border:1px solid #dfe6e9; 
-                                border-radius:9px; 
-                                box-sizing:border-box; 
-                                font-family:inherit; 
-                                resize:vertical; 
-                            " 
-                        ></textarea> 
- 
-                    </div> 
- 
- 
+                    <!-- CUSTOMER PICKUP CITY -->
+                    <div style="margin-bottom:14px;">
+                        <label style="display:block;font-size:11px;color:#636e72;font-weight:800;margin-bottom:6px;">🏠 CUSTOMER PICKUP CITY</label>
+                        <select id="cust-city" onchange="updatePickupDistancePreview()" style="width:100%;padding:12px;border:2px solid #ff9f43;border-radius:9px;box-sizing:border-box;font-family:inherit;background:white;cursor:pointer;">
+                            <option value="">Select your Uttarakhand city</option>
+                            <option value="Almora">Almora</option><option value="Ranikhet">Ranikhet</option><option value="Dwarahat">Dwarahat</option><option value="Chaukhutia">Chaukhutia</option><option value="Bhikiyasen">Bhikiyasen</option><option value="Bageshwar">Bageshwar</option><option value="Kapkot">Kapkot</option><option value="Garur">Garur</option><option value="Champawat">Champawat</option><option value="Banbasa">Banbasa</option><option value="Tanakpur">Tanakpur</option><option value="Lohaghat">Lohaghat</option><option value="Pati">Pati</option><option value="Gopeshwar">Gopeshwar</option><option value="Joshimath">Joshimath</option><option value="Gauchar">Gauchar</option><option value="Karnaprayag">Karnaprayag</option><option value="Nandprayag">Nandprayag</option><option value="Badrinath">Badrinath</option><option value="Pokhari">Pokhari</option><option value="Tharali">Tharali</option><option value="Gairsain">Gairsain</option><option value="Pipalkoti">Pipalkoti</option><option value="Nandanagar">Nandanagar</option><option value="Dehradun">Dehradun</option><option value="Rishikesh">Rishikesh</option><option value="Vikasnagar">Vikasnagar</option><option value="Mussoorie">Mussoorie</option><option value="Herbertpur">Herbertpur</option><option value="Selaqui">Selaqui</option><option value="Doiwala">Doiwala</option><option value="Haridwar">Haridwar</option><option value="Roorkee">Roorkee</option><option value="Adampur-Sultanpur">Adampur-Sultanpur</option><option value="Dhandera">Dhandera</option><option value="Imlikhera">Imlikhera</option><option value="Padligurjar">Padligurjar</option><option value="Rampur">Rampur</option><option value="Manglaur">Manglaur</option><option value="Jhabreda">Jhabreda</option><option value="Laksar">Laksar</option><option value="Landhaura">Landhaura</option><option value="Shivalik Nagar">Shivalik Nagar</option><option value="Bhagwanpur">Bhagwanpur</option><option value="Piran Kaliyer">Piran Kaliyer</option><option value="Haldwani">Haldwani</option><option value="Ramnagar">Ramnagar</option><option value="Bhowali">Bhowali</option><option value="Kaladhungi">Kaladhungi</option><option value="Lalkuan">Lalkuan</option><option value="Nainital">Nainital</option><option value="Bhimtal">Bhimtal</option><option value="Pauri">Pauri</option><option value="Srinagar">Srinagar</option><option value="Swargashram-Jaunk">Swargashram-Jaunk</option><option value="Satpuli">Satpuli</option><option value="Dogadda">Dogadda</option><option value="Kotdwar">Kotdwar</option><option value="Thalisain">Thalisain</option><option value="Pithoragarh">Pithoragarh</option><option value="Dharchula">Dharchula</option><option value="Didihat">Didihat</option><option value="Gangolihat">Gangolihat</option><option value="Berinag">Berinag</option><option value="Munsyari">Munsyari</option><option value="Rudraprayag">Rudraprayag</option><option value="Kedarnath">Kedarnath</option><option value="Augustmuni">Augustmuni</option><option value="Tilwara">Tilwara</option><option value="Ukhimath">Ukhimath</option><option value="Guptkashi">Guptkashi</option><option value="Tehri">Tehri</option><option value="Narendranagar">Narendranagar</option><option value="Chamba">Chamba</option><option value="Muni-ki-Reti">Muni-ki-Reti</option><option value="Kirtinagar">Kirtinagar</option><option value="Devprayag">Devprayag</option><option value="Gaja">Gaja</option><option value="Ghansali">Ghansali</option><option value="Lambgaon">Lambgaon</option><option value="Chamiyala">Chamiyala</option><option value="Tapovan">Tapovan</option><option value="Gadarpur">Gadarpur</option><option value="Jaspur">Jaspur</option><option value="Kichha">Kichha</option><option value="Sitarganj">Sitarganj</option><option value="Bazpur">Bazpur</option><option value="Khatima">Khatima</option><option value="Mahuakheraganj">Mahuakheraganj</option><option value="Mahuwadawara">Mahuwadawara</option><option value="Sultanpur">Sultanpur</option><option value="Kelakheda">Kelakheda</option><option value="Dineshpur">Dineshpur</option><option value="Shaktigarh">Shaktigarh</option><option value="Nanakmatta">Nanakmatta</option><option value="Gularbhoj">Gularbhoj</option><option value="Kashipur">Kashipur</option><option value="Rudrapur">Rudrapur</option><option value="Nagla">Nagla</option><option value="Lalpur">Lalpur</option><option value="Garhinegi">Garhinegi</option><option value="Seroli Kalan">Seroli Kalan</option><option value="Uttarkashi">Uttarkashi</option><option value="Barkot">Barkot</option><option value="Chinyalisaur">Chinyalisaur</option><option value="Gangotri">Gangotri</option><option value="Purola">Purola</option><option value="Naugaon">Naugaon</option>
+                        </select>
+                        <small style="display:block;margin-top:6px;color:#777;font-size:11px;line-height:1.45;">Agency starting city se selected pickup city tak road distance automatically calculate hoga.</small>
+                    </div>
+
+                    <div id="pickup-distance-preview" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px;background:#f5fff8;border:1px solid #b7ebc6;border-radius:9px;">
+                        <div>
+                            <div style="font-size:11px;color:#636e72;font-weight:800;">🚗 PICKUP DISTANCE</div>
+                            <div id="pickup-distance-value" style="font-size:14px;font-weight:800;color:#2d3436;margin-top:3px;">Select a city</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:11px;color:#636e72;font-weight:800;">PICKUP CHARGE</div>
+                            <div id="pickup-distance-charge" style="font-size:17px;font-weight:900;color:#2ecc71;margin-top:3px;">₹0</div>
+                        </div>
+                    </div>
+
                     <!-- PHONE --> 
                     <div> 
  
@@ -3641,6 +3862,10 @@ window.showPackageDetails = function(pEncoded) {
        7. OPEN MODAL 
        ========================================================= */ 
  
+    window.currentPickupDistanceCharge=0;
+    window.currentPickupDistanceKm=0;
+    window.pickupDistanceRequestId=(window.pickupDistanceRequestId||0)+1;
+
     modal.style.display = 'flex'; 
  
  
@@ -3657,88 +3882,12 @@ window.showPackageDetails = function(pEncoded) {
        9. INITIAL PRICE 
        ========================================================= */ 
  
-    if (typeof window.updateLivePrice === 'function') { 
-        window.updateLivePrice(); 
-    } 
- 
-}; 
- 
- 
-/* ========================================================================= 
-   TOUR END DATE CALCULATOR 
-   ========================================================================= */ 
- 
-window.updateTourEndDate = function(tourDays) { 
- 
-    const startInput = 
-        document.getElementById('cust-travel-date'); 
- 
-    const endDisplay = 
-        document.getElementById('tour-end-date-display'); 
- 
-    if (!startInput || !endDisplay) { 
-        return; 
-    } 
- 
- 
-    const startDateValue = 
-        startInput.value; 
- 
-    if (!startDateValue) { 
- 
-        endDisplay.innerText = 
-            'Select start date'; 
- 
-        return; 
- 
-    } 
- 
- 
-    const days = 
-        parseInt(tourDays, 10) || 1; 
- 
- 
-    const startDate = 
-        new Date(startDateValue + 'T00:00:00'); 
- 
- 
-    /* 
-       Example: 
-       1 Day  = same day 
-       2 Days = start + 1 day 
-       5 Days = start + 4 days 
-    */ 
- 
-    const endDate = 
-        new Date(startDate); 
- 
-    endDate.setDate( 
-        startDate.getDate() + (days - 1) 
-    ); 
- 
- 
-    const formatted = 
-        endDate.toLocaleDateString( 
-            'en-IN', 
-            { 
-                weekday: 'short', 
-                day: '2-digit', 
-                month: 'short', 
-                year: 'numeric' 
-            } 
-        ); 
- 
- 
-    endDisplay.innerHTML = 
-        `📅 ${formatted}`; 
- 
-}; 
- 
- 
-/* ========================================================================= 
-   VEHICLE QUANTITY TOGGLE 
-   ========================================================================= */ 
- 
+    if (typeof window.updateLivePrice === 'function') {
+        window.updateLivePrice();
+    }
+
+};
+
 window.toggleQtyInput = function(id) { 
  
     const container = 
@@ -3837,6 +3986,7 @@ async function renderAgencyHotelPackages() {
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
+    window.mountDashboardUtilityMenu('agency');
 
     app.innerHTML = `
         <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
@@ -6173,6 +6323,27 @@ window.showPackageForm = function(pEncoded = null) {
             </div>
 
 
+
+            <!-- CUSTOMER PICKUP DISTANCE PRICING -->
+            <div style="margin:0 0 20px; padding:15px; background:#fff8f0; border:1px solid #ffeaa7; border-radius:10px;">
+                <label style="font-size:11px; font-weight:bold; color:#666; display:block; margin-bottom:6px;">
+                    CUSTOMER PICKUP DISTANCE CHARGE
+                </label>
+                <div style="position:relative; max-width:320px;">
+                    <input type="number" id="p-pickup-km-rate" min="0" step="0.01" inputmode="decimal"
+                        placeholder="e.g. 20"
+                        value="${isEdit ? (Number(pkg.pickup_km_rate) || 0) : ''}"
+                        style="width:100%; padding:10px 65px 10px 10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:14px;">
+                    <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#777; font-size:13px; pointer-events:none;">₹ / km</span>
+                </div>
+                <small style="display:block; margin-top:7px; color:#777; font-size:11px; line-height:1.5;">
+                    Enter only the amount you charge per kilometer.
+                    <br>
+                    <b>Note:</b> We will calculate the distance from your package starting location to the customer's pickup location and automatically add the distance charge to the package booking price.
+                </small>
+            </div>
+
+
             <!-- ITINERARY DETAILS -->
             <label style="
                 font-size:11px;
@@ -6272,7 +6443,6 @@ window.showPackageForm = function(pEncoded = null) {
 // into Supabase 'packages' table
 // =========================================
 window.processSave = async function(packageId = '') {
-
     const saveBtn = document.getElementById('save-btn');
 
     if (saveBtn) {
@@ -6280,178 +6450,125 @@ window.processSave = async function(packageId = '') {
         saveBtn.innerText = "Saving...";
     }
 
-
     try {
-
-        // =====================================
-        // GET FORM VALUES
-        // =====================================
         const title = document.getElementById('p-title').value.trim();
-
         const city = document.getElementById('p-city').value;
-
         const desc = document.getElementById('p-desc').value.trim();
-
         const tourDaysInput = document.getElementById('p-tour-days');
+        const tourDays = tourDaysInput ? parseInt(tourDaysInput.value, 10) : NaN;
 
-        const tourDays = tourDaysInput
-            ? parseInt(tourDaysInput.value, 10)
-            : NaN;
-
-
-        // =====================================
-        // BASIC VALIDATION
-        // =====================================
         if (!title || !city) {
-
             alert("Please fill Package Title and Starting City.");
-
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerText = packageId
-                    ? 'SAVE CHANGES'
-                    : 'PUBLISH PACKAGE';
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
             }
-
             return;
         }
 
-
-        // =====================================
-        // TOUR DURATION VALIDATION
-        // =====================================
-        if (
-            !Number.isInteger(tourDays) ||
-            tourDays < 1 ||
-            tourDays > 365
-        ) {
-
+        if (!Number.isInteger(tourDays) || tourDays < 1 || tourDays > 365) {
             alert("Please enter a valid Tour Duration between 1 and 365 days.");
-
-            if (tourDaysInput) {
-                tourDaysInput.focus();
-            }
-
+            if (tourDaysInput) tourDaysInput.focus();
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerText = packageId
-                    ? 'SAVE CHANGES'
-                    : 'PUBLISH PACKAGE';
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
             }
-
             return;
         }
 
+        const pickupRateInput = document.getElementById('p-pickup-km-rate');
+        const pickupKmRate = pickupRateInput && pickupRateInput.value !== ''
+            ? parseFloat(pickupRateInput.value)
+            : 0;
 
-        // =====================================
-        // GATHER DESTINATIONS
-        // =====================================
+        if (!Number.isFinite(pickupKmRate) || pickupKmRate < 0) {
+            alert("Please enter a valid pickup distance rate (₹/km).");
+            if (pickupRateInput) pickupRateInput.focus();
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
+            }
+            return;
+        }
+
         const selectedDests = [];
-
-        document
-            .querySelectorAll('.d-check:checked')
-            .forEach(cb => {
-                selectedDests.push(cb.value);
-            });
-
+        document.querySelectorAll('.d-check:checked').forEach(cb => {
+            selectedDests.push(cb.value);
+        });
 
         if (selectedDests.length === 0) {
-
             alert("Please select at least one destination.");
-
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerText = packageId
-                    ? 'SAVE CHANGES'
-                    : 'PUBLISH PACKAGE';
+                saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
             }
-
             return;
         }
 
-
-        // =====================================
-        // GATHER VEHICLES
-        // =====================================
         const vehicles = [];
+        document.querySelectorAll('.v-enable:checked').forEach(cb => {
+            const vid = cb.getAttribute('data-id');
+            const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
+            const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
 
-        document
-            .querySelectorAll('.v-enable:checked')
-            .forEach(cb => {
-
-                const vid = cb.getAttribute('data-id');
-
-                const rateInput = document.querySelector(
-                    `.v-rate[data-id="${vid}"]`
-                );
-
-                const maxInput = document.querySelector(
-                    `.v-max[data-id="${vid}"]`
-                );
-
-
-                vehicles.push({
-                    id: vid,
-                    rate: parseFloat(rateInput.value) || 0,
-                    max_cars: parseInt(maxInput.value) || 1
-                });
-
+            vehicles.push({
+                id: vid,
+                rate: parseFloat(rateInput?.value) || 0,
+                max_cars: parseInt(maxInput?.value, 10) || 1
             });
+        });
 
+        // Use the same Supabase Auth session used by the rest of TourSetu.
+        const client = getClient();
 
-        // =====================================
-        // GET AGENCY SESSION DATA
-        // =====================================
-        const sessionStr = localStorage.getItem('agency_session');
-
-        if (!sessionStr) {
-            throw new Error("No active session found.");
+        if (!client) {
+            throw new Error("Supabase client is not available. Please refresh and login again.");
         }
 
-        const session = JSON.parse(sessionStr);
+        const { data: { user }, error: authError } =
+            await client.auth.getUser();
 
+        if (authError) {
+            console.error("Auth error while saving package:", authError);
+            throw new Error("Your login session could not be verified. Please login again.");
+        }
 
-        // =====================================
-        // DATABASE PAYLOAD
-        // =====================================
+        if (!user) {
+            throw new Error("Your login session has expired. Please login again.");
+        }
+
+        const role = user.user_metadata?.role || '';
+        if (role !== 'agency') {
+            throw new Error("Only an agency account can create or edit packages.");
+        }
+
         const payload = {
-
-            title: title,
-
-            // New professional field
+            title,
             tour_days: tourDays,
-
             starting_location: city,
 
-            destinations: selectedDests,
+            // Use the existing packages.destination column.
+            // The database does not have a "destinations" column.
+            destination: selectedDests,
 
-            vehicles: vehicles,
-
+            vehicles,
             description: desc,
+            agency_id: user.id,
 
-            agency_id: session.id
+            // CUSTOMER PICKUP DISTANCE PRICING
+            pickup_km_rate: Number(pickupKmRate.toFixed(2))
         };
 
-
-        // =====================================
-        // SAVE / UPDATE PACKAGE
-        // =====================================
         let resultError = null;
 
-
         if (packageId) {
-
-            // Update Existing Package
             const { error } = await _supabase
                 .from('packages')
                 .update(payload)
                 .eq('id', packageId);
 
             resultError = error;
-
         } else {
-
-            // Insert New Package
             const { error } = await _supabase
                 .from('packages')
                 .insert([payload]);
@@ -6459,18 +6576,10 @@ window.processSave = async function(packageId = '') {
             resultError = error;
         }
 
-
-        // =====================================
-        // ERROR HANDLING
-        // =====================================
         if (resultError) {
             throw resultError;
         }
 
-
-        // =====================================
-        // SUCCESS
-        // =====================================
         alert(
             packageId
                 ? "Package updated successfully!"
@@ -6479,166 +6588,23 @@ window.processSave = async function(packageId = '') {
 
         window.showTab('packages');
 
-
     } catch (err) {
-
         console.error("Save Error:", err);
-
-        alert(
-            "Error saving package: " +
-            err.message
-        );
-
+        alert("Error saving package: " + err.message);
     } finally {
-
         if (saveBtn) {
-
             saveBtn.disabled = false;
-
             saveBtn.innerText = packageId
                 ? 'SAVE CHANGES'
                 : 'PUBLISH PACKAGE';
         }
     }
 };
+
 /* =========================================
-   11. SAVE LOGIC: Package Management
-   ========================================= */
-window.processSave = async function(pkgId) {
-    const btn = document.getElementById('save-btn');
-    if (btn) { btn.innerText = "Processing..."; btn.disabled = true; }
-
-    try {
-        const client = getClient();
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) throw new Error("User session not found.");
-
-        const title = document.getElementById('p-title').value.trim();
-        const city = document.getElementById('p-city').value;
-        const desc = document.getElementById('p-desc').value;
-
-        if (!title || !city) throw new Error("Title and Starting City are required!");
-
-        const selectedDests = Array.from(document.querySelectorAll('.d-check:checked')).map(el => el.value);
-        const selectedVehicles = [];
-        document.querySelectorAll('.v-enable:checked').forEach(el => {
-            const vId = el.dataset.id;
-            const rate = parseFloat(document.querySelector(`.v-rate[data-id="${vId}"]`).value) || 0;
-            const max = parseInt(document.querySelector(`.v-max[data-id="${vId}"]`).value) || 1;
-            const vType = vehicleTypes.find(vt => vt.id === vId);
-            if (rate > 0) {
-                selectedVehicles.push({ id: vId, name: vType.name, rate: rate, max_cars: max, icon: vType.icon });
-            }
-        });
-
-        // --- Dynamic Trek Pricing & Max Member Extraction ---
-        const isKedarSelected = selectedDests.some(d => ["Kedarnath (Uttarakhand)", "Char Dham Yatra (Uttarakhand)"].includes(d));
-        const isVaishnoSelected = selectedDests.some(d => ["Vaishno Devi (Katra)"].includes(d));
-
-        // Kedarnath Variables
-        let ghodaPrice = 0, ghodaMax = 1;
-        let dandiPrice = 0, dandiMax = 1;
-        let kandiPrice = 0, kandiMax = 1;
-        let pitthuPrice = 0, pitthuMax = 1;
-
-        // Vaishno Devi Variables
-        let vaishnoGhodaPrice = 0, vaishnoGhodaMax = 1;
-        let vaishnoPalkiPrice = 0, vaishnoPalkiMax = 1;
-        let vaishnoPitthuPrice = 0, vaishnoPitthuMax = 1;
-
-        if (isKedarSelected) {
-            const ghodaEnabled = document.getElementById('p-ghoda-enable')?.checked;
-            const dandiEnabled = document.getElementById('p-dandi-enable')?.checked;
-            const kandiEnabled = document.getElementById('p-kandi-enable')?.checked;
-            const pitthuEnabled = document.getElementById('p-pitthu-enable')?.checked;
-
-            const ghodaMaxInput = document.getElementById('p-ghoda-max');
-            const dandiMaxInput = document.getElementById('p-dandi-max');
-            const kandiMaxInput = document.getElementById('p-kandi-max');
-            const pitthuMaxInput = document.getElementById('p-pitthu-max');
-
-            ghodaMax = ghodaMaxInput ? (parseInt(ghodaMaxInput.value) || 1) : 1;
-            dandiMax = dandiMaxInput ? (parseInt(dandiMaxInput.value) || 1) : 1;
-            kandiMax = kandiMaxInput ? (parseInt(kandiMaxInput.value) || 1) : 1;
-            pitthuMax = pitthuMaxInput ? (parseInt(pitthuMaxInput.value) || 1) : 1;
-
-            if (ghodaEnabled) ghodaPrice = parseFloat(document.getElementById('p-ghoda-price')?.value) || 0;
-            if (dandiEnabled) dandiPrice = parseFloat(document.getElementById('p-dandi-price')?.value) || 0;
-            if (kandiEnabled) kandiPrice = parseFloat(document.getElementById('p-kandi-price')?.value) || 0;
-            if (pitthuEnabled) pitthuPrice = parseFloat(document.getElementById('p-pitthu-price')?.value) || 0;
-        } 
-        
-        if (isVaishnoSelected) {
-            const vaishnoGhodaEnabled = document.getElementById('p-vaishno-ghoda-enable')?.checked;
-            const vaishnoPalkiEnabled = document.getElementById('p-vaishno-palki-enable')?.checked;
-            const vaishnoPitthuEnabled = document.getElementById('p-vaishno-pitthu-enable')?.checked;
-
-            const vaishnoGhodaMaxInput = document.getElementById('p-vaishno-ghoda-max');
-            const vaishnoPalkiMaxInput = document.getElementById('p-vaishno-palki-max');
-            const vaishnoPitthuMaxInput = document.getElementById('p-vaishno-pitthu-max');
-
-            vaishnoGhodaMax = vaishnoGhodaMaxInput ? (parseInt(vaishnoGhodaMaxInput.value) || 1) : 1;
-            vaishnoPalkiMax = vaishnoPalkiMaxInput ? (parseInt(vaishnoPalkiMaxInput.value) || 1) : 1;
-            vaishnoPitthuMax = vaishnoPitthuMaxInput ? (parseInt(vaishnoPitthuMaxInput.value) || 1) : 1;
-
-            if (vaishnoGhodaEnabled) vaishnoGhodaPrice = parseFloat(document.getElementById('p-vaishno-ghoda-price')?.value) || 0;
-            if (vaishnoPalkiEnabled) vaishnoPalkiPrice = parseFloat(document.getElementById('p-vaishno-palki-price')?.value) || 0;
-            if (vaishnoPitthuEnabled) vaishnoPitthuPrice = parseFloat(document.getElementById('p-vaishno-pitthu-price')?.value) || 0;
-        }
-
-        const pkgData = {
-            title: title,
-            starting_location: city,
-            destination: selectedDests, 
-            vehicles: selectedVehicles,
-            description: desc,
-            agency_id: user.id,
-            
-            // KEDARNATH DATABASE MAPPING
-            ghoda_price: ghodaPrice,
-            ghoda_max: ghodaMax,
-            dandi_price: dandiPrice,
-            dandi_max: dandiMax,
-            kandi_price: kandiPrice,
-            kandi_max: kandiMax,
-            pitthu_price: pitthuPrice,
-            pitthu_max: pitthuMax,
-
-            // VAISHNO DEVI DATABASE MAPPING (EXACT MATCHES TO YOUR SQL SCHEMA)
-            vaishno_ghoda_price: vaishnoGhodaPrice, 
-            vaishno_ghoda_max: vaishnoGhodaMax,
-            vaishno_palki_price: vaishnoPalkiPrice,
-            vaishno_palki_max: vaishnoPalkiMax,
-            vaishno_pitthu_price: vaishnoPitthuPrice,
-            vaishno_pitthu_max: vaishnoPitthuMax
-        };
-
-        let error;
-        // Logic to either Update (Edit) or Insert (New)
-        if (pkgId && pkgId !== "" && pkgId !== "undefined" && pkgId !== null) {
-            const result = await client.from('packages').update(pkgData).eq('id', pkgId);
-            error = result.error;
-        } else {
-            const result = await client.from('packages').insert([pkgData]);
-            error = result.error;
-        }
-
-        if (error) throw error;
-        
-        alert("✅ Success! Package saved.");
-        window.showTab('packages'); // Go back to the list
-
-    } catch (err) {
-        console.error("Save Error:", err);
-        alert("❌ Error: " + err.message);
-        if (btn) {
-            btn.innerText = (pkgId) ? "SAVE CHANGES" : "PUBLISH PACKAGE";
-            btn.disabled = false;
-        }
-    }
-};
-/* =========================================
-   12. BOOKING RENDER LOGIC (ENHANCED WITH DATE)
+   12. BOOKING RENDER LOGIC
+   =========================================
+ RENDER LOGIC (ENHANCED WITH DATE)
    ========================================= */
 window.renderAgencyBookings = function(bookings) {
     const container = document.getElementById('main-content');
@@ -6788,6 +6754,7 @@ let ackTimer = null;
 async function renderHotelDashboard(user) {
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
+    window.mountDashboardUtilityMenu('hotel');
 
     app.innerHTML = `
         <div style="display:flex; min-height:100vh; background:#f4f6f9; font-family:'Inter', sans-serif; margin:-20px;">
@@ -12369,3 +12336,5 @@ window.renderAgencyHotelBookingRequests = async function () {
         );
     }
 };
+
+      
