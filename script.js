@@ -67,7 +67,7 @@ async function completePendingAgencyVerificationUpload(user) {
     const files = draft.files || {};
     const defs = [
         ['gst_document_path','gstDocument'],['business_reg_document_path','businessRegDocument'],
-        ['utdb_registration_certificate_path','utdbCertificate'],['pan_card_path','panCard'],
+        ['utdb_registration_certificate_path','utdmCertificate'],['pan_card_path','panCard'],
         ['aadhaar_card_path','aadhaarCard'],['cancelled_cheque_or_bank_passbook_path','cancelledCheque'],
         ['commercial_rc_path','commercialRc'],['aitp_commercial_permit_path','aitpPermit'],
         ['vehicle_insurance_path','vehicleInsurance'],['fitness_certificate_path','fitnessCertificate'],
@@ -390,7 +390,7 @@ function renderAuthUI() {
                 fileBox('doc-gst','GST Certificate / GST Number proof') +
                 '<input type="text" id="biz-reg" placeholder="Business Registration No" style="width:100%;padding:11px;margin:12px 0 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
                 fileBox('doc-business-reg','Business Registration Certificate copy') +
-                fileBox('doc-utdb-certificate','UTDM / Uttarakhand Tourism Registration Certificate') +
+                fileBox('doc-utdb-certificate','UTDM Registration Certificate') +
                 fileBox('doc-pan','PAN Card') +
                 fileBox('doc-aadhaar','Aadhaar Card') +
                 fileBox('doc-cancelled-cheque','Cancelled Cheque / Bank Passbook') +
@@ -399,7 +399,7 @@ function renderAuthUI() {
             html += '<div style="text-align:left;background:#f8f9fa;border:1px solid #eee;border-radius:12px;padding:14px;margin:15px 0;">' +
                 '<div style="font-weight:900;">STEP 2 OF 2 — VEHICLE & DRIVER DOCUMENTS</div>' +
                 '<div style="font-size:11px;color:#777;margin-top:4px;">Har document ki clear photo/PDF upload karein.</div>' +
-                fileBox('doc-commercial-rc','Commercial RC / Registration Certificate copy') +
+                fileBox('doc-commercial-rc','Commercial RC (Registration Certificate) copy') +
                 fileBox('doc-aitp-permit','AITP / Commercial Permit copy') +
                 fileBox('doc-vehicle-insurance','Vehicle Insurance copy') +
                 fileBox('doc-fitness-certificate','Vehicle Fitness Certificate copy') +
@@ -441,7 +441,7 @@ async function goToAgencyRegistrationStep2() {
         files: {
             gstDocument: document.getElementById('doc-gst').files[0],
             businessRegDocument: document.getElementById('doc-business-reg').files[0],
-            utdbCertificate: document.getElementById('doc-utdb-certificate').files[0],
+            utdmCertificate: document.getElementById('doc-utdb-certificate').files[0],
             panCard: document.getElementById('doc-pan').files[0],
             aadhaarCard: document.getElementById('doc-aadhaar').files[0],
             cancelledCheque: document.getElementById('doc-cancelled-cheque').files[0]
