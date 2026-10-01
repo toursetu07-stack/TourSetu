@@ -447,16 +447,9 @@ async function handleAuth() {
                 metadata.phone = document.getElementById('biz-phone').value || "N/A";
             }
             
-            const { error } = await client.auth.signUp({ 
-                email, 
-                password, 
-                options: { 
-                    data: metadata,
-                    emailRedirectTo: "https://toursetu-app.netlify.app"
-                } 
-            });
-
+            const { data, error } = await client.auth.signUp({ email, password, options: { data: metadata, emailRedirectTo: "https://toursetu-app.netlify.app" } });
             if (error) throw error;
+            if (data?.user) await recordReferralLogin();
             
             // Success UI for Email Confirmation
             status.innerHTML = `
