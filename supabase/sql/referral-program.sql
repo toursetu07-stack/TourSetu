@@ -424,7 +424,7 @@ on storage.objects for select
 to authenticated
 using (
   bucket_id='agency-verification-documents'
-  and owner_id=(select auth.uid())
+  and owner_id=(select auth.uid()::text)
 );
 
 grant usage on schema public to authenticated;
