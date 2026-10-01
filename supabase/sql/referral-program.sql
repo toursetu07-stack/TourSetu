@@ -140,6 +140,7 @@ for each row execute function public.trg_hotel_referral_reward();
 
 alter table public.referral_codes enable row level security;
 alter table public.referral_visits enable row level security;
+alter table public.referral_login_events enable row level security;
 alter table public.referrals enable row level security;
 alter table public.referral_rewards enable row level security;
 
