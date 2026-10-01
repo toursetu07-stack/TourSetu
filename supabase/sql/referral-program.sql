@@ -25,6 +25,16 @@ create table if not exists public.referrals (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.referral_login_events (
+  id uuid primary key default gen_random_uuid(),
+  referrer_user_id uuid not null references auth.users(id) on delete cascade,
+  referred_user_id uuid not null references auth.users(id) on delete cascade,
+  referral_code text not null,
+  logged_in_at timestamptz not null default now()
+);
+
+create index if not exists referral_login_events_referrer_idx on public.referral_login_events(referrer_user_id, logged_in_at desc);
+
 create table if not exists public.referral_rewards (
   id uuid primary key default gen_random_uuid(),
   referrer_user_id uuid not null references auth.users(id) on delete cascade,
@@ -76,6 +86,7 @@ begin
   if uid is null then return; end if;
   select user_id into rid from public.referral_codes where upper(code)=upper(trim(p_code));
   if rid is null or rid=uid then return; end if;
+  insert into public.referral_login_events(referrer_user_id,referred_user_id,referral_code) values(rid,uid,trim(p_code));
   insert into public.referrals(referral_code,referrer_user_id,referred_user_id,first_login_at)
   values(trim(p_code),rid,uid,now())
   on conflict(referred_user_id) do update
@@ -143,20 +154,20 @@ create policy referral_rewards_self_select on public.referral_rewards for select
 
 create or replace function public.get_referral_dashboard_stats()
 returns table(
+  referral_visits bigint,
+  login_events bigint,
   referred_users bigint,
   paid_conversions bigint,
   referred_payment_volume numeric,
   platform_commission_generated numeric,
   referral_earnings numeric
 ) language sql security definer set search_path=public as $$
-  select count(distinct r.referred_user_id),
-         count(rr.id),
-         coalesce(sum(rr.payment_amount),0)::numeric(12,2),
-         coalesce(sum(rr.platform_commission_amount),0)::numeric(12,2),
-         coalesce(sum(rr.referral_reward_amount),0)::numeric(12,2)
-  from public.referrals r
-  left join public.referral_rewards rr
-    on rr.referrer_user_id=r.referrer_user_id
-   and rr.referred_user_id=r.referred_user_id
-  where r.referrer_user_id=auth.uid();
+  select
+    (select count(*) from public.referral_visits v where v.referrer_user_id=auth.uid()),
+    (select count(*) from public.referral_login_events le where le.referrer_user_id=auth.uid()),
+    (select count(*) from public.referrals r where r.referrer_user_id=auth.uid()),
+    (select count(rr.id) from public.referral_rewards rr where rr.referrer_user_id=auth.uid()),
+    coalesce((select sum(rr.payment_amount) from public.referral_rewards rr where rr.referrer_user_id=auth.uid()),0)::numeric(12,2),
+    coalesce((select sum(rr.platform_commission_amount) from public.referral_rewards rr where rr.referrer_user_id=auth.uid()),0)::numeric(12,2),
+    coalesce((select sum(rr.referral_reward_amount) from public.referral_rewards rr where rr.referrer_user_id=auth.uid()),0)::numeric(12,2);
 $$;
