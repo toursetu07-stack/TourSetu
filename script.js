@@ -92,6 +92,114 @@ function getClient() {
     return _supabase;
 }
 
+
+/* =========================================================================
+   🔗 REFERRAL PROGRAM + DASHBOARD UTILITY MENU
+   ========================================================================= */
+const REFERRAL_STORAGE_KEY = 'toursetu_referral_code';
+
+function captureReferralCodeFromUrl() {
+    try {
+        const code = new URLSearchParams(window.location.search).get('ref');
+        if (code) {
+            localStorage.setItem(REFERRAL_STORAGE_KEY, code.trim());
+            const visitorKey = localStorage.getItem('toursetu_referral_visitor') || crypto.randomUUID();
+            localStorage.setItem('toursetu_referral_visitor', visitorKey);
+            const client = getClient();
+            if (client) client.rpc('record_referral_visit', { p_code: code.trim(), p_visitor_key: visitorKey }).catch(() => {});
+        }
+    } catch (e) { console.warn('Referral capture skipped:', e); }
+}
+
+async function recordReferralLogin() {
+    try {
+        const code = localStorage.getItem(REFERRAL_STORAGE_KEY);
+        if (!code) return;
+        await getClient().rpc('record_referral_login', { p_code: code });
+    } catch (e) { console.warn('Referral attribution skipped:', e); }
+}
+
+async function getMyReferralCode() {
+    const { data, error } = await getClient().rpc('get_or_create_referral_code');
+    if (error) throw error;
+    return data;
+}
+
+window.copyMyReferralLink = async function() {
+    const input = document.getElementById('toursetu-referral-link');
+    if (!input) return;
+    try { await navigator.clipboard.writeText(input.value); }
+    catch (e) { input.select(); document.execCommand('copy'); }
+    alert('✅ Referral link copied!');
+};
+
+window.shareMyReferralLink = async function() {
+    const input = document.getElementById('toursetu-referral-link');
+    if (!input) return;
+    const link = input.value;
+    if (navigator.share) {
+        try { await navigator.share({title:'Join TourSetu',text:'Join TourSetu using my referral link.',url:link}); } catch (e) {}
+    } else {
+        try { await navigator.clipboard.writeText(link); } catch (e) {}
+        alert('Referral link copied. Ab aap share kar sakte hain.');
+    }
+};
+
+window.toggleDashboardUtilityMenu = async function(forceOpen) {
+    const drawer = document.getElementById('toursetu-utility-drawer');
+    if (!drawer) return;
+    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : drawer.style.display !== 'flex';
+    drawer.style.display = shouldOpen ? 'flex' : 'none';
+    if (!shouldOpen) return;
+    const linkInput = document.getElementById('toursetu-referral-link');
+    const statsEl = document.getElementById('toursetu-referral-stats');
+    try {
+        const code = await getMyReferralCode();
+        if (linkInput) linkInput.value = window.location.origin + window.location.pathname + '?ref=' + encodeURIComponent(code);
+        const { data } = await getClient().from('referral_dashboard_stats').select('*').maybeSingle();
+        if (statsEl) {
+            const row = data || {};
+            statsEl.innerHTML = '👥 Referred users: <b>' + Number(row.referred_users || 0) + '</b><br>💰 Referral earnings: <b>₹' + Number(row.referral_earnings || 0).toLocaleString('en-IN') + '</b>';
+        }
+    } catch (e) {
+        if (linkInput) linkInput.value = 'Referral link unavailable until referral database migration is applied.';
+        if (statsEl) statsEl.innerText = 'Referral analytics will appear here after the Supabase referral migration is applied.';
+    }
+};
+
+window.mountDashboardUtilityMenu = function(role) {
+    const existing = document.getElementById('toursetu-utility-menu-root');
+    if (existing) existing.remove();
+    const root = document.createElement('div');
+    root.id = 'toursetu-utility-menu-root';
+    const accountLabel = role === 'hotel' ? 'Hotel Owner' : role === 'agency' ? 'Agency' : 'Customer';
+    root.innerHTML = '<button onclick="toggleDashboardUtilityMenu()" aria-label="Open menu" style="position:fixed;left:14px;top:14px;z-index:1000000;width:42px;height:42px;border-radius:50%;border:2px solid #ff9f43;background:#2d3436;color:white;font-size:15px;font-weight:900;letter-spacing:2px;box-shadow:0 5px 18px rgba(0,0,0,.25);cursor:pointer;">••</button>' +
+        '<div id="toursetu-utility-drawer" style="display:none;position:fixed;left:0;top:0;bottom:0;width:min(360px,92vw);z-index:999999;background:#fff;box-shadow:12px 0 35px rgba(0,0,0,.22);padding:26px 20px;box-sizing:border-box;overflow-y:auto;font-family:Inter,sans-serif;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;"><div><h2 style="margin:0;color:#2d3436;">TourSetu Menu</h2><small style="color:#777;">' + accountLabel + ' Account</small></div><button onclick="toggleDashboardUtilityMenu(false)" style="width:36px;height:36px;border-radius:50%;background:#f1f2f6;color:#2d3436;font-size:20px;">×</button></div>' +
+        '<div style="padding:16px;background:#fff8ef;border:1px solid #ffd39b;border-radius:12px;margin-bottom:16px;"><div style="font-weight:900;color:#e67e22;">🔗 Your Specific Referral Link</div><p style="font-size:12px;color:#666;line-height:1.5;margin:8px 0;">Is link ko share karne par referral attribution save hoga. Eligible paid booking par platform commission ka 10% referral earning mein record hoga.</p><input id="toursetu-referral-link" readonly value="Generating..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;font-size:11px;background:white;"><div style="display:flex;gap:8px;margin-top:9px;"><button onclick="copyMyReferralLink()" style="flex:1;background:#ff9f43;color:white;padding:10px;">COPY LINK</button><button onclick="shareMyReferralLink()" style="flex:1;background:#2d3436;color:white;padding:10px;">SHARE</button></div><div id="toursetu-referral-stats" style="margin-top:12px;padding-top:10px;border-top:1px solid #f0d9b5;font-size:12px;color:#555;">Loading referral analytics...</div></div>' +
+        '<button onclick="openTourSetuLegalPanel(\'privacy\')" style="width:100%;text-align:left;padding:14px;background:#f8f9fa;margin-bottom:8px;">🔒 Privacy Policy</button>' +
+        '<button onclick="openTourSetuLegalPanel(\'terms\')" style="width:100%;text-align:left;padding:14px;background:#f8f9fa;margin-bottom:8px;">📄 Terms & Conditions</button>' +
+        '<button onclick="openTourSetuLegalPanel(\'referral\')" style="width:100%;text-align:left;padding:14px;background:#f8f9fa;">💸 Referral & Commission Policy</button></div>';
+    document.body.appendChild(root);
+};
+
+window.openTourSetuLegalPanel = function(type) {
+    const existing = document.getElementById('toursetu-legal-modal');
+    if (existing) existing.remove();
+    const content = {
+        privacy: '<h2>🔒 Privacy Policy</h2><p>TourSetu uses account, booking and referral information to provide the platform, process requests, maintain security and measure referral activity. Referral visits and attribution are stored against referral codes and user accounts.</p>',
+        terms: '<h2>📄 Terms & Conditions</h2><p>Users must provide accurate account and booking information. Agencies, hotels and customers are responsible for their own transactions and communications. Referral rewards are calculated only on eligible paid bookings recorded by TourSetu.</p>',
+        referral: '<h2>💸 Referral & Commission Policy</h2><p>Eligible paid agency bookings use a 15% platform commission and the referrer receives 10% of that commission (1.5% of the payment amount). Eligible paid hotel bookings use a 4% platform commission and the referrer receives 10% of that commission (0.4% of the payment amount). Each booking is credited at most once.</p>'
+    };
+    const modal=document.createElement('div');
+    modal.id='toursetu-legal-modal';
+    modal.style.cssText='position:fixed;inset:0;z-index:1000001;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML='<div style="background:white;max-width:650px;width:100%;max-height:85vh;overflow:auto;border-radius:16px;padding:28px;line-height:1.65;color:#444;">'+(content[type]||content.privacy)+'<button onclick="document.getElementById(\'toursetu-legal-modal\').remove()" style="display:block;margin:20px auto 0;background:#ff9f43;color:white;padding:11px 25px;">CLOSE</button></div>';
+    document.body.appendChild(modal);
+};
+
+captureReferralCodeFromUrl();
+
 function toggleMode() { 
     isLoginMode = !isLoginMode; 
     renderAuthUI(); 
