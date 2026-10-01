@@ -377,50 +377,59 @@ function renderAuthUI() {
 
     let html = '<div class="card" style="max-width:520px;margin:40px auto;padding:32px;background:white;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.1);border-radius:15px;font-family:sans-serif;">' +
         '<h1 style="color:#ff9f43;margin-bottom:10px;">TourSetu</h1>' +
-        '<h2>Create Account</h2>' +
+        '<h2>' + (isLoginMode ? 'Welcome Back' : 'Create Account') + '</h2>' +
         '<input type="email" id="email" placeholder="Email Address" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
-        '<input type="password" id="password" placeholder="Password" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
-        '<div style="margin:10px 0;text-align:left;"><label style="display:block;margin-bottom:5px;font-size:12px;color:#666;">REGISTER AS</label>' +
-        '<select id="role" onchange="if(this.value===\'agency\'){agencyRegistrationStep=1;}else{agencyRegistrationStep=1;}renderAuthUI();" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;">' +
-        '<option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option></select></div>';
+        '<input type="password" id="password" placeholder="Password" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">';
 
-    if (agency && agencyRegistrationStep === 1) {
-        html += '<div style="text-align:left;background:#f8f9fa;border:1px solid #eee;border-radius:12px;padding:14px;margin:15px 0;">' +
-            '<div style="font-weight:900;">STEP 1 OF 2 — BUSINESS & ID DOCUMENTS</div>' +
-            '<div style="font-size:11px;color:#777;margin-top:4px;">Clear photo/PDF upload karein. Documents Supabase ke private verification storage mein save honge.</div>' +
-            '<input type="text" id="gst-no" placeholder="GST Number" style="width:100%;padding:11px;margin:12px 0 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
-            fileBox('doc-gst','GST Certificate / GST Number proof') +
-            '<input type="text" id="biz-reg" placeholder="Business Registration No" style="width:100%;padding:11px;margin:12px 0 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
-            fileBox('doc-business-reg','Business Registration Certificate copy') +
-            fileBox('doc-utdb-certificate','UTDB / Uttarakhand Tourism Registration Certificate') +
-            fileBox('doc-pan','PAN Card') +
-            fileBox('doc-aadhaar','Aadhaar Card') +
-            fileBox('doc-cancelled-cheque','Cancelled Cheque / Bank Passbook') +
-            '</div>' +
-            '<button onclick="goToAgencyRegistrationStep2()" style="width:100%;background:#ff9f43;color:white;border:none;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;">NEXT →</button>';
-    } else if (agency && agencyRegistrationStep === 2) {
-        html += '<div style="text-align:left;background:#f8f9fa;border:1px solid #eee;border-radius:12px;padding:14px;margin:15px 0;">' +
-            '<div style="font-weight:900;">STEP 2 OF 2 — VEHICLE & DRIVER DOCUMENTS</div>' +
-            '<div style="font-size:11px;color:#777;margin-top:4px;">Har document ki clear photo/PDF upload karein.</div>' +
-            fileBox('doc-commercial-rc','Commercial RC / Registration Certificate copy') +
-            fileBox('doc-aitp-permit','AITP / Commercial Permit copy') +
-            fileBox('doc-vehicle-insurance','Vehicle Insurance copy') +
-            fileBox('doc-fitness-certificate','Vehicle Fitness Certificate copy') +
-            fileBox('doc-commercial-driving-license','Commercial Driving License copy') +
-            fileBox('doc-police-verification','Police Verification Certificate / ID Proof') +
-            '</div>' +
-            '<div style="display:flex;gap:10px;margin-top:18px;">' +
-            '<button onclick="agencyRegistrationStep=1;renderAuthUI();" style="flex:1;background:#eee;color:#333;border:none;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;">← BACK</button>' +
-            '<button id="auth-btn" onclick="handleAuth()" style="flex:1;background:#ff9f43;color:white;border:none;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;">REGISTER</button></div>';
+    if (!isLoginMode) {
+        html += '<div style="margin:10px 0;text-align:left;"><label style="display:block;margin-bottom:5px;font-size:12px;color:#666;">REGISTER AS</label>' +
+            '<select id="role" onchange="agencyRegistrationStep=1;renderAuthUI();" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;">' +
+            '<option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option></select></div>';
+
+        if (agency && agencyRegistrationStep === 1) {
+            html += '<div style="text-align:left;background:#f8f9fa;border:1px solid #eee;border-radius:12px;padding:14px;margin:15px 0;">' +
+                '<div style="font-weight:900;">STEP 1 OF 2 — BUSINESS & ID DOCUMENTS</div>' +
+                '<div style="font-size:11px;color:#777;margin-top:4px;">Clear photo/PDF upload karein. Documents Supabase ke private verification storage mein save honge.</div>' +
+                '<input type="text" id="gst-no" placeholder="GST Number" style="width:100%;padding:11px;margin:12px 0 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
+                fileBox('doc-gst','GST Certificate / GST Number proof') +
+                '<input type="text" id="biz-reg" placeholder="Business Registration No" style="width:100%;padding:11px;margin:12px 0 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
+                fileBox('doc-business-reg','Business Registration Certificate copy') +
+                fileBox('doc-utdb-certificate','UTDB / Uttarakhand Tourism Registration Certificate') +
+                fileBox('doc-pan','PAN Card') +
+                fileBox('doc-aadhaar','Aadhaar Card') +
+                fileBox('doc-cancelled-cheque','Cancelled Cheque / Bank Passbook') +
+                '</div><button onclick="goToAgencyRegistrationStep2()" style="width:100%;background:#ff9f43;color:white;border:none;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;">NEXT →</button>';
+        } else if (agency && agencyRegistrationStep === 2) {
+            html += '<div style="text-align:left;background:#f8f9fa;border:1px solid #eee;border-radius:12px;padding:14px;margin:15px 0;">' +
+                '<div style="font-weight:900;">STEP 2 OF 2 — VEHICLE & DRIVER DOCUMENTS</div>' +
+                '<div style="font-size:11px;color:#777;margin-top:4px;">Har document ki clear photo/PDF upload karein.</div>' +
+                fileBox('doc-commercial-rc','Commercial RC / Registration Certificate copy') +
+                fileBox('doc-aitp-permit','AITP / Commercial Permit copy') +
+                fileBox('doc-vehicle-insurance','Vehicle Insurance copy') +
+                fileBox('doc-fitness-certificate','Vehicle Fitness Certificate copy') +
+                fileBox('doc-commercial-driving-license','Commercial Driving License copy') +
+                fileBox('doc-police-verification','Police Verification Certificate / ID Proof') +
+                '</div><div style="display:flex;gap:10px;margin-top:18px;">' +
+                '<button onclick="agencyRegistrationStep=1;renderAuthUI();" style="flex:1;background:#eee;color:#333;border:none;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;">← BACK</button>' +
+                '<button id="auth-btn" onclick="handleAuth()" style="flex:1;background:#ff9f43;color:white;border:none;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;">REGISTER</button></div>';
+        } else {
+            html += '<button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:20px;font-size:16px;">REGISTER</button>';
+        }
     } else {
-        html += '<button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:20px;font-size:16px;">REGISTER</button>';
+        html += '<button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:20px;font-size:16px;">LOGIN</button>';
     }
 
-    html += '<p style="margin-top:20px;font-size:14px;color:#636e72;">Already have account? <span onclick="toggleMode()" style="color:#ff9f43;cursor:pointer;font-weight:bold;">Login</span></p>' +
+    html += '<p style="margin-top:20px;font-size:14px;color:#636e72;">' +
+        (isLoginMode ? "Don't have an account?" : "Already have account?") +
+        ' <span onclick="toggleMode()" style="color:#ff9f43;cursor:pointer;font-weight:bold;">' +
+        (isLoginMode ? 'Create Account' : 'Login') + '</span></p>' +
         '<div id="status" style="margin-top:15px;font-size:13px;font-weight:bold;"></div></div>';
 
     app.innerHTML = html;
-    document.getElementById('role').value = selectedRole;
+    if (!isLoginMode) {
+        const role = document.getElementById('role');
+        if (role) role.value = selectedRole;
+    }
 }
 
 async function goToAgencyRegistrationStep2() {
