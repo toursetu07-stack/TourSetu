@@ -2298,6 +2298,47 @@ if (selectedType === 'hotel') {
     }).join('');
 };
 
+
+/* =========================================================================
+   🎒 AGENCY BOOKING PAYMENT CONFIRMATION
+   ========================================================================= */
+window.simulatePayment = async function(bookingId) {
+    const client = getClient();
+    const confirmed = confirm("Have you completed the payment using the agency payment details?\n\nClick OK only after payment is actually completed.");
+    if (!confirmed) return;
+    try {
+        const { data: { user } } = await client.auth.getUser();
+        if (!user) { alert("Please login first."); return; }
+
+        const { data: booking, error: fetchError } = await client
+            .from('bookings')
+            .select('*')
+            .eq('id', bookingId)
+            .eq('customer_id', user.id)
+            .single();
+
+        if (fetchError) throw fetchError;
+        if (!['approved','confirmed'].includes(String(booking.status || '').toLowerCase())) {
+            alert("Payment cannot be confirmed until the agency approves the booking.");
+            return;
+        }
+
+        const { error } = await client
+            .from('bookings')
+            .update({ status: 'paid' })
+            .eq('id', bookingId)
+            .eq('customer_id', user.id);
+
+        if (error) throw error;
+
+        alert("✅ Payment marked as paid. The referral commission ledger has been updated.");
+        await renderCustomerRequests();
+    } catch (err) {
+        console.error("Agency Payment Confirmation Error:", err);
+        alert("Payment confirmation failed: " + err.message);
+    }
+};
+
 window.cancelBookingWithPenalty = async function(id) {
     const disclaimer = "In case of cancellation, a non-refundable amount of 9% (2% Gateway + 7% Service & Facilitation Fee) will be deducted from your total fund.\n\nDo you agree to proceed with the cancellation?";
     
