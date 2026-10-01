@@ -336,22 +336,18 @@ async function initApp() {
 
 async function showDashboard(user) {
     const role = user?.user_metadata?.role || 'customer';
-    
     if (role === 'hotel') {
-        // Safe database query call kar rahe hain UI render karne se pehle
-        if (typeof initHotelDashboard === "function") {
-            await initHotelDashboard(user);
-        } else if (typeof renderHotelDashboard === "function") {
-            renderHotelDashboard(user);
-        } else {
-            document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
-        }
+        if (typeof initHotelDashboard === "function") await initHotelDashboard(user);
+        else if (typeof renderHotelDashboard === "function") renderHotelDashboard(user);
+        else document.getElementById('app').innerHTML = '<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, '+user.email+'</p><button onclick="handleLogout()">Logout</button></div>';
     } else if (role === 'agency') {
+        const { data: verification } = await getClient().from('agency_verification_requests').select('status,denial_reason,created_at,updated_at').eq('user_id', user.id).maybeSingle();
+        window.currentAgencyVerification = verification || { status: 'pending' };
         if (typeof renderAgencyDashboard === "function") renderAgencyDashboard(user);
-        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
+        else document.getElementById('app').innerHTML = '<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, '+user.email+'</p><p>Verification status: '+window.currentAgencyVerification.status+'</p><button onclick="handleLogout()">Logout</button></div>';
     } else {
         if (typeof renderCustomerHomepage === "function") renderCustomerHomepage(user);
-        else document.getElementById('app').innerHTML = `<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, ${user.email}</p><button onclick="handleLogout()">Logout</button></div>`;
+        else document.getElementById('app').innerHTML = '<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, '+user.email+'</p><button onclick="handleLogout()">Logout</button></div>';
     }
 }
 
@@ -4074,6 +4070,21 @@ function renderAgencyDashboard(user) {
             <div id="action-modal-content" style="background:white; padding:30px; border-radius:15px; max-width:400px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);"></div>
         </div>
     `;
+    const verification = window.currentAgencyVerification || { status: 'pending' };
+    const banner = document.createElement('div');
+    banner.id = 'agency-verification-banner';
+    banner.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:999998;max-width:760px;width:calc(100% - 40px);padding:12px 18px;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.16);font-family:Inter,sans-serif;font-size:13px;text-align:center;';
+    if (verification.status === 'approved') {
+        banner.style.background='#eafaf1'; banner.style.border='1px solid #2ecc71'; banner.style.color='#1e8449';
+        banner.innerHTML='✅ Agency verified. Your packages can be shown to customers.';
+    } else if (verification.status === 'denied') {
+        banner.style.background='#fff0f0'; banner.style.border='1px solid #e74c3c'; banner.style.color='#a93226';
+        banner.innerHTML='❌ Agency verification denied. ' + (verification.denial_reason ? 'Reason: ' + verification.denial_reason : 'Please contact TourSetu support.');
+    } else {
+        banner.style.background='#fff8e7'; banner.style.border='1px solid #f39c12'; banner.style.color='#8a5a00';
+        banner.innerHTML='⏳ Agency verification pending. Dashboard is available, but customers cannot see your packages until approval.';
+    }
+    document.body.appendChild(banner);
     showTab('earnings'); 
 }
 
