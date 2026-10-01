@@ -156,7 +156,8 @@ window.toggleDashboardUtilityMenu = async function(forceOpen) {
     try {
         const code = await getMyReferralCode();
         if (linkInput) linkInput.value = window.location.origin + window.location.pathname + '?ref=' + encodeURIComponent(code);
-        const { data } = await getClient().from('referral_dashboard_stats').select('*').maybeSingle();
+        const { data: { user } } = await getClient().auth.getUser();
+        const { data } = await getClient().from('referral_dashboard_stats').select('*').eq('referrer_user_id', user?.id || '').maybeSingle();
         if (statsEl) {
             const row = data || {};
             statsEl.innerHTML = '👥 Referred users: <b>' + Number(row.referred_users || 0) + '</b><br>💰 Referral earnings: <b>₹' + Number(row.referral_earnings || 0).toLocaleString('en-IN') + '</b>';
