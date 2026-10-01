@@ -277,13 +277,13 @@ async function handleLogout() {
 
 function renderAuthUI() {
     const app=document.getElementById('app'); if(!app)return;
-    app.innerHTML=\`
+    app.innerHTML=`
       <div class="card" style="max-width:520px;margin:50px auto;padding:32px;background:white;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.1);border-radius:15px;font-family:Inter,sans-serif;">
         <h1 style="color:#ff9f43;margin-bottom:8px;">TourSetu</h1>
-        <h2 id="form-title" style="margin-bottom:18px;">\${isLoginMode?"Welcome Back":"Create Account"}</h2>
+        <h2 id="form-title" style="margin-bottom:18px;">${isLoginMode?"Welcome Back":"Create Account"}</h2>
         <input type="email" id="email" placeholder="Email Address" autocomplete="email" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-        <input type="password" id="password" placeholder="Password" autocomplete="\${isLoginMode?"current-password":"new-password"}" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-        <div id="role-selection" style="display:\${isLoginMode?"none":"block"};margin:12px 0;">
+        <input type="password" id="password" placeholder="Password" autocomplete="${isLoginMode?"current-password":"new-password"}" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <div id="role-selection" style="display:${isLoginMode?"none":"block"};margin:12px 0;">
           <label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label>
           <select id="role" onchange="toggleBusinessFields()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
             <option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option>
@@ -325,10 +325,10 @@ function renderAuthUI() {
             </div>
           </div>
         </div>
-        <button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:18px;font-size:16px;">\${isLoginMode?"Login":"Register"}</button>
-        <p style="margin-top:18px;font-size:14px;color:#636e72;">\${isLoginMode?"Don't have an account?":"Already have account?"} <span onclick="toggleMode()" style="color:#ff9f43;cursor:pointer;font-weight:bold;">\${isLoginMode?"Create Account":"Login"}</span></p>
+        <button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:18px;font-size:16px;">${isLoginMode?"Login":"Register"}</button>
+        <p style="margin-top:18px;font-size:14px;color:#636e72;">${isLoginMode?"Don't have an account?":"Already have account?"} <span onclick="toggleMode()" style="color:#ff9f43;cursor:pointer;font-weight:bold;">${isLoginMode?"Create Account":"Login"}</span></p>
         <div id="status" style="margin-top:15px;font-size:13px;font-weight:bold;"></div>
-      </div>\`;
+      </div>`;
     const emailInput=document.getElementById('email'),agencyEmail=document.getElementById('agency-email');
     if(emailInput&&agencyEmail){agencyEmail.value=emailInput.value;emailInput.addEventListener('input',()=>agencyEmail.value=emailInput.value);}
 }
@@ -341,7 +341,7 @@ window.backToAgencyDocumentStep1=function(){document.getElementById('agency-step
 window.toggleBusinessFields=function(){
     const role=document.getElementById('role')?.value,businessFields=document.getElementById('business-fields'),agencyBasic=document.getElementById('agency-basic-fields');if(!businessFields)return;
     if(role==='agency'){businessFields.style.display='block';if(agencyBasic)agencyBasic.style.display='block';const agencyEmail=document.getElementById('agency-email');if(agencyEmail)agencyEmail.value=document.getElementById('email')?.value||'';document.getElementById('agency-step-1').style.display='block';document.getElementById('agency-step-2').style.display='none';const genericAuth=document.getElementById('auth-btn');if(genericAuth)genericAuth.style.display='none';}
-    else if(role==='hotel'){businessFields.style.display='block';if(agencyBasic)agencyBasic.innerHTML=\`<label>GSTIN / FSSAI License</label><input type="text" id="gst-no" placeholder="Hotel GSTIN / FSSAI License" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><label>Property Registration No.</label><input type="text" id="biz-reg" placeholder="Property Registration No." style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><label>Hotel Front Desk / Owner Phone</label><input type="tel" id="biz-phone" placeholder="Hotel Front Desk / Owner Phone" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">\`;document.getElementById('agency-step-1').style.display='none';document.getElementById('agency-step-2').style.display='none';const genericAuth=document.getElementById('auth-btn');if(genericAuth)genericAuth.style.display='block';}
+    else if(role==='hotel'){businessFields.style.display='block';if(agencyBasic)agencyBasic.innerHTML=`<label>GSTIN / FSSAI License</label><input type="text" id="gst-no" placeholder="Hotel GSTIN / FSSAI License" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><label>Property Registration No.</label><input type="text" id="biz-reg" placeholder="Property Registration No." style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><label>Hotel Front Desk / Owner Phone</label><input type="tel" id="biz-phone" placeholder="Hotel Front Desk / Owner Phone" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">`;document.getElementById('agency-step-1').style.display='none';document.getElementById('agency-step-2').style.display='none';const genericAuth=document.getElementById('auth-btn');if(genericAuth)genericAuth.style.display='block';}
     else {businessFields.style.display='none';const genericAuth=document.getElementById('auth-btn');if(genericAuth)genericAuth.style.display='block';}
 };
 /* =========================================
