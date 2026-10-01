@@ -344,6 +344,7 @@ async function handleAuth() {
         if (isLoginMode) {
             const { data, error } = await client.auth.signInWithPassword({ email, password });
             if (error) throw error;
+            await recordReferralLogin();
             showDashboard(data.user);
         } else {
             const role = document.getElementById('role').value;
@@ -431,6 +432,7 @@ async function handleAuth() {
             }
             // --- ONESIGNAL INTEGRATION END ---
 
+            await recordReferralLogin();
             showDashboard(data.user);
         } else {
             // SIGNUP LOGIC
