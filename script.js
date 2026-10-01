@@ -6,6 +6,93 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let _supabase = null;
 let isLoginMode = true;
+let agencyRegistrationStep = 1;
+const AGENCY_DOC_DB = 'toursetu_agency_registration_docs';
+const AGENCY_DOC_STORE = 'draft';
+
+function agencyDocDb() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(AGENCY_DOC_DB, 1);
+        req.onupgradeneeded = () => {
+            if (!req.result.objectStoreNames.contains(AGENCY_DOC_STORE)) req.result.createObjectStore(AGENCY_DOC_STORE);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+async function saveAgencyRegistrationDraft(draft) {
+    const db = await agencyDocDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(AGENCY_DOC_STORE, 'readwrite');
+        tx.objectStore(AGENCY_DOC_STORE).put(draft, 'current');
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+    });
+}
+async function getAgencyRegistrationDraft() {
+    try {
+        const db = await agencyDocDb();
+        return await new Promise((resolve, reject) => {
+            const req = db.transaction(AGENCY_DOC_STORE, 'readonly').objectStore(AGENCY_DOC_STORE).get('current');
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+        });
+    } catch (e) { return null; }
+}
+async function clearAgencyRegistrationDraft() {
+    try {
+        const db = await agencyDocDb();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(AGENCY_DOC_STORE, 'readwrite');
+            tx.objectStore(AGENCY_DOC_STORE).delete('current');
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => reject(tx.error);
+        });
+    } catch (e) {}
+}
+async function uploadAgencyVerificationFile(userId, key, file) {
+    if (!file) return null;
+    const ext = (file.name && file.name.includes('.')) ? file.name.split('.').pop().toLowerCase() : 'jpg';
+    const path = userId + '/' + key.replace(/[^a-z0-9_-]/gi, '_') + '-' + Date.now() + '.' + ext;
+    const { data, error } = await getClient().storage.from('agency-verification-documents').upload(path, file, {
+        cacheControl: '3600', upsert: false, contentType: file.type || 'application/octet-stream'
+    });
+    if (error) throw error;
+    return data.path;
+}
+async function completePendingAgencyVerificationUpload(user) {
+    if (!user || user.user_metadata?.role !== 'agency') return;
+    const draft = await getAgencyRegistrationDraft();
+    if (!draft || draft.userEmail !== user.email) return;
+    const files = draft.files || {};
+    const defs = [
+        ['gst_document_path','gstDocument'],['business_reg_document_path','businessRegDocument'],
+        ['utdb_registration_certificate_path','utdbCertificate'],['pan_card_path','panCard'],
+        ['aadhaar_card_path','aadhaarCard'],['cancelled_cheque_or_bank_passbook_path','cancelledCheque'],
+        ['commercial_rc_path','commercialRc'],['aitp_commercial_permit_path','aitpPermit'],
+        ['vehicle_insurance_path','vehicleInsurance'],['fitness_certificate_path','fitnessCertificate'],
+        ['commercial_driving_license_path','commercialDrivingLicense'],['police_verification_id_proof_path','policeVerification']
+    ];
+    const paths = {};
+    for (const [column,key] of defs) if (files[key]) paths[column] = await uploadAgencyVerificationFile(user.id, key, files[key]);
+    const { error } = await getClient().rpc('save_agency_verification_documents', {
+        p_gst_document_path: paths.gst_document_path || null,
+        p_business_reg_document_path: paths.business_reg_document_path || null,
+        p_utdb_registration_certificate_path: paths.utdb_registration_certificate_path || null,
+        p_pan_card_path: paths.pan_card_path || null,
+        p_aadhaar_card_path: paths.aadhaar_card_path || null,
+        p_cancelled_cheque_or_bank_passbook_path: paths.cancelled_cheque_or_bank_passbook_path || null,
+        p_commercial_rc_path: paths.commercial_rc_path || null,
+        p_aitp_commercial_permit_path: paths.aitp_commercial_permit_path || null,
+        p_vehicle_insurance_path: paths.vehicle_insurance_path || null,
+        p_fitness_certificate_path: paths.fitness_certificate_path || null,
+        p_commercial_driving_license_path: paths.commercial_driving_license_path || null,
+        p_police_verification_id_proof_path: paths.police_verification_id_proof_path || null
+    });
+    if (error) throw error;
+    await clearAgencyRegistrationDraft();
+}
+
 
 const tourDestinations = [
   "Char Dham Yatra (Uttarakhand)", "Kedarnath (Uttarakhand)", "Badrinath (Uttarakhand)", 
