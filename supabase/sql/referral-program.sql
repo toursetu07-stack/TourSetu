@@ -141,14 +141,22 @@ create policy referrals_self_select on public.referrals for select to authentica
 drop policy if exists referral_rewards_self_select on public.referral_rewards;
 create policy referral_rewards_self_select on public.referral_rewards for select to authenticated using(referrer_user_id=auth.uid());
 
-create or replace view public.referral_dashboard_stats as
-select r.referrer_user_id,
-       count(distinct r.referred_user_id) as referred_users,
-       count(rr.id) as paid_conversions,
-       coalesce(sum(rr.payment_amount),0)::numeric(12,2) as referred_payment_volume,
-       coalesce(sum(rr.platform_commission_amount),0)::numeric(12,2) as platform_commission_generated,
-       coalesce(sum(rr.referral_reward_amount),0)::numeric(12,2) as referral_earnings
-from public.referrals r
-left join public.referral_rewards rr
-  on rr.referrer_user_id=r.referrer_user_id and rr.referred_user_id=r.referred_user_id
-group by r.referrer_user_id;
+create or replace function public.get_referral_dashboard_stats()
+returns table(
+  referred_users bigint,
+  paid_conversions bigint,
+  referred_payment_volume numeric,
+  platform_commission_generated numeric,
+  referral_earnings numeric
+) language sql security definer set search_path=public as $$
+  select count(distinct r.referred_user_id),
+         count(rr.id),
+         coalesce(sum(rr.payment_amount),0)::numeric(12,2),
+         coalesce(sum(rr.platform_commission_amount),0)::numeric(12,2),
+         coalesce(sum(rr.referral_reward_amount),0)::numeric(12,2)
+  from public.referrals r
+  left join public.referral_rewards rr
+    on rr.referrer_user_id=r.referrer_user_id
+   and rr.referred_user_id=r.referred_user_id
+  where r.referrer_user_id=auth.uid();
+$$;
