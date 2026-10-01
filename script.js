@@ -390,7 +390,7 @@ function renderAuthUI() {
                 fileBox('doc-gst','GST Certificate / GST Number proof') +
                 '<input type="text" id="biz-reg" placeholder="Business Registration No" style="width:100%;padding:11px;margin:12px 0 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">' +
                 fileBox('doc-business-reg','Business Registration Certificate copy') +
-                fileBox('doc-utdb-certificate','UTDB / Uttarakhand Tourism Registration Certificate') +
+                fileBox('doc-utdb-certificate','UTDM / Uttarakhand Tourism Registration Certificate') +
                 fileBox('doc-pan','PAN Card') +
                 fileBox('doc-aadhaar','Aadhaar Card') +
                 fileBox('doc-cancelled-cheque','Cancelled Cheque / Bank Passbook') +
@@ -4047,8 +4047,8 @@ function renderAgencyDashboard(user) {
                         <span>📅 Bookings</span>
                         <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
                     </div>
-                    <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 My Packages</div>
-                    <div onclick="showTab('hotels')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🏨 Hotels Package</div>
+                    <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; opacity:${agencyActive ? '1' : '.5'}; cursor:${agencyActive ? 'pointer' : 'not-allowed'};">🎒 My Packages${agencyActive ? '' : ' <small style="display:block;color:#ffb86b;font-size:10px;">Available after approval</small>'}</div>
+                    <div onclick="showTab('hotels')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; opacity:${agencyActive ? '1' : '.5'}; cursor:${agencyActive ? 'pointer' : 'not-allowed'};">🏨 Hotels Package${agencyActive ? '' : ' <small style="display:block;color:#ffb86b;font-size:10px;">Available after approval</small>'}</div>
                     <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
                     <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
                </nav>
@@ -4071,6 +4071,7 @@ function renderAgencyDashboard(user) {
         </div>
     `;
     const verification = window.currentAgencyVerification || { status: 'pending' };
+    const agencyActive = verification.status === 'approved';
     const banner = document.createElement('div');
     banner.id = 'agency-verification-banner';
     banner.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:999998;max-width:760px;width:calc(100% - 40px);padding:12px 18px;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.16);font-family:Inter,sans-serif;font-size:13px;text-align:center;';
