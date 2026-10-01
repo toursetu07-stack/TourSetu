@@ -160,7 +160,7 @@ window.toggleDashboardUtilityMenu = async function(forceOpen) {
         if (statsError) throw statsError;
         const row = Array.isArray(data) ? (data[0] || {}) : (data || {});
         if (statsEl) {
-            statsEl.innerHTML = '👥 Referred users: <b>' + Number(row.referred_users || 0) + '</b><br>💰 Referral earnings: <b>₹' + Number(row.referral_earnings || 0).toLocaleString('en-IN') + '</b>';
+            statsEl.innerHTML = '🔗 Link visits: <b>' + Number(row.referral_visits || 0) + '</b><br>🔐 Login events: <b>' + Number(row.login_events || 0) + '</b><br>👥 Referred users: <b>' + Number(row.referred_users || 0) + '</b><br>💰 Referral earnings: <b>₹' + Number(row.referral_earnings || 0).toLocaleString('en-IN') + '</b>';
         }
     } catch (e) {
         if (linkInput) linkInput.value = 'Referral link unavailable until referral database migration is applied.';
