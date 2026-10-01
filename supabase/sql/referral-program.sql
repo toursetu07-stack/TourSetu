@@ -180,3 +180,250 @@ grant execute on function public.get_or_create_referral_code() to authenticated;
 grant execute on function public.record_referral_visit(text,text) to anon, authenticated;
 grant execute on function public.record_referral_login(text) to authenticated;
 grant execute on function public.get_referral_dashboard_stats() to authenticated;
+
+
+-- ============================================================
+-- AGENCY VERIFICATION / DOCUMENT REVIEW
+-- ============================================================
+alter table public.profiles
+  add column if not exists is_approved boolean not null default false,
+  add column if not exists approved_at timestamptz,
+  add column if not exists approval_status text not null default 'pending';
+
+create table if not exists public.agency_verification_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references auth.users(id) on delete cascade,
+  email text,
+  gst_no text,
+  business_reg_no text,
+  phone text,
+  gst_document_path text,
+  business_reg_document_path text,
+  utdb_registration_certificate_path text,
+  pan_card_path text,
+  aadhaar_card_path text,
+  cancelled_cheque_or_bank_passbook_path text,
+  commercial_rc_path text,
+  aitp_commercial_permit_path text,
+  vehicle_insurance_path text,
+  fitness_certificate_path text,
+  commercial_driving_license_path text,
+  police_verification_id_proof_path text,
+  status text not null default 'pending' check (status in ('pending','approved','denied')),
+  denial_reason text,
+  reviewed_by uuid references auth.users(id),
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.agency_verification_requests enable row level security;
+
+revoke all on public.agency_verification_requests from anon, authenticated;
+grant select on public.agency_verification_requests to authenticated;
+grant execute on function public.save_agency_verification_documents(
+  text,text,text,text,text,text,text,text,text,text,text
+) to authenticated;
+
+drop policy if exists "Agency can view own verification request" on public.agency_verification_requests;
+create policy "Agency can view own verification request"
+on public.agency_verification_requests for select
+to authenticated
+using ((select auth.uid()) = user_id);
+
+create or replace function public.create_agency_verification_request()
+returns trigger
+language plpgsql
+security definer
+set search_path=public
+as $$
+begin
+  if coalesce(new.raw_user_meta_data->>'role','') = 'agency' then
+    insert into public.profiles(id,email,role,company_name,gst_no,reg_no,license,phone,is_approved,approval_status)
+    values (
+      new.id,
+      new.email,
+      'agency',
+      coalesce(new.raw_user_meta_data->>'company_name',''),
+      nullif(new.raw_user_meta_data->>'gst',''),
+      nullif(new.raw_user_meta_data->>'reg_no',''),
+      nullif(new.raw_user_meta_data->>'license',''),
+      nullif(new.raw_user_meta_data->>'phone',''),
+      false,
+      'pending'
+    )
+    on conflict (id) do update set
+      email=excluded.email,
+      role='agency',
+      gst_no=excluded.gst_no,
+      reg_no=excluded.reg_no,
+      license=excluded.license,
+      phone=excluded.phone,
+      is_approved=false,
+      approval_status='pending';
+
+    insert into public.agency_verification_requests(user_id,email,gst_no,business_reg_no,phone)
+    values (
+      new.id,
+      new.email,
+      nullif(new.raw_user_meta_data->>'gst',''),
+      nullif(new.raw_user_meta_data->>'reg_no',''),
+      nullif(new.raw_user_meta_data->>'phone','')
+    )
+    on conflict (user_id) do nothing;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_agency_verification on auth.users;
+create trigger on_auth_user_agency_verification
+after insert on auth.users
+for each row execute function public.create_agency_verification_request();
+
+create or replace function public.save_agency_verification_documents(
+  p_gst_document_path text,
+  p_business_reg_document_path text,
+  p_utdb_registration_certificate_path text,
+  p_pan_card_path text,
+  p_aadhaar_card_path text,
+  p_cancelled_cheque_or_bank_passbook_path text,
+  p_commercial_rc_path text,
+  p_aitp_commercial_permit_path text,
+  p_vehicle_insurance_path text,
+  p_fitness_certificate_path text,
+  p_commercial_driving_license_path text,
+  p_police_verification_id_proof_path text
+)
+returns void
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare uid uuid := auth.uid();
+begin
+  if uid is null then raise exception 'Authentication required'; end if;
+
+  update public.agency_verification_requests
+  set
+    gst_document_path=p_gst_document_path,
+    business_reg_document_path=p_business_reg_document_path,
+    utdb_registration_certificate_path=p_utdb_registration_certificate_path,
+    pan_card_path=p_pan_card_path,
+    aadhaar_card_path=p_aadhaar_card_path,
+    cancelled_cheque_or_bank_passbook_path=p_cancelled_cheque_or_bank_passbook_path,
+    commercial_rc_path=p_commercial_rc_path,
+    aitp_commercial_permit_path=p_aitp_commercial_permit_path,
+    vehicle_insurance_path=p_vehicle_insurance_path,
+    fitness_certificate_path=p_fitness_certificate_path,
+    commercial_driving_license_path=p_commercial_driving_license_path,
+    police_verification_id_proof_path=p_police_verification_id_proof_path,
+    updated_at=now()
+  where user_id=uid and status='pending';
+
+  if not found then raise exception 'No pending agency verification request found'; end if;
+end;
+$$;
+
+create or replace function public.sync_agency_approval()
+returns trigger
+language plpgsql
+security definer
+set search_path=public
+as $$
+begin
+  update public.profiles
+  set is_approved=(new.status='approved'),
+      approval_status=new.status,
+      approved_at=case when new.status='approved' then coalesce(new.reviewed_at,now()) else null end,
+      updated_at=now()
+  where id=new.user_id;
+  return new;
+end;
+$$;
+
+drop trigger if exists agency_verification_status_sync on public.agency_verification_requests;
+create trigger agency_verification_status_sync
+after update of status on public.agency_verification_requests
+for each row execute function public.sync_agency_approval();
+
+create or replace function public.is_agency_approved(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path=public
+as $$
+  select exists(
+    select 1 from public.agency_verification_requests
+    where user_id=p_user_id and status='approved'
+  );
+$$;
+
+revoke all on function public.is_agency_approved(uuid) from public;
+grant execute on function public.is_agency_approved(uuid) to anon, authenticated;
+
+-- Customer/public package visibility: only approved agencies are public.
+drop policy if exists "Allow public read access" on public.packages;
+drop policy if exists "Public Access" on public.packages;
+drop policy if exists "Agency Select" on public.packages;
+drop policy if exists "Agency Insert" on public.packages;
+drop policy if exists "Enable insert for authenticated users only" on public.packages;
+drop policy if exists "Enable insert/update for authenticated users" on public.packages;
+drop policy if exists "Agency Update" on public.packages;
+
+create policy "Approved agencies packages are public"
+on public.packages for select
+to anon, authenticated
+using (
+  public.is_agency_approved(agency_id)
+  or (select auth.uid())=agency_id
+);
+
+create policy "Approved agencies can create packages"
+on public.packages for insert
+to authenticated
+with check (
+  (select auth.uid())=agency_id
+  and public.is_agency_approved((select auth.uid()))
+);
+
+create policy "Agencies can update own packages"
+on public.packages for update
+to authenticated
+using ((select auth.uid())=agency_id)
+with check ((select auth.uid())=agency_id);
+
+-- Private bucket for sensitive agency verification documents.
+insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
+values (
+  'agency-verification-documents',
+  'agency-verification-documents',
+  false,
+  10485760,
+  array['image/*','application/pdf']
+)
+on conflict (id) do update set
+  public=false,
+  file_size_limit=10485760,
+  allowed_mime_types=array['image/*','application/pdf'];
+
+drop policy if exists "Agency verification documents upload" on storage.objects;
+create policy "Agency verification documents upload"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id='agency-verification-documents'
+  and (storage.foldername(name))[1]=(select auth.uid()::text)
+);
+
+drop policy if exists "Agency verification documents read own" on storage.objects;
+create policy "Agency verification documents read own"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id='agency-verification-documents'
+  and owner_id=(select auth.uid())
+);
+
+grant usage on schema public to authenticated;
