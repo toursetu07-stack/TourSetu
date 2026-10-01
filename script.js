@@ -359,7 +359,6 @@ async function handleAuth(){
     const status=document.getElementById('status'),role=!isLoginMode?document.getElementById('role')?.value:null,btn=document.getElementById('agency-register-btn')||document.getElementById('auth-btn'),email=document.getElementById('email')?.value.trim(),password=document.getElementById('password')?.value||'';
     if(!email||!password){if(status)status.innerText='⚠️ Please enter email and password';return;}
     const client=getClient();if(!client){if(status)status.innerText='❌ Supabase not initialized';return;}
-    const role=!isLoginMode?document.getElementById('role')?.value:null;
     if(!isLoginMode&&role==='agency'){
         const phone=document.getElementById('biz-phone')?.value.trim(),gst=document.getElementById('gst-no')?.value.trim(),regNo=document.getElementById('biz-reg')?.value.trim(),step2=document.getElementById('agency-step-2');
         if(!phone||!gst||!regNo){if(status)status.innerText='⚠️ Please fill Email, Phone, GST Number and Business Registration No.';return;}
