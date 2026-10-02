@@ -36,6 +36,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <!-- XSS defense-in-depth: maintained sanitizer loaded before app code. -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js"></script>
+    <script src="security-dom.js?v=2026-10-02-xss-phase1"></script>
 
     <style>
         /* FORCE CALENDAR VISIBILITY & STYLE */
