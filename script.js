@@ -5656,6 +5656,12 @@ async function renderHotelDashboard(user, hotelData = null) {
     await window.showHotelTab('overview');
 }
 
+
+/**
+ * Dynamic Tab Switcher for Hotel Dashboard
+ */
+
+// 4. Tab Switching Global Function
 window.showHotelTab = async function(tabName) {
     const container = document.getElementById('hotel-main-content');
     if (!container) return;
