@@ -3283,6 +3283,7 @@ function renderPackageCards(data, isFiltered) {
                 <p style="color:#ff9f43; font-weight:bold;">Starts from ₹${minPrice}</p>
                <div style="font-size:13px; color:#636e72; margin:15px 0;">
                    <div>🚩 <b>From:</b> ${p.starting_location}</div>
+                   ${p._cityMatchType === 'nearby' ? `<div style="margin-top:8px;display:inline-block;padding:5px 9px;background:#eef6ff;color:#2563eb;border-radius:999px;font-size:10px;font-weight:800;">📍 NEARBY OPERATOR${Number.isFinite(p._cityMatchDistance) ? ` • ${Math.round(p._cityMatchDistance)} km away` : ''}</div>` : ''}
                    <div style="margin-top:5px;">📍 <b>To:</b> ${destDisplay}...</div>
                </div>
                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:15px;">
@@ -3422,7 +3423,183 @@ function renderPackageCards(data, isFiltered) {
         </div>`;
     }).join('');
 }
-/* ========================================================================= 
+/* =========================================================================
+   SMART CITY / STATE FALLBACK MATCHING
+   - Exact selected city packages are shown first.
+   - If none exist, packages from the selected state are shown.
+   - Same-state package cities are ranked by real geographic proximity to
+     the selected city using OpenStreetMap geocoding + Haversine distance.
+   - Geocoded coordinates are cached in sessionStorage to avoid repeated calls.
+   ========================================================================= */
+
+const CITY_MATCH_GEO_CACHE_KEY = 'toursetu_city_geo_cache_v1';
+
+function normalizeMatchCity(value) {
+    return String(value || '').trim().toLowerCase().replace(/\\s+/g, ' ');
+}
+
+function getCityState(city) {
+    const target = normalizeMatchCity(city);
+    if (!target) return '';
+    for (const [state, cities] of Object.entries(locationData || {})) {
+        if ((cities || []).some(c => normalizeMatchCity(c) === target)) return state;
+    }
+    return '';
+}
+
+function getCityGeoCache() {
+    try { return JSON.parse(sessionStorage.getItem(CITY_MATCH_GEO_CACHE_KEY) || '{}'); }
+    catch (_) { return {}; }
+}
+
+function saveCityGeoCache(cache) {
+    try { sessionStorage.setItem(CITY_MATCH_GEO_CACHE_KEY, JSON.stringify(cache)); } catch (_) {}
+}
+
+async function geocodeMatchCity(city, state) {
+    const key = normalizeMatchCity(city) + '|' + normalizeMatchCity(state);
+    const cache = getCityGeoCache();
+    if (cache[key]) return cache[key];
+
+    try {
+        const query = encodeURIComponent(city + ', ' + state + ', India');
+        const response = await fetch(
+            'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=' + query,
+            { headers: { 'Accept-Language': 'en-IN' } }
+        );
+        if (!response.ok) return null;
+        const results = await response.json();
+        if (!results.length) return null;
+
+        const point = { lat: Number(results[0].lat), lon: Number(results[0].lon) };
+        if (Number.isFinite(point.lat) && Number.isFinite(point.lon)) {
+            cache[key] = point;
+            saveCityGeoCache(cache);
+            return point;
+        }
+    } catch (error) {
+        console.warn('City proximity geocoding failed for', city, state, error);
+    }
+    return null;
+}
+
+function cityDistanceKm(a, b) {
+    if (!a || !b) return Number.POSITIVE_INFINITY;
+    const toRad = degrees => degrees * Math.PI / 180;
+    const R = 6371;
+    const dLat = toRad(b.lat - a.lat);
+    const dLon = toRad(b.lon - a.lon);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+window.searchMatchedAgencies = async function() {
+    const start = document.getElementById('search-start')?.value?.trim() || '';
+    const dest = document.getElementById('search-dest')?.value?.trim() || '';
+    const container = document.getElementById('customer-pkg-list');
+
+    if (!container) return;
+
+    container.innerHTML = `
+        <div style="grid-column:1/-1;text-align:center;padding:55px 20px;">
+            <div style="font-size:32px;">🔎</div>
+            <h3 style="margin:10px 0 6px;">Finding operators near ${start || 'your selected city'}...</h3>
+            <p style="color:#636e72;margin:0;">Checking the selected city first, then nearby cities in the same state.</p>
+        </div>`;
+
+    const { data, error } = await getClient()
+        .from('packages')
+        .select('*');
+
+    if (error) {
+        console.error('Agency matching error:', error);
+        container.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:50px;">
+                <h3>Unable to load operators</h3>
+                <p style="color:#636e72;">Please try again.</p>
+            </div>`;
+        return;
+    }
+
+    let packages = data || [];
+
+    // Destination remains an independent filter.
+    if (dest) {
+        packages = packages.filter(p => {
+            const pDest = p.destination || [];
+            if (Array.isArray(pDest)) {
+                return pDest.some(value => normalizeMatchCity(value) === normalizeMatchCity(dest));
+            }
+            return normalizeMatchCity(pDest).includes(normalizeMatchCity(dest));
+        });
+    }
+
+    if (!start) {
+        renderPackageCards(packages, false);
+        return;
+    }
+
+    const selectedState = getCityState(start);
+    const exact = packages.filter(
+        p => normalizeMatchCity(p.starting_location) === normalizeMatchCity(start)
+    );
+
+    // Normal case: selected city has operators.
+    if (exact.length) {
+        renderPackageCards(exact.map(p => ({ ...p, _cityMatchType: 'selected', _cityMatchDistance: 0 })), true);
+        return;
+    }
+
+    // No exact city operator: restrict fallback to the same state.
+    const sameState = selectedState
+        ? packages.filter(p => getCityState(p.starting_location) === selectedState)
+        : [];
+
+    if (!sameState.length) {
+        container.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:55px 20px;background:#fff;border-radius:14px;">
+                <div style="font-size:38px;">📍</div>
+                <h3 style="margin:10px 0 6px;">No operators found in ${start}</h3>
+                <p style="color:#636e72;margin:0 0 18px;">
+                    We also checked other operator cities in ${selectedState || 'the selected area'}.
+                </p>
+                <button onclick="loadAllPackages()" style="width:auto;padding:10px 18px;background:#ff9f43;color:#fff;border:0;border-radius:8px;font-weight:800;cursor:pointer;">VIEW ALL OPERATORS</button>
+            </div>`;
+        return;
+    }
+
+    const selectedPoint = await geocodeMatchCity(start, selectedState);
+    const uniqueCities = [...new Set(sameState.map(p => String(p.starting_location || '').trim()).filter(Boolean))];
+
+    // Geocode the operator cities concurrently, then rank by actual distance.
+    const geoEntries = await Promise.all(
+        uniqueCities.map(async city => ({
+            city,
+            point: await geocodeMatchCity(city, selectedState)
+        }))
+    );
+
+    const distanceByCity = {};
+    geoEntries.forEach(entry => {
+        distanceByCity[normalizeMatchCity(entry.city)] =
+            cityDistanceKm(selectedPoint, entry.point);
+    });
+
+    const ranked = sameState
+        .map(p => ({
+            ...p,
+            _cityMatchType: 'nearby',
+            _cityMatchDistance: distanceByCity[normalizeMatchCity(p.starting_location)] ?? Number.POSITIVE_INFINITY
+        }))
+        .sort((a, b) => a._cityMatchDistance - b._cityMatchDistance);
+
+    renderPackageCards(ranked, true);
+};
+
+/* =========================================================================
    PACKAGE DETAIL / CUSTOMER BOOKING MODAL 
    - Shows package duration 
    - Calculates tour end date 
