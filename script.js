@@ -115,7 +115,9 @@ function agencyPartnerTermsHtml() {
         '<h3>3. Vehicle Breakdown & Emergency Backup</h3>' +
         '<p>In the event of a mechanical breakdown, accident, or delay during a tour, the operator is legally obligated to provide a replacement commercial vehicle of equal or higher capacity within a reasonable timeframe.</p>' +
         '<h3>4. Payout Settlement & Commission</h3>' +
-        '<p>Payouts for completed trips will be processed to the operator\'s registered business bank account after deduction of the agreed TourSetu platform commission fee, subject to successful customer check-in and service delivery.</p>';
+        '<p>Payouts for completed trips will be processed to the operator\'s registered business bank account after deduction of the agreed TourSetu platform commission fee, subject to successful customer check-in and service delivery.</p>' +
+        '<h3>5. Platform Commission</h3>' +
+        '<p>Operator confirms that it is ready to pay a <strong>15% TourSetu platform commission</strong> from the total package price for bookings generated through the TourSetu marketplace. This commission will be deducted/settled according to TourSetu payout terms.</p>';
 }
 
 async function ensureAgencyTermsAccepted(user) {
