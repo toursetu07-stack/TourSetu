@@ -10,8 +10,8 @@
     
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-      // OneSignal v16: initialize Web Push once and associate the logged-in
-      // Supabase user with the OneSignal external_id alias.
+      // OneSignal v16: initialize Web Push once. User identity is attached
+      // only after init completes by onesignal-auth-fix.js.
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
@@ -22,13 +22,7 @@
           notifyButton: { enable: true }
         });
         window.__toursetuOneSignalReady = true;
-        if (window.__toursetuPendingOneSignalUserId) {
-          try {
-            await OneSignal.login(window.__toursetuPendingOneSignalUserId);
-          } catch (e) {
-            console.warn("OneSignal user association failed:", e);
-          }
-        }
+        window.dispatchEvent(new Event('toursetu-onesignal-ready'));
       });
     </script>
 
@@ -185,6 +179,7 @@
 </div>
 
 <script src="script.js?v=2026-10-02-char-dham-only-v1"></script>
+<script src="onesignal-auth-fix.js?v=2026-10-02-onesignal-fix-v1"></script>
 <script src="hotel-partner-terms.js?v=2026-10-02-hotel-terms-v5"></script>
 <script src="agency-partner-privacy.js?v=2026-10-02-agency-privacy-v1"></script>
 <script src="hotel-partner-privacy.js?v=2026-10-02-hotel-privacy-v3"></script>
