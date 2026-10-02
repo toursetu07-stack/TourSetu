@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    const HOTEL_TERMS_VERSION = '2026-10-02-v3';
+    const HOTEL_TERMS_VERSION = '2026-10-02-v4';
 
     function hotelPartnerTermsHtml() {
         return '<h2>📄 TourSetu Hotel Partner Terms & Conditions</h2>' +
@@ -100,7 +100,10 @@
 
         const { error } = await client
             .from('hotel_terms_acceptances')
-            .insert({ user_id: user.id, terms_version: HOTEL_TERMS_VERSION });
+            .upsert(
+                { user_id: user.id, terms_version: HOTEL_TERMS_VERSION, accepted_at: new Date().toISOString() },
+                { onConflict: 'user_id' }
+            );
 
         if (error) {
             console.error('Hotel terms acceptance save failed:', error);
