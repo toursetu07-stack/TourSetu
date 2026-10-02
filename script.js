@@ -1167,12 +1167,27 @@ window.loadCustomerHotelPackages = async function() {
     const container = document.getElementById('customer-pkg-list');
     if (!container) return;
 
-    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px;"><h3>Loading Registered Hotels Inventory...</h3></div>`;
+    const setMessage = (title, message, color) => {
+        container.replaceChildren();
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'grid-column:1/-1;text-align:center;padding:50px;';
+        const heading = document.createElement('h3');
+        heading.textContent = title;
+        if (color) heading.style.color = color;
+        wrap.appendChild(heading);
+        if (message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            p.style.color = '#636e72';
+            wrap.appendChild(p);
+        }
+        container.appendChild(wrap);
+    };
+
+    setMessage('Loading Registered Hotels Inventory...', '');
 
     try {
         const client = getClient();
-        
-        // Relational Query: Fetching city and address safely from hotels table
         const { data, error } = await client
             .from('room_categories')
             .select(`
@@ -1187,198 +1202,110 @@ window.loadCustomerHotelPackages = async function() {
         if (error) throw error;
 
         if (!data || data.length === 0) {
-            container.innerHTML = `
-                <div style="grid-column: 1/-1; text-align:center; padding:50px; background:white; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
-                    <h3>🏨 No Registered Hotel Packages Available</h3>
-                    <p style="color:#636e72;">Abhi kisi hotel partner dwara live inventory stock publish nahi kiya gaya hai.</p>
-                </div>`;
+            setMessage('🏨 No Registered Hotel Packages Available',
+                'Abhi kisi hotel partner dwara live inventory stock publish nahi kiya gaya hai.');
             return;
         }
 
-        container.innerHTML = data.map(item => {
-            const price = item.price_per_night || item.price || 0;
-            const availableRooms = item.available_rooms || item.total_rooms || 0;
-            
+        window.__tourSetuHotelBookingItems = new Map(
+            data.map(item => [String(item.id || ''), item])
+        );
+
+        container.replaceChildren();
+
+        data.forEach(item => {
+            const price = Number(item.price_per_night || item.price || 0);
+            const availableRooms = Number(item.available_rooms || item.total_rooms || 0);
             const hotelObj = item.hotels || {};
-            const hotelName = item.hotel_name || item.property_name || 'Registered Hotel Partner 🏨';
-            
-            const city = hotelObj.city || item.city || 'N/A';
-            const address = hotelObj.address || item.address || 'N/A';
-            const location = `${city}/${address}`;
+            const hotelName = String(item.hotel_name || item.property_name || 'Registered Hotel Partner 🏨');
+            const city = String(hotelObj.city || item.city || 'N/A');
+            const address = String(hotelObj.address || item.address || 'N/A');
+            const roomType = String(item.category_name || item.room_type || item.title || 'Standard Room');
+            const amenities = Array.isArray(item.amenities) ? item.amenities.join(', ') : String(item.amenities || '');
 
-            const roomType = item.category_name || item.room_type || item.title || 'Standard Room';
-            const roomImg = item.image || item.image_url || item.room_image || '';
+            const card = document.createElement('div');
+            card.className = 'card result-card';
+            card.style.cssText = 'background:white;overflow:hidden;border:1px solid #eee;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,0.05);display:flex;flex-direction:column;justify-content:space-between;';
 
-            return `
-            <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">
-                <div style="padding:25px;">
-                    <div style="display:flex; justify-content:space-between; align-items:start;">
-                        <span style="background:#e8f5e9; color:#2e7d32; font-size:11px; padding:4px 10px; border-radius:12px; font-weight:bold;">REGISTERED HOTEL</span>
-                        <span style="font-size:20px; font-weight:bold; color:#2ecc71;">₹${price}<small style="font-size:12px; color:#666;">/night</small></span>
-                    </div>
-                    
-                    <h3 style="margin:15px 0 5px 0; color:#2d3436;">${roomType}</h3>
-                    <p style="margin:0; color:#ff9f43; font-weight:bold; font-size:15px;">🏨 ${hotelName}</p>
-                    
-                    <div style="font-size:13px; color:#636e72; margin:15px 0;">
-                        <div>📍 <b>Location:</b> ${location}</div>
-                        <div style="margin-top:5px;">🛏️ <b>Available Rooms:</b> <span style="color:#d35400; font-weight:bold;">${availableRooms} Left</span></div>
-                        ${item.amenities ? `<div style="margin-top:5px;">✨ <b>Amenities:</b> ${Array.isArray(item.amenities) ? item.amenities.join(', ') : item.amenities}</div>` : ''}
-                    </div>
-                </div>
+            const body = document.createElement('div');
+            body.style.padding = '25px';
 
-                <div style="padding:15px 25px; background:#f9f9f9; border-top:1px solid #eee;">
-                    <button onclick="openHotelBookingModal(
-    '${hotelName.replace(/'/g, "\\'")}',
-    '${city.replace(/'/g, "\\'")}',
-    '${address.replace(/'/g, "\\'")}',
-    '${roomType.replace(/'/g, "\\'")}',
-    ${price},
-    ${availableRooms},
-    '${roomImg}',
-    '${item.id || ''}'
-)"
-                            style="background:#3498db; color:white; width:100%; padding:12px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">
-                        BOOK ROOM STOCK
-                    </button>
-                </div>
-            </div>`;
-        }).join('');
+            const top = document.createElement('div');
+            top.style.cssText = 'display:flex;justify-content:space-between;align-items:start;';
+            const badge = document.createElement('span');
+            badge.textContent = 'REGISTERED HOTEL';
+            badge.style.cssText = 'background:#e8f5e9;color:#2e7d32;font-size:11px;padding:4px 10px;border-radius:12px;font-weight:bold;';
+            const priceEl = document.createElement('span');
+            priceEl.textContent = `₹${price}`;
+            priceEl.style.cssText = 'font-size:20px;font-weight:bold;color:#2ecc71;';
+            const perNight = document.createElement('small');
+            perNight.textContent = '/night';
+            perNight.style.cssText = 'font-size:12px;color:#666;';
+            priceEl.appendChild(perNight);
+            top.append(badge, priceEl);
 
-    } catch (err) {
-        console.error("Error loading hotel inventory for customer:", err);
-        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
-    }
-};
-/* =========================================
-   Hotel Booking Modal & Price Engine
-   ========================================= */
+            const roomHeading = document.createElement('h3');
+            roomHeading.textContent = roomType;
+            roomHeading.style.cssText = 'margin:15px 0 5px 0;color:#2d3436;';
+            const hotelEl = document.createElement('p');
+            hotelEl.textContent = `🏨 ${hotelName}`;
+            hotelEl.style.cssText = 'margin:0;color:#ff9f43;font-weight:bold;font-size:15px;';
 
-// Reliable Unsplash Fallback Image (No Timeout Issue)
-const FALLBACK_ROOM_IMAGE = "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=600&q=80";
+            const details = document.createElement('div');
+            details.style.cssText = 'font-size:13px;color:#636e72;margin:15px 0;';
+            const locationEl = document.createElement('div');
+            locationEl.textContent = `📍 Location: ${city}/${address}`;
+            const roomsEl = document.createElement('div');
+            roomsEl.style.marginTop = '5px';
+            roomsEl.textContent = `🛏️ Available Rooms: ${availableRooms} Left`;
+            if (amenities) {
+                const amenityEl = document.createElement('div');
+                amenityEl.style.marginTop = '5px';
+                amenityEl.textContent = `✨ Amenities: ${amenities}`;
+                details.appendChild(amenityEl);
+            }
+            details.prepend(roomsEl);
+            details.prepend(locationEl);
+            body.append(top, roomHeading, hotelEl, details);
 
-// 1. Storage bucket se image URL resolve karne ka helper
-function getHotelRoomImageUrl(imagePath) {
-    if (!imagePath || imagePath.trim() === '' || imagePath === 'undefined' || imagePath === 'null') {
-        return FALLBACK_ROOM_IMAGE;
-    }
-    
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-        return imagePath;
-    }
-    
-    try {
-        const client = getClient();
-        let cleanPath = imagePath.trim();
-        if (!cleanPath.includes('/')) {
-            cleanPath = `rooms/${cleanPath}`;
+            const footer = document.createElement('div');
+            footer.style.cssText = 'padding:15px 25px;background:#f9f9f9;border-top:1px solid #eee;';
+            const bookBtn = document.createElement('button');
+            bookBtn.type = 'button';
+            bookBtn.className = 'customer-hotel-book-btn';
+            bookBtn.dataset.roomCategoryId = String(item.id || '');
+            bookBtn.textContent = 'BOOK ROOM STOCK';
+            bookBtn.style.cssText = 'background:#3498db;color:white;width:100%;padding:12px;border:none;border-radius:10px;font-weight:bold;cursor:pointer;';
+            footer.appendChild(bookBtn);
+
+            card.append(body, footer);
+            container.appendChild(card);
+        });
+
+        if (!container.dataset.hotelBookingDelegation) {
+            container.dataset.hotelBookingDelegation = 'true';
+            container.addEventListener('click', event => {
+                const button = event.target.closest('.customer-hotel-book-btn');
+                if (!button || !container.contains(button)) return;
+                const item = window.__tourSetuHotelBookingItems?.get(button.dataset.roomCategoryId);
+                if (!item) return;
+                const hotelObj = item.hotels || {};
+                openHotelBookingModal(
+                    String(item.hotel_name || item.property_name || 'Registered Hotel Partner 🏨'),
+                    String(hotelObj.city || item.city || 'N/A'),
+                    String(hotelObj.address || item.address || 'N/A'),
+                    String(item.category_name || item.room_type || item.title || 'Standard Room'),
+                    Number(item.price_per_night || item.price || 0),
+                    Number(item.available_rooms || item.total_rooms || 0),
+                    String(item.image || item.image_url || item.room_image || ''),
+                    String(item.id || '')
+                );
+            });
         }
-        const { data } = client.storage.from('hotel-media').getPublicUrl(cleanPath);
-        return data?.publicUrl || FALLBACK_ROOM_IMAGE;
-    } catch(e) {
-        return FALLBACK_ROOM_IMAGE;
+    } catch (err) {
+        console.error('Error loading hotel inventory for customer:', err);
+        setMessage('Failed to load hotel packages', err?.message || 'Please try again.', '#ff7675');
     }
-}
-
-// Helper: Dates Format String (YYYY-MM-DD)
-function formatDateString(dateObj) {
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-// 2. Open Modal Function
-window.openHotelBookingModal = function(hotelName, city, address, roomType, pricePerNight, maxAvailableRooms, imagePath, roomCategoryId) {
-    const existingModal = document.getElementById('hotel-booking-modal');
-    if (existingModal) existingModal.remove();
-
-    const imageUrl = getHotelRoomImageUrl(imagePath);
-
-    // Today & 7-Days Date Restrictions Calculation
-    const today = new Date();
-    const minDateStr = formatDateString(today);
-
-    const maxDate = new Date();
-    maxDate.setDate(today.getDate() + 7);
-    const maxDateStr = formatDateString(maxDate);
-
-    const nextDay = new Date();
-    nextDay.setDate(today.getDate() + 1);
-    const nextDayStr = formatDateString(nextDay);
-
-    const modalHTML = `
-    <div id="hotel-booking-modal" class="custom-modal-overlay">
-        <div class="custom-modal-card">
-            <button class="modal-close-btn" onclick="document.getElementById('hotel-booking-modal').remove()">✕</button>
-            
-            <div class="modal-image-wrapper">
-                <img src="${imageUrl}" alt="${roomType}" class="modal-room-img" onerror="this.onerror=null; this.src='${FALLBACK_ROOM_IMAGE}';">
-            </div>
-
-            <div class="modal-content-body">
-                <h2 style="margin:0 0 5px 0; color:#2d3436;">${hotelName}</h2>
-                <p style="margin:0 0 15px 0; color:#636e72; font-size:13px;">📍 ${city}, ${address}</p>
-                
-                <div style="background:#f8f9fa; padding:10px 15px; border-radius:8px; margin-bottom:15px; border-left:4px solid #3498db;">
-                    <span style="font-weight:bold; color:#2c3e50;">🛏️ Category: ${roomType}</span>
-                </div>
-
-                <!-- Calendar Section: Check-In & Check-Out (Limited to Today + 7 Days) -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:15px;">
-                    <div>
-                        <label style="display:block; font-size:11px; font-weight:bold; color:#636e72; margin-bottom:5px;">📅 CHECK-IN DATE</label>
-                        <input type="date" id="modal-checkin-date" min="${minDateStr}" max="${maxDateStr}" value="${minDateStr}" 
-                               onchange="calculateHotelTotalPrice(${pricePerNight}, ${maxAvailableRooms})" 
-                               style="width:100%; padding:8px 10px; border:2px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:bold; box-sizing:border-box;">
-                    </div>
-                    <div>
-                        <label style="display:block; font-size:11px; font-weight:bold; color:#636e72; margin-bottom:5px;">📅 CHECK-OUT DATE</label>
-                        <input type="date" id="modal-checkout-date" min="${minDateStr}" max="${maxDateStr}" value="${nextDayStr}" 
-                               onchange="calculateHotelTotalPrice(${pricePerNight}, ${maxAvailableRooms})" 
-                               style="width:100%; padding:8px 10px; border:2px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:bold; box-sizing:border-box;">
-                    </div>
-                </div>
-
-                <div class="booking-form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; align-items:center; margin-bottom:15px;">
-                    <div>
-                        <label style="display:block; font-size:11px; font-weight:bold; color:#636e72; margin-bottom:5px;">PRICE PER NIGHT</label>
-                        <div style="font-size:18px; font-weight:bold; color:#2ecc71;">₹${pricePerNight}</div>
-                    </div>
-
-                    <div>
-                        <label style="display:block; font-size:11px; font-weight:bold; color:#636e72; margin-bottom:5px;">ROOMS TO BOOK (Max: ${maxAvailableRooms})</label>
-                        <input type="number" id="modal-room-qty" min="0" max="${maxAvailableRooms}" value="1" 
-                               oninput="calculateHotelTotalPrice(${pricePerNight}, ${maxAvailableRooms})" 
-                               style="width:100%; padding:8px 12px; border:2px solid #e2e8f0; border-radius:8px; font-size:15px; font-weight:bold; box-sizing:border-box;">
-                    </div>
-                </div>
-
-                <!-- Live Dynamic Calculation Display -->
-                <div style="margin:15px 0; padding:12px 15px; background:#eef2f7; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:13px; color:#34495e; font-weight:bold;">Total Amount:</span>
-                    <span id="modal-total-price-display" style="font-size:16px; font-weight:bold; color:#e67e22;">
-                        ₹${pricePerNight} x 1 Room(s) x 1 Night(s) = ₹${pricePerNight}
-                    </span>
-                </div>
-
-                <!-- Terms & Cancellation Policy Checkbox -->
-                <div style="margin-bottom:15px;">
-                    <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; font-size:11px; color:#4a5568; line-height:1.4;">
-                        <input type="checkbox" id="modal-agree-terms" style="margin-top:2px; cursor:pointer;">
-                        <span>I agree to the <b>Cancellation & Refund Policy</b>. I understand that in case of cancellation, a non-refundable amount of <b>18% (2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee)</b> will be deducted from my total refund.</span>
-                    </label>
-                </div>
-
-                <button id="modal-confirm-btn" onclick="submitHotelRoomBooking('${hotelName.replace(/'/g, "\\'")}', '${roomType.replace(/'/g, "\\'")}', '${city.replace(/'/g, "\\'")}, ${address.replace(/'/g, "\\'")}', ${pricePerNight}, ${maxAvailableRooms}, '${roomCategoryId || ''}')" 
-                        style="width:100%; padding:12px; background:#27ae60; color:white; border:none; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer;">
-                    CONFIRM & PROCEED TO BOOK
-                </button>
-            </div>
-        </div>
-    </div>`;
-
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
 };
 
 // 3. Calculation Handler (Calculates Rooms × Nights)
