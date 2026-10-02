@@ -1506,7 +1506,7 @@ window.submitHotelRoomBooking = async function(hotelName, roomType, location, pr
         const { data, error } = await client
             .from('hotel_bookings')
             .insert([bookingPayload])
-            .select();
+            .select('id');
 
         if (error) throw error;
 
@@ -3269,7 +3269,7 @@ window.handleBookingInquiry = async function(packageId,packageTitle,agencyId,age
             pickup_distance_destination:pickupDestination,
             keda_ghoda_qty:ghodaQty,keda_dandi_qty:dandiQty,keda_kandi_qty:kandiQty,keda_pitthu_qty:pitthuQty,
             vaishno_ghoda_qty:vGhodaQty,vaishno_palki_qty:vPalkiQty,vaishno_pitthu_qty:vPitthuQty
-        }]);
+        }]).select('id');
         if(error)throw error;
 
         // Push the request to the agency immediately. This call is
