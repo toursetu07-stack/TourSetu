@@ -60,23 +60,98 @@ const locationData = {
   "West Bengal": ["Kolkata", "Howrah", "Darjeeling", "Siliguri", "Durgapur"]
 };
 
+
+let customerOperatorSearchRequestId = 0;
+
+const CITY_NEARBY_GROUPS = {
+    Uttarakhand: {
+        kichha: ['rudrapur', 'pantnagar', 'gadarpur', 'nagla', 'lalpur', 'sitarganj', 'khatima', 'bazpur', 'kashipur', 'haldwani'],
+        rudrapur: ['kichha', 'pantnagar', 'gadarpur', 'nagla', 'lalpur', 'kashipur', 'haldwani', 'sitarganj', 'khatima', 'bazpur'],
+        pantnagar: ['rudrapur', 'kichha', 'haldwani', 'gadarpur', 'lalpur', 'nagla', 'kashipur'],
+        gadarpur: ['rudrapur', 'kichha', 'nagla', 'lalpur', 'bazpur', 'kashipur', 'khatima', 'sitarganj'],
+        haldwani: ['lalkuan', 'pantnagar', 'rudrapur', 'kichha', 'nainital', 'bhimtal', 'ramnagar'],
+        lalkuan: ['haldwani', 'pantnagar', 'rudrapur', 'kichha', 'nainital', 'ramnagar'],
+        kashipur: ['bazpur', 'gadarpur', 'rudrapur', 'kichha', 'jaspur', 'khatima'],
+        khatima: ['sitarganj', 'kichha', 'rudrapur', 'bazpur', 'gadarpur'],
+        sitarganj: ['khatima', 'kichha', 'rudrapur', 'gadarpur', 'bazpur'],
+        bazpur: ['gadarpur', 'kashipur', 'rudrapur', 'kichha', 'khatima'],
+        nainital: ['haldwani', 'bhowali', 'bhimtal', 'ramnagar'],
+        ramnagar: ['haldwani', 'nainital', 'kashipur', 'bazpur']
+    }
+};
+
+function normalizeMatchCity(value) {
+    return String(value ?? '')
+        .normalize('NFKC')
+        .trim()
+        .toLowerCase()
+        .replace(/[’']/g, '')
+        .replace(/&/g, ' and ')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\blal\s+kuan\b/g, 'lalkuan')
+        .replace(/\brudrapryag\b/g, 'rudraprayag');
+}
+
+function getCityState(city) {
+    const normalized = normalizeMatchCity(city);
+    if (!normalized) return '';
+
+    for (const [state, cities] of Object.entries(locationData)) {
+        if (cities.some(item => normalizeMatchCity(item) === normalized)) return state;
+    }
+
+    if (typeof UTTARAKHAND_PICKUP_CITIES !== 'undefined' &&
+        UTTARAKHAND_PICKUP_CITIES.some(item => normalizeMatchCity(item) === normalized)) {
+        return 'Uttarakhand';
+    }
+
+    return '';
+}
+
+function getCityProximityScore(state, selectedCity, operatorCity) {
+    const selected = normalizeMatchCity(selectedCity);
+    const operator = normalizeMatchCity(operatorCity);
+
+    if (!selected || !operator) return Number.POSITIVE_INFINITY;
+    if (selected === operator) return 0;
+
+    const groups = CITY_NEARBY_GROUPS[state] || {};
+    const selectedGroup = groups[selected] || [];
+    const directIndex = selectedGroup.indexOf(operator);
+    if (directIndex >= 0) return directIndex + 1;
+
+    const operatorGroup = groups[operator] || [];
+    const reverseIndex = operatorGroup.indexOf(selected);
+    if (reverseIndex >= 0) return reverseIndex + 1.5;
+
+    const stateCities = Array.isArray(locationData[state]) ? locationData[state] : [];
+    const stateIndex = stateCities.findIndex(city => normalizeMatchCity(city) === operator);
+    return stateIndex >= 0 ? 100 + stateIndex : 1000;
+}
+
 // HELPER FUNCTION: Ensure this exists in your script so the dropdowns work
 window.updateCities = function() {
     const stateSelect = document.getElementById('p-state');
     const citySelect = document.getElementById('p-city');
+    if (!stateSelect || !citySelect) return;
+
     const selectedState = stateSelect.value;
+    citySelect.replaceChildren();
 
-    // Clear current cities
-    citySelect.innerHTML = '<option value="">Select City</option>';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select City';
+    citySelect.appendChild(placeholder);
 
-    if (selectedState && locationData[selectedState]) {
-        locationData[selectedState].forEach(city => {
-            const opt = document.createElement('option');
-            opt.value = city;
-            opt.innerText = city;
-            citySelect.appendChild(opt);
-        });
-    }
+    const cities = Array.isArray(locationData[selectedState]) ? locationData[selectedState] : [];
+    cities.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        option.textContent = city;
+        citySelect.appendChild(option);
+    });
 };
 /* =========================================
    2. CORE UTILITY FUNCTIONS
@@ -309,6 +384,77 @@ async function ensureCustomerPrivacyAccepted(user) {
     `;
     return false;
 }
+
+window.confirmCustomerLogout = function() {
+    const existing = document.getElementById('customer-logout-confirmation');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'customer-logout-confirmation';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'customer-logout-title');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:1000000;background:rgba(15,23,42,.68);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+    const card = document.createElement('div');
+    card.style.cssText = 'width:min(430px,100%);background:#fff;border-radius:22px;padding:30px;box-sizing:border-box;box-shadow:0 25px 80px rgba(0,0,0,.30);text-align:center;font-family:Inter,sans-serif;';
+
+    const icon = document.createElement('div');
+    icon.textContent = '🚪';
+    icon.style.cssText = 'width:64px;height:64px;border-radius:18px;background:#fff7ed;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;font-size:31px;';
+
+    const title = document.createElement('h2');
+    title.id = 'customer-logout-title';
+    title.textContent = 'Logout from Customer Dashboard?';
+    title.style.cssText = 'margin:0 0 8px;color:#1e293b;font-size:23px;';
+
+    const message = document.createElement('p');
+    message.textContent = 'Are you sure you want to logout from your Customer account?';
+    message.style.cssText = 'margin:0 0 24px;color:#64748b;font-size:14px;line-height:1.55;';
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:12px;';
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = 'CANCEL';
+    cancel.style.cssText = 'flex:1;padding:13px;border:1px solid #cbd5e1;border-radius:11px;background:#f8fafc;color:#334155;font-weight:900;cursor:pointer;';
+
+    const confirm = document.createElement('button');
+    confirm.type = 'button';
+    confirm.textContent = 'LOGOUT';
+    confirm.style.cssText = 'flex:1;padding:13px;border:0;border-radius:11px;background:#e74c3c;color:#fff;font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(231,76,60,.22);';
+
+    cancel.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', event => {
+        if (event.target === overlay) overlay.remove();
+    });
+
+    confirm.addEventListener('click', async () => {
+        confirm.disabled = true;
+        cancel.disabled = true;
+        confirm.textContent = 'LOGGING OUT...';
+        confirm.style.opacity = '.7';
+        cancel.style.opacity = '.7';
+        try {
+            await handleLogout();
+        } catch (error) {
+            console.error('Customer logout failed:', error);
+            confirm.disabled = false;
+            cancel.disabled = false;
+            confirm.textContent = 'LOGOUT';
+            confirm.style.opacity = '1';
+            cancel.style.opacity = '1';
+            alert('Logout failed. Please try again.');
+        }
+    });
+
+    actions.append(cancel, confirm);
+    card.append(icon, title, message, actions);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    confirm.focus();
+};
 
 window.toggleCustomerPrivacyApprovalButton = function() {
     const checkbox = document.getElementById('customer-privacy-policy-checkbox');
@@ -1230,7 +1376,7 @@ async function renderCustomerHomepage(user, options = {}) {
                               ${destOptions}
                           </select>
                       </div>
-                      <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 35px; border-radius:12px; font-weight:bold; cursor:pointer; height:48px; margin-top:22px; font-size:15px;">FIND AGENCIES</button>
+                      <button type="button" data-action="search-agencies" style="background:#ff9f43; color:white; border:none; padding:0 35px; border-radius:12px; font-weight:bold; cursor:pointer; height:48px; margin-top:22px; font-size:15px;">FIND AGENCIES</button>
                   </div>
 
               </div>
@@ -1244,7 +1390,7 @@ async function renderCustomerHomepage(user, options = {}) {
                   </div>
                   <div style="display:flex; gap:10px; align-items:center;">
                     <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
-                    <button onclick="confirmAndExecuteLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
+                    <button onclick="confirmCustomerLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
                     <button onclick="triggerDeactivateModalPopup()" style="background:#ff7675; color:white; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
                   </div>
               </div>
@@ -3290,6 +3436,20 @@ Total: ₹${Number(totalPrice).toLocaleString('en-IN')}`);
 };
 
 // 7. MATCHING & CARD RENDERING — XSS-safe DOM implementation
+// Customer operator search uses delegated safe DOM events so no inline
+// execution sink is required in the dashboard markup.
+if (!window.__toursetuCustomerAgencySearchDelegated) {
+    window.__toursetuCustomerAgencySearchDelegated = true;
+    document.addEventListener('click', function(event) {
+        const button = event.target.closest('#agency-filter-box button[data-action="search-agencies"]');
+        if (!button) return;
+        event.preventDefault();
+        if (typeof window.searchMatchedAgencies === 'function') {
+            void window.searchMatchedAgencies();
+        }
+    });
+}
+
 function clearCustomerPackageList(container) {
     if (!container) return;
     container.replaceChildren();
@@ -3398,12 +3558,11 @@ function renderPackageCards(data, isFiltered) {
         from.textContent = '🚩 From: ' + (packageData.starting_location || 'N/A');
         route.appendChild(from);
 
-        if (packageData._cityMatchType === 'nearby') {
+        if (packageData._cityMatchType === 'nearby' || packageData._cityMatchType === 'same-state') {
             const nearby = document.createElement('div');
-            const distance = Number(packageData._cityMatchDistance);
-            nearby.textContent = Number.isFinite(distance)
-                ? '📍 NEARBY OPERATOR • ' + Math.round(distance) + ' km away'
-                : '📍 NEARBY OPERATOR';
+            nearby.textContent = packageData._cityMatchType === 'nearby'
+                ? '📍 NEARBY OPERATOR'
+                : '📍 SAME-STATE OPERATOR';
             nearby.style.cssText = 'margin-top:8px;display:inline-block;padding:5px 9px;background:#eef6ff;color:#2563eb;border-radius:999px;font-size:10px;font-weight:800;';
             route.appendChild(nearby);
         }
@@ -3437,96 +3596,118 @@ function renderPackageCards(data, isFiltered) {
 }
 
 window.searchMatchedAgencies = async function() {
+    const requestId = ++customerOperatorSearchRequestId;
     const start = document.getElementById('search-start')?.value?.trim() || '';
     const dest = document.getElementById('search-dest')?.value?.trim() || '';
+    const state = document.getElementById('search-state')?.value?.trim() || '';
     const container = document.getElementById('customer-pkg-list');
+    const searchButton = document.querySelector('#agency-filter-box button[data-action="search-agencies"]');
+
     if (!container) return;
+
+    if (!state || !start) {
+        renderCustomerPackageMessage(container, 'Select your pickup city', 'Choose a state and city first so we can find operators near you.');
+        return;
+    }
+
+    const mappedState = getCityState(start);
+    if (mappedState && mappedState !== state) {
+        renderCustomerPackageMessage(container, 'Please reselect your city', 'The selected city does not belong to the selected state.');
+        return;
+    }
+
+    const selectedState = mappedState || state;
+
+    if (searchButton) {
+        searchButton.disabled = true;
+        searchButton.textContent = 'SEARCHING...';
+        searchButton.style.opacity = '.7';
+        searchButton.style.cursor = 'wait';
+    }
 
     renderCustomerPackageMessage(
         container,
-        'Finding operators near ' + (start || 'your selected city') + '...',
-        'Checking the selected city first, then nearby cities in the same state.'
+        'Finding operators near ' + start + '...',
+        'Checking ' + start + ' first, then nearby operator cities in ' + selectedState + '.'
     );
 
-    const { data, error } = await getClient().from('packages').select('*');
-    if (error) {
-        console.error('Agency matching error:', error);
-        renderCustomerPackageMessage(container, 'Unable to load operators', 'Please try again.');
-        return;
-    }
+    try {
+        const result = await getClient().from('packages').select('*');
+        if (requestId !== customerOperatorSearchRequestId) return;
 
-    let packages = data || [];
-    if (dest) {
-        packages = packages.filter(function(p) {
-            const pDest = p?.destination || [];
-            if (Array.isArray(pDest)) {
-                return pDest.some(function(value) {
-                    return normalizeMatchCity(value) === normalizeMatchCity(dest);
+        if (result.error) {
+            console.error('Agency matching error:', result.error);
+            renderCustomerPackageMessage(container, 'Unable to load operators', 'Please try again in a moment.');
+            return;
+        }
+
+        let packages = Array.isArray(result.data) ? result.data : [];
+
+        if (dest) {
+            const normalizedDestination = normalizeMatchCity(dest);
+            packages = packages.filter(function(p) {
+                const destinations = Array.isArray(p?.destination) ? p.destination : [p?.destination];
+                return destinations.some(function(value) {
+                    return normalizeMatchCity(value) === normalizedDestination;
                 });
-            }
-            return normalizeMatchCity(pDest).includes(normalizeMatchCity(dest));
+            });
+        }
+
+        const exact = packages.filter(function(p) {
+            return normalizeMatchCity(p?.starting_location) === normalizeMatchCity(start);
         });
+
+        if (exact.length) {
+            renderPackageCards(exact.map(function(p) {
+                return { ...p, _cityMatchType: 'selected', _cityMatchDistance: 0 };
+            }), true);
+            return;
+        }
+
+        const sameState = packages.filter(function(p) {
+            const operatorCity = String(p?.starting_location || '').trim();
+            return operatorCity && getCityState(operatorCity) === selectedState;
+        });
+
+        if (!sameState.length) {
+            renderCustomerPackageMessage(
+                container,
+                'No nearby operators found',
+                'We could not find an operator in ' + start + ' or another known city in ' + selectedState + '.',
+                'VIEW ALL OPERATORS',
+                function() { loadAllPackages(); }
+            );
+            return;
+        }
+
+        const ranked = sameState
+            .map(function(p) {
+                const operatorCity = String(p?.starting_location || '').trim();
+                const score = getCityProximityScore(selectedState, start, operatorCity);
+                return {
+                    ...p,
+                    _cityMatchType: score < 100 ? 'nearby' : 'same-state',
+                    _cityMatchDistance: score
+                };
+            })
+            .sort(function(a, b) {
+                return a._cityMatchDistance - b._cityMatchDistance;
+            });
+
+        renderPackageCards(ranked, true);
+    } catch (error) {
+        console.error('Operator search failed:', error);
+        if (requestId === customerOperatorSearchRequestId) {
+            renderCustomerPackageMessage(container, 'Unable to find operators', 'Please try again. Your selected city has not been changed.');
+        }
+    } finally {
+        if (searchButton) {
+            searchButton.disabled = false;
+            searchButton.textContent = 'FIND AGENCIES';
+            searchButton.style.opacity = '1';
+            searchButton.style.cursor = 'pointer';
+        }
     }
-
-    if (!start) {
-        renderPackageCards(packages, false);
-        return;
-    }
-
-    const selectedState = getCityState(start);
-    const exact = packages.filter(function(p) {
-        return normalizeMatchCity(p?.starting_location) === normalizeMatchCity(start);
-    });
-
-    if (exact.length) {
-        renderPackageCards(exact.map(function(p) {
-            return { ...p, _cityMatchType: 'selected', _cityMatchDistance: 0 };
-        }), true);
-        return;
-    }
-
-    const sameState = selectedState
-        ? packages.filter(function(p) { return getCityState(p?.starting_location) === selectedState; })
-        : [];
-
-    if (!sameState.length) {
-        renderCustomerPackageMessage(
-            container,
-            'No operators found in ' + start,
-            'We also checked other operator cities in ' + (selectedState || 'the selected area') + '.',
-            'VIEW ALL OPERATORS',
-            function() { loadAllPackages(); }
-        );
-        return;
-    }
-
-    const selectedPoint = await geocodeMatchCity(start, selectedState);
-    const uniqueCities = [...new Set(
-        sameState.map(function(p) { return String(p?.starting_location || '').trim(); }).filter(Boolean)
-    )];
-
-    const geoEntries = await Promise.all(
-        uniqueCities.map(async function(city) {
-            return { city: city, point: await geocodeMatchCity(city, selectedState) };
-        })
-    );
-
-    const distanceByCity = {};
-    geoEntries.forEach(function(entry) {
-        distanceByCity[normalizeMatchCity(entry.city)] = cityDistanceKm(selectedPoint, entry.point);
-    });
-
-    const ranked = sameState
-        .map(function(p) {
-            return {
-                ...p,
-                _cityMatchType: 'nearby',
-                _cityMatchDistance: distanceByCity[normalizeMatchCity(p?.starting_location)] ?? Number.POSITIVE_INFINITY
-            };
-        })
-        .sort(function(a, b) { return a._cityMatchDistance - b._cityMatchDistance; });
-
-    renderPackageCards(ranked, true);
 };
 
 async function loadAllPackages() {
