@@ -3247,7 +3247,7 @@ function renderPackageCards(data, isFiltered) {
 
         const card = document.createElement('article');
         card.className = 'card result-card toursetu-package-card';
-        card.dataset.packageIndex = String(index);
+        card.setAttribute('data-package-index', String(index));
         card.tabIndex = 0;
         card.setAttribute('role', 'button');
         card.setAttribute('aria-label', 'View package details');
