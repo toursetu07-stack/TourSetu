@@ -1,4 +1,5 @@
 name: Frontend Security Regression
+# Hotel Dashboard phase regression guard included.
 
 on:
   push:
