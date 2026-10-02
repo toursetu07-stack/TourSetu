@@ -169,5 +169,34 @@
         window.__tourSetuHotelTermsWrapped = true;
     }
 
+
+    function installHotelLegalTermsPanel() {
+        if (window.__tourSetuHotelLegalTermsWrapped) return;
+        if (typeof window.openTourSetuLegalPanel !== 'function') {
+            setTimeout(installHotelLegalTermsPanel, 50);
+            return;
+        }
+        const originalLegalPanel = window.openTourSetuLegalPanel;
+        window.openTourSetuLegalPanel = function (type) {
+            const role = window.currentTourSetuUser?.user_metadata?.role;
+            if (type === 'terms' && role === 'hotel') {
+                const existing = document.getElementById('toursetu-legal-modal');
+                if (existing) existing.remove();
+                const modal = document.createElement('div');
+                modal.id = 'toursetu-legal-modal';
+                modal.style.cssText = 'position:fixed;inset:0;z-index:1000001;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px;';
+                modal.innerHTML = '<div style="background:white;max-width:650px;width:100%;max-height:85vh;overflow:auto;border-radius:16px;padding:28px;line-height:1.65;color:#444;">' +
+                    hotelPartnerTermsHtml() +
+                    '<button onclick="document.getElementById(\'toursetu-legal-modal\').remove()" style="display:block;margin:20px auto 0;background:#ff9f43;color:white;padding:11px 25px;border:0;border-radius:8px;">CLOSE</button>' +
+                    '</div>';
+                document.body.appendChild(modal);
+                return;
+            }
+            return originalLegalPanel(type);
+        };
+        window.__tourSetuHotelLegalTermsWrapped = true;
+    }
+
+    installHotelLegalTermsPanel();
     installHotelDashboardGuard();
 })();
