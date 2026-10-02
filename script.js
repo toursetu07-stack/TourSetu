@@ -7286,7 +7286,10 @@ window.renderHotelBookingRequests = async function(container, user) {
             target.appendChild(card);
         });
 
-        target.addEventListener('click', function onHotelBookingAction(event) {
+        if (target.__tourSetuHotelBookingActionHandler) {
+            target.removeEventListener('click', target.__tourSetuHotelBookingActionHandler);
+        }
+        target.__tourSetuHotelBookingActionHandler = function onHotelBookingAction(event) {
             const button = event.target.closest('[data-hotel-booking-action]');
             if (!button || !target.contains(button)) return;
             const bookingId = button.dataset.bookingId;
@@ -7296,7 +7299,8 @@ window.renderHotelBookingRequests = async function(container, user) {
             } else if (button.dataset.hotelBookingAction === 'deny' && typeof window.denyHotelBookingRequest === 'function') {
                 window.denyHotelBookingRequest(bookingId);
             }
-        }, { once: true });
+        };
+        target.addEventListener('click', target.__tourSetuHotelBookingActionHandler);
     } catch (error) {
         console.error('Hotel booking request render error:', error);
         setHotelDashboardMessage(target, 'Unable to load booking requests right now.', 'error');
