@@ -108,9 +108,15 @@
 
         if (button) button.innerText = 'APPROVED ✓';
 
-        const originalDashboard = window.__tourSetuOriginalHotelDashboard;
-        if (typeof originalDashboard === 'function') {
-            await originalDashboard(user);
+        // Re-enter the dashboard entry point so the Hotel Privacy Policy gate
+        // can run immediately after Terms acceptance.
+        if (typeof window.initHotelDashboard === 'function') {
+            await window.initHotelDashboard(user);
+        } else {
+            const originalDashboard = window.__tourSetuOriginalHotelDashboard;
+            if (typeof originalDashboard === 'function') {
+                await originalDashboard(user);
+            }
         }
     };
 
