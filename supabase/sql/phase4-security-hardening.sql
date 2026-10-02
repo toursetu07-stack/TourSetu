@@ -24,52 +24,80 @@ grant execute on function public.save_hotel_verification_documents(
 ) to authenticated;
 grant execute on function public.is_agency_approved(uuid) to anon, authenticated;
 
--- 2) Public hotel media remains publicly retrievable, but writes are owner-only.
-drop policy if exists "Allow hotel media uploads" on storage.objects;
+-- 2) Public image buckets: anyone may read images; only the authenticated
+-- object owner may write/update/delete. KYC buckets are private.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values
+  ('agency-verification-documents','agency-verification-documents',false,10485760,array['application/pdf','image/jpeg','image/png','image/webp']::text[]),
+  ('hotel-verification-documents','hotel-verification-documents',false,10485760,array['application/pdf','image/jpeg','image/png','image/webp']::text[])
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "Hotel media owner select" on storage.objects;
 drop policy if exists "Hotel media owner upload" on storage.objects;
 drop policy if exists "Hotel media owner update" on storage.objects;
 drop policy if exists "Hotel media owner delete" on storage.objects;
+drop policy if exists "Hotel media public read" on storage.objects;
+create policy "Hotel media public read" on storage.objects for select
+to public using (bucket_id = 'hotel-media');
 
-create policy "Hotel media owner select"
-on storage.objects for select to authenticated
-using (bucket_id = 'hotel-media' and owner_id = (select auth.uid()::text));
+create policy "Hotel media owner upload" on storage.objects for insert
+to authenticated with check (bucket_id = 'hotel-media' and owner_id = (select auth.uid()::text));
 
-create policy "Hotel media owner upload"
-on storage.objects for insert to authenticated
+create policy "Hotel media owner update" on storage.objects for update
+to authenticated using (bucket_id = 'hotel-media' and owner_id = (select auth.uid()::text))
 with check (bucket_id = 'hotel-media' and owner_id = (select auth.uid()::text));
 
-create policy "Hotel media owner update"
-on storage.objects for update to authenticated
-using (bucket_id = 'hotel-media' and owner_id = (select auth.uid()::text))
-with check (bucket_id = 'hotel-media' and owner_id = (select auth.uid()::text));
+create policy "Hotel media owner delete" on storage.objects for delete
+to authenticated using (bucket_id = 'hotel-media' and owner_id = (select auth.uid()::text));
 
-create policy "Hotel media owner delete"
-on storage.objects for delete to authenticated
-using (bucket_id = 'hotel-media' and owner_id = (select auth.uid()::text));
+drop policy if exists "Hotel images owner select" on storage.objects;
+drop policy if exists "Hotel images owner upload" on storage.objects;
+drop policy if exists "Hotel images owner update" on storage.objects;
+drop policy if exists "Hotel images owner delete" on storage.objects;
+drop policy if exists "Hotel images public read" on storage.objects;
+create policy "Hotel images public read" on storage.objects for select
+to public using (bucket_id = 'hotel-images');
 
--- 3) Remove legacy anonymous CRUD policies from hotel-images.
-drop policy if exists "Give anon users access to JPG images in folder 1f678hd_0" on storage.objects;
-drop policy if exists "Give anon users access to JPG images in folder 1f678hd_1" on storage.objects;
-drop policy if exists "Give anon users access to JPG images in folder 1f678hd_2" on storage.objects;
+create policy "Hotel images owner upload" on storage.objects for insert
+to authenticated with check (bucket_id = 'hotel-images' and owner_id = (select auth.uid()::text));
 
-create policy "Hotel images owner select"
-on storage.objects for select to authenticated
-using (bucket_id = 'hotel-images' and owner_id = (select auth.uid()::text));
-
-create policy "Hotel images owner upload"
-on storage.objects for insert to authenticated
+create policy "Hotel images owner update" on storage.objects for update
+to authenticated using (bucket_id = 'hotel-images' and owner_id = (select auth.uid()::text))
 with check (bucket_id = 'hotel-images' and owner_id = (select auth.uid()::text));
 
-create policy "Hotel images owner update"
-on storage.objects for update to authenticated
-using (bucket_id = 'hotel-images' and owner_id = (select auth.uid()::text))
-with check (bucket_id = 'hotel-images' and owner_id = (select auth.uid()::text));
+create policy "Hotel images owner delete" on storage.objects for delete
+to authenticated using (bucket_id = 'hotel-images' and owner_id = (select auth.uid()::text));
 
-create policy "Hotel images owner delete"
-on storage.objects for delete to authenticated
-using (bucket_id = 'hotel-images' and owner_id = (select auth.uid()::text));
+drop policy if exists "Agency KYC owner select" on storage.objects;
+drop policy if exists "Agency KYC owner upload" on storage.objects;
+drop policy if exists "Agency KYC owner update" on storage.objects;
+drop policy if exists "Agency KYC owner delete" on storage.objects;
+create policy "Agency KYC owner select" on storage.objects for select to authenticated
+using (bucket_id = 'agency-verification-documents' and owner_id = (select auth.uid()::text));
+create policy "Agency KYC owner upload" on storage.objects for insert to authenticated
+with check (bucket_id = 'agency-verification-documents' and owner_id = (select auth.uid()::text));
+create policy "Agency KYC owner update" on storage.objects for update to authenticated
+using (bucket_id = 'agency-verification-documents' and owner_id = (select auth.uid()::text))
+with check (bucket_id = 'agency-verification-documents' and owner_id = (select auth.uid()::text));
+create policy "Agency KYC owner delete" on storage.objects for delete to authenticated
+using (bucket_id = 'agency-verification-documents' and owner_id = (select auth.uid()::text));
+
+drop policy if exists "Hotel KYC owner select" on storage.objects;
+drop policy if exists "Hotel KYC owner upload" on storage.objects;
+drop policy if exists "Hotel KYC owner update" on storage.objects;
+drop policy if exists "Hotel KYC owner delete" on storage.objects;
+create policy "Hotel KYC owner select" on storage.objects for select to authenticated
+using (bucket_id = 'hotel-verification-documents' and owner_id = (select auth.uid()::text));
+create policy "Hotel KYC owner upload" on storage.objects for insert to authenticated
+with check (bucket_id = 'hotel-verification-documents' and owner_id = (select auth.uid()::text));
+create policy "Hotel KYC owner update" on storage.objects for update to authenticated
+using (bucket_id = 'hotel-verification-documents' and owner_id = (select auth.uid()::text))
+with check (bucket_id = 'hotel-verification-documents' and owner_id = (select auth.uid()::text));
+create policy "Hotel KYC owner delete" on storage.objects for delete to authenticated
+using (bucket_id = 'hotel-verification-documents' and owner_id = (select auth.uid()::text));
 
 -- 4) Pin search_path on mutable/definer helper functions flagged by the
 -- Supabase security advisor.
