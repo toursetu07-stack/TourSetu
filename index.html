@@ -36,6 +36,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <!-- XSS defense-in-depth: maintained sanitizer loaded before app code. -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js"></script>
+    <script src="security-dom.js?v=2026-10-02-xss-phase1"></script>
 
     <style>
         /* FORCE CALENDAR VISIBILITY & STYLE */
@@ -122,7 +125,7 @@
             
             <div id="role-selection">
                 <label>I am a:</label>
-                <select id="role" onchange="toggleBusinessFields()">
+                <select id="role">
                     <option value="customer">Traveler</option>
                     <option value="agency">Travel Agency</option>
                     <option value="hotel">Hotel Partner</option>
@@ -138,10 +141,10 @@
                 </p>
             </div>
 
-            <button id="auth-btn" onclick="handleAuth()">Create Account</button>
+            <button id="auth-btn">Create Account</button>
             
             <p id="toggle-text">
-                Already have an account? <a href="javascript:void(0)" onclick="toggleMode()">Login here</a>
+                Already have an account? <a href="#" id="toggle-mode-link">Login here</a>
             </p>
         </div>
         
@@ -165,7 +168,7 @@
     <h2>Incoming Booking Requests</h2>
     
     <!-- Refresh Button -->
-    <button onclick="fetchAndRenderOwnerRequests(window.currentHotelId)" style="padding: 10px 15px; background: #ff9f43; color: white; border: none; border-radius: 6px; cursor:pointer;">
+    <button id="owner-refresh-btn" style="padding: 10px 15px; background: #ff9f43; color: white; border: none; border-radius: 6px; cursor:pointer;">
         🔄 Fetch/Refresh Requests
     </button>
 
