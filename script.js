@@ -88,6 +88,47 @@ function getClient() {
     return _supabase;
 }
 
+/* ============================================================
+   🔔 TOURSETU PUSH NOTIFICATIONS
+   OneSignal maps the authenticated Supabase user id to the
+   OneSignal external_id alias. The provider then delivers the
+   notification even when this website is not open in a tab.
+   ============================================================ */
+window.identifyOneSignalUser = function(userId) {
+    if (!userId) return;
+    window.__toursetuPendingOneSignalUserId = String(userId);
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal) {
+        try {
+            await OneSignal.login(String(userId));
+        } catch (error) {
+            console.warn("OneSignal login failed:", error);
+        }
+    });
+};
+
+window.sendTourSetuBookingNotification = async function(bookingId, bookingType) {
+    if (!bookingId || !bookingType) return;
+    try {
+        const client = getClient();
+        if (!client) return;
+        const { data, error } = await client.functions.invoke('send-booking-notification', {
+            body: {
+                booking_id: String(bookingId),
+                booking_type: String(bookingType)
+            }
+        });
+        if (error) {
+            console.warn("Booking push notification failed:", error);
+            return;
+        }
+        console.log("🔔 Booking push notification result:", data);
+    } catch (error) {
+        // Notification failure must never make a successful booking fail.
+        console.warn("Booking push notification exception:", error);
+    }
+};
+
 
 /* =========================================================================
    🔗 REFERRAL PROGRAM + DASHBOARD UTILITY MENU
@@ -634,6 +675,9 @@ async function initApp() {
 
 async function showDashboard(user) {
     window.currentTourSetuUser = user;
+    if (user?.id && typeof window.identifyOneSignalUser === 'function') {
+        window.identifyOneSignalUser(user.id);
+    }
     const role=user?.user_metadata?.role||'customer';
     if(role==='agency'){
         const termsAccepted = await ensureAgencyTermsAccepted(user);
@@ -657,6 +701,12 @@ async function showDashboard(user) {
 }
 
 async function handleLogout() {
+    try {
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function(OneSignal) {
+            try { await OneSignal.logout(); } catch (e) {}
+        });
+    } catch (e) {}
     await getClient().auth.signOut();
     window.location.reload();
 }
@@ -955,7 +1005,7 @@ async function handleAuth(){
                 }
                 throw error;
             }
-            if(data?.user){window.OneSignal=window.OneSignal||[];OneSignal.push(function(){OneSignal.login(data.user.id);});}
+            if(data?.user){window.identifyOneSignalUser(data.user.id);}
             await recordReferralLogin();await showDashboard(data.user);return;
         }
         const metadata={role,is_approved:role==='customer'};
@@ -1459,6 +1509,13 @@ window.submitHotelRoomBooking = async function(hotelName, roomType, location, pr
             .select();
 
         if (error) throw error;
+
+        // Push the request to the hotel owner immediately. This is
+        // non-blocking so a push-provider outage cannot cancel the booking.
+        const createdHotelBookingId = data?.[0]?.id;
+        if (createdHotelBookingId) {
+            void window.sendTourSetuBookingNotification(createdHotelBookingId, 'hotel');
+        }
 
         alert(
             `🎉 Booking Request Sent Successfully!\n\n` +
@@ -3202,7 +3259,7 @@ window.handleBookingInquiry = async function(packageId,packageTitle,agencyId,age
         }
         totalPrice+=pickupDistanceCharge;
 
-        const {error}=await client.from('bookings').insert([{
+        const {data,error}=await client.from('bookings').insert([{
             package_id:packageId,package_title:packageTitle,customer_id:user.id,customer_email:user.email,
             customer_address:city,customer_phone:phone,travel_date:travelDate,
             selected_vehicles:selectedVehicles.join(', '),total_price:Number(totalPrice.toFixed(2)),status:'pending',
@@ -3214,6 +3271,14 @@ window.handleBookingInquiry = async function(packageId,packageTitle,agencyId,age
             vaishno_ghoda_qty:vGhodaQty,vaishno_palki_qty:vPalkiQty,vaishno_pitthu_qty:vPitthuQty
         }]);
         if(error)throw error;
+
+        // Push the request to the agency immediately. This call is
+        // intentionally non-blocking so notification issues cannot
+        // break an otherwise successful booking.
+        const createdBookingId = data?.[0]?.id;
+        if (createdBookingId) {
+            void window.sendTourSetuBookingNotification(createdBookingId, 'agency');
+        }
 
         alert(`✅ Success! Request sent for ${new Date(travelDate).toLocaleDateString('en-IN')}.
 Pickup city: ${city}
