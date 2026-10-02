@@ -82,6 +82,37 @@ jobs:
 
 
 
+      - name: Check migrated customer package detail modal
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          js = Path("script.js").read_text(encoding="utf-8")
+          start_marker = "PACKAGE DETAIL / CUSTOMER BOOKING MODAL — XSS-safe DOM implementation"
+          end_marker = "HOTELS PACKAGES IN AGENCY DASHBOARD"
+          start = js.find(start_marker)
+          end = js.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit("Security regression: package detail modal markers missing.")
+          block = js[start:end]
+
+          forbidden = [
+              r"innerHTML\s*=",
+              r"insertAdjacentHTML\s*\(",
+              r"\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\s*="
+          ]
+          hits = [pattern for pattern in forbidden if re.search(pattern, block, re.I)]
+          if hits:
+              raise SystemExit("Security regression: package detail modal still contains: " + ", ".join(hits))
+
+          required = ["textContent", "createElement", "addEventListener", "replaceChildren"]
+          missing = [item for item in required if item not in block]
+          if missing:
+              raise SystemExit("Security regression: package detail modal missing: " + ", ".join(missing))
+
+          print("OK: customer package detail/booking modal uses safe DOM APIs.")
+
       - name: Check global JavaScript security sinks and legacy sink budget
         shell: python
         run: |
