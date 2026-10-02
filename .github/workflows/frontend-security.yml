@@ -219,7 +219,7 @@ jobs:
           forbidden = [
               r"\.innerHTML\s*=",
               r"\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\s*=",
-              r"setAttribute\(\s*['"]on",
+              r'''setAttribute\(\s*['"]on''',
           ]
           for pattern in forbidden:
               if re.search(pattern, block, re.I):
