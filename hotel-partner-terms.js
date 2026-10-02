@@ -110,8 +110,8 @@
 
         // Re-enter the dashboard entry point so the Hotel Privacy Policy gate
         // can run immediately after Terms acceptance.
-        if (typeof window.initHotelDashboard === 'function') {
-            await window.initHotelDashboard(user);
+        if (typeof window.renderHotelDashboard === 'function') {
+            await window.renderHotelDashboard(user);
         } else {
             const originalDashboard = window.__tourSetuOriginalHotelDashboard;
             if (typeof originalDashboard === 'function') {
@@ -151,15 +151,15 @@
 
     function installHotelDashboardGuard() {
         if (window.__tourSetuHotelTermsWrapped) return;
-        if (typeof window.initHotelDashboard !== 'function') {
+        if (typeof window.renderHotelDashboard !== 'function') {
             setTimeout(installHotelDashboardGuard, 50);
             return;
         }
 
-        const originalDashboard = window.initHotelDashboard;
+        const originalDashboard = window.renderHotelDashboard;
         window.__tourSetuOriginalHotelDashboard = originalDashboard;
 
-        window.initHotelDashboard = async function (user) {
+        window.renderHotelDashboard = async function (user) {
             const activeUser = user || (await window.supabase.auth.getUser()).data.user;
             if (!activeUser?.id) return originalDashboard(user);
 
