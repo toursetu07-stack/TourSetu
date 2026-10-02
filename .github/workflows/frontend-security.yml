@@ -225,7 +225,7 @@ jobs:
               if re.search(pattern, block, re.I):
                   raise SystemExit("Security regression: legacy DOM sink/inline handler in agency dashboard shell.")
 
-          for required in ["createElement", "textContent", "addEventListener", "dataset.agencyTab", "app.replaceChildren"]:
+          for required in ["createAgencyDashboardElement", "textContent", "addEventListener", "dataset.agencyTab", "app.replaceChildren"]:
               if required not in block:
                   raise SystemExit(f"Security regression: missing safe DOM control: {required}")
 
