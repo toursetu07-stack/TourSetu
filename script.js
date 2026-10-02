@@ -1288,7 +1288,7 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
                 <div style="margin-bottom:15px;">
                     <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; font-size:11px; color:#4a5568; line-height:1.4;">
                         <input type="checkbox" id="modal-agree-terms" style="margin-top:2px; cursor:pointer;">
-                        <span>I agree to the <b>Cancellation & Refund Policy</b>. I understand that in case of cancellation, a non-refundable amount of <b>9% (2% Gateway + 7% Service & Facilitation Fee)</b> will be deducted from my total refund.</span>
+                        <span>I agree to the <b>Cancellation & Refund Policy</b>. I understand that in case of cancellation, a non-refundable amount of <b>18% (2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee)</b> will be deducted from my total refund.</span>
                     </label>
                 </div>
 
@@ -1520,8 +1520,7 @@ window.openHotelCancellationModal = function(bookingId) {
                     <div style="margin-top:8px;">
                         I agree to the Cancellation & Refund Policy.
                         I understand that in case of cancellation, a
-                        non-refundable amount of <b>9%</b>
-                        (2% Gateway + 7% Service & Facilitation Fee)
+                        non-refundable amount of <b>18%</b> (2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee)
                         will be deducted from my total refund.
                     </div>
                 </div>
@@ -1624,7 +1623,7 @@ window.confirmHotelCancellation =
 
         const finalConfirm = confirm(
             "Cancellation confirmation:\n\n" +
-            "9% (2% Gateway + 7% Service & Facilitation Fee) " +
+            "18% (2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee) " +
             "will be deducted from the total refund.\n\n" +
             "Do you want to continue?"
         );
@@ -1751,8 +1750,8 @@ window.confirmHotelCancellation =
             const cancellationMessage =
                 "Customer cancelled this Registered Hotel booking. " +
                 "Cancellation & Refund Policy accepted. " +
-                "A non-refundable amount of 9% " +
-                "(2% Gateway + 7% Service & Facilitation Fee) " +
+                "A non-refundable amount of 18% " +
+                "(2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee) " +
                 "will be deducted from the total refund.";
 
 
@@ -2638,7 +2637,7 @@ if (selectedType === 'hotel') {
                                 ">
                                     Refund will be processed according to the
                                     Cancellation & Refund Policy with the applicable
-                                    9% non-refundable deduction.
+                                    18% non-refundable deduction.
                                 </div>
                                 `
                                 : ''
@@ -2834,7 +2833,7 @@ window.simulatePayment = async function(bookingId) {
 };
 
 window.cancelBookingWithPenalty = async function(id) {
-    const disclaimer = "In case of cancellation, a non-refundable amount of 9% (2% Gateway + 7% Service & Facilitation Fee) will be deducted from your total fund.\n\nDo you agree to proceed with the cancellation?";
+    const disclaimer = "In case of cancellation, a non-refundable amount of 18% (2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee) will be deducted from your total fund.\n\nDo you agree to proceed with the cancellation?";
     
     if (!confirm(disclaimer)) return;
 
@@ -4682,7 +4681,7 @@ window.showTab = async function(tabName) {
                     </div>
                     ${b.policy_agreed ? `
                         <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:4px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71; flex-shrink:0;">
-                            ✅ 9% DEDUCTION POLICY AGREED
+                            ✅ 18% DEDUCTION POLICY AGREED
                         </div>
                     ` : ''}
                 </div>
@@ -7316,7 +7315,7 @@ window.renderAgencyBookings = function(bookings) {
         }) : 'Not Selected';
 
         const policyTag = b.constant_9_percent_policy ? 
-            `<div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">🛡️ 9% Policy Verified</div>` : 
+            `<div style="background:#d1f2eb; color:#16a085; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:bold;">🛡️ 18% Policy Verified</div>` : 
             `<div style="background:#eee; color:#777; padding:5px 12px; border-radius:20px; font-size:11px;">Standard Policy</div>`;
 
         // Problem 1 Fix: Dynamically track quantities using precise database columns
