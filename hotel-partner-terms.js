@@ -65,19 +65,25 @@
             return;
         }
 
-        const client = window.supabase?.createClient
-            ? window.supabase.createClient(
-                'https://udfwcqrmksfyeigxgdws.supabase.co',
-                'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTIyNTQsImV4cCI6MjA4ODAyODI1NH0.zf1taGGbEsA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw'
-            )
-            : null;
+        // Use the same authenticated Supabase client as the main app.
+        const client = typeof getClient === 'function' ? getClient() : null;
 
         if (!client) {
             alert('Database connection error. Please reload and try again.');
             return;
         }
 
-        const { data: { user } } = await client.auth.getUser();
+        let { data: { user } } = await client.auth.getUser();
+
+        // If the access token expired while the page was open, refresh it
+        // before asking the hotel partner to log in again.
+        if (!user?.id) {
+            const { data: refreshed, error: refreshError } = await client.auth.refreshSession();
+            if (!refreshError) {
+                user = refreshed?.user || null;
+            }
+        }
+
         if (!user?.id) {
             alert('Your login session has expired. Please login again.');
             return;
@@ -121,12 +127,8 @@
     };
 
     async function hotelTermsGuard(user) {
-        const client = window.supabase?.createClient
-            ? window.supabase.createClient(
-                'https://udfwcqrmksfyeigxgdws.supabase.co',
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTIyNTQsImV4cCI6MjA4ODAyODI1NH0.zf1taGGbEszA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw'
-            )
-            : null;
+        // Use the same authenticated Supabase client as the main app.
+        const client = typeof getClient === 'function' ? getClient() : null;
 
         if (!client) return false;
         const { data, error } = await client
