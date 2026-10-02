@@ -5387,48 +5387,275 @@ async function handleSaveHotelProfile(existingHotelId) {
     }
 }
 
-// UI Layout Render Function
+/* =========================================================================
+   🏨 ACTIVE HOTEL DASHBOARD — XSS-SAFE DOM IMPLEMENTATION
+   ========================================================================= */
+
+function createHotelDashboardElement(tagName, text, style) {
+    const element = document.createElement(tagName);
+    if (text !== null && text !== undefined) {
+        element.textContent = String(text);
+    }
+    if (style) {
+        element.style.cssText = style;
+    }
+    return element;
+}
+
+function appendHotelLabelValue(parent, label, value) {
+    const row = createHotelDashboardElement('div', null, 'padding:12px;background:#f8fafc;border-radius:8px;');
+    const labelNode = createHotelDashboardElement('small', label, 'display:block;color:#888;font-weight:700;font-size:11px;');
+    const valueNode = createHotelDashboardElement('div', value, 'margin-top:4px;font-weight:700;color:#1e272e;overflow-wrap:anywhere;');
+    row.appendChild(labelNode);
+    row.appendChild(valueNode);
+    parent.appendChild(row);
+}
+
+async function renderHotelPropertyTab(container, hotel) {
+    container.replaceChildren();
+
+    const heading = createHotelDashboardElement('h1', 'Property & Inventory Management', 'margin-top:0;');
+    container.appendChild(heading);
+
+    const grid = createHotelDashboardElement(
+        'div',
+        null,
+        'display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:30px;margin-top:20px;'
+    );
+
+    const propertyCard = createHotelDashboardElement(
+        'section',
+        null,
+        'background:white;padding:25px;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,.05);'
+    );
+    propertyCard.appendChild(createHotelDashboardElement('h3', '🏨 Property Profile'));
+
+    const nameInput = createHotelDashboardElement('input');
+    nameInput.type = 'text';
+    nameInput.id = 'h-name';
+    nameInput.placeholder = 'Hotel Name';
+    nameInput.value = hotel?.hotel_name || '';
+    nameInput.style.cssText = 'width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;';
+
+    const cityLabel = createHotelDashboardElement('label', 'DESTINATION', 'font-size:12px;color:#666;font-weight:bold;display:block;margin-top:10px;');
+    const citySelect = createHotelDashboardElement('select');
+    citySelect.id = 'h-city';
+    citySelect.style.cssText = 'width:100%;padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:8px;';
+    const placeholder = createHotelDashboardElement('option', 'Select Permitted Destination');
+    placeholder.value = '';
+    citySelect.appendChild(placeholder);
+
+    const destinations = typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' && Array.isArray(FIXED_HOTEL_DESTINATIONS)
+        ? FIXED_HOTEL_DESTINATIONS
+        : [];
+    destinations.forEach(function (loc) {
+        const option = createHotelDashboardElement('option', loc);
+        option.value = loc;
+        option.selected = hotel?.city === loc;
+        citySelect.appendChild(option);
+    });
+
+    const addressInput = createHotelDashboardElement('input');
+    addressInput.type = 'text';
+    addressInput.id = 'h-address';
+    addressInput.placeholder = 'Complete Street Address';
+    addressInput.value = hotel?.address || '';
+    addressInput.style.cssText = 'width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;';
+
+    const frontPic = createHotelDashboardElement('input');
+    frontPic.type = 'file';
+    frontPic.id = 'h-front-pic';
+    frontPic.accept = 'image/*';
+    frontPic.style.cssText = 'margin:8px 0;';
+
+    const saveProperty = createHotelDashboardElement('button', 'Save Property Profile', 'width:100%;background:#ff9f43;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:15px;');
+    saveProperty.type = 'button';
+    saveProperty.addEventListener('click', function () {
+        if (typeof window.handleSaveHotelProfile === 'function') {
+            window.handleSaveHotelProfile(hotel?.hotel_id || '');
+        } else if (typeof handleSaveHotelProfile === 'function') {
+            handleSaveHotelProfile(hotel?.hotel_id || '');
+        }
+    });
+
+    propertyCard.appendChild(nameInput);
+    propertyCard.appendChild(cityLabel);
+    propertyCard.appendChild(citySelect);
+    propertyCard.appendChild(addressInput);
+    propertyCard.appendChild(frontPic);
+    propertyCard.appendChild(saveProperty);
+
+    const roomCard = createHotelDashboardElement(
+        'section',
+        null,
+        'background:white;padding:25px;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,.05);'
+    );
+    roomCard.appendChild(createHotelDashboardElement('h3', '🛏️ Add Room Category'));
+
+    if (!hotel) {
+        roomCard.appendChild(createHotelDashboardElement('p', 'Save hotel property details first before adding rooms.', 'color:#e74c3c;'));
+    } else {
+        const roomType = createHotelDashboardElement('input');
+        roomType.type = 'text';
+        roomType.id = 'r-type';
+        roomType.placeholder = 'Room Category (e.g. Deluxe AC)';
+        roomType.style.cssText = 'width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;';
+
+        const price = createHotelDashboardElement('input');
+        price.type = 'number';
+        price.id = 'r-price';
+        price.placeholder = 'Price per Night (₹)';
+        price.style.cssText = roomType.style.cssText;
+
+        const total = createHotelDashboardElement('input');
+        total.type = 'number';
+        total.id = 'r-total';
+        total.placeholder = 'Total Rooms Inventory';
+        total.style.cssText = roomType.style.cssText;
+
+        const available = createHotelDashboardElement('input');
+        available.type = 'number';
+        available.id = 'r-available';
+        available.placeholder = 'Current Available Rooms';
+        available.style.cssText = roomType.style.cssText;
+
+        const photos = createHotelDashboardElement('input');
+        photos.type = 'file';
+        photos.id = 'r-photos';
+        photos.multiple = true;
+        photos.accept = 'image/*';
+        photos.style.cssText = 'margin:8px 0;';
+
+        const saveRoom = createHotelDashboardElement('button', '+ Add Room Type', 'width:100%;background:#2ecc71;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:15px;');
+        saveRoom.id = 'btn-save-room';
+        saveRoom.type = 'button';
+        saveRoom.addEventListener('click', function () {
+            if (typeof window.saveRoomCategory === 'function') {
+                window.saveRoomCategory(hotel.hotel_id);
+            } else if (typeof saveRoomCategory === 'function') {
+                saveRoomCategory(hotel.hotel_id);
+            }
+        });
+
+        roomCard.appendChild(roomType);
+        roomCard.appendChild(price);
+        roomCard.appendChild(total);
+        roomCard.appendChild(available);
+        roomCard.appendChild(photos);
+        roomCard.appendChild(saveRoom);
+    }
+
+    grid.appendChild(propertyCard);
+    grid.appendChild(roomCard);
+    container.appendChild(grid);
+
+    const inventoryHeading = createHotelDashboardElement('h3', 'Live Inventory Stock', 'margin-top:30px;');
+    const inventoryList = createHotelDashboardElement('div');
+    inventoryList.id = 'hotel-rooms-list';
+    inventoryList.textContent = 'Loading inventory...';
+    container.appendChild(inventoryHeading);
+    container.appendChild(inventoryList);
+
+    if (hotel && typeof loadHotelRooms === 'function') {
+        await loadHotelRooms(hotel.hotel_id);
+    }
+}
+
+async function renderHotelRequestsTab(container, user) {
+    container.replaceChildren();
+
+    const heading = createHotelDashboardElement('h1', 'Booking & Quote Requests', 'margin-top:0;');
+    const requestList = createHotelDashboardElement('div');
+    requestList.id = 'hotel-booking-request-list';
+    requestList.style.marginTop = '20px';
+
+    container.appendChild(heading);
+    container.appendChild(requestList);
+
+    if (typeof window.renderHotelBookingRequests === 'function') {
+        await window.renderHotelBookingRequests(container, user);
+    }
+}
+
 async function renderHotelDashboard(user, hotelData = null) {
     const app = document.getElementById('app');
     if (!app) return;
-    
-    app.style.maxWidth = "100%";
 
-    app.innerHTML = `
-        <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
-            <!-- SIDEBAR -->
-            <div style="width:260px; background:#1e272e; color:white; padding:25px; flex-shrink:0;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
-                    <h2 style="color:#ff9f43; margin:0;">TourSetu <small style="font-size:12px; color:#aaa; display:block;">Hotel Partner</small></h2>
-                </div>
-                <nav>
-                    <div onclick="showHotelTab('overview')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
-                    <div onclick="showHotelTab('property')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🏨 Property & Rooms</div>
-                    <div onclick="showHotelTab('requests')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📥 Booking Inbox</div>
-                    <div onclick="confirmAndExecuteLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
-                </nav>
-            </div>
-            
-            <!-- MAIN DISPLAY AREA -->
-            <div id="hotel-main-content" style="flex:1; padding:40px; overflow-y:auto; background:#f8f9fa;"></div>
-        </div>
+    app.style.maxWidth = '100%';
+    app.replaceChildren();
 
-        <!-- Action Modal -->
-        <div id="hotel-action-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center; padding:20px;">
-            <div class="card" style="background:white; max-width:450px; width:100%; padding:30px; border-radius:15px; text-align:left;">
-                <div id="hotel-action-modal-body"></div>
-            </div>
-        </div>
-    `;
+    const shell = createHotelDashboardElement(
+        'div',
+        null,
+        'display:flex;min-height:100vh;background:#f8f9fa;margin:-20px;font-family:Inter,sans-serif;'
+    );
 
-    if (typeof initHotelRealtimeSubscriptions === "function") {
+    const sidebar = createHotelDashboardElement(
+        'aside',
+        null,
+        'width:260px;background:#1e272e;color:white;padding:25px;flex-shrink:0;box-sizing:border-box;'
+    );
+    sidebar.appendChild(createHotelDashboardElement(
+        'div',
+        null,
+        'display:flex;justify-content:space-between;align-items:center;margin-bottom:40px;'
+    ));
+
+    const brand = createHotelDashboardElement('h2', null, 'color:#ff9f43;margin:0;');
+    brand.appendChild(createHotelDashboardElement('span', 'TourSetu'));
+    brand.appendChild(createHotelDashboardElement('small', 'Hotel Partner', 'font-size:12px;color:#aaa;display:block;'));
+    sidebar.firstChild.appendChild(brand);
+
+    const nav = createHotelDashboardElement('nav');
+    const tabs = [
+        ['overview', '📊 Dashboard'],
+        ['property', '🏨 Property & Rooms'],
+        ['requests', '📥 Booking Inbox']
+    ];
+
+    tabs.forEach(function (entry) {
+        const item = createHotelDashboardElement('button', entry[1], 'display:block;width:100%;text-align:left;padding:12px;border:0;background:transparent;color:white;cursor:pointer;border-radius:8px;margin-bottom:5px;font:inherit;');
+        item.type = 'button';
+        item.dataset.hotelTab = entry[0];
+        item.addEventListener('click', function () {
+            window.showHotelTab(entry[0]);
+        });
+        nav.appendChild(item);
+    });
+
+    const logout = createHotelDashboardElement('button', '🚪 Logout', 'display:block;width:100%;text-align:left;padding:15px;border:0;background:transparent;color:#ff7675;cursor:pointer;margin-top:50px;font-weight:bold;border-top:1px solid #444;font:inherit;');
+    logout.type = 'button';
+    logout.addEventListener('click', function () {
+        if (typeof window.confirmAndExecuteLogout === 'function') {
+            window.confirmAndExecuteLogout();
+        } else if (typeof confirmAndExecuteLogout === 'function') {
+            confirmAndExecuteLogout();
+        }
+    });
+    nav.appendChild(logout);
+    sidebar.appendChild(nav);
+
+    const main = createHotelDashboardElement('main', null, 'flex:1;padding:40px;overflow:auto;');
+    main.id = 'hotel-main-content';
+
+    const modal = createHotelDashboardElement('div', null, 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;');
+    modal.id = 'hotel-action-modal';
+    const modalBody = createHotelDashboardElement('div', null, 'background:white;border-radius:15px;padding:25px;max-width:720px;width:calc(100% - 30px);max-height:85vh;overflow:auto;');
+    modalBody.id = 'hotel-action-modal-body';
+    modal.appendChild(modalBody);
+
+    shell.appendChild(sidebar);
+    shell.appendChild(main);
+    shell.appendChild(modal);
+    app.appendChild(shell);
+
+    if (typeof initHotelRealtimeSubscriptions === 'function') {
         initHotelRealtimeSubscriptions();
     }
-    
-    showHotelTab('overview');
+
+    await window.showHotelTab('overview');
 }
 
-// 4. Tab Switching Global Function
 window.showHotelTab = async function(tabName) {
     const container = document.getElementById('hotel-main-content');
     if (!container) return;
@@ -5441,95 +5668,51 @@ window.showHotelTab = async function(tabName) {
 
     const hotel = await fetchHotelProfile(user.id);
 
-    // TAB 1: OVERVIEW
     if (tabName === 'overview') {
+        container.replaceChildren();
+
+        const title = createHotelDashboardElement('h1', 'Hotel Overview');
+        container.appendChild(title);
+
         if (!hotel) {
-            container.innerHTML = `
-                <div class="card" style="background:white; padding:40px; border-radius:15px; text-align:center;">
-                    <h2>Welcome Partner! 🏨</h2>
-                    <p style="color:#666;">Please setup your property details to begin taking room requests.</p>
-                    <button onclick="showHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:10px;">Setup Property Now</button>
-                </div>`;
+            const card = createHotelDashboardElement('section', null, 'background:white;padding:40px;border-radius:15px;text-align:center;');
+            card.appendChild(createHotelDashboardElement('h2', 'Welcome Partner! 🏨'));
+            card.appendChild(createHotelDashboardElement('p', 'Please setup your property details to begin taking room requests.', 'color:#666;'));
+
+            const setup = createHotelDashboardElement('button', 'Setup Property Now', 'background:#ff9f43;color:white;border:none;padding:12px 25px;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:10px;');
+            setup.type = 'button';
+            setup.dataset.hotelTab = 'property';
+            setup.addEventListener('click', function () {
+                window.showHotelTab('property');
+            });
+            card.appendChild(setup);
+            container.appendChild(card);
             return;
         }
 
-        const { data: requests } = await client.from('hotel_requests').select('*').eq('hotel_id', hotel.hotel_id);
+        const { data: requests } = await client
+            .from('hotel_requests')
+            .select('*')
+            .eq('hotel_id', hotel.hotel_id);
+
         const pendingCount = requests ? requests.filter(r => r.status === 'pending').length : 0;
         const approvedCount = requests ? requests.filter(r => r.status === 'approved').length : 0;
 
-        container.innerHTML = `
-            <h1>Hotel Overview</h1>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-top:20px;">
-                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #ff9f43;">
-                    <small style="color:#888;">PROPERTY STATUS</small>
-                    <h3 style="margin:5px 0;">${hotel.hide_from_search ? '🔴 Hidden (No Inventory)' : '🟢 Active & Listed'}</h3>
-                </div>
-                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #3498db;">
-                    <small style="color:#888;">PENDING REQUESTS</small>
-                    <h2 style="margin:5px 0;">${pendingCount}</h2>
-                </div>
-                <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #2ecc71;">
-                    <small style="color:#888;">CONFIRMED BOOKINGS</small>
-                    <h2 style="margin:5px 0;">${approvedCount}</h2>
-                </div>
-            </div>`;
-    } 
-    // TAB 2: PROPERTY / ROOM INVENTORY
-    else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
-        const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
-            `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
-        ).join('');
-
-        container.innerHTML = `
-            <h1>Property & Inventory Management</h1>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
-                <div class="card" style="background:white; padding:25px; border-radius:15px;">
-                    <h3>🏨 Property Profile</h3>
-                    <input type="text" id="h-name" placeholder="Hotel Name" value="${hotel?.hotel_name || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    
-                    <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION</label>
-                    <select id="h-city" style="width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
-                        <option value="">Select Permitted Destination</option>
-                        ${destSelectOptions}
-                    </select>
-
-                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${hotel?.address || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
-
-                    <button onclick="handleSaveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
-                </div>
-
-                <div class="card" style="background:white; padding:25px; border-radius:15px;">
-                    <h3>🛏️ Add Room Category</h3>
-                    ${!hotel ? '<p style="color:#e74c3c;">Save hotel property details first before adding rooms.</p>' : `
-                        <input type="text" id="r-type" placeholder="Room Category (e.g. Deluxe AC)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                        <input type="number" id="r-price" placeholder="Price per Night (₹)" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                        <input type="number" id="r-total" placeholder="Total Rooms Inventory" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                        <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                        <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
-
-                        <button id="btn-save-room" onclick="saveRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
-                    `}
-                </div>
-            </div>
-
-            <div style="margin-top:30px;">
-                <h3>Live Inventory Stock</h3>
-                <div id="hotel-rooms-list">Loading inventory...</div>
-            </div>`;
-
-        if (hotel && typeof loadHotelRooms === "function") loadHotelRooms(hotel.hotel_id);
-    } 
-    // TAB 3: REQUESTS (Correctly connected with main IF block)
-    else if (tabName === 'requests') {
-        container.innerHTML = `
-            <h1>Booking & Quote Requests</h1>
-            <div style="margin-top:20px;" id="hotel-inbox-container">Loading requests...</div>`;
-        if (hotel && typeof loadHotelRequests === "function") {
-            loadHotelRequests(hotel.hotel_id);
-        }
+        const stats = createHotelDashboardElement('div', null, 'display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-top:20px;');
+        appendHotelLabelValue(stats, 'PROPERTY STATUS', hotel.hide_from_search ? '🔴 Hidden (No Inventory)' : '🟢 Active & Listed');
+        appendHotelLabelValue(stats, 'PENDING REQUESTS', pendingCount);
+        appendHotelLabelValue(stats, 'CONFIRMED BOOKINGS', approvedCount);
+        container.appendChild(stats);
+    } else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
+        await renderHotelPropertyTab(container, hotel);
+    } else if (tabName === 'requests') {
+        await renderHotelRequestsTab(container, user);
     }
 };
+
+/* =========================================================================
+   🛡️ ACTIVE HOTEL DASHBOARD BOUNDARY COMPLETE
+   ========================================================================= */
 
 // --- SUPPORTING FUNCTIONS FOR AUTO-LOAD & EDIT FEATURE ---
 
