@@ -3164,309 +3164,180 @@ Total: ₹${Number(totalPrice).toLocaleString('en-IN')}`);
     }catch(e){console.error("Booking distance/save error:",e);alert("❌ "+e.message);}
 };
 
-// 7. MATCHING & CARD RENDERING
-window.searchMatchedAgencies = async function() {
-    const start = document.getElementById('search-start').value;
-    const dest = document.getElementById('search-dest').value;
-    const container = document.getElementById('customer-pkg-list');
-    
-    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px;"><h3>Searching for Agency Matches...</h3></div>`;
-    
-    const { data, error } = await getClient().from('packages').select('*');
-    if (error) {
-       container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Error loading data.</h3></div>`;
-        return;
+// 7. MATCHING & CARD RENDERING — XSS-safe DOM implementation
+function clearCustomerPackageList(container) {
+    if (!container) return;
+    container.replaceChildren();
+}
+
+function renderCustomerPackageMessage(container, title, body, buttonText, buttonHandler) {
+    if (!container) return;
+    clearCustomerPackageList(container);
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'grid-column:1/-1;text-align:center;padding:55px 20px;background:#fff;border-radius:14px;';
+
+    const heading = document.createElement('h3');
+    heading.textContent = title || '';
+    heading.style.cssText = 'margin:10px 0 6px;';
+    wrapper.appendChild(heading);
+
+    if (body) {
+        const message = document.createElement('p');
+        message.textContent = body;
+        message.style.cssText = 'color:#636e72;margin:0 0 18px;line-height:1.5;';
+        wrapper.appendChild(message);
     }
 
-    let matchedData = data || [];
-    if (start) matchedData = matchedData.filter(p => p.starting_location === start);
-    if (dest) {
-        matchedData = matchedData.filter(p => {
-            const pDest = p.destination || [];
-            if (Array.isArray(pDest)) return pDest.includes(dest);
-            if (typeof pDest === 'string') return pDest.includes(dest);
-            return false;
-        });
+    if (buttonText && typeof buttonHandler === 'function') {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = buttonText;
+        button.style.cssText = 'width:auto;padding:10px 18px;background:#ff9f43;color:#fff;border:0;border-radius:8px;font-weight:800;cursor:pointer;';
+        button.addEventListener('click', buttonHandler);
+        wrapper.appendChild(button);
     }
 
-    renderPackageCards(matchedData, true);
-};
+    container.appendChild(wrapper);
+}
 
-async function loadAllPackages() {
-    const { data } = await getClient().from('packages').select('*').limit(12);
-    renderPackageCards(data || [], false);
+function ensureCustomerPackageCardDelegation(container) {
+    if (!container || container.dataset.toursetuPackageDelegated === '1') return;
+    container.dataset.toursetuPackageDelegated = '1';
+    container.addEventListener('click', function(event) {
+        const card = event.target.closest('.toursetu-package-card');
+        if (!card || !container.contains(card)) return;
+        const index = card.dataset.packageIndex;
+        const packageData = window.__toursetuPackageCards?.get(String(index));
+        if (!packageData || typeof window.showPackageDetails !== 'function') return;
+        window.showPackageDetails(encodeURIComponent(JSON.stringify(packageData)));
+    });
 }
 
 function renderPackageCards(data, isFiltered) {
     const container = document.getElementById('customer-pkg-list');
-    if (!data || data.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:60px;"><h3>No Matches Found</h3><button onclick="loadAllPackages()" style="width:auto; padding:10px 20px; background:#eee;">View All</button></div>`;
-        return;
-    }
+    if (!container) return;
 
-    container.innerHTML = data.map(p => {
-        const vels = p.vehicles || [];
-        const rates = (vels.length > 0) ? vels.map(v => v.rate) : [0];
-        const minPrice = Math.min(...rates);
-        const destDisplay = Array.isArray(p.destination) ? p.destination.slice(0,2).join(', ') : (p.destination || 'N/A');
-        const pString = encodeURIComponent(JSON.stringify(p));
+    ensureCustomerPackageCardDelegation(container);
 
-        return `
-        <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; cursor:pointer;" onclick="showPackageDetails('${pString}')">
-            <div style="padding:25px;">
-                <h3 style="margin:0;">${p.title}</h3>
-                <p style="color:#ff9f43; font-weight:bold;">Starts from ₹${minPrice}</p>
-               <div style="font-size:13px; color:#636e72; margin:15px 0;">
-                   <div>🚩 <b>From:</b> ${p.starting_location}</div>
-                   ${p._cityMatchType === 'nearby' ? `<div style="margin-top:8px;display:inline-block;padding:5px 9px;background:#eef6ff;color:#2563eb;border-radius:999px;font-size:10px;font-weight:800;">📍 NEARBY OPERATOR${Number.isFinite(p._cityMatchDistance) ? ` • ${Math.round(p._cityMatchDistance)} km away` : ''}</div>` : ''}
-                   <div style="margin-top:5px;">📍 <b>To:</b> ${destDisplay}...</div>
-               </div>
-               <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:15px;">
-                   ${vels.map(v => `<span style="font-size:10px; background:#f0f0f0; padding:3px 8px; border-radius:4px;">${v.name}</span>`).join('')}
-               </div>
-               <button style="background:#ff9f43; color:white; width:100%; padding:12px;">VIEW DETAILS</button>
-            </div>
-        </div>`;
-    }).join('');
-}
-
-// 7. MATCHING & CARD RENDERING
-window.searchMatchedAgencies = async function() {
-    const start = document.getElementById('search-start').value;
-    const dest = document.getElementById('search-dest').value;
-    const container = document.getElementById('customer-pkg-list');
-    
-    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px;"><h3>Searching for Agency Matches...</h3></div>`;
-    
-    const { data, error } = await getClient().from('packages').select('*');
-    if (error) {
-       container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Error loading data.</h3></div>`;
-        return;
-    }
-
-    let matchedData = data || [];
-    if (start) matchedData = matchedData.filter(p => p.starting_location === start);
-    if (dest) {
-        matchedData = matchedData.filter(p => {
-            const pDest = p.destination || [];
-            if (Array.isArray(pDest)) return pDest.includes(dest);
-            if (typeof pDest === 'string') return pDest.includes(dest);
-            return false;
-        });
-    }
-
-    renderPackageCards(matchedData, true);
-};
-
-async function loadAllPackages() {
-    const { data } = await getClient().from('packages').select('*').limit(12);
-    renderPackageCards(data || [], false);
-}
-
-function renderPackageCards(data, isFiltered) {
-    const container = document.getElementById('customer-pkg-list');
-    if (!data || data.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:60px;"><h3>No Matches Found</h3><button onclick="loadAllPackages()" style="width:auto; padding:10px 20px; background:#eee;">View All</button></div>`;
-        return;
-    }
-
-    container.innerHTML = data.map(p => {
-        const vels = p.vehicles || [];
-        const rates = (vels.length > 0) ? vels.map(v => v.rate) : [0];
-        const minPrice = Math.min(...rates);
-        const destDisplay = Array.isArray(p.destination) ? p.destination.slice(0,2).join(', ') : (p.destination || 'N/A');
-        const pString = encodeURIComponent(JSON.stringify(p));
-
-        return `
-        <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; cursor:pointer;" onclick="showPackageDetails('${pString}')">
-            <div style="padding:25px;">
-                <h3 style="margin:0;">${p.title}</h3>
-                <p style="color:#ff9f43; font-weight:bold;">Starts from ₹${minPrice}</p>
-               <div style="font-size:13px; color:#636e72; margin:15px 0;">
-                   <div>🚩 <b>From:</b> ${p.starting_location}</div>
-                   <div style="margin-top:5px;">📍 <b>To:</b> ${destDisplay}...</div>
-               </div>
-               <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:15px;">
-                   ${vels.map(v => `<span style="font-size:10px; background:#f0f0f0; padding:3px 8px; border-radius:4px;">${v.name}</span>`).join('')}
-               </div>
-               <button style="background:#ff9f43; color:white; width:100%; padding:12px;">VIEW DETAILS</button>
-            </div>
-        </div>`;
-    }).join('');
-}
-// 7. MATCHING & CARD RENDERING
-window.searchMatchedAgencies = async function() {
-    const start = document.getElementById('search-start').value;
-    const dest = document.getElementById('search-dest').value;
-    const container = document.getElementById('customer-pkg-list');
-    
-    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px;"><h3>Searching for Agency Matches...</h3></div>`;
-    
-    const { data, error } = await getClient().from('packages').select('*');
-    if (error) {
-       container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Error loading data.</h3></div>`;
-        return;
-    }
-
-    let matchedData = data || [];
-    if (start) matchedData = matchedData.filter(p => p.starting_location === start);
-    if (dest) {
-        matchedData = matchedData.filter(p => {
-            const pDest = p.destination || [];
-            if (Array.isArray(pDest)) return pDest.includes(dest);
-            if (typeof pDest === 'string') return pDest.includes(dest);
-            return false;
-        });
-    }
-
-    renderPackageCards(matchedData, true);
-};
-
-async function loadAllPackages() {
-    const { data } = await getClient().from('packages').select('*').limit(12);
-    renderPackageCards(data || [], false);
-}
-
-function renderPackageCards(data, isFiltered) {
-    const container = document.getElementById('customer-pkg-list');
-    if (!data || data.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:60px;"><h3>No Matches Found</h3><button onclick="loadAllPackages()" style="width:auto; padding:10px 20px; background:#eee;">View All</button></div>`;
-        return;
-    }
-
-    container.innerHTML = data.map(p => {
-        const vels = p.vehicles || [];
-        const rates = (vels.length > 0) ? vels.map(v => v.rate) : [0];
-        const minPrice = Math.min(...rates);
-        const destDisplay = Array.isArray(p.destination) ? p.destination.slice(0,2).join(', ') : (p.destination || 'N/A');
-        const pString = encodeURIComponent(JSON.stringify(p));
-
-        return `
-        <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; cursor:pointer;" onclick="showPackageDetails('${pString}')">
-            <div style="padding:25px;">
-                <h3 style="margin:0;">${p.title}</h3>
-                <p style="color:#ff9f43; font-weight:bold;">Starts from ₹${minPrice}</p>
-               <div style="font-size:13px; color:#636e72; margin:15px 0;">
-                   <div>🚩 <b>From:</b> ${p.starting_location}</div>
-                   <div style="margin-top:5px;">📍 <b>To:</b> ${destDisplay}...</div>
-               </div>
-               <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:15px;">
-                   ${vels.map(v => `<span style="font-size:10px; background:#f0f0f0; padding:3px 8px; border-radius:4px;">${v.name}</span>`).join('')}
-               </div>
-               <button style="background:#ff9f43; color:white; width:100%; padding:12px;">VIEW DETAILS</button>
-            </div>
-        </div>`;
-    }).join('');
-}
-/* =========================================================================
-   SMART CITY / STATE FALLBACK MATCHING
-   - Exact selected city packages are shown first.
-   - If none exist, packages from the selected state are shown.
-   - Same-state package cities are ranked by real geographic proximity to
-     the selected city using OpenStreetMap geocoding + Haversine distance.
-   - Geocoded coordinates are cached in sessionStorage to avoid repeated calls.
-   ========================================================================= */
-
-const CITY_MATCH_GEO_CACHE_KEY = 'toursetu_city_geo_cache_v1';
-
-function normalizeMatchCity(value) {
-    return String(value || '').trim().toLowerCase().replace(/\\s+/g, ' ');
-}
-
-function getCityState(city) {
-    const target = normalizeMatchCity(city);
-    if (!target) return '';
-    for (const [state, cities] of Object.entries(locationData || {})) {
-        if ((cities || []).some(c => normalizeMatchCity(c) === target)) return state;
-    }
-    return '';
-}
-
-function getCityGeoCache() {
-    try { return JSON.parse(sessionStorage.getItem(CITY_MATCH_GEO_CACHE_KEY) || '{}'); }
-    catch (_) { return {}; }
-}
-
-function saveCityGeoCache(cache) {
-    try { sessionStorage.setItem(CITY_MATCH_GEO_CACHE_KEY, JSON.stringify(cache)); } catch (_) {}
-}
-
-async function geocodeMatchCity(city, state) {
-    const key = normalizeMatchCity(city) + '|' + normalizeMatchCity(state);
-    const cache = getCityGeoCache();
-    if (cache[key]) return cache[key];
-
-    try {
-        const query = encodeURIComponent(city + ', ' + state + ', India');
-        const response = await fetch(
-            'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=' + query,
-            { headers: { 'Accept-Language': 'en-IN' } }
+    if (!Array.isArray(data) || data.length === 0) {
+        renderCustomerPackageMessage(
+            container,
+            'No Matches Found',
+            'Try another pickup city or destination, or view all available operators.',
+            'VIEW ALL OPERATORS',
+            function() { loadAllPackages(); }
         );
-        if (!response.ok) return null;
-        const results = await response.json();
-        if (!results.length) return null;
-
-        const point = { lat: Number(results[0].lat), lon: Number(results[0].lon) };
-        if (Number.isFinite(point.lat) && Number.isFinite(point.lon)) {
-            cache[key] = point;
-            saveCityGeoCache(cache);
-            return point;
-        }
-    } catch (error) {
-        console.warn('City proximity geocoding failed for', city, state, error);
+        return;
     }
-    return null;
-}
 
-function cityDistanceKm(a, b) {
-    if (!a || !b) return Number.POSITIVE_INFINITY;
-    const toRad = degrees => degrees * Math.PI / 180;
-    const R = 6371;
-    const dLat = toRad(b.lat - a.lat);
-    const dLon = toRad(b.lon - a.lon);
-    const lat1 = toRad(a.lat);
-    const lat2 = toRad(b.lat);
-    const h = Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(h));
+    clearCustomerPackageList(container);
+    window.__toursetuPackageCards = new Map();
+
+    data.forEach(function(p, index) {
+        const packageData = p || {};
+        window.__toursetuPackageCards.set(String(index), packageData);
+
+        const vehicles = Array.isArray(packageData.vehicles) ? packageData.vehicles : [];
+        const rates = vehicles.length ? vehicles.map(function(v) { return Number(v?.rate) || 0; }) : [0];
+        const minPrice = Math.min.apply(Math, rates);
+        const destinations = Array.isArray(packageData.destination)
+            ? packageData.destination.slice(0, 2).join(', ')
+            : (packageData.destination || 'N/A');
+
+        const card = document.createElement('article');
+        card.className = 'card result-card toursetu-package-card';
+        card.setAttribute('data-package-index', String(index));
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        card.setAttribute('aria-label', 'View package details');
+        card.style.cssText = 'background:white;overflow:hidden;border:1px solid #eee;cursor:pointer;';
+
+        const content = document.createElement('div');
+        content.style.cssText = 'padding:25px;';
+
+        const title = document.createElement('h3');
+        title.textContent = packageData.title || 'Untitled package';
+        title.style.cssText = 'margin:0;';
+        content.appendChild(title);
+
+        const price = document.createElement('p');
+        price.textContent = 'Starts from ₹' + minPrice.toLocaleString('en-IN');
+        price.style.cssText = 'color:#ff9f43;font-weight:bold;';
+        content.appendChild(price);
+
+        const route = document.createElement('div');
+        route.style.cssText = 'font-size:13px;color:#636e72;margin:15px 0;';
+
+        const from = document.createElement('div');
+        from.textContent = '🚩 From: ' + (packageData.starting_location || 'N/A');
+        route.appendChild(from);
+
+        if (packageData._cityMatchType === 'nearby') {
+            const nearby = document.createElement('div');
+            const distance = Number(packageData._cityMatchDistance);
+            nearby.textContent = Number.isFinite(distance)
+                ? '📍 NEARBY OPERATOR • ' + Math.round(distance) + ' km away'
+                : '📍 NEARBY OPERATOR';
+            nearby.style.cssText = 'margin-top:8px;display:inline-block;padding:5px 9px;background:#eef6ff;color:#2563eb;border-radius:999px;font-size:10px;font-weight:800;';
+            route.appendChild(nearby);
+        }
+
+        const to = document.createElement('div');
+        to.textContent = '📍 To: ' + destinations + (destinations !== 'N/A' ? '...' : '');
+        to.style.cssText = 'margin-top:5px;';
+        route.appendChild(to);
+        content.appendChild(route);
+
+        const vehicleList = document.createElement('div');
+        vehicleList.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px;';
+        vehicles.forEach(function(vehicle) {
+            const tag = document.createElement('span');
+            tag.textContent = vehicle?.name || 'Vehicle';
+            tag.style.cssText = 'font-size:10px;background:#f0f0f0;padding:3px 8px;border-radius:4px;';
+            vehicleList.appendChild(tag);
+        });
+        content.appendChild(vehicleList);
+
+        const action = document.createElement('button');
+        action.type = 'button';
+        action.textContent = 'VIEW DETAILS';
+        action.tabIndex = -1;
+        action.style.cssText = 'background:#ff9f43;color:white;width:100%;padding:12px;border:0;border-radius:8px;font-weight:800;';
+        content.appendChild(action);
+
+        card.appendChild(content);
+        container.appendChild(card);
+    });
 }
 
 window.searchMatchedAgencies = async function() {
     const start = document.getElementById('search-start')?.value?.trim() || '';
     const dest = document.getElementById('search-dest')?.value?.trim() || '';
     const container = document.getElementById('customer-pkg-list');
-
     if (!container) return;
 
-    container.innerHTML = `
-        <div style="grid-column:1/-1;text-align:center;padding:55px 20px;">
-            <div style="font-size:32px;">🔎</div>
-            <h3 style="margin:10px 0 6px;">Finding operators near ${start || 'your selected city'}...</h3>
-            <p style="color:#636e72;margin:0;">Checking the selected city first, then nearby cities in the same state.</p>
-        </div>`;
+    renderCustomerPackageMessage(
+        container,
+        'Finding operators near ' + (start || 'your selected city') + '...',
+        'Checking the selected city first, then nearby cities in the same state.'
+    );
 
-    const { data, error } = await getClient()
-        .from('packages')
-        .select('*');
-
+    const { data, error } = await getClient().from('packages').select('*');
     if (error) {
         console.error('Agency matching error:', error);
-        container.innerHTML = `
-            <div style="grid-column:1/-1;text-align:center;padding:50px;">
-                <h3>Unable to load operators</h3>
-                <p style="color:#636e72;">Please try again.</p>
-            </div>`;
+        renderCustomerPackageMessage(container, 'Unable to load operators', 'Please try again.');
         return;
     }
 
     let packages = data || [];
-
-    // Destination remains an independent filter.
     if (dest) {
-        packages = packages.filter(p => {
-            const pDest = p.destination || [];
+        packages = packages.filter(function(p) {
+            const pDest = p?.destination || [];
             if (Array.isArray(pDest)) {
-                return pDest.some(value => normalizeMatchCity(value) === normalizeMatchCity(dest));
+                return pDest.some(function(value) {
+                    return normalizeMatchCity(value) === normalizeMatchCity(dest);
+                });
             }
             return normalizeMatchCity(pDest).includes(normalizeMatchCity(dest));
         });
@@ -3478,61 +3349,72 @@ window.searchMatchedAgencies = async function() {
     }
 
     const selectedState = getCityState(start);
-    const exact = packages.filter(
-        p => normalizeMatchCity(p.starting_location) === normalizeMatchCity(start)
-    );
+    const exact = packages.filter(function(p) {
+        return normalizeMatchCity(p?.starting_location) === normalizeMatchCity(start);
+    });
 
-    // Normal case: selected city has operators.
     if (exact.length) {
-        renderPackageCards(exact.map(p => ({ ...p, _cityMatchType: 'selected', _cityMatchDistance: 0 })), true);
+        renderPackageCards(exact.map(function(p) {
+            return { ...p, _cityMatchType: 'selected', _cityMatchDistance: 0 };
+        }), true);
         return;
     }
 
-    // No exact city operator: restrict fallback to the same state.
     const sameState = selectedState
-        ? packages.filter(p => getCityState(p.starting_location) === selectedState)
+        ? packages.filter(function(p) { return getCityState(p?.starting_location) === selectedState; })
         : [];
 
     if (!sameState.length) {
-        container.innerHTML = `
-            <div style="grid-column:1/-1;text-align:center;padding:55px 20px;background:#fff;border-radius:14px;">
-                <div style="font-size:38px;">📍</div>
-                <h3 style="margin:10px 0 6px;">No operators found in ${start}</h3>
-                <p style="color:#636e72;margin:0 0 18px;">
-                    We also checked other operator cities in ${selectedState || 'the selected area'}.
-                </p>
-                <button onclick="loadAllPackages()" style="width:auto;padding:10px 18px;background:#ff9f43;color:#fff;border:0;border-radius:8px;font-weight:800;cursor:pointer;">VIEW ALL OPERATORS</button>
-            </div>`;
+        renderCustomerPackageMessage(
+            container,
+            'No operators found in ' + start,
+            'We also checked other operator cities in ' + (selectedState || 'the selected area') + '.',
+            'VIEW ALL OPERATORS',
+            function() { loadAllPackages(); }
+        );
         return;
     }
 
     const selectedPoint = await geocodeMatchCity(start, selectedState);
-    const uniqueCities = [...new Set(sameState.map(p => String(p.starting_location || '').trim()).filter(Boolean))];
+    const uniqueCities = [...new Set(
+        sameState.map(function(p) { return String(p?.starting_location || '').trim(); }).filter(Boolean)
+    )];
 
-    // Geocode the operator cities concurrently, then rank by actual distance.
     const geoEntries = await Promise.all(
-        uniqueCities.map(async city => ({
-            city,
-            point: await geocodeMatchCity(city, selectedState)
-        }))
+        uniqueCities.map(async function(city) {
+            return { city: city, point: await geocodeMatchCity(city, selectedState) };
+        })
     );
 
     const distanceByCity = {};
-    geoEntries.forEach(entry => {
-        distanceByCity[normalizeMatchCity(entry.city)] =
-            cityDistanceKm(selectedPoint, entry.point);
+    geoEntries.forEach(function(entry) {
+        distanceByCity[normalizeMatchCity(entry.city)] = cityDistanceKm(selectedPoint, entry.point);
     });
 
     const ranked = sameState
-        .map(p => ({
-            ...p,
-            _cityMatchType: 'nearby',
-            _cityMatchDistance: distanceByCity[normalizeMatchCity(p.starting_location)] ?? Number.POSITIVE_INFINITY
-        }))
-        .sort((a, b) => a._cityMatchDistance - b._cityMatchDistance);
+        .map(function(p) {
+            return {
+                ...p,
+                _cityMatchType: 'nearby',
+                _cityMatchDistance: distanceByCity[normalizeMatchCity(p?.starting_location)] ?? Number.POSITIVE_INFINITY
+            };
+        })
+        .sort(function(a, b) { return a._cityMatchDistance - b._cityMatchDistance; });
 
     renderPackageCards(ranked, true);
 };
+
+async function loadAllPackages() {
+    try {
+        const { data, error } = await getClient().from('packages').select('*').limit(12);
+        if (error) throw error;
+        renderPackageCards(data || [], false);
+    } catch (error) {
+        console.error('Load all packages error:', error);
+        const container = document.getElementById('customer-pkg-list');
+        renderCustomerPackageMessage(container, 'Unable to load operators', 'Please try again.');
+    }
+}
 
 /* =========================================================================
    PACKAGE DETAIL / CUSTOMER BOOKING MODAL 
