@@ -1027,61 +1027,6 @@ function safeFileExtension(file) {
     return ALLOWED_DOCUMENT_TYPES[String(file?.type || '').toLowerCase()] || null;
 }
 
-const KYC_MAX_FILE_BYTES = 10 * 1024 * 1024;
-const IMAGE_MAX_FILE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_DOCUMENT_TYPES = Object.freeze({
-    'application/pdf': 'pdf',
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp'
-});
-const ALLOWED_IMAGE_TYPES = Object.freeze({
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp'
-});
-
-async function readFileSignature(file, byteCount = 12) {
-    const buffer = await file.slice(0, byteCount).arrayBuffer();
-    return new Uint8Array(buffer);
-}
-
-function hasBytes(bytes, expected) {
-    if (bytes.length < expected.length) return false;
-    return expected.every((value, index) => bytes[index] === value);
-}
-
-async function validateUploadedFile(file, label, allowedTypes, maxBytes) {
-    if (!file) return label + ' is required.';
-    if (!Number.isFinite(file.size) || file.size <= 0) return label + ' is empty or invalid.';
-    if (file.size > maxBytes) return label + ' must be 10 MB or smaller.';
-    const type = String(file.type || '').toLowerCase();
-    if (!Object.prototype.hasOwnProperty.call(allowedTypes, type)) {
-        return label + ' must be a PDF, JPG/JPEG, PNG, or WEBP file.';
-    }
-
-    const bytes = await readFileSignature(file);
-    let signatureValid = false;
-    if (type === 'image/jpeg') {
-        signatureValid = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-    } else if (type === 'image/png') {
-        signatureValid = hasBytes(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-    } else if (type === 'image/webp') {
-        const ascii = new TextDecoder().decode(bytes);
-        signatureValid = ascii.startsWith('RIFF') && ascii.slice(8, 12) === 'WEBP';
-    } else if (type === 'application/pdf') {
-        const ascii = new TextDecoder().decode(bytes);
-        signatureValid = ascii.startsWith('%PDF-');
-    }
-
-    if (!signatureValid) return label + ' content does not match its declared file type.';
-    return '';
-}
-
-function safeFileExtension(file) {
-    return ALLOWED_DOCUMENT_TYPES[String(file?.type || '').toLowerCase()] || null;
-}
-
 async function validateAgencyDocuments(files) {
     const labels = {
         gst_document_path: 'GST Number document/photo',
@@ -1121,41 +1066,8 @@ async function uploadAgencyDocuments(userId, files) {
     }
     return uploadedPaths;
 }
-async function getAgencyVerification(userId){const {data,error}=await getClient().from('agency_verification_requests').select('id,status,denial_reason,email,gst_no,business_reg_no,phone,created_at,updated_at').eq('user_id',userId).maybeSingle();if(error)thasync function validateHotelDocuments(files) {
-    const labels = {
-        uttarakhand_tourism_utbm_registration_path: 'Uttarakhand Tourism / UTBM Hotel Registration',
-        trade_license_local_authority_license_path: 'Trade License / Local Authority License',
-        gst_certificate_msme_udyam_path: 'GST Certificate / MSME Udyam',
-        fire_safety_noc_path: 'Fire Safety NOC',
-        police_noc_path: 'Police NOC'
-    };
-    for (const [key, label] of Object.entries(labels)) {
-        if (!files[key]) continue;
-        const error = await validateUploadedFile(files[key], label, ALLOWED_DOCUMENT_TYPES, KYC_MAX_FILE_BYTES);
-        if (error) return error;
-    }
-    return '';
-}
-
-async function uploadHotelDocuments(userId, files) {
-    const bucket = getClient().storage.from(HOTEL_KYC_BUCKET);
-    const uploadedPaths = {};
-    for (const [dbField, file] of Object.entries(files)) {
-        if (!file) continue;
-        const extension = safeFileExtension(file);
-        if (!extension) throw new Error('Unsupported file type for ' + dbField + '.');
-        const path = userId + '/' + dbField.replace(/_path$/, '') + '-' + crypto.randomUUID() + '.' + extension;
-        const { data, error } = await bucket.upload(path, file, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: file.type
-        });
-        if (error) throw new Error('Upload failed for ' + dbField + '. Please try again.');
-        uploadedPaths[dbField] = data.path;
-    }
-    return uploadedPaths;
-}
-aveError;}
+async function getAgencyVerification(userId){const {data,error}=await getClient().from('agency_verification_requests').select('id,status,denial_reason,email,gst_no,business_reg_no,phone,created_at,updated_at').eq('user_id',userId).maybeSingle();if(error)throw error;return data;}
+async function submitAgencyKYC(user){const files=getSelectedAgencyDocuments(),validationError=await validateAgencyDocuments(files);if(validationError)throw new Error(validationError);const client=getClient();const {data:existing,error:existingError}=await client.from('agency_verification_requests').select('id,status').eq('user_id',user.id).maybeSingle();if(existingError)throw existingError;if(!existing)throw new Error('Agency verification request was not created. Please try registration again.');if(existing.status!=='pending')throw new Error('This agency verification request is already '+existing.status+'.');const paths=await uploadAgencyDocuments(user.id,files);const {error:saveError}=await client.rpc('save_agency_verification_documents',{p_gst_document_path:paths.gst_document_path,p_business_reg_document_path:paths.business_reg_document_path,p_utdb_registration_certificate_path:paths.utdb_registration_certificate_path,p_pan_card_path:paths.pan_card_path,p_aadhaar_card_path:paths.aadhaar_card_path,p_cancelled_cheque_or_bank_passbook_path:paths.cancelled_cheque_or_bank_passbook_path,p_commercial_rc_path:paths.commercial_rc_path,p_aitp_commercial_permit_path:paths.aitp_commercial_permit_path,p_vehicle_insurance_path:paths.vehicle_insurance_path,p_fitness_certificate_path:paths.fitness_certificate_path,p_commercial_driving_license_path:paths.commercial_driving_license_path,p_police_verification_id_proof_path:paths.police_verification_id_proof_path});if(saveError)throw saveError;}
 const HOTEL_KYC_BUCKET='hotel-verification-documents';
 const HOTEL_KYC_FILES={uttarakhand_tourism_utbm_registration_path:'hotel-doc-uttarakhand-registration',trade_license_local_authority_license_path:'hotel-doc-trade-license',gst_certificate_msme_udyam_path:'hotel-doc-gst-udyam',fire_safety_noc_path:'hotel-doc-fire-noc',police_noc_path:'hotel-doc-police-noc'};
 function getSelectedHotelDocuments(){const files={};for(const [dbField,inputId] of Object.entries(HOTEL_KYC_FILES)){const input=document.getElementById(inputId);files[dbField]=input?.files?.[0]||null;}return files;}
