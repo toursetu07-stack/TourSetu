@@ -2,7 +2,9 @@ name: Frontend Security Regression
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'security-*'
   pull_request:
     branches: [main]
 
@@ -203,6 +205,39 @@ jobs:
               if required not in init:
                   raise SystemExit(f"Security regression: missing OneSignal bootstrap control: {required}")
           print("OK: OneSignal bootstrap is externalized.")
+
+
+      - name: Check migrated agency dashboard shell
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          source = Path("script.js").read_text(encoding="utf-8")
+          start = source.index("function renderAgencyDashboard(user) {")
+          end = source.index("window.loadAgencyVerificationBanner=async function(user){", start)
+          block = source[start:end]
+
+          forbidden = [
+              r"\.innerHTML\s*=",
+              r"\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\s*=",
+              r'''setAttribute\(\s*['"]on''',
+          ]
+          for pattern in forbidden:
+              if re.search(pattern, block, re.I):
+                  raise SystemExit("Security regression: legacy DOM sink/inline handler in agency dashboard shell.")
+
+          for required in ["createAgencyDashboardElement", "textContent", "addEventListener", "dataset.agencyTab", "app.replaceChildren"]:
+              if required not in block:
+                  raise SystemExit(f"Security regression: missing safe DOM control: {required}")
+
+          banner_start = source.index("window.loadAgencyVerificationBanner=async function(user){")
+          banner_end = source.index("\n\nwindow.showTab = async function", banner_start)
+          banner = source[banner_start:banner_end]
+          if re.search(r"\.innerHTML\s*=", banner) or re.search(r"\bon\w+\s*=", banner, re.I):
+              raise SystemExit("Security regression: agency verification banner still uses unsafe dynamic DOM.")
+
+          print("OK: agency dashboard shell and verification banner use safe DOM/event APIs.")
 
       - name: Validate frontend JavaScript syntax
         shell: bash

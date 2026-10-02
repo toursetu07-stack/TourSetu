@@ -1,3 +1,4 @@
+/* Phase 5 dashboard security migration: active Agency Dashboard shell uses safe DOM APIs. */
 /* =========================================
    1. CONFIGURATION & GLOBAL STATE
    ========================================= */
@@ -4041,65 +4042,225 @@ async function renderAgencyHotelPackages() {
     }
 }
 // 9. AGENCY DASHBOARD
+function createAgencyDashboardElement(tag, text, style) {
+    const el = document.createElement(tag);
+    if (text != null) el.textContent = text;
+    if (style) el.style.cssText = style;
+    return el;
+}
+
+/* Security regression guard: dashboard labels are rendered as text, never HTML. */
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
-    app.style.maxWidth = "100%";
+    if (!app) return;
+
+    app.style.maxWidth = '100%';
     window.mountDashboardUtilityMenu('agency');
 
-    app.innerHTML = `
-        <div style="display:flex; min-height:100vh; background:#f8f9fa; margin:-20px; font-family:'Inter', sans-serif;">
-            <div style="width:260px; background:#2d3436; color:white; padding:25px; position:relative; flex-shrink:0;">
-               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
-                    <h2 style="color:#ff9f43; margin:0;">TourSetu</h2>
-                    <div id="notif-bell" onclick="showTab('bookings')" style="position:relative; cursor:pointer; font-size:20px; transition: 0.3s;">
-                        🔔
-                        <span id="bell-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:#ff7675; color:white; font-size:10px; padding:2px 6px; border-radius:50%; font-weight:bold; border: 2px solid #2d3436;">0</span>
-                    </div>
-               </div>
-               <nav>
-                    <div onclick="showTab('earnings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
-                    <div onclick="showTab('bookings')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                        <span>📅 Bookings</span>
-                        <span id="side-notif-count" style="background:#ff9f43; color:white; padding:2px 8px; border-radius:10px; font-size:10px; display:none;">0</span>
-                    </div>
-                    <div onclick="showTab('packages')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🎒 My Packages</div>
-                    <div onclick="showTab('hotels')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🏨 Hotels Package</div>
-                    <div onclick="showTab('profile')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">👤 Agency Profile</div>
-                    <div onclick="confirmLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
-               </nav>
-            </div>
-            <div id="main-content" style="flex:1; padding:40px; overflow-y:auto; background:#f8f9fa;"></div>
-        </div>
+    const root = createAgencyDashboardElement(
+        'div',
+        null,
+        "display:flex;min-height:100vh;background:#f8f9fa;margin:-20px;font-family:'Inter',sans-serif;"
+    );
 
-        <div id="logout-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
-            <div style="background:white; padding:30px; border-radius:12px; text-align:center; max-width:350px;">
-               <h2 style="margin:0 0 20px 0;">Logout?</h2>
-               <div style="display:flex; gap:10px;">
-                    <button onclick="executeLogout()" style="background:#ff7675; color:white; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Yes</button>
-                    <button onclick="document.getElementById('logout-modal').style.display='none'" style="background:#eee; flex:1; padding:12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">No</button>
-               </div>
-           </div>
-        </div>
+    const sidebar = createAgencyDashboardElement(
+        'aside',
+        null,
+        'width:260px;background:#2d3436;color:white;padding:25px;position:relative;flex-shrink:0;box-sizing:border-box;'
+    );
 
-        <div id="action-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center; padding:20px;">
-            <div id="action-modal-content" style="background:white; padding:30px; border-radius:15px; max-width:400px; width:100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);"></div>
-        </div>
-    `;
+    const brandRow = createAgencyDashboardElement(
+        'div',
+        null,
+        'display:flex;justify-content:space-between;align-items:center;margin-bottom:40px;'
+    );
+    brandRow.appendChild(createAgencyDashboardElement('h2', 'TourSetu', 'color:#ff9f43;margin:0;'));
+
+    const notificationButton = createAgencyDashboardElement(
+        'button',
+        '🔔',
+        'position:relative;cursor:pointer;font-size:20px;transition:.3s;background:none;border:0;color:white;padding:4px;'
+    );
+    notificationButton.type = 'button';
+    notificationButton.id = 'notif-bell';
+    notificationButton.setAttribute('aria-label', 'Open bookings');
+    notificationButton.dataset.agencyTab = 'bookings';
+
+    const badge = createAgencyDashboardElement(
+        'span',
+        '0',
+        'display:none;position:absolute;top:-5px;right:-5px;background:#ff7675;color:white;font-size:10px;padding:2px 6px;border-radius:50%;font-weight:bold;border:2px solid #2d3436;'
+    );
+    badge.id = 'bell-badge';
+    notificationButton.appendChild(badge);
+    brandRow.appendChild(notificationButton);
+    sidebar.appendChild(brandRow);
+
+    const nav = createAgencyDashboardElement('nav', null, 'display:flex;flex-direction:column;gap:2px;');
+    const navItems = [
+        ['earnings', '📊 Dashboard'],
+        ['bookings', '📅 Bookings'],
+        ['packages', '🎒 My Packages'],
+        ['hotels', '🏨 Hotels Package'],
+        ['profile', '👤 Agency Profile']
+    ];
+
+    navItems.forEach(function ([tab, label]) {
+        const item = createAgencyDashboardElement(
+            'button',
+            null,
+            'width:100%;text-align:left;padding:12px;cursor:pointer;border-radius:8px;margin-bottom:5px;background:transparent;border:0;color:white;font:inherit;display:flex;justify-content:space-between;align-items:center;'
+        );
+        item.type = 'button';
+        item.className = 'nav-item';
+        item.dataset.agencyTab = tab;
+
+        const labelSpan = createAgencyDashboardElement('span', null);
+        labelSpan.textContent = label;
+        item.appendChild(labelSpan);
+
+        if (tab === 'bookings') {
+            const count = createAgencyDashboardElement(
+                'span',
+                '0',
+                'background:#ff9f43;color:white;padding:2px 8px;border-radius:10px;font-size:10px;display:none;'
+            );
+            count.id = 'side-notif-count';
+            item.appendChild(count);
+        }
+
+        nav.appendChild(item);
+    });
+
+    const logoutNav = createAgencyDashboardElement(
+        'button',
+        '🚪 Logout',
+        'width:100%;text-align:left;padding:15px;cursor:pointer;color:#ff7675;margin-top:50px;font-weight:bold;border:0;border-top:1px solid #444;background:transparent;font:inherit;'
+    );
+    logoutNav.type = 'button';
+    logoutNav.dataset.agencyLogout = 'confirm';
+    nav.appendChild(logoutNav);
+    sidebar.appendChild(nav);
+
+    const mainContent = createAgencyDashboardElement(
+        'main',
+        null,
+        'flex:1;padding:40px;overflow-y:auto;background:#f8f9fa;'
+    );
+    mainContent.id = 'main-content';
+
+    root.appendChild(sidebar);
+    root.appendChild(mainContent);
+
+    const logoutModal = createAgencyDashboardElement(
+        'div',
+        null,
+        'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:1000;justify-content:center;align-items:center;'
+    );
+    logoutModal.id = 'logout-modal';
+
+    const logoutCard = createAgencyDashboardElement(
+        'div',
+        null,
+        'background:white;padding:30px;border-radius:12px;text-align:center;max-width:350px;'
+    );
+    logoutCard.appendChild(createAgencyDashboardElement('h2', 'Logout?', 'margin:0 0 20px 0;'));
+
+    const logoutActions = createAgencyDashboardElement('div', null, 'display:flex;gap:10px;');
+    const logoutYes = createAgencyDashboardElement(
+        'button',
+        'Yes',
+        'background:#ff7675;color:white;flex:1;padding:12px;border:none;border-radius:5px;cursor:pointer;font-weight:bold;'
+    );
+    logoutYes.type = 'button';
+    logoutYes.dataset.agencyLogout = 'execute';
+
+    const logoutNo = createAgencyDashboardElement(
+        'button',
+        'No',
+        'background:#eee;color:#2d3436;flex:1;padding:12px;border:none;border-radius:5px;cursor:pointer;font-weight:bold;'
+    );
+    logoutNo.type = 'button';
+    logoutNo.dataset.agencyLogout = 'cancel';
+
+    logoutActions.appendChild(logoutYes);
+    logoutActions.appendChild(logoutNo);
+    logoutCard.appendChild(logoutActions);
+    logoutModal.appendChild(logoutCard);
+
+    const actionModal = createAgencyDashboardElement(
+        'div',
+        null,
+        'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:2000;justify-content:center;align-items:center;padding:20px;box-sizing:border-box;'
+    );
+    actionModal.id = 'action-modal';
+
+    const actionModalContent = createAgencyDashboardElement(
+        'div',
+        null,
+        'background:white;padding:30px;border-radius:15px;max-width:400px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.3);box-sizing:border-box;'
+    );
+    actionModalContent.id = 'action-modal-content';
+    actionModal.appendChild(actionModalContent);
+
+    app.replaceChildren(root, logoutModal, actionModal);
+
+    nav.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-agency-tab]');
+        if (!button || !nav.contains(button)) return;
+        const tab = button.dataset.agencyTab;
+        if (typeof window.showTab === 'function') window.showTab(tab);
+    });
+
+    notificationButton.addEventListener('click', function () {
+        if (typeof window.showTab === 'function') window.showTab('bookings');
+    });
+
+    logoutNav.addEventListener('click', function () {
+        if (typeof window.confirmLogout === 'function') window.confirmLogout();
+    });
+
+    logoutYes.addEventListener('click', function () {
+        if (typeof window.executeLogout === 'function') window.executeLogout();
+    });
+
+    logoutNo.addEventListener('click', function () {
+        logoutModal.style.display = 'none';
+    });
+
     showTab('earnings');
     loadAgencyVerificationBanner(user);
- 
 }
 
 
 window.loadAgencyVerificationBanner=async function(user){
-    const container=document.getElementById('main-content');if(!container)return;
+    const container=document.getElementById('main-content');
+    if(!container)return;
+
     const verification=await getAgencyVerification(user.id).catch(()=>null);
     document.getElementById('agency-verification-banner')?.remove();
     if(!verification||verification.status==='approved')return;
-    const color=verification.status==='denied'?'#ff7675':'#f39c12';
-    const text=verification.status==='denied'?'Your verification was denied. Please contact TourSetu support.':'Your registration is submitted and waiting for admin approval. Your packages remain hidden from customers until approval.';
-    const banner=document.createElement('div');banner.id='agency-verification-banner';banner.style.cssText='margin:0 0 20px;padding:14px 18px;border-radius:10px;border-left:5px solid '+color+';background:white;box-shadow:0 2px 8px rgba(0,0,0,.06);color:#444;';
-    banner.innerHTML='<strong>Agency Verification: '+String(verification.status||'pending').toUpperCase()+'</strong><br><span style="font-size:13px;">'+text+'</span>';
+
+    const isDenied=verification.status==='denied';
+    const color=isDenied?'#ff7675':'#f39c12';
+    const text=isDenied
+        ? 'Your verification was denied. Please contact TourSetu support.'
+        : 'Your registration is submitted and waiting for admin approval. Your packages remain hidden from customers until approval.';
+
+    const banner=document.createElement('div');
+    banner.id='agency-verification-banner';
+    banner.style.cssText='margin:0 0 20px;padding:14px 18px;border-radius:10px;border-left:5px solid '+color+';background:white;box-shadow:0 2px 8px rgba(0,0,0,.06);color:#444;';
+
+    const title=document.createElement('strong');
+    title.textContent='Agency Verification: '+String(verification.status||'pending').toUpperCase();
+
+    const message=document.createElement('span');
+    message.style.cssText='font-size:13px;';
+    message.textContent=text;
+
+    banner.appendChild(title);
+    banner.appendChild(document.createElement('br'));
+    banner.appendChild(message);
     container.prepend(banner);
 };
 
