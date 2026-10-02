@@ -1,3 +1,11 @@
+-- KYC buckets are private and constrained to document/image MIME types.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values
+  ('agency-verification-documents','agency-verification-documents',false,10485760,array['application/pdf','image/jpeg','image/png','image/webp']::text[]),
+  ('hotel-verification-documents','hotel-verification-documents',false,10485760,array['application/pdf','image/jpeg','image/png','image/webp']::text[])
+on conflict (id) do update
+set public=excluded.public,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
+
 -- TourSetu Phase 4 production security hardening.
 --
 -- Applied to production on 2026-10-02 before this migration was committed.
