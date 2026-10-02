@@ -134,10 +134,10 @@
 
         if (button) button.innerText = 'ACCEPTED ✓';
 
-        if (typeof window.__toursetuOriginalHotelDashboard === 'function') {
-            await window.__toursetuOriginalHotelDashboard(user);
-        } else if (typeof window.initHotelDashboard === 'function') {
-            await window.initHotelDashboard(user);
+        if (typeof window.__toursetuOriginalHotelPrivacyDashboard === 'function') {
+            await window.__toursetuOriginalHotelPrivacyDashboard(user);
+        } else if (typeof window.renderHotelDashboard === 'function') {
+            await window.renderHotelDashboard(user);
         }
     };
 
@@ -145,19 +145,19 @@
     window.hotelPartnerPrivacyPolicyHtml = hotelPartnerPrivacyPolicyHtml;
     window.HOTEL_PRIVACY_VERSION = HOTEL_PRIVACY_VERSION;
 
-    // Hotel Terms helper wraps initHotelDashboard, so wrap the current function
+    // Hotel Terms helper wraps renderHotelDashboard, so wrap the current function
     // and place Privacy immediately after the existing Hotel Partner Terms gate.
     function installHotelPrivacyGuard() {
         if (window.__toursetuHotelPrivacyWrapped) return;
-        if (typeof window.initHotelDashboard !== 'function') {
+        if (typeof window.renderHotelDashboard !== 'function') {
             setTimeout(installHotelPrivacyGuard, 50);
             return;
         }
 
-        const currentDashboard = window.initHotelDashboard;
+        const currentDashboard = window.renderHotelDashboard;
         window.__toursetuOriginalHotelPrivacyDashboard = currentDashboard;
 
-        window.initHotelDashboard = async function (user) {
+        window.renderHotelDashboard = async function (user) {
             const activeUser = user || (await window.supabase.auth.getUser()).data.user;
             if (!activeUser?.id) return currentDashboard(user);
 
