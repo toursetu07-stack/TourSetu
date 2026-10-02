@@ -1,0 +1,44 @@
+name: Frontend Security Regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  xss-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check static HTML for inline execution sinks
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          html = Path("index.html").read_text(encoding="utf-8")
+          forbidden = [
+              r"\bon(?:click|change|submit|error|load|mouseover|focus|blur)\s*=",
+              r"href\s*=\s*["']\s*javascript:",
+          ]
+          for pattern in forbidden:
+              if re.search(pattern, html, re.I):
+                  raise SystemExit(f"Security regression: forbidden inline execution sink: {pattern}")
+          print("OK: index.html has no checked inline event/javascript-URL sinks.")
+
+      - name: Check safe DOM helper is present
+        shell: python
+        run: |
+          from pathlib import Path
+          js = Path("security-dom.js").read_text(encoding="utf-8")
+          required = [
+              "DOMPurify.sanitize",
+              "textContent",
+              "addEventListener",
+              "setTrustedHTML",
+          ]
+          missing = [item for item in required if item not in js]
+          if missing:
+              raise SystemExit("Security regression: missing helper controls: " + ", ".join(missing))
+          print("OK: safe DOM helper controls are present.")
