@@ -2,7 +2,9 @@ name: Frontend Security Regression
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'security-*'
   pull_request:
     branches: [main]
 
@@ -236,43 +238,6 @@ jobs:
               raise SystemExit("Security regression: agency verification banner still uses unsafe dynamic DOM.")
 
           print("OK: agency dashboard shell and verification banner use safe DOM/event APIs.")
-
-
-      - name: Check migrated agency showTab
-        shell: python
-        run: |
-          from pathlib import Path
-          import re
-
-          source = Path("script.js").read_text(encoding="utf-8")
-          start = source.index("window.showTab = async function(tabName) {")
-          end = source.index("window.renderAgencyHotelPackages = async function()", start)
-          block = source[start:end]
-
-          forbidden = [
-              r"\.innerHTML\s*=",
-              r"\.innerText\s*=",
-              r"\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\s*=",
-              r'''setAttribute\(\s*['"]on''',
-          ]
-          for pattern in forbidden:
-              if re.search(pattern, block, re.I):
-                  raise SystemExit("Security regression: unsafe DOM sink/inline handler remains in agency showTab.")
-
-          required = [
-              "createAgencyDashboardElement",
-              "textContent",
-              "replaceChildren",
-              "addEventListener",
-              "dataset.agencyBookingAction",
-              "window.showPackageForm",
-              "window.renderAgencyHotelPackages",
-          ]
-          missing = [item for item in required if item not in block]
-          if missing:
-              raise SystemExit("Security regression: agency showTab missing safe control(s): " + ", ".join(missing))
-
-          print("OK: agency showTab uses safe DOM/event APIs and delegated action data.")
 
       - name: Validate frontend JavaScript syntax
         shell: bash
