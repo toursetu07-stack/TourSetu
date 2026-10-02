@@ -675,6 +675,9 @@ async function initApp() {
 
 async function showDashboard(user) {
     window.currentTourSetuUser = user;
+    if (user?.id && typeof window.identifyOneSignalUser === 'function') {
+        window.identifyOneSignalUser(user.id);
+    }
     const role=user?.user_metadata?.role||'customer';
     if(role==='agency'){
         const termsAccepted = await ensureAgencyTermsAccepted(user);
@@ -698,6 +701,12 @@ async function showDashboard(user) {
 }
 
 async function handleLogout() {
+    try {
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function(OneSignal) {
+            try { await OneSignal.logout(); } catch (e) {}
+        });
+    } catch (e) {}
     await getClient().auth.signOut();
     window.location.reload();
 }
