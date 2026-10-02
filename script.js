@@ -1314,13 +1314,13 @@ function getHotelRoomImageUrl(imagePath) {
         return FALLBACK_ROOM_IMAGE;
     }
     const value = String(imagePath).trim();
-    if (/^https?:\\/\\//i.test(value)) return value;
+    if (/^https?:\/\//i.test(value)) return value;
     try {
         const client = getClient();
         const cleanPath = value.includes('/') ? value : `rooms/${value}`;
         const { data } = client.storage.from('hotel-media').getPublicUrl(cleanPath);
         const publicUrl = data?.publicUrl || '';
-        return /^https?:\\/\\//i.test(publicUrl) ? publicUrl : FALLBACK_ROOM_IMAGE;
+        return /^https?:\/\//i.test(publicUrl) ? publicUrl : FALLBACK_ROOM_IMAGE;
     } catch (e) {
         return FALLBACK_ROOM_IMAGE;
     }
