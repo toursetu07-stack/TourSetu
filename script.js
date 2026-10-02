@@ -5956,11 +5956,12 @@ async function renderHotelDashboard(user) {
                <h2 style="color:#ff9f43; margin-bottom:5px;">TourSetu</h2>
                <small style="font-size:12px; color:#aaa; display:block; margin-bottom:30px;">Hotel Partner Panel</small>
                
-               <nav style="display:flex; flex-direction:column; gap:10px;">
-                    <button onclick="switchHotelTab('overview')" class="hotel-nav-btn" style="text-align:left; padding:12px; background:#2c3e50; border:none; color:white; font-weight:bold; cursor:pointer; border-radius:8px;">📊 Overview</button>
-                    <button onclick="switchHotelTab('property')" class="hotel-nav-btn" style="text-align:left; padding:12px; background:none; border:none; color:white; font-weight:bold; cursor:pointer; border-radius:8px;">🏨 Property & Rooms</button>
-                    <button onclick="switchHotelTab('inbox')" class="hotel-nav-btn" style="text-align:left; padding:12px; background:none; border:none; color:white; font-weight:bold; cursor:pointer; border-radius:8px;">📥 Booking Inbox</button>
-                    <button onclick="confirmAndExecuteLogout()" style="text-align:left; padding:12px; background:none; border:none; color:#ff7675; font-weight:bold; cursor:pointer; margin-top:40px;">🚪 Logout</button>
+               <nav style="display:flex; flex-direction:column; gap:8px;">
+                    <button onclick="switchHotelTab('overview')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:#2c3e50; border:1px solid rgba(255,255,255,.06); color:white; font-weight:800; cursor:pointer; border-radius:10px;">📊 Overview</button>
+                    <button onclick="switchHotelTab('property')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:transparent; border:1px solid transparent; color:#dfe6e9; font-weight:700; cursor:pointer; border-radius:10px;">🏨 Property & Rooms</button>
+                    <button onclick="switchHotelTab('inbox')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:transparent; border:1px solid transparent; color:#dfe6e9; font-weight:700; cursor:pointer; border-radius:10px;">📥 Booking Inbox</button>
+                    <button onclick="switchHotelTab('arrivals-payouts')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:transparent; border:1px solid transparent; color:#dfe6e9; font-weight:700; cursor:pointer; border-radius:10px;">📋 Arrivals & Payouts</button>
+                    <button onclick="confirmAndExecuteLogout()" style="text-align:left; padding:13px 14px; background:rgba(231,76,60,.08); border:1px solid rgba(231,76,60,.18); color:#ff7675; font-weight:800; cursor:pointer; margin-top:32px; border-radius:10px;">🚪 Logout</button>
                </nav>
             </div>
 
@@ -6009,6 +6010,53 @@ async function renderHotelDashboard(user) {
         hotelMain.prepend(banner);
     }
 }
+
+
+/* ==========================================================================
+   HOTEL LOGOUT CONFIRMATION
+   ========================================================================== */
+window.confirmAndExecuteLogout = function() {
+    const existing = document.getElementById('hotel-logout-confirmation');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'hotel-logout-confirmation';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:1000000;background:rgba(15,23,42,.68);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+    overlay.innerHTML = `
+        <div style="width:min(430px,100%);background:#fff;border-radius:20px;padding:28px;box-sizing:border-box;box-shadow:0 24px 70px rgba(0,0,0,.28);text-align:center;font-family:Inter,sans-serif;">
+            <div style="width:62px;height:62px;margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff4e8;font-size:30px;">🚪</div>
+            <h2 style="margin:0 0 8px;color:#1e293b;font-size:22px;">Logout from Hotel Dashboard?</h2>
+            <p style="margin:0 0 24px;color:#64748b;line-height:1.55;font-size:14px;">Are you sure you want to logout? Your current dashboard session will be ended.</p>
+            <div style="display:flex;gap:12px;">
+                <button type="button" onclick="document.getElementById('hotel-logout-confirmation')?.remove()" style="flex:1;padding:13px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer;">DENY</button>
+                <button type="button" onclick="executeHotelLogout()" style="flex:1;padding:13px 16px;border-radius:10px;border:0;background:#e74c3c;color:#fff;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(231,76,60,.25);">CONFIRM</button>
+            </div>
+        </div>
+    `;
+
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) overlay.remove();
+    });
+    document.body.appendChild(overlay);
+};
+
+window.executeHotelLogout = async function() {
+    const button = document.querySelector('#hotel-logout-confirmation button[onclick="executeHotelLogout()"]');
+    if (button) {
+        button.disabled = true;
+        button.innerText = 'LOGGING OUT...';
+        button.style.opacity = '.7';
+        button.style.cursor = 'wait';
+    }
+
+    try {
+        const client = getClient();
+        if (client) await client.auth.signOut();
+    } finally {
+        window.location.reload();
+    }
+};
 
 /* ==========================================================================
    TAB NAVIGATION & DATA RENDERER LOGIC
@@ -6065,26 +6113,39 @@ if (!hotel) {
         const pendingCount = reqs ? reqs.filter(r => r.status === 'pending').length : 0;
 
         content.innerHTML = `
-            <h2>Property Overview Statistics</h2>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px; margin-top:20px;">
-                <div style="background:white; padding:20px; border-radius:12px; border-top:5px solid ${availRooms > 0 ? '#2ecc71' : '#e74c3c'}; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                    <small style="color:#7f8c8d; font-weight:bold;">REALTIME SEARCH VISIBILITY</small>
-                    <h3 style="margin:10px 0;">${availRooms} / ${totalRooms} Rooms Available</h3>
-                    <span style="font-size:13px; color:${availRooms > 0 ? '#2ecc71' : '#e74c3c'}; font-weight:bold;">
-                        ${availRooms > 0 ? '🟢 Visible on Customer/Agency Search' : '🔴 Hidden from Search (Zero Stock)'}
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:24px;">
+                <div>
+                    <div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#ff9f43;text-transform:uppercase;">HOTEL PARTNER PANEL</div>
+                    <h2 style="margin:5px 0 4px;color:#1e293b;font-size:28px;">Welcome back, ${hotel.hotel_name || 'Hotel Partner'} 👋</h2>
+                    <p style="margin:0;color:#64748b;font-size:14px;">Manage your rooms, booking requests, arrivals and customer payments from one place.</p>
+                </div>
+                <button onclick="switchHotelTab('arrivals-payouts')" style="border:0;background:#ff9f43;color:#fff;padding:12px 17px;border-radius:11px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(255,159,67,.22);">📋 View Arrivals & Payouts</button>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+                <div style="background:linear-gradient(135deg,#ffffff,#f0fff7); padding:22px; border-radius:16px; border:1px solid #d7f3e4; box-shadow:0 8px 24px rgba(15,23,42,.06);">
+                    <small style="color:#64748b; font-weight:900;">ROOM AVAILABILITY</small>
+                    <h3 style="margin:9px 0 5px;color:#1e293b;font-size:23px;">${availRooms} / ${totalRooms}</h3>
+                    <span style="font-size:12px; color:${availRooms > 0 ? '#16a34a' : '#dc2626'}; font-weight:800;">
+                        ${availRooms > 0 ? '🟢 Visible on Customer / Agency Search' : '🔴 Hidden from Search (Zero Stock)'}
                     </span>
                 </div>
-                <div style="background:white; padding:20px; border-radius:12px; border-top:5px solid #ff9f43; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                    <small style="color:#7f8c8d; font-weight:bold;">PENDING QUOTE REQUESTS</small>
-                    <h3 style="margin:10px 0;">${pendingCount} Pending Quotes</h3>
-                    <small style="color:#3498db; cursor:pointer;" onclick="switchHotelTab('inbox')">View Inbox &rarr;</small>
+                <div style="background:linear-gradient(135deg,#ffffff,#fff7ed); padding:22px; border-radius:16px; border:1px solid #fed7aa; box-shadow:0 8px 24px rgba(15,23,42,.06);">
+                    <small style="color:#64748b; font-weight:900;">PENDING REQUESTS</small>
+                    <h3 style="margin:9px 0 5px;color:#1e293b;font-size:23px;">${pendingCount}</h3>
+                    <small style="color:#2563eb;cursor:pointer;font-weight:800;" onclick="switchHotelTab('inbox')">Open Booking Inbox →</small>
                 </div>
-                <div style="background:white; padding:20px; border-radius:12px; border-top:5px solid #3498db; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                    <small style="color:#7f8c8d; font-weight:bold;">TOTAL CONFIRMED EARNINGS</small>
-                    <h3 style="margin:10px 0;">₹${totalEarnings.toLocaleString('en-IN')}</h3>
-                    <small style="color:#2ecc71; font-weight:bold;">Approved Bookings</small>
+                <div style="background:linear-gradient(135deg,#ffffff,#eff6ff); padding:22px; border-radius:16px; border:1px solid #dbeafe; box-shadow:0 8px 24px rgba(15,23,42,.06);">
+                    <small style="color:#64748b; font-weight:900;">CONFIRMED BOOKINGS</small>
+                    <h3 style="margin:9px 0 5px;color:#1e293b;font-size:23px;">${reqs ? reqs.filter(r => r.status === 'approved').length : 0}</h3>
+                    <small style="color:#16a34a;font-weight:800;">Approved requests</small>
+                </div>
+                <div style="background:linear-gradient(135deg,#ffffff,#faf5ff); padding:22px; border-radius:16px; border:1px solid #e9d5ff; box-shadow:0 8px 24px rgba(15,23,42,.06);">
+                    <small style="color:#64748b; font-weight:900;">APPROVED REQUEST VALUE</small>
+                    <h3 style="margin:9px 0 5px;color:#1e293b;font-size:23px;">₹${totalEarnings.toLocaleString('en-IN')}</h3>
+                    <small style="color:#7c3aed;font-weight:800;">Based on approved hotel requests</small>
                 </div>
             </div>`;
+
     } 
 
     // TAB 2: PROPERTY & ROOM MANAGEMENT
@@ -6197,6 +6258,119 @@ if (!hotel) {
                         </div>`;
                 }).join('')}
             </div>`;
+    }
+
+    // TAB 4: ARRIVALS & PAYOUTS — paid customer hotel bookings only
+    else if (tabName === 'arrivals-payouts') {
+        const { data: paidBookings, error: paidError } = await client
+            .from('hotel_bookings')
+            .select('id, created_at, hotel_name, room_type, location, check_in_date, check_out_date, rooms_booked, price_per_night, subtotal_amount, gateway_fee, service_fee, total_amount, total_nights, booking_status, payment_status, customer_email, customer_phone, approved_at, room_category_id, room_categories!inner(hotel_id)')
+            .eq('room_categories.hotel_id', hotel.hotel_id)
+            .eq('payment_status', 'paid')
+            .order('check_in_date', { ascending: true })
+            .order('created_at', { ascending: false });
+
+        if (paidError) {
+            content.innerHTML = `
+                <div style="background:#fff1f2;border:1px solid #fecdd3;padding:22px;border-radius:15px;color:#9f1239;">
+                    <h3 style="margin-top:0;">Unable to load Arrivals & Payouts</h3>
+                    <p style="margin-bottom:0;">${paidError.message}</p>
+                </div>`;
+            return;
+        }
+
+        const rows = paidBookings || [];
+        const totalCollected = rows.reduce((sum, booking) => sum + (Number(booking.total_amount) || 0), 0);
+        const totalServiceFee = rows.reduce((sum, booking) => sum + (Number(booking.service_fee) || 0), 0);
+        const totalGatewayFee = rows.reduce((sum, booking) => sum + (Number(booking.gateway_fee) || 0), 0);
+        const totalRoomNights = rows.reduce((sum, booking) => {
+            const roomsBooked = Number(booking.rooms_booked) || 0;
+            const nights = Number(booking.total_nights) || Math.max(1, Math.round((new Date(booking.check_out_date) - new Date(booking.check_in_date)) / 86400000));
+            return sum + (roomsBooked * nights);
+        }, 0);
+
+        content.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px;">
+                <div>
+                    <div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#ff9f43;">OPERATIONS & FINANCE</div>
+                    <h2 style="margin:5px 0;color:#1e293b;font-size:28px;">📋 Arrivals & Payouts</h2>
+                    <p style="margin:0;color:#64748b;font-size:14px;">Customer se successfully received <b>paid</b> hotel bookings yahan show honge.</p>
+                </div>
+                <button onclick="switchHotelTab('arrivals-payouts')" style="border:1px solid #e2e8f0;background:#fff;color:#334155;padding:10px 15px;border-radius:10px;font-weight:800;cursor:pointer;">↻ Refresh</button>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:22px;">
+                <div style="background:#fff;padding:20px;border-radius:15px;border:1px solid #dcfce7;box-shadow:0 7px 22px rgba(15,23,42,.05);">
+                    <small style="color:#64748b;font-weight:900;">CUSTOMER PAYMENTS RECEIVED</small>
+                    <div style="font-size:27px;font-weight:900;color:#15803d;margin-top:8px;">₹${totalCollected.toLocaleString('en-IN')}</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:4px;">${rows.length} paid booking(s)</div>
+                </div>
+                <div style="background:#fff;padding:20px;border-radius:15px;border:1px solid #dbeafe;box-shadow:0 7px 22px rgba(15,23,42,.05);">
+                    <small style="color:#64748b;font-weight:900;">UPCOMING PAID ARRIVALS</small>
+                    <div style="font-size:27px;font-weight:900;color:#1d4ed8;margin-top:8px;">${rows.filter(b => b.check_in_date && new Date(b.check_in_date + 'T00:00:00') >= new Date(new Date().toDateString())).length}</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:4px;">Based on paid bookings</div>
+                </div>
+                <div style="background:#fff;padding:20px;border-radius:15px;border:1px solid #ffedd5;box-shadow:0 7px 22px rgba(15,23,42,.05);">
+                    <small style="color:#64748b;font-weight:900;">ROOM NIGHTS SOLD</small>
+                    <div style="font-size:27px;font-weight:900;color:#c2410c;margin-top:8px;">${totalRoomNights}</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:4px;">From paid bookings</div>
+                </div>
+                <div style="background:#fff;padding:20px;border-radius:15px;border:1px solid #e9d5ff;box-shadow:0 7px 22px rgba(15,23,42,.05);">
+                    <small style="color:#64748b;font-weight:900;">FEES INCLUDED IN PAYMENT</small>
+                    <div style="font-size:19px;font-weight:900;color:#6d28d9;margin-top:10px;">₹${(totalServiceFee + totalGatewayFee).toLocaleString('en-IN')}</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:4px;">Service + gateway fee</div>
+                </div>
+            </div>
+
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:auto;box-shadow:0 8px 24px rgba(15,23,42,.05);">
+                <div style="padding:18px 20px;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+                    <div><h3 style="margin:0;color:#1e293b;">Paid Customer Bookings</h3><small style="color:#64748b;">Only records with payment_status = paid are shown.</small></div>
+                    <span style="background:#dcfce7;color:#166534;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900;">PAID</span>
+                </div>
+                ${rows.length ? `
+                <table style="width:100%;border-collapse:collapse;min-width:900px;">
+                    <thead>
+                        <tr style="background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;">
+                            <th style="padding:13px;text-align:left;">Guest</th>
+                            <th style="padding:13px;text-align:left;">Room</th>
+                            <th style="padding:13px;text-align:left;">Arrival</th>
+                            <th style="padding:13px;text-align:left;">Departure</th>
+                            <th style="padding:13px;text-align:left;">Rooms</th>
+                            <th style="padding:13px;text-align:right;">Customer Paid</th>
+                            <th style="padding:13px;text-align:center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(booking => `
+                            <tr style="border-top:1px solid #f1f5f9;">
+                                <td style="padding:14px;">
+                                    <div style="font-weight:800;color:#1e293b;">${booking.customer_email || 'Customer'}</div>
+                                    <div style="font-size:11px;color:#64748b;">${booking.customer_phone || ''}</div>
+                                </td>
+                                <td style="padding:14px;color:#334155;">
+                                    <div style="font-weight:800;">${booking.room_type || 'Room'}</div>
+                                    <div style="font-size:11px;color:#64748b;">${booking.hotel_name || hotel.hotel_name}</div>
+                                </td>
+                                <td style="padding:14px;color:#1d4ed8;font-weight:800;">${booking.check_in_date || '—'}</td>
+                                <td style="padding:14px;color:#475569;">${booking.check_out_date || '—'}</td>
+                                <td style="padding:14px;text-align:center;font-weight:800;">${booking.rooms_booked || 0}</td>
+                                <td style="padding:14px;text-align:right;font-weight:900;color:#15803d;">₹${Number(booking.total_amount || 0).toLocaleString('en-IN')}</td>
+                                <td style="padding:14px;text-align:center;"><span style="background:#dcfce7;color:#166534;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;">PAID</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>` : `
+                    <div style="padding:48px 20px;text-align:center;color:#64748b;">
+                        <div style="font-size:42px;margin-bottom:10px;">💳</div>
+                        <h3 style="margin:0 0 7px;color:#334155;">No paid customer bookings yet</h3>
+                        <p style="margin:0;font-size:13px;">Jab customer ka hotel payment successfully <b>paid</b> mark hoga, woh yahan automatically show hoga.</p>
+                    </div>`}
+            </div>
+
+            <div style="margin-top:14px;padding:13px 15px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;color:#92400e;font-size:12px;line-height:1.5;">
+                <b>Note:</b> “Customer Payments Received” yahan <b>payment_status = paid</b> bookings ka gross <code>total_amount</code> hai. Actual bank payout/settlement status alag payment gateway/payout workflow par depend karega.
+            </div>
+        `;
     }
 }
 
