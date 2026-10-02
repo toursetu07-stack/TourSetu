@@ -286,8 +286,7 @@ jobs:
 
           source = Path("script.js").read_text(encoding="utf-8")
           dashboard_start = source.rfind("async function renderHotelDashboard(user) {")
-          dashboard_end = source.find("/**
- * Dynamic Tab Switcher for Hotel Dashboard", dashboard_start)
+          dashboard_end = source.find("Dynamic Tab Switcher for Hotel Dashboard", dashboard_start)
           if dashboard_start < 0 or dashboard_end < 0:
               raise SystemExit("Security regression: active hotel dashboard markers missing.")
           dashboard = source[dashboard_start:dashboard_end]
