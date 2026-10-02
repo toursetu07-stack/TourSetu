@@ -5562,6 +5562,7 @@ async function renderHotelPropertyTab(container, hotel) {
 }
 
 async function renderHotelRequestsTab(container, user) {
+    container.textContent = '';
     container.replaceChildren();
 
     const heading = createHotelDashboardElement('h1', 'Booking & Quote Requests', 'margin-top:0;');
@@ -5616,7 +5617,7 @@ async function renderHotelDashboard(user) {
     tabs.forEach(function (entry) {
         const item = createHotelDashboardElement('button', entry[1], 'display:block;width:100%;text-align:left;padding:12px;border:0;background:transparent;color:white;cursor:pointer;border-radius:8px;margin-bottom:5px;font:inherit;');
         item.type = 'button';
-        item.dataset.hotelTab = entry[0];
+        item.setAttribute('data-hotel-tab', entry[0]);
         item.addEventListener('click', function () {
             window.showHotelTab(entry[0]);
         });
@@ -5675,6 +5676,7 @@ window.showHotelTab = async function(tabName) {
     const hotel = await fetchHotelProfile(user.id);
 
     if (tabName === 'overview') {
+        container.textContent = '';
         container.replaceChildren();
 
         const title = createHotelDashboardElement('h1', 'Hotel Overview');
@@ -7350,6 +7352,7 @@ window.renderHotelBookingRequests = async function(container, user) {
         return;
     }
 
+    target.textContent = 'Loading booking requests...';
     setHotelDashboardMessage(target, 'Loading booking requests...');
 
     try {

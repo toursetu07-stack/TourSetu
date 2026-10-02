@@ -298,7 +298,7 @@ jobs:
               raise SystemExit("Security regression: active hotel showHotelTab markers missing.")
           tab = source[tab_start:tab_end]
 
-          request_start = source.find("window.renderHotelBookingRequests =")
+          request_start = source.rfind("window.renderHotelBookingRequests =")
           request_end = source.find("\n/* ACTIVE HOTEL BOOKING RENDERER END */", request_start + 30)
           if request_start < 0 or request_end < 0:
               raise SystemExit("Security regression: hotel booking renderer markers missing.")
