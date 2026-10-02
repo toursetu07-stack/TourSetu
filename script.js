@@ -4049,6 +4049,7 @@ function createAgencyDashboardElement(tag, text, style) {
     return el;
 }
 
+/* Security regression guard: dashboard labels are rendered as text, never HTML. */
 function renderAgencyDashboard(user) {
     const app = document.getElementById('app');
     if (!app) return;
