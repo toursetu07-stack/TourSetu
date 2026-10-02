@@ -3222,9 +3222,10 @@ window.handleBookingInquiry = async function(packageId,packageTitle,agencyId,age
 
     let totalPrice=0;
     const selectedVehicles=Array.from(document.querySelectorAll('.book-v-check:checked')).map(el=>{
-        const id=el.dataset.id;
+        const id=String(el.dataset.id || '');
         const rate=parseFloat(el.dataset.rate)||0;
-        const qty=parseInt(document.querySelector(`.book-v-qty[data-id="${id}"]`)?.value,10)||1;
+        const qtyInput=el.closest('.book-v-row')?.querySelector('.book-v-qty');
+        const qty=parseInt(qtyInput?.value,10)||1;
         totalPrice+=rate*qty;
         return `${qty}x vehicle_id:${id}`;
     });
@@ -3540,1005 +3541,439 @@ async function loadAllPackages() {
 }
 
 /* =========================================================================
-   PACKAGE DETAIL / CUSTOMER BOOKING MODAL 
-   - Shows package duration 
-   - Calculates tour end date 
-   - Shows vehicle seat capacity 
-   - Trekking add-ons removed 
-   ========================================================================= */ 
- 
-window.showPackageDetails = function(pEncoded) { 
- 
-    const p = JSON.parse(decodeURIComponent(pEncoded));
-    window.currentBookingPackage = p; 
- 
-    const modal = document.getElementById('detail-modal'); 
-    const body = document.getElementById('detail-view-body'); 
- 
-    if (!modal || !body) { 
-        console.error("Package detail modal elements not found."); 
-        return; 
-    } 
- 
- 
-    /* ========================================================= 
-       1. PACKAGE BASIC DATA 
-       ========================================================= */ 
- 
-    const vehicleList = Array.isArray(p.vehicles) 
-        ? p.vehicles 
-        : []; 
- 
-    const destinations = Array.isArray(p.destination) 
-        ? p.destination 
-        : ( 
-            Array.isArray(p.destinations) 
-                ? p.destinations 
-                : [p.destination || ''] 
-        ); 
- 
-    const routeInfo = 
-        `${p.starting_location || 'N/A'} ➔ ${destinations.filter(Boolean).join(' ➔ ')}`; 
- 
- 
-    /* ========================================================= 
-       2. TOUR DURATION 
-       Reads tour_days from packages table 
-       ========================================================= */ 
- 
-    const tourDays = parseInt(p.tour_days, 10) || 1; 
- 
- 
-    /* ========================================================= 
-       3. TRAVEL DATE LIMIT 
-       Existing rule: customer can select within 7 days 
-       ========================================================= */ 
- 
-    const today = new Date(); 
- 
-    const minStr = 
-        today.toISOString().split('T')[0]; 
- 
-    const limitDate = new Date(today); 
- 
-    limitDate.setDate( 
-        today.getDate() + 7 
-    ); 
- 
-    const limitStr = 
-        limitDate.toISOString().split('T')[0]; 
- 
- 
-    /* ========================================================= 
-       4. VEHICLE DISPLAY 
-       Tempo Traveler = 26 Seater 
-       Luxury Bus = 60 Seater 
- 
-       IMPORTANT: 
-       Database vehicle IDs/rates are NOT changed. 
-       Only display name is changed. 
-       ========================================================= */ 
- 
-    const vehicleHtml = vehicleList.map(v => { 
- 
-        let vehicleName = v.name || 'Vehicle'; 
- 
-        if ( 
-            vehicleName.toLowerCase().includes('tempo traveler') 
-        ) { 
-            vehicleName = 'Tempo Traveler (26 Seater)'; 
-        } 
- 
-        if ( 
-            vehicleName.toLowerCase().includes('luxury bus') 
-        ) { 
-            vehicleName = 'Luxury Bus (60 Seater)'; 
-        } 
- 
- 
-        const maxVehicles = 
-            parseInt(v.max_cars, 10) || 1; 
- 
-        const vehicleRate = 
-            parseFloat(v.rate) || 0; 
- 
- 
-        return ` 
-            <div 
-                style=" 
-                    padding:16px; 
-                    border:1px solid #e5e7eb; 
-                    border-radius:12px; 
-                    background:#ffffff; 
-                    margin-bottom:10px; 
-                    transition:all 0.2s ease; 
-                " 
-            > 
- 
-                <div 
-                    style=" 
-                        display:flex; 
-                        justify-content:space-between; 
-                        align-items:center; 
-                        gap:12px; 
-                    " 
-                > 
- 
-                    <div 
-                        style=" 
-                            display:flex; 
-                            align-items:center; 
-                            gap:10px; 
-                            flex:1; 
-                        " 
-                    > 
- 
-                        <input 
-                            type="checkbox" 
-                            class="book-v-check" 
-                            data-id="${v.id}" 
-                            data-rate="${vehicleRate}" 
-                            onchange=" 
-                                toggleQtyInput('${v.id}'); 
-                                updateLivePrice(); 
-                            " 
-                            style=" 
-                                width:20px; 
-                                height:20px; 
-                                cursor:pointer; 
-                                flex-shrink:0; 
-                            " 
-                        > 
- 
-                        <div> 
- 
-                            <div 
-                                style=" 
-                                    font-weight:700; 
-                                    color:#2d3436; 
-                                    font-size:15px; 
-                                " 
-                            > 
-                                ${vehicleName} 
-                            </div> 
- 
-                            <div 
-                                style=" 
-                                    margin-top:4px; 
-                                    color:#777; 
-                                    font-size:12px; 
-                                " 
-                            > 
-                                Available Units: 
-                                <b>${maxVehicles}</b> 
-                            </div> 
- 
-                        </div> 
- 
-                    </div> 
- 
- 
-                    <div 
-                        style=" 
-                            color:#2ecc71; 
-                            font-size:16px; 
-                            font-weight:800; 
-                            white-space:nowrap; 
-                        " 
-                    > 
-                        ₹${vehicleRate.toLocaleString('en-IN')} 
-                    </div> 
- 
-                </div> 
- 
- 
-                <div 
-                    id="qty-container-${v.id}" 
-                    style=" 
-                        display:none; 
-                        margin-top:14px; 
-                        padding-top:14px; 
-                        border-top:1px solid #f0f0f0; 
-                    " 
-                > 
- 
-                    <label 
-                        style=" 
-                            font-size:12px; 
-                            color:#636e72; 
-                            font-weight:700; 
-                            display:block; 
-                            margin-bottom:6px; 
-                        " 
-                    > 
-                        NUMBER OF VEHICLES 
-                    </label> 
- 
-                    <input 
-                        type="number" 
-                        class="book-v-qty" 
-                        data-id="${v.id}" 
-                        value="1" 
-                        min="1" 
-                        max="${maxVehicles}" 
-                        oninput="updateLivePrice()" 
-                        style=" 
-                            width:90px; 
-                            padding:9px; 
-                            border:2px solid #ff9f43; 
-                            border-radius:7px; 
-                            box-sizing:border-box; 
-                        " 
-                    > 
- 
-                    <span 
-                        style=" 
-                            margin-left:8px; 
-                            color:#888; 
-                            font-size:12px; 
-                        " 
-                    > 
-                        Max ${maxVehicles} 
-                    </span> 
- 
-                </div> 
- 
-            </div> 
-        `; 
- 
-    }).join(''); 
- 
- 
-    /* ========================================================= 
-       5. PACKAGE UPDATE HISTORY 
-       ========================================================= */ 
- 
-    const historyList = 
-        Array.isArray(p.updates_history) 
-            ? p.updates_history 
-            : []; 
- 
-    let historyHtml = ''; 
- 
-    if (historyList.length > 0) { 
- 
-        const historyItems = 
-            historyList 
-                .map((h, i) => ` 
-                    <div 
-                        style=" 
-                            padding:8px 0; 
-                            border-bottom:1px solid #eee; 
-                            margin-bottom:5px; 
-                        " 
-                    > 
- 
-                        <div 
-                            style=" 
-                                display:flex; 
-                                justify-content:space-between; 
-                            " 
-                        > 
- 
-                            <b> 
-                                Update #${i + 1} 
-                            </b> 
- 
-                            <span 
-                                style=" 
-                                    font-size:10px; 
-                                    color:#999; 
-                                " 
-                            > 
-                                ${new Date( 
-                                    h.updated_at 
-                                ).toLocaleDateString('en-IN')} 
-                            </span> 
- 
-                        </div> 
- 
-                        <div 
-                            style=" 
-                                margin-top:4px; 
-                            " 
-                        > 
-                            <b>Title:</b> 
-                            ${h.title || p.title} 
-                        </div> 
- 
-                    </div> 
-                `) 
-                .reverse() 
-                .join(''); 
- 
- 
-        historyHtml = ` 
-            <div 
-                style=" 
-                    margin-top:20px; 
-                    border-top:1px dashed #ddd; 
-                    padding-top:15px; 
-                " 
-            > 
- 
-                <details> 
- 
-                    <summary 
-                        style=" 
-                            cursor:pointer; 
-                            color:#ff9f43; 
-                            font-size:13px; 
-                            font-weight:bold; 
-                        " 
-                    > 
-                        View Previous Package Updates 
-                        (${historyList.length}) 
-                    </summary> 
- 
-                    <div 
-                        style=" 
-                            margin-top:10px; 
-                            font-size:12px; 
-                            color:#636e72; 
-                            background:#f9f9f9; 
-                            padding:10px; 
-                            border-radius:8px; 
-                        " 
-                    > 
-                        ${historyItems} 
-                    </div> 
- 
-                </details> 
- 
-            </div> 
-        `; 
-    } 
- 
- 
-    /* ========================================================= 
-       6. MAIN BOOKING FORM 
-       ========================================================= */ 
- 
-    body.innerHTML = ` 
- 
-        <div 
-            style=" 
-                text-align:left; 
-                font-family:Inter, sans-serif; 
-            " 
-        > 
- 
-            <!-- HEADER --> 
-            <div 
-                style=" 
-                    display:flex; 
-                    justify-content:space-between; 
-                    align-items:flex-start; 
-                    gap:15px; 
-                " 
-            > 
- 
-                <div> 
- 
-                    <h2 
-                        style=" 
-                            margin:0; 
-                            color:#2d3436; 
-                            font-size:24px; 
-                        " 
-                    > 
-                        ${p.title || 'Tour Package'} 
-                    </h2> 
- 
-                    <p 
-                        style=" 
-                            margin:7px 0 0; 
-                            color:#ff9f43; 
-                            font-weight:700; 
-                            font-size:14px; 
-                        " 
-                    > 
-                        📍 ${routeInfo} 
-                    </p> 
- 
-                </div> 
- 
- 
-                <button 
-                    onclick=" 
-                        document.getElementById('detail-modal').style.display='none' 
-                    " 
-                    style=" 
-                        border:none; 
-                        background:#f1f2f6; 
-                        width:36px; 
-                        height:36px; 
-                        border-radius:50%; 
-                        font-size:20px; 
-                        cursor:pointer; 
-                        color:#555; 
-                        flex-shrink:0; 
-                    " 
-                > 
-                    ✕ 
-                </button> 
- 
-            </div> 
- 
- 
-            <!-- PACKAGE SUMMARY --> 
-            <div 
-                style=" 
-                    margin-top:20px; 
-                    display:grid; 
-                    grid-template-columns:1fr 1fr; 
-                    gap:12px; 
-                " 
-            > 
- 
-                <!-- DURATION --> 
-                <div 
-                    style=" 
-                        background:#fff8ef; 
-                        border:1px solid #ffd8a8; 
-                        border-radius:12px; 
-                        padding:15px; 
-                    " 
-                > 
- 
-                    <div 
-                        style=" 
-                            font-size:11px; 
-                            color:#888; 
-                            font-weight:700; 
-                            margin-bottom:6px; 
-                        " 
-                    > 
-                        TOUR DURATION 
-                    </div> 
- 
-                    <div 
-                        style=" 
-                            font-size:20px; 
-                            color:#e67e22; 
-                            font-weight:800; 
-                        " 
-                    > 
-                        ${tourDays} 
-                        <span 
-                            style=" 
-                                font-size:13px; 
-                                font-weight:600; 
-                            " 
-                        > 
-                            ${tourDays === 1 ? 'Day' : 'Days'} 
-                        </span> 
-                    </div> 
- 
-                </div> 
- 
- 
-                <!-- STARTING LOCATION --> 
-                <div 
-                    style=" 
-                        background:#f5f9ff; 
-                        border:1px solid #cfe2ff; 
-                        border-radius:12px; 
-                        padding:15px; 
-                    " 
-                > 
- 
-                    <div 
-                        style=" 
-                            font-size:11px; 
-                            color:#888; 
-                            font-weight:700; 
-                            margin-bottom:6px; 
-                        " 
-                    > 
-                        STARTING FROM 
-                    </div> 
- 
-                    <div 
-                        style=" 
-                            font-size:16px; 
-                            color:#2980b9; 
-                            font-weight:800; 
-                        " 
-                    > 
-                        ${p.starting_location || 'N/A'} 
-                    </div> 
- 
-                </div> 
- 
-            </div> 
- 
- 
-            <!-- DESCRIPTION --> 
-            <div 
-                style=" 
-                    margin-top:18px; 
-                    padding:16px; 
-                    background:#f8f9fa; 
-                    border-radius:12px; 
-                    border:1px solid #eee; 
-                " 
-            > 
- 
-                <h4 
-                    style=" 
-                        margin:0 0 8px; 
-                        color:#2d3436; 
-                    " 
-                > 
-                    📝 Itinerary / Description 
-                </h4> 
- 
-                <p 
-                    style=" 
-                        margin:0; 
-                        white-space:pre-line; 
-                        font-size:14px; 
-                        color:#636e72; 
-                        line-height:1.6; 
-                    " 
-                > 
-                    ${p.description || 'No description provided.'} 
-                </p> 
- 
-            </div> 
- 
- 
-            <!-- TRAVEL DATE + END DATE --> 
-            <div 
-                style=" 
-                    margin-top:20px; 
-                    padding:18px; 
-                    background:#fff8ef; 
-                    border:1px solid #ffd8a8; 
-                    border-radius:14px; 
-                " 
-            > 
- 
-                <h4 
-                    style=" 
-                        margin:0 0 15px; 
-                        color:#e67e22; 
-                        font-size:16px; 
-                    " 
-                > 
-                    📅 Tour Schedule 
-                </h4> 
- 
- 
-                <div 
-                    style=" 
-                        display:grid; 
-                        grid-template-columns:1fr 1fr; 
-                        gap:12px; 
-                    " 
-                > 
- 
-                    <!-- START DATE --> 
-                    <div> 
- 
-                        <label 
-                            style=" 
-                                font-size:11px; 
-                                color:#666; 
-                                font-weight:800; 
-                                display:block; 
-                                margin-bottom:6px; 
-                            " 
-                        > 
-                            TOUR START DATE 
-                        </label> 
- 
-                        <input 
-                            type="date" 
-                            id="cust-travel-date" 
-                            min="${minStr}" 
-                            max="${limitStr}" 
-                            value="${minStr}" 
-                            onchange="updateTourEndDate(${tourDays})" 
-                            style=" 
-                                width:100%; 
-                                padding:12px; 
-                                border:2px solid #ff9f43; 
-                                border-radius:9px; 
-                                background:white; 
-                                color:#2d3436; 
-                                font-weight:700; 
-                                box-sizing:border-box; 
-                                cursor:pointer; 
-                            " 
-                        > 
- 
-                    </div> 
- 
- 
-                    <!-- END DATE --> 
-                    <div> 
- 
-                        <label 
-                            style=" 
-                                font-size:11px; 
-                                color:#666; 
-                                font-weight:800; 
-                                display:block; 
-                                margin-bottom:6px; 
-                            " 
-                        > 
-                            EXPECTED TOUR END DATE 
-                        </label> 
- 
-                        <div 
-                            id="tour-end-date-display" 
-                            style=" 
-                                min-height:44px; 
-                                display:flex; 
-                                align-items:center; 
-                                padding:0 12px; 
-                                border:2px solid #2ecc71; 
-                                border-radius:9px; 
-                                background:#f0fff6; 
-                                color:#219653; 
-                                font-weight:800; 
-                                box-sizing:border-box; 
-                            " 
-                        > 
-                            Calculating... 
-                        </div> 
- 
-                    </div> 
- 
-                </div> 
- 
- 
-                <div 
-                    style=" 
-                        margin-top:10px; 
-                        font-size:11px; 
-                        color:#777; 
-                    " 
-                > 
-                    Tour end date is automatically calculated from the selected start date and package duration. 
-                </div> 
- 
-            </div> 
- 
- 
-            <!-- VEHICLES --> 
-            <div 
-                style=" 
-                    margin-top:22px; 
-                " 
-            > 
- 
-                <div 
-                    style=" 
-                        display:flex; 
-                        justify-content:space-between; 
-                        align-items:center; 
-                        margin-bottom:10px; 
-                    " 
-                > 
- 
-                    <h4 
-                        style=" 
-                            margin:0; 
-                            color:#2d3436; 
-                            font-size:16px; 
-                        " 
-                    > 
-                        🚗 Select Vehicles 
-                    </h4> 
- 
-                    <span 
-                        style=" 
-                            font-size:11px; 
-                            color:#888; 
-                        " 
-                    > 
-                        Choose at least one 
-                    </span> 
- 
-                </div> 
- 
- 
-                <div> 
-                    ${vehicleHtml} 
-                </div> 
- 
-            </div> 
- 
- 
-            <!-- TOTAL --> 
-            <div 
-                style=" 
-                    margin-top:20px; 
-                    background:#2d3436; 
-                    color:white; 
-                    padding:16px 18px; 
-                    border-radius:12px; 
-                    display:flex; 
-                    justify-content:space-between; 
-                    align-items:center; 
-                " 
-            > 
- 
-                <span 
-                    style=" 
-                        font-weight:800; 
-                        font-size:14px; 
-                    " 
-                > 
-                    ESTIMATED TOTAL 
-                </span> 
- 
-                <span 
-                    id="live-total-display" 
-                    style=" 
-                        color:#ff9f43; 
-                        font-size:23px; 
-                        font-weight:900; 
-                    " 
-                > 
-                    ₹0 
-                </span> 
- 
-            </div> 
- 
- 
-            <!-- CONTACT DETAILS --> 
-            <div 
-                style=" 
-                    margin-top:22px; 
-                    padding-top:20px; 
-                    border-top:2px solid #eee; 
-                " 
-            > 
- 
-                <h4 
-                    style=" 
-                        margin:0 0 15px; 
-                        color:#2d3436; 
-                        font-size:16px; 
-                    " 
-                > 
-                    📋 Pickup & Contact Details 
-                </h4> 
- 
- 
-                <div> 
- 
-                    <!-- CUSTOMER PICKUP CITY -->
-                    <div style="margin-bottom:14px;">
-                        <label style="display:block;font-size:11px;color:#636e72;font-weight:800;margin-bottom:6px;">🏠 CUSTOMER PICKUP CITY</label>
-                        <select id="cust-city" onchange="updatePickupDistancePreview()" style="width:100%;padding:12px;border:2px solid #ff9f43;border-radius:9px;box-sizing:border-box;font-family:inherit;background:white;cursor:pointer;">
-                            <option value="">Select your Uttarakhand city</option>
-                            <option value="Almora">Almora</option><option value="Ranikhet">Ranikhet</option><option value="Dwarahat">Dwarahat</option><option value="Chaukhutia">Chaukhutia</option><option value="Bhikiyasen">Bhikiyasen</option><option value="Bageshwar">Bageshwar</option><option value="Kapkot">Kapkot</option><option value="Garur">Garur</option><option value="Champawat">Champawat</option><option value="Banbasa">Banbasa</option><option value="Tanakpur">Tanakpur</option><option value="Lohaghat">Lohaghat</option><option value="Pati">Pati</option><option value="Gopeshwar">Gopeshwar</option><option value="Joshimath">Joshimath</option><option value="Gauchar">Gauchar</option><option value="Karnaprayag">Karnaprayag</option><option value="Nandprayag">Nandprayag</option><option value="Badrinath">Badrinath</option><option value="Pokhari">Pokhari</option><option value="Tharali">Tharali</option><option value="Gairsain">Gairsain</option><option value="Pipalkoti">Pipalkoti</option><option value="Nandanagar">Nandanagar</option><option value="Dehradun">Dehradun</option><option value="Rishikesh">Rishikesh</option><option value="Vikasnagar">Vikasnagar</option><option value="Mussoorie">Mussoorie</option><option value="Herbertpur">Herbertpur</option><option value="Selaqui">Selaqui</option><option value="Doiwala">Doiwala</option><option value="Haridwar">Haridwar</option><option value="Roorkee">Roorkee</option><option value="Adampur-Sultanpur">Adampur-Sultanpur</option><option value="Dhandera">Dhandera</option><option value="Imlikhera">Imlikhera</option><option value="Padligurjar">Padligurjar</option><option value="Rampur">Rampur</option><option value="Manglaur">Manglaur</option><option value="Jhabreda">Jhabreda</option><option value="Laksar">Laksar</option><option value="Landhaura">Landhaura</option><option value="Shivalik Nagar">Shivalik Nagar</option><option value="Bhagwanpur">Bhagwanpur</option><option value="Piran Kaliyer">Piran Kaliyer</option><option value="Haldwani">Haldwani</option><option value="Ramnagar">Ramnagar</option><option value="Bhowali">Bhowali</option><option value="Kaladhungi">Kaladhungi</option><option value="Lalkuan">Lalkuan</option><option value="Nainital">Nainital</option><option value="Bhimtal">Bhimtal</option><option value="Pauri">Pauri</option><option value="Srinagar">Srinagar</option><option value="Swargashram-Jaunk">Swargashram-Jaunk</option><option value="Satpuli">Satpuli</option><option value="Dogadda">Dogadda</option><option value="Kotdwar">Kotdwar</option><option value="Thalisain">Thalisain</option><option value="Pithoragarh">Pithoragarh</option><option value="Dharchula">Dharchula</option><option value="Didihat">Didihat</option><option value="Gangolihat">Gangolihat</option><option value="Berinag">Berinag</option><option value="Munsyari">Munsyari</option><option value="Rudraprayag">Rudraprayag</option><option value="Kedarnath">Kedarnath</option><option value="Augustmuni">Augustmuni</option><option value="Tilwara">Tilwara</option><option value="Ukhimath">Ukhimath</option><option value="Guptkashi">Guptkashi</option><option value="Tehri">Tehri</option><option value="Narendranagar">Narendranagar</option><option value="Chamba">Chamba</option><option value="Muni-ki-Reti">Muni-ki-Reti</option><option value="Kirtinagar">Kirtinagar</option><option value="Devprayag">Devprayag</option><option value="Gaja">Gaja</option><option value="Ghansali">Ghansali</option><option value="Lambgaon">Lambgaon</option><option value="Chamiyala">Chamiyala</option><option value="Tapovan">Tapovan</option><option value="Gadarpur">Gadarpur</option><option value="Jaspur">Jaspur</option><option value="Kichha">Kichha</option><option value="Sitarganj">Sitarganj</option><option value="Bazpur">Bazpur</option><option value="Khatima">Khatima</option><option value="Mahuakheraganj">Mahuakheraganj</option><option value="Mahuwadawara">Mahuwadawara</option><option value="Sultanpur">Sultanpur</option><option value="Kelakheda">Kelakheda</option><option value="Dineshpur">Dineshpur</option><option value="Shaktigarh">Shaktigarh</option><option value="Nanakmatta">Nanakmatta</option><option value="Gularbhoj">Gularbhoj</option><option value="Kashipur">Kashipur</option><option value="Rudrapur">Rudrapur</option><option value="Nagla">Nagla</option><option value="Lalpur">Lalpur</option><option value="Garhinegi">Garhinegi</option><option value="Seroli Kalan">Seroli Kalan</option><option value="Uttarkashi">Uttarkashi</option><option value="Barkot">Barkot</option><option value="Chinyalisaur">Chinyalisaur</option><option value="Gangotri">Gangotri</option><option value="Purola">Purola</option><option value="Naugaon">Naugaon</option>
-                        </select>
-                        <small style="display:block;margin-top:6px;color:#777;font-size:11px;line-height:1.45;">Agency starting city se selected pickup city tak road distance automatically calculate hoga.</small>
-                    </div>
+   PACKAGE DETAIL / CUSTOMER BOOKING MODAL — XSS-safe DOM implementation
+   ========================================================================= */
 
-                    <div id="pickup-distance-preview" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px;background:#f5fff8;border:1px solid #b7ebc6;border-radius:9px;">
-                        <div>
-                            <div style="font-size:11px;color:#636e72;font-weight:800;">🚗 PICKUP DISTANCE</div>
-                            <div id="pickup-distance-value" style="font-size:14px;font-weight:800;color:#2d3436;margin-top:3px;">Select a city</div>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:11px;color:#636e72;font-weight:800;">PICKUP CHARGE</div>
-                            <div id="pickup-distance-charge" style="font-size:17px;font-weight:900;color:#2ecc71;margin-top:3px;">₹0</div>
-                        </div>
-                    </div>
+function tourSetuCreateElement(tag, text, className) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = String(text);
+    return node;
+}
 
-                    <!-- PHONE --> 
-                    <div> 
- 
-                        <label 
-                            style=" 
-                                display:block; 
-                                font-size:11px; 
-                                color:#636e72; 
-                                font-weight:800; 
-                                margin-bottom:6px; 
-                            " 
-                        > 
-                            📞 MOBILE NUMBER 
-                        </label> 
- 
-                        <input 
-                            type="text" 
-                            id="cust-phone" 
-                            maxlength="10" 
-                            placeholder="Enter 10-digit mobile number" 
-                            style=" 
-                                width:100%; 
-                                padding:12px; 
-                                border:1px solid #dfe6e9; 
-                                border-radius:9px; 
-                                box-sizing:border-box; 
-                            " 
-                        > 
- 
-                    </div> 
- 
-                </div> 
- 
-            </div> 
- 
- 
-            <!-- POLICY --> 
-            <div 
-                style=" 
-                    margin-top:18px; 
-                    padding:14px; 
-                    background:#fff5f5; 
-                    border:1px solid #ff7675; 
-                    border-radius:10px; 
-                " 
-            > 
- 
-                <label 
-                    style=" 
-                        display:flex; 
-                        gap:10px; 
-                        align-items:flex-start; 
-                        cursor:pointer; 
-                    " 
-                > 
- 
-                    <input 
-                        type="checkbox" 
-                        id="policy-consent" 
-                        style=" 
-                            width:18px; 
-                            height:18px; 
-                            margin-top:2px; 
-                            flex-shrink:0; 
-                        " 
-                    > 
- 
-                    <span 
-                        style=" 
-                            font-size:11px; 
-                            color:#444; 
-                            line-height:1.5; 
-                        " 
-                    > 
-                        I agree to the 
-                        <b>Cancellation & Refund Policy</b>. 
-                        I understand that in case of cancellation, 
-                        a non-refundable amount of 
-                        <b>18%</b>\n                        (2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee) 
-                        will be deducted from my total refund. 
-                    </span> 
- 
-                </label> 
- 
-            </div> 
- 
- 
-            <!-- HISTORY --> 
-            ${historyHtml} 
- 
- 
-            <!-- ACTION BUTTONS --> 
-            <div 
-                style=" 
-                    margin-top:25px; 
-                    display:flex; 
-                    gap:10px; 
-                " 
-            > 
- 
-                <button 
-                    onclick=" 
-                        handleBookingInquiry( 
-                            '${p.id}', 
-                            '${String(p.title || '').replace(/'/g, "\\'")}', 
-                            '${p.agency_id || ''}' 
-                        ) 
-                    " 
-                    style=" 
-                        flex:2; 
-                        background:#ff9f43; 
-                        color:white; 
-                        padding:15px; 
-                        font-weight:800; 
-                        cursor:pointer; 
-                        border-radius:10px; 
-                        border:none; 
-                        font-size:15px; 
-                    " 
-                > 
-                    SEND BOOKING REQUEST 
-                </button> 
- 
- 
-                <button 
-                    onclick=" 
-                        document.getElementById('detail-modal').style.display='none' 
-                    " 
-                    style=" 
-                        flex:1; 
-                        background:#eee; 
-                        padding:15px; 
-                        border-radius:10px; 
-                        cursor:pointer; 
-                        border:none; 
-                        font-weight:700; 
-                        color:#666; 
-                    " 
-                > 
-                    BACK 
-                </button> 
- 
-            </div> 
- 
-        </div> 
-    `; 
- 
- 
-    /* ========================================================= 
-       7. OPEN MODAL 
-       ========================================================= */ 
- 
-    window.currentPickupDistanceCharge=0;
-    window.currentPickupDistanceKm=0;
-    window.pickupDistanceRequestId=(window.pickupDistanceRequestId||0)+1;
+function tourSetuSetStyles(node, cssText) {
+    if (node) node.style.cssText = cssText;
+    return node;
+}
 
-    modal.style.display = 'flex'; 
- 
- 
-    /* ========================================================= 
-       8. INITIAL END DATE 
-       ========================================================= */ 
- 
-    if (typeof window.updateTourEndDate === 'function') { 
-        window.updateTourEndDate(tourDays); 
-    } 
- 
- 
-    /* ========================================================= 
-       9. INITIAL PRICE 
-       ========================================================= */ 
- 
-    if (typeof window.updateLivePrice === 'function') {
-        window.updateLivePrice();
+function tourSetuAddField(parent, label, value) {
+    const wrap = tourSetuCreateElement('div');
+    const title = tourSetuCreateElement('div', label);
+    tourSetuSetStyles(title, 'font-size:11px;color:#636e72;font-weight:800;margin-bottom:6px;');
+    const valueNode = tourSetuCreateElement('div', value);
+    tourSetuSetStyles(valueNode, 'font-size:14px;color:#2d3436;font-weight:700;line-height:1.5;');
+    wrap.append(title, valueNode);
+    parent.appendChild(wrap);
+    return wrap;
+}
+
+function tourSetuBuildSection(titleText) {
+    const section = tourSetuCreateElement('section');
+    tourSetuSetStyles(section, 'margin-top:20px;padding:18px;background:#fff8ef;border:1px solid #ffd8a8;border-radius:14px;');
+    const heading = tourSetuCreateElement('h4', titleText);
+    tourSetuSetStyles(heading, 'margin:0 0 15px;color:#e67e22;font-size:16px;');
+    section.appendChild(heading);
+    return section;
+}
+
+window.showPackageDetails = function(pEncoded) {
+    let p;
+    try {
+        p = JSON.parse(decodeURIComponent(String(pEncoded || '')));
+    } catch (error) {
+        console.error('Invalid package payload:', error);
+        alert('This package could not be opened. Please try again.');
+        return;
     }
 
+    if (!p || typeof p !== 'object') {
+        alert('Invalid package details.');
+        return;
+    }
+
+    window.currentBookingPackage = p;
+
+    const modal = document.getElementById('detail-modal');
+    const body = document.getElementById('detail-view-body');
+    if (!modal || !body) {
+        console.error('Package detail modal elements not found.');
+        return;
+    }
+
+    const vehicleList = Array.isArray(p.vehicles) ? p.vehicles : [];
+    const destinations = Array.isArray(p.destination)
+        ? p.destination
+        : (Array.isArray(p.destinations) ? p.destinations : [p.destination || '']);
+    const routeInfo = [
+        p.starting_location || 'N/A',
+        ...destinations.filter(Boolean)
+    ].join(' ➔ ');
+
+    const tourDays = Math.max(1, Number.parseInt(p.tour_days, 10) || 1);
+    const today = new Date();
+    const minStr = today.toISOString().split('T')[0];
+    const limitDate = new Date(today);
+    limitDate.setDate(today.getDate() + 7);
+    const limitStr = limitDate.toISOString().split('T')[0];
+
+    const wrapper = tourSetuCreateElement('div');
+    tourSetuSetStyles(wrapper, 'text-align:left;font-family:Inter,sans-serif;');
+
+    const header = tourSetuCreateElement('div');
+    tourSetuSetStyles(header, 'display:flex;justify-content:space-between;align-items:flex-start;gap:15px;');
+    const headerText = tourSetuCreateElement('div');
+    const title = tourSetuCreateElement('h2', p.title || 'Tour Package');
+    tourSetuSetStyles(title, 'margin:0;color:#2d3436;font-size:24px;line-height:1.25;');
+    const route = tourSetuCreateElement('p', '📍 ' + routeInfo);
+    tourSetuSetStyles(route, 'margin:7px 0 0;color:#ff9f43;font-weight:700;font-size:14px;line-height:1.5;');
+    headerText.append(title, route);
+
+    const closeBtn = tourSetuCreateElement('button', '✕');
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', 'Close package details');
+    tourSetuSetStyles(closeBtn, 'border:none;background:#f1f2f6;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;color:#555;flex-shrink:0;');
+    closeBtn.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+    header.append(headerText, closeBtn);
+    wrapper.appendChild(header);
+
+    const summary = tourSetuCreateElement('div');
+    tourSetuSetStyles(summary, 'margin-top:20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;');
+    const duration = tourSetuCreateElement('div');
+    tourSetuSetStyles(duration, 'background:#fff8ef;border:1px solid #ffd8a8;border-radius:12px;padding:15px;');
+    tourSetuAddField(duration, 'TOUR DURATION', tourDays + (tourDays === 1 ? ' Day' : ' Days'));
+    const startCard = tourSetuCreateElement('div');
+    tourSetuSetStyles(startCard, 'background:#f5f9ff;border:1px solid #cfe2ff;border-radius:12px;padding:15px;');
+    tourSetuAddField(startCard, 'STARTING FROM', p.starting_location || 'N/A');
+    summary.append(duration, startCard);
+    wrapper.appendChild(summary);
+
+    const description = tourSetuCreateElement('div');
+    tourSetuSetStyles(description, 'margin-top:18px;padding:16px;background:#f8f9fa;border-radius:12px;border:1px solid #eee;');
+    const descHeading = tourSetuCreateElement('h4', '📝 Itinerary / Description');
+    tourSetuSetStyles(descHeading, 'margin:0 0 8px;color:#2d3436;');
+    const desc = tourSetuCreateElement('p', p.description || 'No description provided.');
+    tourSetuSetStyles(desc, 'margin:0;white-space:pre-line;font-size:14px;color:#636e72;line-height:1.6;');
+    description.append(descHeading, desc);
+    wrapper.appendChild(description);
+
+    const schedule = tourSetuBuildSection('📅 Tour Schedule');
+    const scheduleGrid = tourSetuCreateElement('div');
+    tourSetuSetStyles(scheduleGrid, 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;');
+
+    const startWrap = tourSetuCreateElement('div');
+    const startLabel = tourSetuCreateElement('label', 'TOUR START DATE');
+    startLabel.setAttribute('for', 'cust-travel-date');
+    tourSetuSetStyles(startLabel, 'font-size:11px;color:#666;font-weight:800;display:block;margin-bottom:6px;');
+    const dateInput = tourSetuCreateElement('input');
+    dateInput.type = 'date';
+    dateInput.id = 'cust-travel-date';
+    dateInput.min = minStr;
+    dateInput.max = limitStr;
+    dateInput.value = minStr;
+    tourSetuSetStyles(dateInput, 'width:100%;padding:12px;border:2px solid #ff9f43;border-radius:9px;background:white;color:#2d3436;font-weight:700;box-sizing:border-box;cursor:pointer;min-height:46px;');
+    startWrap.append(startLabel, dateInput);
+
+    const endWrap = tourSetuCreateElement('div');
+    const endLabel = tourSetuCreateElement('label', 'EXPECTED TOUR END DATE');
+    tourSetuSetStyles(endLabel, 'font-size:11px;color:#666;font-weight:800;display:block;margin-bottom:6px;');
+    const endDisplay = tourSetuCreateElement('div', 'Calculating...');
+    endDisplay.id = 'tour-end-date-display';
+    tourSetuSetStyles(endDisplay, 'min-height:46px;display:flex;align-items:center;padding:0 12px;border:2px solid #2ecc71;border-radius:9px;background:#f0fff6;color:#219653;font-weight:800;box-sizing:border-box;');
+    endWrap.append(endLabel, endDisplay);
+    scheduleGrid.append(startWrap, endWrap);
+    schedule.appendChild(scheduleGrid);
+    const scheduleNote = tourSetuCreateElement('div', 'Tour end date is automatically calculated from the selected start date and package duration.');
+    tourSetuSetStyles(scheduleNote, 'margin-top:10px;font-size:11px;color:#777;line-height:1.5;');
+    schedule.appendChild(scheduleNote);
+    wrapper.appendChild(schedule);
+
+    window.updateTourEndDate = function(days) {
+        const input = document.getElementById('cust-travel-date');
+        const output = document.getElementById('tour-end-date-display');
+        if (!input || !output) return;
+        const base = new Date(input.value + 'T00:00:00');
+        if (Number.isNaN(base.getTime())) {
+            output.textContent = 'Select a valid start date';
+            return;
+        }
+        base.setDate(base.getDate() + Math.max(0, Number(days) - 1));
+        output.textContent = base.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    };
+
+    dateInput.addEventListener('change', function() {
+        window.updateTourEndDate(tourDays);
+        if (typeof window.updateLivePrice === 'function') window.updateLivePrice();
+    });
+
+    const vehiclesSection = tourSetuCreateElement('section');
+    tourSetuSetStyles(vehiclesSection, 'margin-top:22px;');
+    const vehicleHeader = tourSetuCreateElement('div');
+    tourSetuSetStyles(vehicleHeader, 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:12px;');
+    const vehicleHeading = tourSetuCreateElement('h4', '🚗 Select Vehicles');
+    tourSetuSetStyles(vehicleHeading, 'margin:0;color:#2d3436;font-size:16px;');
+    const vehicleHint = tourSetuCreateElement('span', 'Choose at least one');
+    tourSetuSetStyles(vehicleHint, 'font-size:11px;color:#888;');
+    vehicleHeader.append(vehicleHeading, vehicleHint);
+    vehiclesSection.appendChild(vehicleHeader);
+
+    const vehicleListNode = tourSetuCreateElement('div');
+    vehicleList.forEach(function(vehicle, index) {
+        const row = tourSetuCreateElement('div', null, 'book-v-row');
+        tourSetuSetStyles(row, 'padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;margin-bottom:10px;transition:box-shadow .2s ease;');
+
+        const top = tourSetuCreateElement('div');
+        tourSetuSetStyles(top, 'display:flex;justify-content:space-between;align-items:center;gap:12px;');
+        const left = tourSetuCreateElement('div');
+        tourSetuSetStyles(left, 'display:flex;align-items:center;gap:10px;flex:1;');
+
+        const check = tourSetuCreateElement('input');
+        check.type = 'checkbox';
+        check.className = 'book-v-check';
+        check.setAttribute('data-id', String(vehicle.id ?? ''));
+        check.setAttribute('data-rate', String(Number.parseFloat(vehicle.rate) || 0));
+        check.setAttribute('aria-label', 'Select ' + String(vehicle.name || 'vehicle'));
+
+        const vehicleInfo = tourSetuCreateElement('div');
+        let vehicleName = String(vehicle.name || 'Vehicle');
+        const lowerName = vehicleName.toLowerCase();
+        if (lowerName.includes('tempo traveler')) vehicleName = 'Tempo Traveler (26 Seater)';
+        if (lowerName.includes('luxury bus')) vehicleName = 'Luxury Bus (60 Seater)';
+        const vehicleNameNode = tourSetuCreateElement('div', vehicleName);
+        tourSetuSetStyles(vehicleNameNode, 'font-weight:700;color:#2d3436;font-size:15px;');
+        const maxVehicles = Math.max(1, Number.parseInt(vehicle.max_cars, 10) || 1);
+        const available = tourSetuCreateElement('div', 'Available Units: ' + maxVehicles);
+        tourSetuSetStyles(available, 'margin-top:4px;color:#777;font-size:12px;');
+        vehicleInfo.append(vehicleNameNode, available);
+        left.append(check, vehicleInfo);
+
+        const rate = tourSetuCreateElement('div', '₹' + (Number.parseFloat(vehicle.rate) || 0).toLocaleString('en-IN'));
+        tourSetuSetStyles(rate, 'color:#2ecc71;font-size:16px;font-weight:800;white-space:nowrap;');
+        top.append(left, rate);
+        row.appendChild(top);
+
+        const qtyWrap = tourSetuCreateElement('div');
+        qtyWrap.id = 'qty-container-' + index;
+        tourSetuSetStyles(qtyWrap, 'display:none;margin-top:14px;padding-top:14px;border-top:1px solid #f0f0f0;');
+        const qtyLabel = tourSetuCreateElement('label', 'NUMBER OF VEHICLES');
+        tourSetuSetStyles(qtyLabel, 'font-size:12px;color:#636e72;font-weight:700;display:block;margin-bottom:6px;');
+        const qty = tourSetuCreateElement('input');
+        qty.type = 'number';
+        qty.className = 'book-v-qty';
+        qty.setAttribute('data-id', String(vehicle.id ?? ''));
+        qty.value = '1';
+        qty.min = '1';
+        qty.max = String(maxVehicles);
+        qty.inputMode = 'numeric';
+        tourSetuSetStyles(qty, 'width:90px;padding:9px;border:2px solid #ff9f43;border-radius:7px;box-sizing:border-box;min-height:42px;');
+        const maxText = tourSetuCreateElement('span', ' Max ' + maxVehicles);
+        tourSetuSetStyles(maxText, 'margin-left:8px;color:#888;font-size:12px;');
+        qtyWrap.append(qtyLabel, qty, maxText);
+        row.appendChild(qtyWrap);
+        vehicleListNode.appendChild(row);
+
+        check.addEventListener('change', function() {
+            qtyWrap.style.display = check.checked ? 'block' : 'none';
+            window.updateLivePrice();
+        });
+        qty.addEventListener('input', function() {
+            const parsed = Math.min(maxVehicles, Math.max(1, Number.parseInt(qty.value, 10) || 1));
+            qty.value = String(parsed);
+            window.updateLivePrice();
+        });
+    });
+    vehiclesSection.appendChild(vehicleListNode);
+    wrapper.appendChild(vehiclesSection);
+
+    const totalBox = tourSetuCreateElement('div');
+    tourSetuSetStyles(totalBox, 'margin-top:20px;background:#2d3436;color:white;padding:16px 18px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;');
+    const totalLabel = tourSetuCreateElement('span', 'ESTIMATED TOTAL');
+    tourSetuSetStyles(totalLabel, 'font-weight:800;font-size:14px;');
+    const totalDisplay = tourSetuCreateElement('span', '₹0');
+    totalDisplay.id = 'live-total-display';
+    tourSetuSetStyles(totalDisplay, 'color:#ff9f43;font-size:23px;font-weight:900;');
+    totalBox.append(totalLabel, totalDisplay);
+    wrapper.appendChild(totalBox);
+
+    const contact = tourSetuCreateElement('section');
+    tourSetuSetStyles(contact, 'margin-top:22px;padding-top:20px;border-top:2px solid #eee;');
+    const contactHeading = tourSetuCreateElement('h4', '📋 Pickup & Contact Details');
+    tourSetuSetStyles(contactHeading, 'margin:0 0 15px;color:#2d3436;font-size:16px;');
+    contact.appendChild(contactHeading);
+
+    const cityWrap = tourSetuCreateElement('div');
+    tourSetuSetStyles(cityWrap, 'margin-bottom:14px;');
+    const cityLabel = tourSetuCreateElement('label', '🏠 CUSTOMER PICKUP CITY');
+    cityLabel.setAttribute('for', 'cust-city');
+    tourSetuSetStyles(cityLabel, 'display:block;font-size:11px;color:#636e72;font-weight:800;margin-bottom:6px;');
+    const city = tourSetuCreateElement('select');
+    city.id = 'cust-city';
+    city.setAttribute('aria-label', 'Customer pickup city');
+    tourSetuSetStyles(city, 'width:100%;padding:12px;border:2px solid #ff9f43;border-radius:9px;box-sizing:border-box;font-family:inherit;background:white;cursor:pointer;min-height:46px;');
+    const placeholder = tourSetuCreateElement('option', 'Select your Uttarakhand city');
+    placeholder.value = '';
+    city.appendChild(placeholder);
+    const cities = Array.isArray(UTTARAKHAND_PICKUP_CITIES) ? UTTARAKHAND_PICKUP_CITIES : [];
+    cities.forEach(function(cityName) {
+        const option = tourSetuCreateElement('option', cityName);
+        option.value = cityName;
+        city.appendChild(option);
+    });
+    const cityNote = tourSetuCreateElement('small', 'Agency starting city se selected pickup city tak road distance automatically calculate hoga.');
+    tourSetuSetStyles(cityNote, 'display:block;margin-top:6px;color:#777;font-size:11px;line-height:1.45;');
+    cityWrap.append(cityLabel, city, cityNote);
+
+    const distanceBox = tourSetuCreateElement('div');
+    distanceBox.id = 'pickup-distance-preview';
+    tourSetuSetStyles(distanceBox, 'display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;margin-bottom:14px;background:#f5fff8;border:1px solid #b7ebc6;border-radius:9px;');
+    const distanceTextWrap = tourSetuCreateElement('div');
+    const distanceLabel = tourSetuCreateElement('div', '🚗 PICKUP DISTANCE');
+    tourSetuSetStyles(distanceLabel, 'font-size:11px;color:#636e72;font-weight:800;');
+    const distanceValue = tourSetuCreateElement('div', 'Select a city');
+    distanceValue.id = 'pickup-distance-value';
+    tourSetuSetStyles(distanceValue, 'font-size:14px;font-weight:800;color:#2d3436;margin-top:3px;');
+    distanceTextWrap.append(distanceLabel, distanceValue);
+    const chargeWrap = tourSetuCreateElement('div');
+    tourSetuSetStyles(chargeWrap, 'text-align:right;');
+    const chargeLabel = tourSetuCreateElement('div', 'PICKUP CHARGE');
+    tourSetuSetStyles(chargeLabel, 'font-size:11px;color:#636e72;font-weight:800;');
+    const chargeValue = tourSetuCreateElement('div', '₹0');
+    chargeValue.id = 'pickup-distance-charge';
+    tourSetuSetStyles(chargeValue, 'font-size:17px;font-weight:900;color:#2ecc71;margin-top:3px;');
+    chargeWrap.append(chargeLabel, chargeValue);
+    distanceBox.append(distanceTextWrap, chargeWrap);
+    cityWrap.appendChild(distanceBox);
+    contact.appendChild(cityWrap);
+
+    const phoneWrap = tourSetuCreateElement('div');
+    const phoneLabel = tourSetuCreateElement('label', '📞 MOBILE NUMBER');
+    phoneLabel.setAttribute('for', 'cust-phone');
+    tourSetuSetStyles(phoneLabel, 'display:block;font-size:11px;color:#636e72;font-weight:800;margin-bottom:6px;');
+    const phone = tourSetuCreateElement('input');
+    phone.type = 'tel';
+    phone.id = 'cust-phone';
+    phone.maxLength = 10;
+    phone.inputMode = 'numeric';
+    phone.autocomplete = 'tel';
+    phone.placeholder = 'Enter 10-digit mobile number';
+    phone.setAttribute('aria-label', '10 digit mobile number');
+    tourSetuSetStyles(phone, 'width:100%;padding:12px;border:1px solid #dfe6e9;border-radius:9px;box-sizing:border-box;min-height:46px;');
+    phone.addEventListener('input', function() {
+        phone.value = phone.value.replace(/\D/g, '').slice(0, 10);
+    });
+    phoneWrap.append(phoneLabel, phone);
+    contact.appendChild(phoneWrap);
+    wrapper.appendChild(contact);
+
+    const policy = tourSetuCreateElement('div');
+    tourSetuSetStyles(policy, 'margin-top:18px;padding:14px;background:#fff5f5;border:1px solid #ff7675;border-radius:10px;');
+    const policyLabel = tourSetuCreateElement('label');
+    tourSetuSetStyles(policyLabel, 'display:flex;gap:10px;align-items:flex-start;cursor:pointer;');
+    const policyCheck = tourSetuCreateElement('input');
+    policyCheck.type = 'checkbox';
+    policyCheck.id = 'policy-consent';
+    policyCheck.setAttribute('aria-label', 'Accept cancellation and refund policy');
+    tourSetuSetStyles(policyCheck, 'width:18px;height:18px;margin-top:2px;flex-shrink:0;');
+    const policyText = tourSetuCreateElement('span', 'I agree to the Cancellation & Refund Policy. I understand that in case of cancellation, a non-refundable amount of 18% (2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee) will be deducted from my total refund.');
+    tourSetuSetStyles(policyText, 'font-size:11px;color:#444;line-height:1.5;');
+    policyLabel.append(policyCheck, policyText);
+    policy.appendChild(policyLabel);
+    wrapper.appendChild(policy);
+
+    const historyList = Array.isArray(p.updates_history) ? p.updates_history : [];
+    if (historyList.length) {
+        const history = tourSetuCreateElement('details');
+        tourSetuSetStyles(history, 'margin-top:20px;border-top:1px dashed #ddd;padding-top:15px;');
+        const summaryNode = tourSetuCreateElement('summary', 'View Previous Package Updates (' + historyList.length + ')');
+        tourSetuSetStyles(summaryNode, 'cursor:pointer;color:#ff9f43;font-size:13px;font-weight:bold;');
+        const historyBody = tourSetuCreateElement('div');
+        tourSetuSetStyles(historyBody, 'margin-top:10px;font-size:12px;color:#636e72;background:#f9f9f9;padding:10px;border-radius:8px;');
+        history.slice().reverse().forEach(function(item, index) {
+            const entry = tourSetuCreateElement('div');
+            tourSetuSetStyles(entry, 'padding:8px 0;border-bottom:1px solid #eee;margin-bottom:5px;');
+            const topLine = tourSetuCreateElement('div');
+            tourSetuSetStyles(topLine, 'display:flex;justify-content:space-between;gap:8px;');
+            topLine.appendChild(tourSetuCreateElement('b', 'Update #' + (index + 1)));
+            let dateText = 'Unknown date';
+            const parsedDate = new Date(item?.updated_at);
+            if (!Number.isNaN(parsedDate.getTime())) dateText = parsedDate.toLocaleDateString('en-IN');
+            topLine.appendChild(tourSetuCreateElement('span', dateText));
+            const itemTitle = tourSetuCreateElement('div', 'Title: ' + (item?.title || p.title || 'Tour Package'));
+            tourSetuSetStyles(itemTitle, 'margin-top:4px;');
+            entry.append(topLine, itemTitle);
+            historyBody.appendChild(entry);
+        });
+        history.append(summaryNode, historyBody);
+        wrapper.appendChild(history);
+    }
+
+    const actions = tourSetuCreateElement('div');
+    tourSetuSetStyles(actions, 'margin-top:25px;display:flex;gap:10px;flex-wrap:wrap;');
+    const sendBtn = tourSetuCreateElement('button', 'SEND BOOKING REQUEST');
+    sendBtn.type = 'button';
+    tourSetuSetStyles(sendBtn, 'flex:2 1 240px;background:#ff9f43;color:white;padding:15px;font-weight:800;cursor:pointer;border-radius:10px;border:none;font-size:15px;min-height:50px;');
+    sendBtn.addEventListener('click', function() {
+        void window.handleBookingInquiry(
+            String(p.id || ''),
+            String(p.title || ''),
+            String(p.agency_id || ''),
+            String(p.agency_email || '')
+        );
+    });
+
+    const backBtn = tourSetuCreateElement('button', 'BACK');
+    backBtn.type = 'button';
+    tourSetuSetStyles(backBtn, 'flex:1 1 120px;background:#eee;padding:15px;border-radius:10px;cursor:pointer;border:none;font-weight:700;color:#666;min-height:50px;');
+    backBtn.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+    actions.append(sendBtn, backBtn);
+    wrapper.appendChild(actions);
+
+    body.replaceChildren(wrapper);
+    window.currentPickupDistanceCharge = 0;
+    window.currentPickupDistanceKm = 0;
+    window.pickupDistanceRequestId = (window.pickupDistanceRequestId || 0) + 1;
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+
+    city.addEventListener('change', function() {
+        void window.updatePickupDistancePreview();
+    });
+
+    window.updateTourEndDate(tourDays);
+    window.updateLivePrice();
 };
 
-window.toggleQtyInput = function(id) { 
- 
-    const container = 
-        document.getElementById( 
-            `qty-container-${id}` 
-        ); 
- 
-    const checkbox = 
-        document.querySelector( 
-            `.book-v-check[data-id="${id}"]` 
-        ); 
- 
-    if (!container || !checkbox) { 
-        return; 
-    } 
- 
- 
-    container.style.display = 
-        checkbox.checked 
-            ? 'block' 
-            : 'none'; 
- 
- 
-    if (typeof window.updateLivePrice === 'function') { 
-        window.updateLivePrice(); 
-    } 
- 
+window.toggleQtyInput = function(id) {
+    const checkbox = Array.from(document.querySelectorAll('.book-v-check')).find(function(node) {
+        return String(node.dataset.id || '') === String(id || '');
+    });
+    if (!checkbox) return;
+    const row = checkbox.closest('.book-v-row');
+    const qtyContainer = row?.querySelector('[id^="qty-container-"]');
+    if (qtyContainer) qtyContainer.style.display = checkbox.checked ? 'block' : 'none';
+    if (typeof window.updateLivePrice === 'function') window.updateLivePrice();
 };
+
+window.updateLivePrice = function() {
+    let total = 0;
+    document.querySelectorAll('.book-v-check:checked').forEach(function(checkbox) {
+        const rate = Number.parseFloat(checkbox.dataset.rate) || 0;
+        const row = checkbox.closest('.book-v-row');
+        const qtyInput = row?.querySelector('.book-v-qty');
+        const qty = Math.max(1, Number.parseInt(qtyInput?.value, 10) || 1);
+        total += rate * qty;
+    });
+    total += Number(window.currentPickupDistanceCharge) || 0;
+    const totalEl = document.getElementById('live-total-display');
+    if (totalEl) totalEl.textContent = '₹' + total.toLocaleString('en-IN');
+};
+
+/* =========================================
+   HOTELS PACKAGES IN AGENCY DASHBOARD
+   ========================================= */
 /* =========================================
    HOTELS PACKAGES IN AGENCY DASHBOARD
    ========================================= */
