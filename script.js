@@ -1,3 +1,4 @@
+/* Phase 5 dashboard security migration: active Agency Dashboard shell uses safe DOM APIs. */
 /* =========================================
    1. CONFIGURATION & GLOBAL STATE
    ========================================= */
