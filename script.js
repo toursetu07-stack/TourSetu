@@ -1027,7 +1027,7 @@ function safeFileExtension(file) {
     return ALLOWED_DOCUMENT_TYPES[String(file?.type || '').toLowerCase()] || null;
 }
 
-async const KYC_MAX_FILE_BYTES = 10 * 1024 * 1024;
+const KYC_MAX_FILE_BYTES = 10 * 1024 * 1024;
 const IMAGE_MAX_FILE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = Object.freeze({
     'application/pdf': 'pdf',
