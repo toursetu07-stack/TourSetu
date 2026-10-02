@@ -257,6 +257,8 @@ async function showDashboard(user) {
         return;
     }
     if(role==='hotel'){
+        const hotelVerification=await getHotelVerification(user.id).catch(()=>null);
+        window.currentHotelVerificationStatus=hotelVerification?.status||'pending';
         if(typeof initHotelDashboard==="function")await initHotelDashboard(user);
         else if(typeof renderHotelDashboard==="function")renderHotelDashboard(user);
         else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, '+user.email+'</p><button onclick="handleLogout()">Logout</button></div>';
@@ -295,6 +297,22 @@ function renderAuthUI() {
             <label>Phone / Contact No.</label><input type="tel" id="biz-phone" placeholder="Phone / Contact No." style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
             <label>GST Number</label><input type="text" id="gst-no" placeholder="GST Number" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
             <label>Business Registration No.</label><input type="text" id="biz-reg" placeholder="Business Registration No." style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+          </div>
+          <div id="hotel-basic-fields" style="display:none;">
+            <label>Hotel Front Desk / Owner Phone (Optional)</label>
+            <input type="tel" id="hotel-phone" placeholder="Hotel Front Desk / Owner Phone" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+          </div>
+          <div id="hotel-verification-fields" style="display:none;margin-top:14px;">
+            <h3 style="margin:8px 0;color:#2d3436;font-size:16px;">Hotel Verification Documents — Optional</h3>
+            <p style="font-size:12px;color:#777;margin:0 0 10px;">Upload clear photos or PDF copies if available. All five documents are optional.</p>
+            <div class="agency-doc-grid">
+              <label>Uttarakhand Tourism / UTBM Hotel Registration<input type="file" id="hotel-doc-uttarakhand-registration" accept="image/*,.pdf"></label>
+              <label>Trade License / Local Authority License<input type="file" id="hotel-doc-trade-license" accept="image/*,.pdf"></label>
+              <label>GST Certificate / MSME Udyam<input type="file" id="hotel-doc-gst-udyam" accept="image/*,.pdf"></label>
+              <label>Fire Safety NOC<input type="file" id="hotel-doc-fire-noc" accept="image/*,.pdf"></label>
+              <label>Police NOC<input type="file" id="hotel-doc-police-noc" accept="image/*,.pdf"></label>
+            </div>
+            <p style="font-size:11px;color:#888;margin:10px 0 0;">You can continue without these documents. Your hotel remains hidden from customers until admin approval.</p>
           </div>
           <div id="agency-step-1" style="margin-top:14px;">
             <h3 style="margin:8px 0;color:#2d3436;font-size:16px;">Step 1 — Business & KYC Documents</h3>
@@ -339,10 +357,44 @@ window.goToAgencyDocumentStep2=function(){
 };
 window.backToAgencyDocumentStep1=function(){document.getElementById('agency-step-2').style.display='none';document.getElementById('agency-step-1').style.display='block';document.getElementById('status').innerText='';};
 window.toggleBusinessFields=function(){
-    const role=document.getElementById('role')?.value,businessFields=document.getElementById('business-fields'),agencyBasic=document.getElementById('agency-basic-fields');if(!businessFields)return;
-    if(role==='agency'){businessFields.style.display='block';if(agencyBasic)agencyBasic.style.display='block';const agencyEmail=document.getElementById('agency-email');if(agencyEmail)agencyEmail.value=document.getElementById('email')?.value||'';document.getElementById('agency-step-1').style.display='block';document.getElementById('agency-step-2').style.display='none';const genericAuth=document.getElementById('auth-btn');if(genericAuth)genericAuth.style.display='none';}
-    else if(role==='hotel'){businessFields.style.display='block';if(agencyBasic)agencyBasic.innerHTML=`<label>GSTIN / FSSAI License</label><input type="text" id="gst-no" placeholder="Hotel GSTIN / FSSAI License" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><label>Property Registration No.</label><input type="text" id="biz-reg" placeholder="Property Registration No." style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><label>Hotel Front Desk / Owner Phone</label><input type="tel" id="biz-phone" placeholder="Hotel Front Desk / Owner Phone" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">`;document.getElementById('agency-step-1').style.display='none';document.getElementById('agency-step-2').style.display='none';const genericAuth=document.getElementById('auth-btn');if(genericAuth)genericAuth.style.display='block';}
-    else {businessFields.style.display='none';const genericAuth=document.getElementById('auth-btn');if(genericAuth)genericAuth.style.display='block';}
+    const role=document.getElementById('role')?.value;
+    const businessFields=document.getElementById('business-fields');
+    const agencyBasic=document.getElementById('agency-basic-fields');
+    const hotelBasic=document.getElementById('hotel-basic-fields');
+    const agencyStep1=document.getElementById('agency-step-1');
+    const agencyStep2=document.getElementById('agency-step-2');
+    const hotelDocs=document.getElementById('hotel-verification-fields');
+    if(!businessFields)return;
+    if(role==='agency'){
+        businessFields.style.display='block';
+        if(agencyBasic)agencyBasic.style.display='block';
+        if(hotelBasic)hotelBasic.style.display='none';
+        if(agencyStep1)agencyStep1.style.display='block';
+        if(agencyStep2)agencyStep2.style.display='none';
+        if(hotelDocs)hotelDocs.style.display='none';
+        const agencyEmail=document.getElementById('agency-email');
+        if(agencyEmail)agencyEmail.value=document.getElementById('email')?.value||'';
+        const genericAuth=document.getElementById('auth-btn');
+        if(genericAuth)genericAuth.style.display='none';
+    }else if(role==='hotel'){
+        businessFields.style.display='block';
+        if(agencyBasic)agencyBasic.style.display='none';
+        if(hotelBasic)hotelBasic.style.display='block';
+        if(agencyStep1)agencyStep1.style.display='none';
+        if(agencyStep2)agencyStep2.style.display='none';
+        if(hotelDocs)hotelDocs.style.display='block';
+        const genericAuth=document.getElementById('auth-btn');
+        if(genericAuth)genericAuth.style.display='block';
+    }else{
+        businessFields.style.display='none';
+        if(agencyBasic)agencyBasic.style.display='none';
+        if(hotelBasic)hotelBasic.style.display='none';
+        if(agencyStep1)agencyStep1.style.display='none';
+        if(agencyStep2)agencyStep2.style.display='none';
+        if(hotelDocs)hotelDocs.style.display='none';
+        const genericAuth=document.getElementById('auth-btn');
+        if(genericAuth)genericAuth.style.display='block';
+    }
 };
 /* =========================================
    5. AUTHENTICATION + AGENCY KYC
@@ -355,6 +407,13 @@ function safeFileExtension(file){const match=String(file?.name||'').toLowerCase(
 async function uploadAgencyDocuments(userId,files){const bucket=getClient().storage.from(AGENCY_KYC_BUCKET),uploadedPaths={};for(const [dbField,file] of Object.entries(files)){const path=userId+'/'+dbField.replace(/_path$/,'')+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+safeFileExtension(file);const {data,error}=await bucket.upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});if(error)throw new Error('Upload failed for '+dbField+': '+error.message);uploadedPaths[dbField]=data.path;}return uploadedPaths;}
 async function getAgencyVerification(userId){const {data,error}=await getClient().from('agency_verification_requests').select('id,status,denial_reason,email,gst_no,business_reg_no,phone,created_at,updated_at').eq('user_id',userId).maybeSingle();if(error)throw error;return data;}
 async function submitAgencyKYC(user){const files=getSelectedAgencyDocuments(),validationError=validateAgencyDocuments(files);if(validationError)throw new Error(validationError);const client=getClient();const {data:existing,error:existingError}=await client.from('agency_verification_requests').select('id,status').eq('user_id',user.id).maybeSingle();if(existingError)throw existingError;if(!existing)throw new Error('Agency verification request was not created. Please try registration again.');if(existing.status!=='pending')throw new Error('This agency verification request is already '+existing.status+'.');const paths=await uploadAgencyDocuments(user.id,files);const {error:saveError}=await client.rpc('save_agency_verification_documents',{p_gst_document_path:paths.gst_document_path,p_business_reg_document_path:paths.business_reg_document_path,p_utdb_registration_certificate_path:paths.utdb_registration_certificate_path,p_pan_card_path:paths.pan_card_path,p_aadhaar_card_path:paths.aadhaar_card_path,p_cancelled_cheque_or_bank_passbook_path:paths.cancelled_cheque_or_bank_passbook_path,p_commercial_rc_path:paths.commercial_rc_path,p_aitp_commercial_permit_path:paths.aitp_commercial_permit_path,p_vehicle_insurance_path:paths.vehicle_insurance_path,p_fitness_certificate_path:paths.fitness_certificate_path,p_commercial_driving_license_path:paths.commercial_driving_license_path,p_police_verification_id_proof_path:paths.police_verification_id_proof_path});if(saveError)throw saveError;}
+const HOTEL_KYC_BUCKET='hotel-verification-documents';
+const HOTEL_KYC_FILES={uttarakhand_tourism_utbm_registration_path:'hotel-doc-uttarakhand-registration',trade_license_local_authority_license_path:'hotel-doc-trade-license',gst_certificate_msme_udyam_path:'hotel-doc-gst-udyam',fire_safety_noc_path:'hotel-doc-fire-noc',police_noc_path:'hotel-doc-police-noc'};
+function getSelectedHotelDocuments(){const files={};for(const [dbField,inputId] of Object.entries(HOTEL_KYC_FILES)){const input=document.getElementById(inputId);files[dbField]=input?.files?.[0]||null;}return files;}
+function validateHotelDocuments(files){const labels={uttarakhand_tourism_utbm_registration_path:'Uttarakhand Tourism / UTBM Hotel Registration',trade_license_local_authority_license_path:'Trade License / Local Authority License',gst_certificate_msme_udyam_path:'GST Certificate / MSME Udyam',fire_safety_noc_path:'Fire Safety NOC',police_noc_path:'Police NOC'};for(const [key,label] of Object.entries(labels)){if(files[key]&&files[key].size>10*1024*1024)return label+' must be 10 MB or smaller.';}return '';}
+async function uploadHotelDocuments(userId,files){const bucket=getClient().storage.from(HOTEL_KYC_BUCKET),uploadedPaths={};for(const [dbField,file] of Object.entries(files)){if(!file)continue;const path=userId+'/'+dbField.replace(/_path$/,'')+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+safeFileExtension(file);const {data,error}=await bucket.upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});if(error)throw new Error('Upload failed for '+dbField+': '+error.message);uploadedPaths[dbField]=data.path;}return uploadedPaths;}
+async function getHotelVerification(userId){const {data,error}=await getClient().from('hotel_verification_requests').select('id,status,denial_reason,email,phone,created_at,updated_at').eq('user_id',userId).maybeSingle();if(error)throw error;return data;}
+async function submitHotelKYC(user){const files=getSelectedHotelDocuments(),validationError=validateHotelDocuments(files);if(validationError)throw new Error(validationError);const client=getClient();const {error:ensureError}=await client.rpc('ensure_my_hotel_verification_request');if(ensureError)throw ensureError;const paths=await uploadHotelDocuments(user.id,files);if(Object.keys(paths).length===0)return;const {error:saveError}=await client.rpc('save_hotel_verification_documents',{p_uttarakhand_tourism_utbm_registration_path:paths.uttarakhand_tourism_utbm_registration_path||null,p_trade_license_local_authority_license_path:paths.trade_license_local_authority_license_path||null,p_gst_certificate_msme_udyam_path:paths.gst_certificate_msme_udyam_path||null,p_fire_safety_noc_path:paths.fire_safety_noc_path||null,p_police_noc_path:paths.police_noc_path||null});if(saveError)throw saveError;}
 async function handleAuth(){
     const status=document.getElementById('status'),role=!isLoginMode?document.getElementById('role')?.value:null,btn=document.getElementById('agency-register-btn')||document.getElementById('auth-btn'),email=document.getElementById('email')?.value.trim(),password=document.getElementById('password')?.value||'';
     if(!email||!password){if(status)status.innerText='⚠️ Please enter email and password';return;}
@@ -373,12 +432,22 @@ async function handleAuth(){
         }
         const metadata={role,is_approved:role==='customer'};
         if(role==='agency'){metadata.gst=document.getElementById('gst-no')?.value.trim()||'';metadata.reg_no=document.getElementById('biz-reg')?.value.trim()||'';metadata.phone=document.getElementById('biz-phone')?.value.trim()||'';metadata.license='';}
-        else if(role==='hotel'){metadata.gst=document.getElementById('gst-no')?.value.trim()||'N/A';metadata.reg_no=document.getElementById('biz-reg')?.value.trim()||'N/A';metadata.phone=document.getElementById('biz-phone')?.value.trim()||'N/A';metadata.license='';}
+        else if(role==='hotel'){metadata.phone=document.getElementById('hotel-phone')?.value.trim()||'';metadata.business_name='';metadata.gst='';metadata.reg_no='';metadata.license='';}
         const redirectUrl=window.location.origin+window.location.pathname;
         const {data,error}=await client.auth.signUp({email,password,options:{data:metadata,emailRedirectTo:redirectUrl}});if(error)throw error;if(!data?.user)throw new Error('Account could not be created.');
         if(role==='agency'){
             if(!data.session){if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Supabase has email confirmation enabled, so documents can only be uploaded after the account is signed in. Please confirm <b>'+email+'</b>, then login once to complete the KYC upload.<br><br><small>The agency request is already created in Supabase with <b>pending</b> status.</small></div>';return;}
             await submitAgencyKYC(data.user);if(status)status.innerText='✅ Registration submitted. Opening your Agency Dashboard...';await showDashboard(data.user);return;
+        }
+        if(role==='hotel'){
+            if(!data.session){
+                if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Supabase email confirmation is enabled, so the Hotel Dashboard will open after you confirm <b>'+email+'</b> and login.<br><br><small>Your hotel verification request is already saved as <b>pending</b>. The documents are optional.</small></div>';
+                return;
+            }
+            await submitHotelKYC(data.user);
+            if(status)status.innerText='✅ Hotel account created. Opening your Hotel Dashboard...';
+            await showDashboard(data.user);
+            return;
         }
         if(data?.session)await showDashboard(data.user);else if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Check your Inbox!</strong><br>A confirmation link was sent to <b>'+email+'</b>. After confirmation, login with your email and password.</div>';
     }catch(err){console.error('Auth/KYC error:',err);if(status)status.innerText='❌ '+(err?.message||err);}
@@ -5143,7 +5212,8 @@ window.saveHotelProfile = async function(existingHotelId) {
         hotel_name: name,
         city: city,
         address: address,
-        status: 'active'
+        status: 'pending',
+        hide_from_search: true
     };
     if (imageUrl) payload.front_pictures_urls = [imageUrl];
 
@@ -5442,7 +5512,32 @@ async function renderHotelDashboard(user) {
     // Initialize Real-time Database Listeners
     initHotelRealtimeSubscriptions(user.id);
     // Render initial overview tab
-    switchHotelTab('overview');
+    await switchHotelTab('overview');
+    const hotelVerification = await getHotelVerification(user.id).catch(()=>null);
+    window.currentHotelVerificationStatus = hotelVerification?.status || 'pending';
+    const hotelMain = document.getElementById('hotel-main-content');
+    if (hotelMain) {
+        const banner = document.createElement('div');
+        banner.id = 'hotel-verification-banner';
+        banner.style.cssText = 'margin-bottom:20px;padding:14px 16px;border-radius:10px;font-size:13px;font-weight:700;';
+        if (window.currentHotelVerificationStatus === 'approved') {
+            banner.style.background = '#eafaf1';
+            banner.style.border = '1px solid #b7e4c7';
+            banner.style.color = '#1e8449';
+            banner.innerHTML = '✅ Hotel verification approved. Your property can be shown to customers when inventory is available.';
+        } else if (window.currentHotelVerificationStatus === 'denied') {
+            banner.style.background = '#fff0f0';
+            banner.style.border = '1px solid #f5b7b1';
+            banner.style.color = '#c0392b';
+            banner.innerHTML = '❌ Hotel verification denied.' + (hotelVerification?.denial_reason ? ' Reason: ' + hotelVerification.denial_reason : '');
+        } else {
+            banner.style.background = '#fff8e8';
+            banner.style.border = '1px solid #ffd59a';
+            banner.style.color = '#9a6700';
+            banner.innerHTML = '⏳ Hotel verification pending. Your hotel profile is hidden from customers until admin approval.';
+        }
+        hotelMain.prepend(banner);
+    }
 }
 
 /* ==========================================================================
