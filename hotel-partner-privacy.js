@@ -161,6 +161,27 @@
             const activeUser = user || (await window.supabase.auth.getUser()).data.user;
             if (!activeUser?.id) return currentDashboard(user);
 
+            // Enforce the requested order: Hotel Partner Terms first, then Privacy Policy.
+            // If Terms are not accepted yet, let the existing Terms guard render its form.
+            const client = typeof getClient === 'function' ? getClient() : null;
+            if (client) {
+                const { data: termsData, error: termsError } = await client
+                    .from('hotel_terms_acceptances')
+                    .select('user_id, terms_version, accepted_at')
+                    .eq('user_id', activeUser.id)
+                    .eq('terms_version', '2026-10-02-v1')
+                    .maybeSingle();
+
+                if (termsError) {
+                    console.error('Hotel terms acceptance pre-check failed:', termsError);
+                    return currentDashboard(activeUser);
+                }
+
+                if (!termsData) {
+                    return currentDashboard(activeUser);
+                }
+            }
+
             const accepted = await ensureHotelPrivacyAccepted(activeUser);
             if (!accepted) return;
 
