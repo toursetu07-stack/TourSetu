@@ -1,10 +1,7 @@
+# Cloudflare Pages security headers
 /*
-  Cloudflare Pages security headers.
-  CSP is report-only while legacy inline handlers are being migrated.
-*/
-
-/*
-  The following rule is intentionally real (not a documentation example).
+  CSP remains report-only while legacy inline handlers are being migrated.
+  Promote this to Content-Security-Policy after the inline-handler migration.
 */
 /
   X-Frame-Options: DENY
