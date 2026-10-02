@@ -2593,95 +2593,161 @@ if (selectedType === 'hotel') {
 
     /* ============================================================
        🎒 AGENCY PACKAGES - MY REQUESTS
-       Source: bookings table ONLY
-
-       ORIGINAL CODE BELOW IS KEPT SAME
+       XSS-safe DOM renderer
        ============================================================ */
+    resultTitle.textContent='My Trip Requests';
+    resultSubtitle.textContent='Track your inquiries and booking status';
 
-    resultTitle.innerText = "My Trip Requests";
-    resultSubtitle.innerText = "Track your inquiries and booking status";
-    container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Loading your requests...</h3></div>`;
-    
-    // Problem 2 Fix: Freshly fetch everything directly from database to avoid caching/sync issues
-    const { data, error } = await client.from('bookings').select('*').eq('customer_id', user.id).order('created_at', {ascending: false});
-    
-    if(!data || data.length === 0) {
-        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px;">
-            <p>No requests found. <span onclick="renderCustomerHomepage()" style="color:#ff9f43; cursor:pointer; font-weight:bold;">Search for packages</span></p>
-        </div>`;
+    const setAgencyRequestMessage=(title,message,action)=>{
+        container.replaceChildren();
+        const box=document.createElement('div');
+        box.style.cssText='grid-column:1/-1;text-align:center;padding:40px;';
+        const heading=document.createElement('h3');
+        heading.textContent=title;
+        box.appendChild(heading);
+        if(message){const p=document.createElement('p');p.textContent=message;p.style.color='#636e72';box.appendChild(p);}
+        if(action){const button=document.createElement('button');button.type='button';button.textContent=action.label;button.style.cssText='background:#ff9f43;color:#fff;border:0;padding:10px 18px;border-radius:8px;font-weight:800;cursor:pointer;';button.addEventListener('click',action.onClick);box.appendChild(button);}
+        container.appendChild(box);
+    };
+
+    const appendAgencyText=(parent,tagName,value,css)=>{
+        const node=document.createElement(tagName);
+        node.textContent=value==null?'':String(value);
+        if(css)node.style.cssText=css;
+        parent.appendChild(node);
+        return node;
+    };
+
+    const renderAgencyBookingCard=(booking)=>{
+        const b=booking||{};
+        const status=String(b.status||'pending').toLowerCase();
+        const approved=status==='approved'||status==='confirmed';
+        const paid=status==='paid';
+        const cancelled=status==='cancelled';
+        const denied=status==='denied'||status==='rejected';
+        const statusColor=paid?'#2ecc71':approved?'#3498db':denied?'#ff7675':cancelled?'#636e72':'#ff9f43';
+
+        const today=new Date();today.setHours(0,0,0,0);
+        const travelDate=b.travel_date?new Date(b.travel_date):null;
+        if(travelDate)travelDate.setHours(0,0,0,0);
+        const canCancel=!!travelDate&&today<=travelDate&&!cancelled&&!denied&&!paid;
+
+        let friendlyStatus=status.toUpperCase();
+        if(friendlyStatus==='APPROVED')friendlyStatus='CONFIRMED (PENDING PAYMENT)';
+
+        const card=document.createElement('div');
+        card.className='card';
+        card.style.cssText='background:#fff;padding:25px;border-left:5px solid '+statusColor+';position:relative;box-shadow:0 4px 15px rgba(0,0,0,.05);border-radius:15px;';
+
+        const header=document.createElement('div');
+        header.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;gap:15px;';
+        const identity=document.createElement('div');
+        appendAgencyText(identity,'h3',b.package_title||'Package','margin:0 0 10px;color:#2d3436;');
+
+        const meta=document.createElement('div');
+        meta.style.cssText='font-size:13px;color:#636e72;';
+        const travelLabel=b.travel_date?new Date(b.travel_date).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'}):'Not Set';
+        appendAgencyText(meta,'div','📅 Travel Date: '+travelLabel,'margin-bottom:6px;color:#e67e22;font-weight:bold;');
+        appendAgencyText(meta,'div','🚗 Vehicles: '+(b.selected_vehicles||'Not specified'),'margin-bottom:4px;');
+
+        const trek=[];
+        if(Number(b.keda_ghoda_qty)>0)trek.push('🐴 Ghoda ('+Number(b.keda_ghoda_qty)+')');
+        if(Number(b.keda_dandi_qty)>0)trek.push('🪑 Dandi ('+Number(b.keda_dandi_qty)+')');
+        if(Number(b.keda_kandi_qty)>0)trek.push('🧺 Kandi ('+Number(b.keda_kandi_qty)+')');
+        if(Number(b.keda_pitthu_qty)>0)trek.push('🎒 Pitthu ('+Number(b.keda_pitthu_qty)+')');
+        if(trek.length){
+            appendAgencyText(meta,'div','⛰️ Kedarnath Trek Selected: '+trek.join(' '),'margin-top:5px;color:#e67e22;font-size:12px;');
+        }else{
+            const vaishno=[];
+            if(Number(b.vaishno_ghoda_price)>0)vaishno.push('🐴 Ghoda ('+Number(b.vaishno_ghoda_price)+')');
+            if(Number(b.vaishno_dandi_price)>0)vaishno.push('🪑 Palki ('+Number(b.vaishno_dandi_price)+')');
+            if(Number(b.vaishno_pitthu_price)>0)vaishno.push('🎒 Pithoo ('+Number(b.vaishno_pitthu_price)+')');
+            if(vaishno.length)appendAgencyText(meta,'div','⛰️ Vaishno Devi Trek Selected: '+vaishno.join(' '),'margin-top:5px;color:#2980b9;font-size:12px;');
+        }
+        appendAgencyText(meta,'div','Status: '+friendlyStatus,'margin-top:5px;font-weight:bold;color:'+statusColor+';');
+        identity.appendChild(meta);
+
+        const actions=document.createElement('div');
+        actions.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:8px;';
+        if(canCancel){
+            const cancelButton=document.createElement('button');
+            cancelButton.type='button';
+            cancelButton.dataset.agencyRequestAction='cancel';
+            cancelButton.dataset.bookingId=String(b.id||'');
+            cancelButton.textContent='✕ Cancel Booking';
+            cancelButton.style.cssText='background:#ff7675;color:#fff;border:0;padding:8px 15px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;';
+            actions.appendChild(cancelButton);
+        }
+        header.append(identity,actions);
+        card.appendChild(header);
+
+        const statusPanel=document.createElement('div');
+        statusPanel.style.cssText='margin-top:20px;padding:15px;border-radius:10px;text-align:center;background:'+(paid?'#f0fff4':cancelled?'#f1f2f6':denied?'#ffeaa7':'#f8f9fa')+';border:1px solid '+(paid?'#2ecc71':'#eee')+';';
+
+        if(paid){
+            appendAgencyText(statusPanel,'p','✅ AGENCY CONTACT REVEALED','margin:0 0 5px;color:#27ae60;font-weight:bold;font-size:12px;');
+            appendAgencyText(statusPanel,'h2',b.agency_contact||'Contact info missing','margin:0;color:#2d3436;');
+            appendAgencyText(statusPanel,'small','Call now to coordinate your trip!','color:#666;');
+        }else if(cancelled){
+            appendAgencyText(statusPanel,'p','🚫 BOOKING CANCELLED','margin:0;color:#ff7675;font-weight:bold;');
+            appendAgencyText(statusPanel,'small','You cancelled this trip request.');
+        }else if(denied){
+            appendAgencyText(statusPanel,'p','❌ REQUEST DECLINED','margin:0;color:#d63031;font-weight:bold;');
+            appendAgencyText(statusPanel,'small','The travel agency has denied this booking request.');
+        }else{
+            appendAgencyText(statusPanel,'p','🔒 Contact Details Locked','margin:0;color:#636e72;font-size:13px;');
+            appendAgencyText(statusPanel,'small','Available only after payment is confirmed');
+            if(approved){
+                const paymentButton=document.createElement('button');
+                paymentButton.type='button';
+                paymentButton.dataset.agencyRequestAction='payment';
+                paymentButton.dataset.bookingId=String(b.id||'');
+                paymentButton.textContent='PROCEED TO PAYMENT (₹'+Number(b.total_price||0).toLocaleString('en-IN')+')';
+                paymentButton.style.cssText='margin-top:10px;background:#2ecc71;color:#fff;width:100%;padding:10px;border:0;border-radius:5px;cursor:pointer;font-weight:bold;';
+                statusPanel.appendChild(paymentButton);
+            }
+        }
+        card.appendChild(statusPanel);
+        return card;
+    };
+
+    container.replaceChildren();
+    const loading=document.createElement('div');
+    loading.style.cssText='grid-column:1/-1;text-align:center;';
+    appendAgencyText(loading,'h3','Loading your requests...');
+    container.appendChild(loading);
+
+    const {data,error}=await client.from('bookings').select('*').eq('customer_id',user.id).order('created_at',{ascending:false});
+    if(error){
+        console.error('Agency booking fetch error:',error);
+        setAgencyRequestMessage('Unable to load your requests','Please try again after refreshing the page.');
+        return;
+    }
+    if(!data||data.length===0){
+        setAgencyRequestMessage('No requests found.','Search for packages to send a new booking request.',{
+            label:'SEARCH FOR PACKAGES',
+            onClick:()=>renderCustomerHomepage()
+        });
         return;
     }
 
-    container.innerHTML = data.map(b => {
-        // Problem 2 Fix: Handle both 'confirmed' and 'approved' values cleanly for styling and buttons
-        const isApprovedOrConfirmed = b.status === 'confirmed' || b.status === 'approved';
-        const statusColor = b.status === 'paid' ? '#2ecc71' : (isApprovedOrConfirmed ? '#3498db' : (b.status === 'denied' || b.status === 'rejected' ? '#ff7675' : (b.status === 'cancelled' ? '#636e72' : '#ff9f43')));
-        const isPending = b.status === 'pending';
-        const isPaid = b.status === 'paid';
-        const isApproved = isApprovedOrConfirmed; 
-        const isCancelled = b.status === 'cancelled';
-        const isDenied = b.status === 'denied' || b.status === 'rejected';
+    container.replaceChildren();
+    data.forEach(booking=>container.appendChild(renderAgencyBookingCard(booking)));
 
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const travelDateObj = b.travel_date ? new Date(b.travel_date) : null;
-        if(travelDateObj) travelDateObj.setHours(0,0,0,0);
-        
-        const canCancel = travelDateObj && today <= travelDateObj && !isCancelled && !isDenied && !isPaid;
-
-        // Problem 1 Fix: Changed database property targets to match exactly: vaishno_ghoda_price, vaishno_dandi_price, vaishno_pitthu_price
-        let trackingDetailsInfo = '';
-        if (b.keda_ghoda_qty > 0 || b.keda_dandi_qty > 0 || b.keda_kandi_qty > 0 || b.keda_pitthu_qty > 0) {
-            trackingDetailsInfo = `<div style="margin-top:5px; color:#e67e22; font-size:12px;">⛰️ Kedarnath Trek Selected: ${b.keda_ghoda_qty ? '🐴 Ghoda ('+b.keda_ghoda_qty+') ' : ''}${b.keda_dandi_qty ? '🪑 Dandi ('+b.keda_dandi_qty+') ' : ''}${b.keda_kandi_qty ? ' baskets ('+b.keda_kandi_qty+') ' : ''}${b.keda_pitthu_qty ? '🎒 Pitthu ('+b.keda_pitthu_qty+') ' : ''}</div>`;
-        } else if (b.vaishno_ghoda_price > 0 || b.vaishno_dandi_price > 0 || b.vaishno_pitthu_price > 0) {
-            trackingDetailsInfo = `<div style="margin-top:5px; color:#2980b9; font-size:12px;">⛰️ Vaishno Devi Trek Selected: ${b.vaishno_ghoda_price ? '🐴 Ghoda ('+b.vaishno_ghoda_price+') ' : ''}${b.vaishno_dandi_price ? '🪑 Palki ('+b.vaishno_dandi_price+') ' : ''}${b.vaishno_pitthu_price ? '🎒 Pithoo ('+b.vaishno_pitthu_price+') ' : ''}</div>`;
-        }
-
-        let friendlyStatus = b.status.toUpperCase();
-        if(friendlyStatus === 'APPROVED') friendlyStatus = 'CONFIRMED (PENDING PAYMENT)';
-
-        return `
-        <div class="card" style="background:white; padding:25px; border-left:5px solid ${statusColor}; position:relative; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius:15px;">
-            <div style="display:flex; justify-content:space-between; align-items:start;">
-                <div>
-                    <h3 style="margin:0 0 10px 0; color:#2d3436;">${b.package_title}</h3>
-                    <div style="font-size:13px; color:#636e72;">
-                        <div style="margin-bottom:6px; color:#e67e22; font-weight:bold;">📅 Travel Date: ${b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'}) : 'Not Set'}</div>
-                        <div style="margin-bottom:4px;">🚗 Vehicles: ${b.selected_vehicles}</div>
-                        ${trackingDetailsInfo}
-                        <div style="margin-top:5px;">Status: <span style="padding:2px 8px; border-radius:10px; font-size:11px; background:#f0f0f0; color:${statusColor}; font-weight:bold;">${friendlyStatus}</span></div>
-                    </div>
-                </div>
-                ${canCancel ? `<button onclick="cancelBookingWithPenalty(${b.id})" style="background:#ff7675; color:white; border:none; padding:8px 15px; font-size:12px; border-radius:8px; cursor:pointer; font-weight:bold;">✕ Cancel Booking</button>` : ''}
-            </div>
-
-            <div style="margin-top:20px; padding:15px; border-radius:10px; background:${isPaid ? '#f0fff4' : (isCancelled ? '#f1f2f6' : (isDenied ? '#ffeaa7' : '#f8f9fa'))}; border:1px solid ${isPaid ? '#2ecc71' : '#eee'};">
-                ${isPaid ? `
-                    <div style="text-align:center;">
-                        <p style="margin:0 0 5px 0; font-size:12px; color:#27ae60; font-weight:bold;">✅ AGENCY CONTACT REVEALED</p>
-                        <h2 style="margin:0; color:#2d3436;">${b.agency_contact || 'Contact info missing'}</h2>
-                        <small style="color:#666;">Call now to coordinate your trip!</small>
-                    </div>
-                ` : (isCancelled ? `
-                    <div style="text-align:center; color:#636e72;">
-                        <p style="margin:0; font-weight:bold; color:#ff7675;">🚫 BOOKING CANCELLED</p>
-                        <small>You cancelled this trip request.</small>
-                    </div>
-                ` : (isDenied ? `
-                    <div style="text-align:center; color:#d63031;">
-                        <p style="margin:0; font-weight:bold;">❌ REQUEST DECLINED</p>
-                        <small>The travel agency has denied this booking request.</small>
-                    </div>
-                ` : `
-                    <div style="text-align:center; color:#636e72;">
-                        <p style="margin:0; font-size:13px;">🔒 Contact Details Locked</p>
-                        <small>Available only after payment is confirmed</small>
-                        ${isApproved ? `<button onclick="simulatePayment(${b.id})" style="margin-top:10px; background:#2ecc71; color:white; width:100%; padding:10px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">PROCEED TO PAYMENT (₹${b.total_price})</button>` : ''}
-                    </div>
-                `))}
-            </div>
-        </div>`;
-    }).join('');
+    if(!container.dataset.agencyRequestDelegation){
+        container.dataset.agencyRequestDelegation='1';
+        container.addEventListener('click',event=>{
+            const actionElement=event.target.closest('[data-agency-request-action]');
+            if(!actionElement||!container.contains(actionElement))return;
+            const bookingId=actionElement.dataset.bookingId;
+            if(!bookingId)return;
+            if(actionElement.dataset.agencyRequestAction==='cancel'){
+                void window.cancelBookingWithPenalty(bookingId);
+            }else if(actionElement.dataset.agencyRequestAction==='payment'){
+                void window.simulatePayment(bookingId);
+            }
+        });
+    }
 };
 
 
