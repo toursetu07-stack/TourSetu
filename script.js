@@ -5986,6 +5986,7 @@ async function registerHotelUser(email, password, phone, businessName) {
  * Main dashboard view generator for role === 'hotel'
  */
 async function renderHotelDashboard(user) {
+    window.currentHotelDashboardUser = user;
     const app = document.getElementById('app');
     if (!app) return;
     app.style.maxWidth = "100%";
@@ -7476,7 +7477,7 @@ async function renderHotelDashboard(user) {
 >
     <span>📋</span> Booking Request
 </div>
-                        <div onclick="showHotelTab('bookings')" class="hotel-nav-btn" id="nav-bookings" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
+                        <div onclick="window.showHotelTab('bookings')" class="hotel-nav-btn" id="nav-bookings" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>📋</span> Arrivals & Payouts
                         </div>
                         <div onclick="showHotelTab('landslide')" class="hotel-nav-btn" id="nav-landslide" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; color:#ff7675; gap:10px;">
@@ -7490,7 +7491,7 @@ async function renderHotelDashboard(user) {
                     <button id="stop-sell-btn" onclick="toggleStopSell('${user.id}')" style="width:100%; padding:10px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; background:#2ecc71; color:white; margin-bottom:15px;">
                         🟢 Normal Selling Mode
                     </button>
-                    <button onclick="confirmHotelLogout()" style="width:100%; padding:11px; border-radius:10px; border:1px solid rgba(255,118,117,.55); background:rgba(255,118,117,.08); color:#ff7675; font-weight:900; cursor:pointer;">
+                    <button onclick="window.confirmAndExecuteLogout()" style="width:100%; padding:11px; border-radius:10px; border:1px solid rgba(255,118,117,.55); background:rgba(255,118,117,.08); color:#ff7675; font-weight:900; cursor:pointer;">
                         🚪 Logout Desk
                     </button>
                 </div>
@@ -7517,7 +7518,7 @@ async function renderHotelDashboard(user) {
     runInventoryHoldSweeper();
     
     // Default Tab — open the modern dashboard overview.
-    window.showHotelTab('overview');
+    await window.showHotelTab('overview');
 }
 
 /**
@@ -7525,8 +7526,18 @@ async function renderHotelDashboard(user) {
  */
 async function showHotelTab(tabName) {
     const client = getClient();
-    const { data: { user } } = await client.auth.getUser();
+    let user = window.currentHotelDashboardUser || null;
+    if (!user?.id) {
+        const { data: authData } = await client.auth.getUser();
+        user = authData?.user || null;
+    }
     const container = document.getElementById('hotel-main-content');
+
+    if (!container) return;
+    if (!user?.id) {
+        container.innerHTML = '<div style="padding:30px;background:#fff1f2;border:1px solid #fecdd3;border-radius:14px;color:#9f1239;"><b>Session expired.</b> Please login again.</div>';
+        return;
+    }
 
     // Stop camera active stream if navigating away from scan tab
     if (typeof activeQrScanner !== 'undefined' && activeQrScanner) {
@@ -7549,6 +7560,9 @@ async function showHotelTab(tabName) {
         renderLandslideDisputeDesk(container, user);
     }
 }
+window.showHotelTab = showHotelTab;
+window.renderArrivalsAndPayouts = renderArrivalsAndPayouts;
+
 /* ============================================================
    🏨 CUSTOMER HOTEL BOOKING - OWNER APPROVAL
    ============================================================ */
