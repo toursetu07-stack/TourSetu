@@ -9592,10 +9592,94 @@ async function renderArrivalsAndPayouts(container, user) {
 
 
         /* ============================================================
-           4. BUILD ALL CARDS
+           4. CUSTOMER PAYMENTS RECEIVED
            ============================================================ */
 
-        let html = '';
+        const paidCustomerBookings =
+            customerHotelBookings.filter(b => {
+                const status = String(b.payment_status || 'unpaid').toLowerCase();
+                return status === 'paid' || status === 'success' || status === 'completed';
+            });
+
+        const paidCustomerTotal =
+            paidCustomerBookings.reduce(
+                (sum, b) => sum + Number(b.total_amount || 0),
+                0
+            );
+
+        const paidSection = `
+            <section style="margin-bottom:28px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:15px;flex-wrap:wrap;margin-bottom:15px;">
+                    <div>
+                        <div style="font-size:11px;font-weight:900;letter-spacing:.1em;color:#16a34a;text-transform:uppercase;">PAYMENTS RECEIVED</div>
+                        <h2 style="margin:4px 0;color:#0f172a;font-size:25px;">💳 Customer Payments Received</h2>
+                        <p style="margin:0;color:#64748b;font-size:13px;">Yahan sirf customer ki successfully received/paid hotel payments show hongi.</p>
+                    </div>
+                    <span style="background:#dcfce7;color:#166534;padding:7px 12px;border-radius:999px;font-size:11px;font-weight:900;">${paidCustomerBookings.length} PAID</span>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:16px;">
+                    <div style="background:linear-gradient(135deg,#ffffff,#f0fdf4);border:1px solid #bbf7d0;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(15,23,42,.05);">
+                        <div style="font-size:11px;color:#64748b;font-weight:900;">TOTAL PAYMENT RECEIVED</div>
+                        <div style="font-size:28px;font-weight:900;color:#15803d;margin-top:7px;">₹${paidCustomerTotal.toLocaleString('en-IN')}</div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #dbeafe;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(15,23,42,.05);">
+                        <div style="font-size:11px;color:#64748b;font-weight:900;">PAID CUSTOMER BOOKINGS</div>
+                        <div style="font-size:28px;font-weight:900;color:#1d4ed8;margin-top:7px;">${paidCustomerBookings.length}</div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #ffedd5;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(15,23,42,.05);">
+                        <div style="font-size:11px;color:#64748b;font-weight:900;">PAYMENT STATUS</div>
+                        <div style="font-size:20px;font-weight:900;color:#15803d;margin-top:10px;">✓ RECEIVED</div>
+                    </div>
+                </div>
+
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:auto;box-shadow:0 8px 24px rgba(15,23,42,.05);">
+                    ${paidCustomerBookings.length ? `
+                    <table style="width:100%;border-collapse:collapse;min-width:900px;">
+                        <thead>
+                            <tr style="background:#f8fafc;color:#64748b;font-size:10px;text-transform:uppercase;">
+                                <th style="padding:13px 15px;text-align:left;">Customer</th>
+                                <th style="padding:13px 15px;text-align:left;">Room</th>
+                                <th style="padding:13px 15px;text-align:left;">Arrival</th>
+                                <th style="padding:13px 15px;text-align:left;">Departure</th>
+                                <th style="padding:13px 15px;text-align:center;">Rooms</th>
+                                <th style="padding:13px 15px;text-align:right;">Amount Received</th>
+                                <th style="padding:13px 15px;text-align:center;">Payment</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${paidCustomerBookings.map(b => `
+                                <tr style="border-top:1px solid #f1f5f9;">
+                                    <td style="padding:14px 15px;">
+                                        <div style="font-weight:800;color:#1e293b;">${b.customer_email || 'Customer'}</div>
+                                        <div style="font-size:11px;color:#64748b;">${b.customer_phone || ''}</div>
+                                    </td>
+                                    <td style="padding:14px 15px;color:#334155;font-weight:700;">${b.room_type || 'Room'}</td>
+                                    <td style="padding:14px 15px;color:#1d4ed8;font-weight:800;">${b.check_in_date || '—'}</td>
+                                    <td style="padding:14px 15px;color:#475569;">${b.check_out_date || '—'}</td>
+                                    <td style="padding:14px 15px;text-align:center;font-weight:800;">${b.rooms_booked || 0}</td>
+                                    <td style="padding:14px 15px;text-align:right;font-weight:900;color:#15803d;">₹${Number(b.total_amount || 0).toLocaleString('en-IN')}</td>
+                                    <td style="padding:14px 15px;text-align:center;"><span style="background:#dcfce7;color:#166534;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;">PAID</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    ` : `
+                    <div style="padding:38px 20px;text-align:center;color:#64748b;">
+                        <div style="font-size:38px;margin-bottom:8px;">💳</div>
+                        <h3 style="margin:0 0 6px;color:#334155;">No customer payment received yet</h3>
+                        <p style="margin:0;font-size:13px;">Jab customer payment successfully <b>PAID</b> hoga, booking yahan automatically show hogi.</p>
+                    </div>
+                    `}
+                </div>
+            </section>
+        `;
+
+        /* ============================================================
+           5. BUILD ALL BOOKING CARDS
+           ============================================================ */
+
+        let html = paidSection;
 
 
         /* ============================================================
