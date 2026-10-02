@@ -633,6 +633,47 @@ async function handleLogout() {
     window.location.reload();
 }
 
+window.confirmHotelLogout = async function() {
+    const old = document.getElementById('hotel-logout-confirm-modal');
+    if (old) old.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'hotel-logout-confirm-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:1000000;background:rgba(15,23,42,.68);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;';
+
+    overlay.innerHTML = `
+        <div style="width:min(430px,100%);background:#fff;border-radius:22px;padding:30px;box-shadow:0 25px 80px rgba(0,0,0,.30);font-family:Inter,sans-serif;text-align:center;">
+            <div style="width:64px;height:64px;border-radius:18px;background:#fff7ed;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;font-size:31px;">🚪</div>
+            <h2 style="margin:0 0 8px;color:#1e293b;font-size:23px;">Logout from Hotel Dashboard?</h2>
+            <p style="margin:0 0 24px;color:#64748b;font-size:14px;line-height:1.55;">Are you sure you want to logout from your Hotel Partner account?</p>
+            <div style="display:flex;gap:12px;">
+                <button type="button" id="hotel-logout-deny" style="flex:1;padding:13px;border:1px solid #cbd5e1;border-radius:11px;background:#f8fafc;color:#334155;font-weight:900;cursor:pointer;">DENY</button>
+                <button type="button" id="hotel-logout-confirm" style="flex:1;padding:13px;border:0;border-radius:11px;background:#e74c3c;color:#fff;font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(231,76,60,.22);">CONFIRM</button>
+            </div>
+        </div>`;
+
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#hotel-logout-deny').onclick = () => overlay.remove();
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) overlay.remove();
+    });
+
+    overlay.querySelector('#hotel-logout-confirm').onclick = async () => {
+        const btn = overlay.querySelector('#hotel-logout-confirm');
+        btn.disabled = true;
+        btn.textContent = 'LOGGING OUT...';
+        btn.style.opacity = '.7';
+
+        try {
+            const client = getClient();
+            if (client) await client.auth.signOut();
+        } finally {
+            window.location.reload();
+        }
+    };
+};
+
 /* =========================================
    4. UI RENDERING (Login / Signup)
    ========================================= */
@@ -7402,7 +7443,7 @@ async function renderHotelDashboard(user) {
     app.innerHTML = `
         <div style="display:flex; min-height:100vh; background:#f4f6f9; font-family:'Inter', sans-serif; margin:-20px;">
             <!-- Hotel Sidebar Navigation -->
-            <div style="width:280px; background:#1e272e; color:white; padding:25px; flex-shrink:0; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="width:280px; background:linear-gradient(180deg,#17212b 0%,#1e272e 55%,#202b35 100%); color:white; padding:25px 20px; flex-shrink:0; display:flex; flex-direction:column; justify-content:space-between; box-shadow:8px 0 30px rgba(15,23,42,.10);">
                 <div>
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:30px;">
                         <span style="font-size:28px;">🏔️</span>
@@ -7413,8 +7454,8 @@ async function renderHotelDashboard(user) {
                     </div>
                     
                     <nav style="display:flex; flex-direction:column; gap:8px;">
-                        <div onclick="showHotelTab('checkin')" class="hotel-nav-btn" id="nav-checkin" style="padding:14px; cursor:pointer; border-radius:10px; background:#2c3e50; font-weight:600; display:flex; align-items:center; gap:10px;">
-                            <span>📲</span> QR/OTP Check-in Desk
+                        <div onclick="window.showHotelTab('overview')" class="hotel-nav-btn" id="nav-overview" style="padding:14px; cursor:pointer; border-radius:10px; background:#2c3e50; font-weight:600; display:flex; align-items:center; gap:10px;">
+                            <span>📊</span> Dashboard
                         </div>
                         <div onclick="showHotelTab('inventory')" class="hotel-nav-btn" id="nav-inventory" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>🏨</span> Room Inventory & Lock
@@ -7449,14 +7490,14 @@ async function renderHotelDashboard(user) {
                     <button id="stop-sell-btn" onclick="toggleStopSell('${user.id}')" style="width:100%; padding:10px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; background:#2ecc71; color:white; margin-bottom:15px;">
                         🟢 Normal Selling Mode
                     </button>
-                    <button onclick="handleLogout()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ff7675; background:none; color:#ff7675; font-weight:bold; cursor:pointer;">
+                    <button onclick="confirmHotelLogout()" style="width:100%; padding:11px; border-radius:10px; border:1px solid rgba(255,118,117,.55); background:rgba(255,118,117,.08); color:#ff7675; font-weight:900; cursor:pointer;">
                         🚪 Logout Desk
                     </button>
                 </div>
             </div>
 
             <!-- Main Content Display Area -->
-            <div id="hotel-main-content" style="flex:1; padding:35px; overflow-y:auto; background:#f4f6f9;">
+            <div id="hotel-main-content" style="flex:1; padding:40px; overflow-y:auto; background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);">
                 <div style="text-align:center; padding:50px;">
                     <h3>Initializing Hotel Dashboard & Network Listener...</h3>
                 </div>
@@ -7475,8 +7516,8 @@ async function renderHotelDashboard(user) {
     // Auto-run Dynamic Hold Release Sweeper
     runInventoryHoldSweeper();
     
-    // Default Tab
-    showHotelTab('checkin');
+    // Default Tab — open the modern dashboard overview.
+    window.showHotelTab('overview');
 }
 
 /**
@@ -7488,7 +7529,7 @@ async function showHotelTab(tabName) {
     const container = document.getElementById('hotel-main-content');
 
     // Stop camera active stream if navigating away from scan tab
-    if (activeQrScanner) {
+    if (typeof activeQrScanner !== 'undefined' && activeQrScanner) {
         try { await activeQrScanner.stop(); } catch(e){}
         activeQrScanner = null;
     }
@@ -9362,7 +9403,7 @@ async function renderArrivalsAndPayouts(container, user) {
         <div style="max-width:1100px;margin:auto;">
 
             <h1 style="margin:0;color:#1e272e;">
-                📋 Arrivals & Payout
+                📋 Arrivals & Payouts
             </h1>
 
             <p style="
@@ -9370,8 +9411,7 @@ async function renderArrivalsAndPayouts(container, user) {
                 margin-top:6px;
                 margin-bottom:25px;
             ">
-                Manage customer and agency hotel booking requests,
-                cancellations and payment confirmations.
+                Track customer arrivals, paid bookings, payment receipts and agency hotel requests from one place.
             </p>
 
             <div id="hotel-arrivals-payout-list">
