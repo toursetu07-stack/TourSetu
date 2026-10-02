@@ -5,18 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TourSetu | Travel Agency Portal</title>
     
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.js" defer></script>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-      window.OneSignal = window.OneSignal || [];
-      OneSignal.push(function() {
-        OneSignal.init({
+      // OneSignal v16: initialize Web Push once and associate the logged-in
+      // Supabase user with the OneSignal external_id alias.
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
           appId: "1d58b571-868b-4b5b-b370-cd417cac6c28",
           allowLocalhostAsSecureOrigin: true,
+          serviceWorkerPath: "/OneSignalSDKWorker.js",
           serviceWorkerParam: { scope: "/" },
-          notifyButton: {
-            enable: true,
-          },
+          notifyButton: { enable: true }
         });
+        window.__toursetuOneSignalReady = true;
+        if (window.__toursetuPendingOneSignalUserId) {
+          try {
+            await OneSignal.login(window.__toursetuPendingOneSignalUserId);
+          } catch (e) {
+            console.warn("OneSignal user association failed:", e);
+          }
+        }
       });
     </script>
 
