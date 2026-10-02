@@ -155,12 +155,37 @@ window.acceptAgencyPartnerTerms = async function() {
     const { data: { user } } = await client.auth.getUser();
     if (!user?.id) { alert('Your login session has expired. Please login again.'); return; }
     if (button) { button.disabled = true; button.innerText = 'SAVING...'; button.style.opacity = '.7'; button.style.cursor = 'wait'; }
-    const { error } = await client
+    const acceptancePayload = {
+        user_id: user.id,
+        terms_version: AGENCY_TERMS_VERSION,
+        accepted_at: new Date().toISOString()
+    };
+
+    // Handle both first-time acceptance and acceptance of a new terms version.
+    // Updating first avoids the user_id primary-key/upsert conflict when an
+    // older terms version is already stored for this agency.
+    const { data: existingAcceptance, error: existingAcceptanceError } = await client
         .from('agency_terms_acceptances')
-        .upsert(
-            { user_id: user.id, terms_version: AGENCY_TERMS_VERSION, accepted_at: new Date().toISOString() },
-            { onConflict: 'user_id' }
-        );
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    let acceptanceError = existingAcceptanceError || null;
+
+    if (!acceptanceError && existingAcceptance) {
+        const { error } = await client
+            .from('agency_terms_acceptances')
+            .update(acceptancePayload)
+            .eq('user_id', user.id);
+        acceptanceError = error || null;
+    } else if (!acceptanceError) {
+        const { error } = await client
+            .from('agency_terms_acceptances')
+            .insert(acceptancePayload);
+        acceptanceError = error || null;
+    }
+
+    const error = acceptanceError;
     if (error) {
         console.error('Agency terms acceptance save failed:', error);
         if (button) { button.disabled = false; button.innerText = 'APPROVED'; button.style.opacity = '1'; button.style.cursor = 'pointer'; }
