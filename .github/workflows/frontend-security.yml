@@ -246,7 +246,9 @@ jobs:
           import re
 
           source = Path("script.js").read_text(encoding="utf-8")
-          start = source.index("window.showTab = async function(tabName) {")
+          start_marker = "function setAgencyTabMessage(container, message, style) {"
+          start = source.index(start_marker)
+
           end = source.index("window.renderAgencyHotelPackages = async function()", start)
           block = source[start:end]
 
