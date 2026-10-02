@@ -972,18 +972,141 @@ async function resendConfirmationFromLogin() {
 const AGENCY_KYC_BUCKET='agency-verification-documents';
 const AGENCY_KYC_FILES={gst_document_path:'doc-gst',business_reg_document_path:'doc-business-reg',utdb_registration_certificate_path:'doc-utdm-certificate',pan_card_path:'doc-pan',aadhaar_card_path:'doc-aadhaar',cancelled_cheque_or_bank_passbook_path:'doc-cancelled-cheque',commercial_rc_path:'doc-commercial-rc',aitp_commercial_permit_path:'doc-aitp-permit',vehicle_insurance_path:'doc-vehicle-insurance',fitness_certificate_path:'doc-fitness',commercial_driving_license_path:'doc-commercial-license',police_verification_id_proof_path:'doc-police-id'};
 function getSelectedAgencyDocuments(){const files={};for(const [dbField,inputId] of Object.entries(AGENCY_KYC_FILES)){const input=document.getElementById(inputId);files[dbField]=input?.files?.[0]||null;}return files;}
-function validateAgencyDocuments(files){const labels={gst_document_path:'GST Number document/photo',business_reg_document_path:'Business Registration document/photo',utdb_registration_certificate_path:'UTDM Registration Certificate',pan_card_path:'PAN Card',aadhaar_card_path:'Aadhaar Card',cancelled_cheque_or_bank_passbook_path:'Cancelled Cheque / Bank Passbook',commercial_rc_path:'Commercial RC',aitp_commercial_permit_path:'AITP / Commercial Permit',vehicle_insurance_path:'Vehicle Insurance',fitness_certificate_path:'Vehicle Fitness Certificate',commercial_driving_license_path:'Commercial Driving License',police_verification_id_proof_path:'Police Verification Certificate / ID Proof'};for(const [key,label] of Object.entries(labels)){if(!files[key])return'Please upload: '+label;if(files[key].size>10*1024*1024)return label+' must be 10 MB or smaller.';}return'';}
-function safeFileExtension(file){const match=String(file?.name||'').toLowerCase().match(/\.([a-z0-9]+)$/);return match?match[1]:'bin';}
-async function uploadAgencyDocuments(userId,files){const bucket=getClient().storage.from(AGENCY_KYC_BUCKET),uploadedPaths={};for(const [dbField,file] of Object.entries(files)){const path=userId+'/'+dbField.replace(/_path$/,'')+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+safeFileExtension(file);const {data,error}=await bucket.upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});if(error)throw new Error('Upload failed for '+dbField+': '+error.message);uploadedPaths[dbField]=data.path;}return uploadedPaths;}
+const KYC_MAX_FILE_BYTES = 10 * 1024 * 1024;
+const IMAGE_MAX_FILE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_DOCUMENT_TYPES = Object.freeze({
+    'application/pdf': 'pdf',
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp'
+});
+const ALLOWED_IMAGE_TYPES = Object.freeze({
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp'
+});
+
+async function readFileSignature(file, byteCount = 12) {
+    const buffer = await file.slice(0, byteCount).arrayBuffer();
+    return new Uint8Array(buffer);
+}
+
+function hasBytes(bytes, expected) {
+    if (bytes.length < expected.length) return false;
+    return expected.every((value, index) => bytes[index] === value);
+}
+
+async function validateUploadedFile(file, label, allowedTypes, maxBytes) {
+    if (!file) return label + ' is required.';
+    if (!Number.isFinite(file.size) || file.size <= 0) return label + ' is empty or invalid.';
+    if (file.size > maxBytes) return label + ' must be 10 MB or smaller.';
+    const type = String(file.type || '').toLowerCase();
+    if (!Object.prototype.hasOwnProperty.call(allowedTypes, type)) {
+        return label + ' must be a PDF, JPG/JPEG, PNG, or WEBP file.';
+    }
+
+    const bytes = await readFileSignature(file);
+    let signatureValid = false;
+    if (type === 'image/jpeg') {
+        signatureValid = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    } else if (type === 'image/png') {
+        signatureValid = hasBytes(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    } else if (type === 'image/webp') {
+        const ascii = new TextDecoder().decode(bytes);
+        signatureValid = ascii.startsWith('RIFF') && ascii.slice(8, 12) === 'WEBP';
+    } else if (type === 'application/pdf') {
+        const ascii = new TextDecoder().decode(bytes);
+        signatureValid = ascii.startsWith('%PDF-');
+    }
+
+    if (!signatureValid) return label + ' content does not match its declared file type.';
+    return '';
+}
+
+function safeFileExtension(file) {
+    return ALLOWED_DOCUMENT_TYPES[String(file?.type || '').toLowerCase()] || null;
+}
+
+async function validateAgencyDocuments(files) {
+    const labels = {
+        gst_document_path: 'GST Number document/photo',
+        business_reg_document_path: 'Business Registration document/photo',
+        utdb_registration_certificate_path: 'UTDM Registration Certificate',
+        pan_card_path: 'PAN Card',
+        aadhaar_card_path: 'Aadhaar Card',
+        cancelled_cheque_or_bank_passbook_path: 'Cancelled Cheque / Bank Passbook',
+        commercial_rc_path: 'Commercial RC',
+        aitp_commercial_permit_path: 'AITP / Commercial Permit',
+        vehicle_insurance_path: 'Vehicle Insurance',
+        fitness_certificate_path: 'Vehicle Fitness Certificate',
+        commercial_driving_license_path: 'Commercial Driving License',
+        police_verification_id_proof_path: 'Police Verification Certificate / ID Proof'
+    };
+    for (const [key, label] of Object.entries(labels)) {
+        const error = await validateUploadedFile(files[key], label, ALLOWED_DOCUMENT_TYPES, KYC_MAX_FILE_BYTES);
+        if (error) return error;
+    }
+    return '';
+}
+
+async function uploadAgencyDocuments(userId, files) {
+    const bucket = getClient().storage.from(AGENCY_KYC_BUCKET);
+    const uploadedPaths = {};
+    for (const [dbField, file] of Object.entries(files)) {
+        const extension = safeFileExtension(file);
+        if (!extension) throw new Error('Unsupported file type for ' + dbField + '.');
+        const path = userId + '/' + dbField.replace(/_path$/, '') + '-' + crypto.randomUUID() + '.' + extension;
+        const { data, error } = await bucket.upload(path, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type
+        });
+        if (error) throw new Error('Upload failed for ' + dbField + '. Please try again.');
+        uploadedPaths[dbField] = data.path;
+    }
+    return uploadedPaths;
+}
 async function getAgencyVerification(userId){const {data,error}=await getClient().from('agency_verification_requests').select('id,status,denial_reason,email,gst_no,business_reg_no,phone,created_at,updated_at').eq('user_id',userId).maybeSingle();if(error)throw error;return data;}
-async function submitAgencyKYC(user){const files=getSelectedAgencyDocuments(),validationError=validateAgencyDocuments(files);if(validationError)throw new Error(validationError);const client=getClient();const {data:existing,error:existingError}=await client.from('agency_verification_requests').select('id,status').eq('user_id',user.id).maybeSingle();if(existingError)throw existingError;if(!existing)throw new Error('Agency verification request was not created. Please try registration again.');if(existing.status!=='pending')throw new Error('This agency verification request is already '+existing.status+'.');const paths=await uploadAgencyDocuments(user.id,files);const {error:saveError}=await client.rpc('save_agency_verification_documents',{p_gst_document_path:paths.gst_document_path,p_business_reg_document_path:paths.business_reg_document_path,p_utdb_registration_certificate_path:paths.utdb_registration_certificate_path,p_pan_card_path:paths.pan_card_path,p_aadhaar_card_path:paths.aadhaar_card_path,p_cancelled_cheque_or_bank_passbook_path:paths.cancelled_cheque_or_bank_passbook_path,p_commercial_rc_path:paths.commercial_rc_path,p_aitp_commercial_permit_path:paths.aitp_commercial_permit_path,p_vehicle_insurance_path:paths.vehicle_insurance_path,p_fitness_certificate_path:paths.fitness_certificate_path,p_commercial_driving_license_path:paths.commercial_driving_license_path,p_police_verification_id_proof_path:paths.police_verification_id_proof_path});if(saveError)throw saveError;}
+async function submitAgencyKYC(user){const files=getSelectedAgencyDocuments(),validationError=await validateAgencyDocuments(files);if(validationError)throw new Error(validationError);const client=getClient();const {data:existing,error:existingError}=await client.from('agency_verification_requests').select('id,status').eq('user_id',user.id).maybeSingle();if(existingError)throw existingError;if(!existing)throw new Error('Agency verification request was not created. Please try registration again.');if(existing.status!=='pending')throw new Error('This agency verification request is already '+existing.status+'.');const paths=await uploadAgencyDocuments(user.id,files);const {error:saveError}=await client.rpc('save_agency_verification_documents',{p_gst_document_path:paths.gst_document_path,p_business_reg_document_path:paths.business_reg_document_path,p_utdb_registration_certificate_path:paths.utdb_registration_certificate_path,p_pan_card_path:paths.pan_card_path,p_aadhaar_card_path:paths.aadhaar_card_path,p_cancelled_cheque_or_bank_passbook_path:paths.cancelled_cheque_or_bank_passbook_path,p_commercial_rc_path:paths.commercial_rc_path,p_aitp_commercial_permit_path:paths.aitp_commercial_permit_path,p_vehicle_insurance_path:paths.vehicle_insurance_path,p_fitness_certificate_path:paths.fitness_certificate_path,p_commercial_driving_license_path:paths.commercial_driving_license_path,p_police_verification_id_proof_path:paths.police_verification_id_proof_path});if(saveError)throw saveError;}
 const HOTEL_KYC_BUCKET='hotel-verification-documents';
 const HOTEL_KYC_FILES={uttarakhand_tourism_utbm_registration_path:'hotel-doc-uttarakhand-registration',trade_license_local_authority_license_path:'hotel-doc-trade-license',gst_certificate_msme_udyam_path:'hotel-doc-gst-udyam',fire_safety_noc_path:'hotel-doc-fire-noc',police_noc_path:'hotel-doc-police-noc'};
 function getSelectedHotelDocuments(){const files={};for(const [dbField,inputId] of Object.entries(HOTEL_KYC_FILES)){const input=document.getElementById(inputId);files[dbField]=input?.files?.[0]||null;}return files;}
-function validateHotelDocuments(files){const labels={uttarakhand_tourism_utbm_registration_path:'Uttarakhand Tourism / UTBM Hotel Registration',trade_license_local_authority_license_path:'Trade License / Local Authority License',gst_certificate_msme_udyam_path:'GST Certificate / MSME Udyam',fire_safety_noc_path:'Fire Safety NOC',police_noc_path:'Police NOC'};for(const [key,label] of Object.entries(labels)){if(files[key]&&files[key].size>10*1024*1024)return label+' must be 10 MB or smaller.';}return '';}
-async function uploadHotelDocuments(userId,files){const bucket=getClient().storage.from(HOTEL_KYC_BUCKET),uploadedPaths={};for(const [dbField,file] of Object.entries(files)){if(!file)continue;const path=userId+'/'+dbField.replace(/_path$/,'')+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+safeFileExtension(file);const {data,error}=await bucket.upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type||undefined});if(error)throw new Error('Upload failed for '+dbField+': '+error.message);uploadedPaths[dbField]=data.path;}return uploadedPaths;}
+async function validateHotelDocuments(files) {
+    const labels = {
+        uttarakhand_tourism_utbm_registration_path: 'Uttarakhand Tourism / UTBM Hotel Registration',
+        trade_license_local_authority_license_path: 'Trade License / Local Authority License',
+        gst_certificate_msme_udyam_path: 'GST Certificate / MSME Udyam',
+        fire_safety_noc_path: 'Fire Safety NOC',
+        police_noc_path: 'Police NOC'
+    };
+    for (const [key, label] of Object.entries(labels)) {
+        if (!files[key]) continue;
+        const error = await validateUploadedFile(files[key], label, ALLOWED_DOCUMENT_TYPES, KYC_MAX_FILE_BYTES);
+        if (error) return error;
+    }
+    return '';
+}
+
+async function uploadHotelDocuments(userId, files) {
+    const bucket = getClient().storage.from(HOTEL_KYC_BUCKET);
+    const uploadedPaths = {};
+    for (const [dbField, file] of Object.entries(files)) {
+        if (!file) continue;
+        const extension = safeFileExtension(file);
+        if (!extension) throw new Error('Unsupported file type for ' + dbField + '.');
+        const path = userId + '/' + dbField.replace(/_path$/, '') + '-' + crypto.randomUUID() + '.' + extension;
+        const { data, error } = await bucket.upload(path, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type
+        });
+        if (error) throw new Error('Upload failed for ' + dbField + '. Please try again.');
+        uploadedPaths[dbField] = data.path;
+    }
+    return uploadedPaths;
+}
 async function getHotelVerification(userId){const {data,error}=await getClient().from('hotel_verification_requests').select('id,status,denial_reason,email,phone,created_at,updated_at').eq('user_id',userId).maybeSingle();if(error)throw error;return data;}
-async function submitHotelKYC(user){const files=getSelectedHotelDocuments(),validationError=validateHotelDocuments(files);if(validationError)throw new Error(validationError);const client=getClient();const {error:ensureError}=await client.rpc('ensure_my_hotel_verification_request');if(ensureError)throw ensureError;const paths=await uploadHotelDocuments(user.id,files);if(Object.keys(paths).length===0)return;const {error:saveError}=await client.rpc('save_hotel_verification_documents',{p_uttarakhand_tourism_utbm_registration_path:paths.uttarakhand_tourism_utbm_registration_path||null,p_trade_license_local_authority_license_path:paths.trade_license_local_authority_license_path||null,p_gst_certificate_msme_udyam_path:paths.gst_certificate_msme_udyam_path||null,p_fire_safety_noc_path:paths.fire_safety_noc_path||null,p_police_noc_path:paths.police_noc_path||null});if(saveError)throw saveError;}
+async function submitHotelKYC(user){const files=getSelectedHotelDocuments(),validationError=await validateHotelDocuments(files);if(validationError)throw new Error(validationError);const client=getClient();const {error:ensureError}=await client.rpc('ensure_my_hotel_verification_request');if(ensureError)throw ensureError;const paths=await uploadHotelDocuments(user.id,files);if(Object.keys(paths).length===0)return;const {error:saveError}=await client.rpc('save_hotel_verification_documents',{p_uttarakhand_tourism_utbm_registration_path:paths.uttarakhand_tourism_utbm_registration_path||null,p_trade_license_local_authority_license_path:paths.trade_license_local_authority_license_path||null,p_gst_certificate_msme_udyam_path:paths.gst_certificate_msme_udyam_path||null,p_fire_safety_noc_path:paths.fire_safety_noc_path||null,p_police_noc_path:paths.police_noc_path||null});if(saveError)throw saveError;}
 async function handleAuth(){
     const status=document.getElementById('status'),role=!isLoginMode?document.getElementById('role')?.value:null,btn=document.getElementById('agency-register-btn')||document.getElementById('auth-btn'),email=document.getElementById('email')?.value.trim(),password=document.getElementById('password')?.value||'';
     if(!email||!password){if(status)status.innerText='⚠️ Please enter email and password';return;}
@@ -5137,22 +5260,32 @@ async function fetchHotelProfile(userId) {
 // Helper: Upload Image to Supabase Storage Bucket
 async function uploadHotelImage(file, bucketPath) {
     if (!file) return null;
-    const client = getClient();
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-    const filePath = `${bucketPath}/${fileName}`;
+    const validationError = await validateUploadedFile(file, 'Hotel image', ALLOWED_IMAGE_TYPES, IMAGE_MAX_FILE_BYTES);
+    if (validationError) throw new Error(validationError);
 
-    const { data, error } = await client.storage
-        .from('hotel-assets')
-        .upload(filePath, file);
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) throw new Error('User session not found.');
+
+    const extension = ALLOWED_IMAGE_TYPES[String(file.type || '').toLowerCase()];
+    const safeFolder = ['front_views', 'parking_views', 'room_views'].includes(bucketPath) ? bucketPath : 'room_views';
+    const filePath = user.id + '/' + safeFolder + '/' + crypto.randomUUID() + '.' + extension;
+
+    const { error } = await client.storage
+        .from('hotel-media')
+        .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type
+        });
 
     if (error) {
-        console.error("Image Upload Error:", error.message);
+        console.error('Image Upload Error:', error.message);
         return null;
     }
 
     const { data: publicUrlData } = client.storage
-        .from('hotel-assets')
+        .from('hotel-media')
         .getPublicUrl(filePath);
 
     return publicUrlData.publicUrl;
@@ -5734,9 +5867,15 @@ window.saveHotelProfile = async function(existingHotelId) {
     let imageUrl = null;
     if (fileInput.files.length > 0) {
         const file = fileInput.files[0];
-        const fileExt = file.name.split('.').pop();
-        const filePath = `hotels/${Date.now()}.${fileExt}`;
-        const { error: uploadErr } = await client.storage.from('hotel-media').upload(filePath, file);
+        const validationError = await validateUploadedFile(file, 'Hotel front image', ALLOWED_IMAGE_TYPES, IMAGE_MAX_FILE_BYTES);
+        if (validationError) { alert(validationError); return; }
+        const extension = ALLOWED_IMAGE_TYPES[String(file.type || '').toLowerCase()];
+        const filePath = user.id + '/hotels/' + crypto.randomUUID() + '.' + extension;
+        const { error: uploadErr } = await client.storage.from('hotel-media').upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type
+        });
         if (uploadErr) { alert("Image Upload Failed: " + uploadErr.message); return; }
         const { data: urlData } = client.storage.from('hotel-media').getPublicUrl(filePath);
         imageUrl = urlData.publicUrl;
@@ -5785,8 +5924,15 @@ window.saveRoomCategory = async function(hotelId) {
     let uploadedUrls = [];
     if (fileInput.files.length > 0) {
         for (let file of fileInput.files) {
-            const filePath = `rooms/${Date.now()}_${file.name}`;
-            const { error: uploadErr } = await client.storage.from('hotel-media').upload(filePath, file);
+            const validationError = await validateUploadedFile(file, 'Room image', ALLOWED_IMAGE_TYPES, IMAGE_MAX_FILE_BYTES);
+            if (validationError) { alert(validationError); continue; }
+            const extension = ALLOWED_IMAGE_TYPES[String(file.type || '').toLowerCase()];
+            const filePath = user.id + '/rooms/' + crypto.randomUUID() + '.' + extension;
+            const { error: uploadErr } = await client.storage.from('hotel-media').upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: file.type
+            });
             if (!uploadErr) {
                 const { data: urlData } = client.storage.from('hotel-media').getPublicUrl(filePath);
                 uploadedUrls.push(urlData.publicUrl);
