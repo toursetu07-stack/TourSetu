@@ -140,12 +140,12 @@ jobs:
               re.I,
           ))
 
-          if inner_html_count > 146:
-              raise SystemExit(f"Security regression: script.js innerHTML budget increased from 146 to {inner_html_count}.")
-          if inline_handler_count > 165:
-              raise SystemExit(f"Security regression: script.js inline-handler budget increased from 165 to {inline_handler_count}.")
+          if inner_html_count > 145:
+              raise SystemExit(f"Security regression: script.js innerHTML budget increased from 145 to {inner_html_count}.")
+          if inline_handler_count > 158:
+              raise SystemExit(f"Security regression: script.js inline-handler budget increased from 158 to {inline_handler_count}.")
 
-          print(f"OK: forbidden JS sinks absent; legacy budget is innerHTML={inner_html_count}/146, inlineHandlers={inline_handler_count}/165.")
+          print(f"OK: forbidden JS sinks absent; legacy budget is innerHTML={inner_html_count}/145, inlineHandlers={inline_handler_count}/158.")
 
       - name: Validate all frontend JavaScript syntax
         shell: bash
