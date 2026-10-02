@@ -20,7 +20,7 @@ jobs:
           html = Path("index.html").read_text(encoding="utf-8")
           forbidden = [
               r"\bon(?:click|change|submit|error|load|mouseover|focus|blur)\s*=",
-              r"href\s*=\s*["']\s*javascript:",
+              r'''href\s*=\s*["']\s*javascript:''',
           ]
           for pattern in forbidden:
               if re.search(pattern, html, re.I):
