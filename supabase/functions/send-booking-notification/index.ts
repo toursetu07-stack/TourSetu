@@ -23,11 +23,12 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const oneSignalAppId = Deno.env.get("ONESIGNAL_APP_ID");
+    const oneSignalAppId = "1d58b571-868b-4b5b-b370-cd417cac6c28";
     const oneSignalRestApiKey = Deno.env.get("ONESIGNAL_REST_API_KEY");
-    const appUrl = Deno.env.get("TOURSETU_APP_URL") || "https://toursetu07-stack.github.io/TourSetu/";
+    const requestOrigin = req.headers.get("origin") || "";
+    const appUrl = (Deno.env.get("TOURSETU_APP_URL") || requestOrigin || "https://toursetu.in").replace(/\/$/, "");
 
-    if (!supabaseUrl || !anonKey || !serviceRoleKey || !oneSignalAppId || !oneSignalRestApiKey) {
+    if (!supabaseUrl || !anonKey || !serviceRoleKey || !oneSignalRestApiKey) {
       console.error("Missing notification function secrets/config");
       return json({ error: "Notification service is not configured." }, 500);
     }
