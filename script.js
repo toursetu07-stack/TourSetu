@@ -100,7 +100,7 @@ const REFERRAL_STORAGE_KEY = 'toursetu_referral_code';
 
 const CUSTOMER_TERMS_VERSION = '2026-10-02-v1';
 
-const AGENCY_TERMS_VERSION = '2026-10-02-v2';
+const AGENCY_TERMS_VERSION = '2026-10-02-v3';
 
 const CUSTOMER_PRIVACY_VERSION = '2026-10-02-v1';
 
@@ -116,8 +116,8 @@ function agencyPartnerTermsHtml() {
         '<p>In the event of a mechanical breakdown, accident, or delay during a tour, the operator is legally obligated to provide a replacement commercial vehicle of equal or higher capacity within a reasonable timeframe.</p>' +
         '<h3>4. Payout Settlement & Commission</h3>' +
         '<p>Payouts for completed trips will be processed to the operator\'s registered business bank account after deduction of the agreed TourSetu platform commission fee, subject to successful customer check-in and service delivery.</p>' +
-        '<h3>5. Platform Commission</h3>' +
-        '<p>Operator confirms that it is ready to pay a <strong>15% TourSetu platform commission</strong> from the total package price for bookings generated through the TourSetu marketplace. This commission will be deducted/settled according to TourSetu payout terms.</p>';
+        '<h3>5. Platform Commission & Transaction Fees</h3>' +
+        '<p>Operator confirms that it is ready to pay <strong>15% TourSetu platform commission + 2% gateway transaction fee + applicable GST on the transaction fee</strong> from the total package price for bookings generated through the TourSetu marketplace. These applicable platform and transaction charges will be deducted/settled according to TourSetu payout terms.</p>';
 }
 
 async function ensureAgencyTermsAccepted(user) {
