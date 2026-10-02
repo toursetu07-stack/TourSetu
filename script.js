@@ -5872,7 +5872,9 @@ async function renderArrivalsAndPayouts(container, user) {
             const strong = createHotelDashboardElement('strong', label + ' ', null);
             row.appendChild(strong);
         }
-        row.appendChild(document.createTextNode(String(value ?? 'N/A')));
+        const valueNode = document.createElement('span');
+        valueNode.textContent = String(value ?? 'N/A');
+        row.appendChild(valueNode);
         parent.appendChild(row);
         return row;
     };
