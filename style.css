@@ -32,18 +32,13 @@ h1 {
   margin-bottom: 15px;
 }
 
-input:not([type="checkbox"]):not([type="radio"]), select {
+input, select {
   width: 100%;
   padding: 12px;
   margin-top: 5px;
   border: 2px solid var(--light-orange);
   border-radius: 8px;
-  box-sizing: border-box; /* Prevents text/select inputs from overflowing */
-}
-
-input[type="checkbox"],
-input[type="radio"] {
-  box-sizing: border-box;
+  box-sizing: border-box; /* Prevents input from overflowing */
 }
 
 input:focus {
@@ -206,13 +201,7 @@ body {
 
 button, input, select, textarea { font: inherit; }
 button { min-height: 44px; }
-input:not([type="checkbox"]):not([type="radio"]), select, textarea { min-height: 44px; }
-
-/* Keep native choice controls compact while their surrounding label/card provides the touch target. */
-input[type="checkbox"],
-input[type="radio"] {
-  min-height: 18px;
-}
+input, select, textarea { min-height: 44px; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
   outline: 3px solid rgba(255,159,67,.35);
   outline-offset: 2px;
