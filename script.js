@@ -1308,6 +1308,181 @@ window.loadCustomerHotelPackages = async function() {
     }
 };
 
+// Safe hotel image URL helper retained from the legacy renderer.
+function getHotelRoomImageUrl(imagePath) {
+    if (!imagePath || String(imagePath).trim() === '' || imagePath === 'undefined' || imagePath === 'null') {
+        return FALLBACK_ROOM_IMAGE;
+    }
+    const value = String(imagePath).trim();
+    if (/^https?:\\/\\//i.test(value)) return value;
+    try {
+        const client = getClient();
+        const cleanPath = value.includes('/') ? value : `rooms/${value}`;
+        const { data } = client.storage.from('hotel-media').getPublicUrl(cleanPath);
+        const publicUrl = data?.publicUrl || '';
+        return /^https?:\\/\\//i.test(publicUrl) ? publicUrl : FALLBACK_ROOM_IMAGE;
+    } catch (e) {
+        return FALLBACK_ROOM_IMAGE;
+    }
+}
+
+function formatDateString(dateObj) {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+window.openHotelBookingModal = function(hotelName, city, address, roomType, pricePerNight, maxAvailableRooms, imagePath, roomCategoryId) {
+    const existingModal = document.getElementById('hotel-booking-modal');
+    if (existingModal) existingModal.remove();
+
+    const imageUrl = getHotelRoomImageUrl(imagePath);
+    const today = new Date();
+    const minDateStr = formatDateString(today);
+    const maxDate = new Date(today);
+    maxDate.setDate(today.getDate() + 7);
+    const maxDateStr = formatDateString(maxDate);
+    const nextDay = new Date(today);
+    nextDay.setDate(today.getDate() + 1);
+    const nextDayStr = formatDateString(nextDay);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'hotel-booking-modal';
+    overlay.className = 'custom-modal-overlay';
+
+    const card = document.createElement('div');
+    card.className = 'custom-modal-card';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'modal-close-btn';
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', () => overlay.remove());
+
+    const imageWrap = document.createElement('div');
+    imageWrap.className = 'modal-image-wrapper';
+    const image = document.createElement('img');
+    image.className = 'modal-room-img';
+    image.alt = String(roomType || 'Hotel room');
+    image.src = imageUrl;
+    image.addEventListener('error', () => {
+        if (image.src !== FALLBACK_ROOM_IMAGE) image.src = FALLBACK_ROOM_IMAGE;
+    });
+    imageWrap.appendChild(image);
+
+    const body = document.createElement('div');
+    body.className = 'modal-content-body';
+
+    const title = document.createElement('h2');
+    title.textContent = String(hotelName || '');
+    title.style.cssText = 'margin:0 0 5px 0;color:#2d3436;';
+    const locationEl = document.createElement('p');
+    locationEl.textContent = `📍 ${city || ''}, ${address || ''}`;
+    locationEl.style.cssText = 'margin:0 0 15px 0;color:#636e72;font-size:13px;';
+
+    const categoryBox = document.createElement('div');
+    categoryBox.style.cssText = 'background:#f8f9fa;padding:10px 15px;border-radius:8px;margin-bottom:15px;border-left:4px solid #3498db;';
+    const categoryText = document.createElement('span');
+    categoryText.textContent = `🛏️ Category: ${roomType || ''}`;
+    categoryText.style.cssText = 'font-weight:bold;color:#2c3e50;';
+    categoryBox.appendChild(categoryText);
+
+    const dateGrid = document.createElement('div');
+    dateGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px;';
+    const makeDateField = (labelText, id, min, max, value) => {
+        const wrap = document.createElement('div');
+        const label = document.createElement('label');
+        label.textContent = labelText;
+        label.style.cssText = 'display:block;font-size:11px;font-weight:bold;color:#636e72;margin-bottom:5px;';
+        const input = document.createElement('input');
+        input.type = 'date';
+        input.id = id;
+        input.min = min;
+        input.max = max;
+        input.value = value;
+        input.style.cssText = 'width:100%;padding:8px 10px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:bold;box-sizing:border-box;';
+        input.addEventListener('change', () => window.calculateHotelTotalPrice(pricePerNight, maxAvailableRooms));
+        wrap.append(label, input);
+        return wrap;
+    };
+    dateGrid.append(
+        makeDateField('📅 CHECK-IN DATE', 'modal-checkin-date', minDateStr, maxDateStr, minDateStr),
+        makeDateField('📅 CHECK-OUT DATE', 'modal-checkout-date', minDateStr, maxDateStr, nextDayStr)
+    );
+
+    const formGrid = document.createElement('div');
+    formGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:15px;align-items:center;margin-bottom:15px;';
+    const priceWrap = document.createElement('div');
+    const priceLabel = document.createElement('label');
+    priceLabel.textContent = 'PRICE PER NIGHT';
+    priceLabel.style.cssText = 'display:block;font-size:11px;font-weight:bold;color:#636e72;margin-bottom:5px;';
+    const priceText = document.createElement('div');
+    priceText.textContent = `₹${pricePerNight}`;
+    priceText.style.cssText = 'font-size:18px;font-weight:bold;color:#2ecc71;';
+    priceWrap.append(priceLabel, priceText);
+
+    const qtyWrap = document.createElement('div');
+    const qtyLabel = document.createElement('label');
+    qtyLabel.textContent = `ROOMS TO BOOK (Max: ${maxAvailableRooms})`;
+    qtyLabel.style.cssText = 'display:block;font-size:11px;font-weight:bold;color:#636e72;margin-bottom:5px;';
+    const qtyInput = document.createElement('input');
+    qtyInput.type = 'number';
+    qtyInput.id = 'modal-room-qty';
+    qtyInput.min = '0';
+    qtyInput.max = String(maxAvailableRooms);
+    qtyInput.value = '1';
+    qtyInput.style.cssText = 'width:100%;padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:15px;font-weight:bold;box-sizing:border-box;';
+    qtyInput.addEventListener('input', () => window.calculateHotelTotalPrice(pricePerNight, maxAvailableRooms));
+    qtyWrap.append(qtyLabel, qtyInput);
+    formGrid.append(priceWrap, qtyWrap);
+
+    const totalBox = document.createElement('div');
+    totalBox.style.cssText = 'margin:15px 0;padding:12px 15px;background:#eef2f7;border-radius:10px;display:flex;justify-content:space-between;align-items:center;';
+    const totalLabel = document.createElement('span');
+    totalLabel.textContent = 'Total Amount:';
+    totalLabel.style.cssText = 'font-size:13px;color:#34495e;font-weight:bold;';
+    const totalDisplay = document.createElement('span');
+    totalDisplay.id = 'modal-total-price-display';
+    totalDisplay.style.cssText = 'font-size:16px;font-weight:bold;color:#e67e22;';
+    totalBox.append(totalLabel, totalDisplay);
+
+    const termsWrap = document.createElement('div');
+    termsWrap.style.marginBottom = '15px';
+    const termsLabel = document.createElement('label');
+    termsLabel.style.cssText = 'display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:11px;color:#4a5568;line-height:1.4;';
+    const terms = document.createElement('input');
+    terms.type = 'checkbox';
+    terms.id = 'modal-agree-terms';
+    terms.style.cssText = 'margin-top:2px;cursor:pointer;';
+    const termsText = document.createElement('span');
+    termsText.textContent = 'I agree to the Cancellation & Refund Policy. I understand that in case of cancellation, a non-refundable amount of 18% (2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee) will be deducted from my total refund.';
+    termsLabel.append(terms, termsText);
+    termsWrap.appendChild(termsLabel);
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.id = 'modal-confirm-btn';
+    confirmBtn.textContent = 'CONFIRM & PROCEED TO BOOK';
+    confirmBtn.style.cssText = 'width:100%;padding:12px;background:#27ae60;color:white;border:none;border-radius:10px;font-weight:bold;font-size:15px;cursor:pointer;';
+    confirmBtn.addEventListener('click', () => {
+        window.submitHotelRoomBooking(
+            String(hotelName || ''),
+            String(roomType || ''),
+            `${city || ''}, ${address || ''}`,
+            Number(pricePerNight) || 0,
+            Number(maxAvailableRooms) || 0,
+            String(roomCategoryId || '')
+        );
+    });
+
+    body.append(title, locationEl, categoryBox, dateGrid, formGrid, totalBox, termsWrap, confirmBtn);
+    card.append(closeBtn, imageWrap, body);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    window.calculateHotelTotalPrice(pricePerNight, maxAvailableRooms);
+};
+
 // 3. Calculation Handler (Calculates Rooms × Nights)
 window.calculateHotelTotalPrice = function(pricePerNight, maxAvailableRooms) {
     const qtyInput = document.getElementById('modal-room-qty');
@@ -1338,7 +1513,7 @@ window.calculateHotelTotalPrice = function(pricePerNight, maxAvailableRooms) {
     }
 
     const total = pricePerNight * qty * nights;
-    display.innerHTML = `₹${pricePerNight} x ${qty} Room(s) x ${nights} Night(s) = ₹${total}`;
+    display.textContent = `₹${pricePerNight} x ${qty} Room(s) x ${nights} Night(s) = ₹${total}`;
 };
 
 // 4. Booking Submission Handler (Saves direct to Supabase SQL Table)
