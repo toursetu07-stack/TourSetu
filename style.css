@@ -183,3 +183,85 @@ input[type="file"] {
 @media (max-width: 620px) {
   .agency-doc-grid { grid-template-columns: 1fr; }
 }
+
+
+/* ============================================================
+   TourSetu UI/UX production foundation
+   ============================================================ */
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  background: #f6f7fb;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+button, input, select, textarea { font: inherit; }
+button { min-height: 44px; }
+input, select, textarea { min-height: 44px; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+  outline: 3px solid rgba(255,159,67,.35);
+  outline-offset: 2px;
+}
+button:disabled {
+  opacity: .6 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+button:hover { transform: translateY(-1px); }
+button:active { transform: translateY(0); }
+
+#app {
+  margin: 0 auto;
+  min-height: 0;
+}
+.auth-card {
+  width: 100%;
+}
+.auth-card input,
+.auth-card select,
+.auth-card button {
+  margin-bottom: 10px;
+}
+
+.card {
+  overflow-wrap: anywhere;
+}
+
+.modal-overlay,
+.custom-modal-overlay {
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 768px) {
+  body { padding: 16px !important; }
+  #app { max-width: 100%; padding: 18px; }
+  .auth-card { padding: 0; }
+  h1 { font-size: 1.55rem; }
+  .modal-content,
+  .custom-modal-card {
+    width: min(96vw, 520px) !important;
+    max-height: 88vh !important;
+    padding: 20px !important;
+  }
+  .agency-doc-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  body { padding: 10px !important; }
+  #app { padding: 14px; border-radius: 12px; }
+  button { width: 100%; }
+  .nav-item { min-height: 44px; display: flex; align-items: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

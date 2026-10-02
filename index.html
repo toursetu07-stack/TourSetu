@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="TourSetu — trusted travel, hotel and Char Dham booking marketplace.">
+    <meta name="theme-color" content="#ff9f43">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>TourSetu | Travel Agency Portal</title>
     
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
@@ -14,8 +17,8 @@
         await OneSignal.init({
           appId: "1d58b571-868b-4b5b-b370-cd417cac6c28",
           allowLocalhostAsSecureOrigin: true,
-          serviceWorkerPath: "/OneSignalSDKWorker.js",
-          serviceWorkerParam: { scope: "/" },
+          serviceWorkerPath: (location.pathname.startsWith("/TourSetu/") ? "/TourSetu/" : "/") + "OneSignalSDKWorker.js",
+          serviceWorkerParam: { scope: location.pathname.startsWith("/TourSetu/") ? "/TourSetu/" : "/" },
           notifyButton: { enable: true }
         });
         window.__toursetuOneSignalReady = true;
@@ -114,8 +117,8 @@
         <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>
         
         <div id="auth-section">
-            <input type="email" id="email" placeholder="Email Address">
-            <input type="password" id="password" placeholder="Password">
+            <input type="email" id="email" placeholder="Email Address" autocomplete="email" inputmode="email" aria-label="Email Address">
+            <input type="password" id="password" placeholder="Password" autocomplete="current-password" aria-label="Password">
             
             <div id="role-selection">
                 <label>I am a:</label>
