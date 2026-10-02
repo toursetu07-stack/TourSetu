@@ -61,9 +61,24 @@ const locationData = {
 };
 
 
-const CITY_MATCH_CACHE = new Map();
-const CITY_GEOCODE_IN_FLIGHT = new Map();
 let customerOperatorSearchRequestId = 0;
+
+const CITY_NEARBY_GROUPS = {
+    Uttarakhand: {
+        kichha: ['rudrapur', 'pantnagar', 'gadarpur', 'nagla', 'lalpur', 'sitarganj', 'khatima', 'bazpur', 'kashipur', 'haldwani'],
+        rudrapur: ['kichha', 'pantnagar', 'gadarpur', 'nagla', 'lalpur', 'kashipur', 'haldwani', 'sitarganj', 'khatima', 'bazpur'],
+        pantnagar: ['rudrapur', 'kichha', 'haldwani', 'gadarpur', 'lalpur', 'nagla', 'kashipur'],
+        gadarpur: ['rudrapur', 'kichha', 'nagla', 'lalpur', 'bazpur', 'kashipur', 'khatima', 'sitarganj'],
+        haldwani: ['lalkuan', 'pantnagar', 'rudrapur', 'kichha', 'nainital', 'bhimtal', 'ramnagar'],
+        lalkuan: ['haldwani', 'pantnagar', 'rudrapur', 'kichha', 'nainital', 'ramnagar'],
+        kashipur: ['bazpur', 'gadarpur', 'rudrapur', 'kichha', 'jaspur', 'khatima'],
+        khatima: ['sitarganj', 'kichha', 'rudrapur', 'bazpur', 'gadarpur'],
+        sitarganj: ['khatima', 'kichha', 'rudrapur', 'gadarpur', 'bazpur'],
+        bazpur: ['gadarpur', 'kashipur', 'rudrapur', 'kichha', 'khatima'],
+        nainital: ['haldwani', 'bhowali', 'bhimtal', 'ramnagar'],
+        ramnagar: ['haldwani', 'nainital', 'kashipur', 'bazpur']
+    }
+};
 
 function normalizeMatchCity(value) {
     return String(value ?? '')
@@ -95,70 +110,25 @@ function getCityState(city) {
     return '';
 }
 
-function cityDistanceKm(a, b) {
-    if (!a || !b || !Number.isFinite(a.lat) || !Number.isFinite(a.lon) ||
-        !Number.isFinite(b.lat) || !Number.isFinite(b.lon)) {
-        return Number.POSITIVE_INFINITY;
-    }
+function getCityProximityScore(state, selectedCity, operatorCity) {
+    const selected = normalizeMatchCity(selectedCity);
+    const operator = normalizeMatchCity(operatorCity);
 
-    const toRadians = degrees => degrees * Math.PI / 180;
-    const earthRadiusKm = 6371;
-    const lat1 = toRadians(a.lat);
-    const lat2 = toRadians(b.lat);
-    const deltaLat = toRadians(b.lat - a.lat);
-    const deltaLon = toRadians(b.lon - a.lon);
-    const h = Math.sin(deltaLat / 2) ** 2 +
-        Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
+    if (!selected || !operator) return Number.POSITIVE_INFINITY;
+    if (selected === operator) return 0;
 
-    return earthRadiusKm * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
-}
+    const groups = CITY_NEARBY_GROUPS[state] || {};
+    const selectedGroup = groups[selected] || [];
+    const directIndex = selectedGroup.indexOf(operator);
+    if (directIndex >= 0) return directIndex + 1;
 
-async function geocodeMatchCity(city, state) {
-    const normalizedCity = normalizeMatchCity(city);
-    const normalizedState = normalizeMatchCity(state);
-    if (!normalizedCity || !normalizedState || getCityState(city) !== state) return null;
+    const operatorGroup = groups[operator] || [];
+    const reverseIndex = operatorGroup.indexOf(selected);
+    if (reverseIndex >= 0) return reverseIndex + 1.5;
 
-    const cacheKey = normalizedCity + '|' + normalizedState;
-    if (CITY_MATCH_CACHE.has(cacheKey)) return CITY_MATCH_CACHE.get(cacheKey);
-    if (CITY_GEOCODE_IN_FLIGHT.has(cacheKey)) return CITY_GEOCODE_IN_FLIGHT.get(cacheKey);
-
-    const request = (async () => {
-        let timeoutId = null;
-        try {
-            const controller = new AbortController();
-            timeoutId = window.setTimeout(() => controller.abort(), 4500);
-            const query = encodeURIComponent(city + ', ' + state + ', India');
-            const response = await fetch(
-                'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=' + query,
-                {
-                    method: 'GET',
-                    headers: { 'Accept-Language': 'en-IN' },
-                    signal: controller.signal,
-                    cache: 'force-cache'
-                }
-            );
-            if (!response.ok) return null;
-
-            const results = await response.json();
-            const first = Array.isArray(results) ? results[0] : null;
-            const point = first && Number.isFinite(Number(first.lat)) && Number.isFinite(Number(first.lon))
-                ? { lat: Number(first.lat), lon: Number(first.lon) }
-                : null;
-
-            CITY_MATCH_CACHE.set(cacheKey, point);
-            return point;
-        } catch (error) {
-            console.warn('City proximity lookup skipped:', city, error);
-            CITY_MATCH_CACHE.set(cacheKey, null);
-            return null;
-        } finally {
-            if (timeoutId) window.clearTimeout(timeoutId);
-            CITY_GEOCODE_IN_FLIGHT.delete(cacheKey);
-        }
-    })();
-
-    CITY_GEOCODE_IN_FLIGHT.set(cacheKey, request);
-    return request;
+    const stateCities = Array.isArray(locationData[state]) ? locationData[state] : [];
+    const stateIndex = stateCities.findIndex(city => normalizeMatchCity(city) === operator);
+    return stateIndex >= 0 ? 100 + stateIndex : 1000;
 }
 
 // HELPER FUNCTION: Ensure this exists in your script so the dropdowns work
@@ -3574,12 +3544,11 @@ function renderPackageCards(data, isFiltered) {
         from.textContent = '🚩 From: ' + (packageData.starting_location || 'N/A');
         route.appendChild(from);
 
-        if (packageData._cityMatchType === 'nearby') {
+        if (packageData._cityMatchType === 'nearby' || packageData._cityMatchType === 'same-state') {
             const nearby = document.createElement('div');
-            const distance = Number(packageData._cityMatchDistance);
-            nearby.textContent = Number.isFinite(distance)
-                ? '📍 NEARBY OPERATOR • ' + Math.round(distance) + ' km away'
-                : '📍 NEARBY OPERATOR';
+            nearby.textContent = packageData._cityMatchType === 'nearby'
+                ? '📍 NEARBY OPERATOR'
+                : '📍 SAME-STATE OPERATOR';
             nearby.style.cssText = 'margin-top:8px;display:inline-block;padding:5px 9px;background:#eef6ff;color:#2563eb;border-radius:999px;font-size:10px;font-weight:800;';
             route.appendChild(nearby);
         }
@@ -3697,38 +3666,19 @@ window.searchMatchedAgencies = async function() {
             return;
         }
 
-        const selectedPoint = await geocodeMatchCity(start, selectedState);
-        if (requestId !== customerOperatorSearchRequestId) return;
-
-        const uniqueCities = [...new Set(
-            sameState.map(function(p) {
-                return String(p?.starting_location || '').trim();
-            }).filter(Boolean)
-        )];
-
-        const geoEntries = await Promise.all(
-            uniqueCities.map(async function(city) {
-                return { city: city, point: await geocodeMatchCity(city, selectedState) };
+        const ranked = sameState
+            .map(function(p) {
+                const operatorCity = String(p?.starting_location || '').trim();
+                const score = getCityProximityScore(selectedState, start, operatorCity);
+                return {
+                    ...p,
+                    _cityMatchType: score < 100 ? 'nearby' : 'same-state',
+                    _cityMatchDistance: score
+                };
             })
-        );
-
-        if (requestId !== customerOperatorSearchRequestId) return;
-
-        const distanceByCity = {};
-        geoEntries.forEach(function(entry) {
-            distanceByCity[normalizeMatchCity(entry.city)] = cityDistanceKm(selectedPoint, entry.point);
-        });
-
-        const ranked = sameState.map(function(p) {
-            const distance = distanceByCity[normalizeMatchCity(p?.starting_location)];
-            return {
-                ...p,
-                _cityMatchType: 'nearby',
-                _cityMatchDistance: Number.isFinite(distance) ? distance : Number.POSITIVE_INFINITY
-            };
-        }).sort(function(a, b) {
-            return a._cityMatchDistance - b._cityMatchDistance;
-        });
+            .sort(function(a, b) {
+                return a._cityMatchDistance - b._cityMatchDistance;
+            });
 
         renderPackageCards(ranked, true);
     } catch (error) {
