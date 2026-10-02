@@ -5577,7 +5577,7 @@ async function renderHotelRequestsTab(container, user) {
     }
 }
 
-async function renderHotelDashboard(user, hotelData = null) {
+async function renderHotelDashboard(user) {
     const app = document.getElementById('app');
     if (!app) return;
 
@@ -5715,6 +5715,8 @@ window.showHotelTab = async function(tabName) {
         await renderHotelRequestsTab(container, user);
     }
 };
+
+// 3. Edit Button Click Function
 
 /* =========================================================================
    🛡️ ACTIVE HOTEL DASHBOARD BOUNDARY COMPLETE
@@ -7495,6 +7497,8 @@ window.renderHotelBookingRequests = async function(container, user) {
         setHotelDashboardMessage(target, 'Unable to load booking requests right now.', 'error');
     }
 };
+
+/* ACTIVE HOTEL BOOKING RENDERER END */
 
 
 window.openHotelBookingApproval =
