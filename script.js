@@ -4231,14 +4231,33 @@ function renderAgencyDashboard(user) {
 
 
 window.loadAgencyVerificationBanner=async function(user){
-    const container=document.getElementById('main-content');if(!container)return;
+    const container=document.getElementById('main-content');
+    if(!container)return;
+
     const verification=await getAgencyVerification(user.id).catch(()=>null);
     document.getElementById('agency-verification-banner')?.remove();
     if(!verification||verification.status==='approved')return;
-    const color=verification.status==='denied'?'#ff7675':'#f39c12';
-    const text=verification.status==='denied'?'Your verification was denied. Please contact TourSetu support.':'Your registration is submitted and waiting for admin approval. Your packages remain hidden from customers until approval.';
-    const banner=document.createElement('div');banner.id='agency-verification-banner';banner.style.cssText='margin:0 0 20px;padding:14px 18px;border-radius:10px;border-left:5px solid '+color+';background:white;box-shadow:0 2px 8px rgba(0,0,0,.06);color:#444;';
-    banner.innerHTML='<strong>Agency Verification: '+String(verification.status||'pending').toUpperCase()+'</strong><br><span style="font-size:13px;">'+text+'</span>';
+
+    const isDenied=verification.status==='denied';
+    const color=isDenied?'#ff7675':'#f39c12';
+    const text=isDenied
+        ? 'Your verification was denied. Please contact TourSetu support.'
+        : 'Your registration is submitted and waiting for admin approval. Your packages remain hidden from customers until approval.';
+
+    const banner=document.createElement('div');
+    banner.id='agency-verification-banner';
+    banner.style.cssText='margin:0 0 20px;padding:14px 18px;border-radius:10px;border-left:5px solid '+color+';background:white;box-shadow:0 2px 8px rgba(0,0,0,.06);color:#444;';
+
+    const title=document.createElement('strong');
+    title.textContent='Agency Verification: '+String(verification.status||'pending').toUpperCase();
+
+    const message=document.createElement('span');
+    message.style.cssText='font-size:13px;';
+    message.textContent=text;
+
+    banner.appendChild(title);
+    banner.appendChild(document.createElement('br'));
+    banner.appendChild(message);
     container.prepend(banner);
 };
 
