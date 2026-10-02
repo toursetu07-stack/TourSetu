@@ -4114,7 +4114,8 @@ function renderAgencyDashboard(user) {
         item.className = 'nav-item';
         item.dataset.agencyTab = tab;
 
-        const labelSpan = createAgencyDashboardElement('span', label);
+        const labelSpan = createAgencyDashboardElement('span', null);
+        labelSpan.textContent = label;
         item.appendChild(labelSpan);
 
         if (tab === 'bookings') {
