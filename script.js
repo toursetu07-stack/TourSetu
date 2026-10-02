@@ -60,23 +60,129 @@ const locationData = {
   "West Bengal": ["Kolkata", "Howrah", "Darjeeling", "Siliguri", "Durgapur"]
 };
 
+
+const CITY_MATCH_CACHE = new Map();
+const CITY_GEOCODE_IN_FLIGHT = new Map();
+let customerOperatorSearchRequestId = 0;
+
+function normalizeMatchCity(value) {
+    return String(value ?? '')
+        .normalize('NFKC')
+        .trim()
+        .toLowerCase()
+        .replace(/[’']/g, '')
+        .replace(/&/g, ' and ')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\blal\s+kuan\b/g, 'lalkuan')
+        .replace(/\brudrapryag\b/g, 'rudraprayag');
+}
+
+const UTTARAKHAND_OPERATOR_CITIES = new Set(
+    (typeof UTTARAKHAND_PICKUP_CITIES !== 'undefined' ? UTTARAKHAND_PICKUP_CITIES : [])
+        .map(normalizeMatchCity)
+);
+
+function getCityState(city) {
+    const normalized = normalizeMatchCity(city);
+    if (!normalized) return '';
+
+    for (const [state, cities] of Object.entries(locationData)) {
+        if (cities.some(item => normalizeMatchCity(item) === normalized)) return state;
+    }
+
+    if (UTTARAKHAND_OPERATOR_CITIES.has(normalized)) return 'Uttarakhand';
+    return '';
+}
+
+function cityDistanceKm(a, b) {
+    if (!a || !b || !Number.isFinite(a.lat) || !Number.isFinite(a.lon) ||
+        !Number.isFinite(b.lat) || !Number.isFinite(b.lon)) {
+        return Number.POSITIVE_INFINITY;
+    }
+
+    const toRadians = degrees => degrees * Math.PI / 180;
+    const earthRadiusKm = 6371;
+    const lat1 = toRadians(a.lat);
+    const lat2 = toRadians(b.lat);
+    const deltaLat = toRadians(b.lat - a.lat);
+    const deltaLon = toRadians(b.lon - a.lon);
+    const h = Math.sin(deltaLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
+
+    return earthRadiusKm * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
+}
+
+async function geocodeMatchCity(city, state) {
+    const normalizedCity = normalizeMatchCity(city);
+    const normalizedState = normalizeMatchCity(state);
+    if (!normalizedCity || !normalizedState || getCityState(city) !== state) return null;
+
+    const cacheKey = normalizedCity + '|' + normalizedState;
+    if (CITY_MATCH_CACHE.has(cacheKey)) return CITY_MATCH_CACHE.get(cacheKey);
+    if (CITY_GEOCODE_IN_FLIGHT.has(cacheKey)) return CITY_GEOCODE_IN_FLIGHT.get(cacheKey);
+
+    const request = (async () => {
+        let timeoutId = null;
+        try {
+            const controller = new AbortController();
+            timeoutId = window.setTimeout(() => controller.abort(), 4500);
+            const query = encodeURIComponent(city + ', ' + state + ', India');
+            const response = await fetch(
+                'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=' + query,
+                {
+                    method: 'GET',
+                    headers: { 'Accept-Language': 'en-IN' },
+                    signal: controller.signal,
+                    cache: 'force-cache'
+                }
+            );
+            if (!response.ok) return null;
+
+            const results = await response.json();
+            const first = Array.isArray(results) ? results[0] : null;
+            const point = first && Number.isFinite(Number(first.lat)) && Number.isFinite(Number(first.lon))
+                ? { lat: Number(first.lat), lon: Number(first.lon) }
+                : null;
+
+            CITY_MATCH_CACHE.set(cacheKey, point);
+            return point;
+        } catch (error) {
+            console.warn('City proximity lookup skipped:', city, error);
+            CITY_MATCH_CACHE.set(cacheKey, null);
+            return null;
+        } finally {
+            if (timeoutId) window.clearTimeout(timeoutId);
+            CITY_GEOCODE_IN_FLIGHT.delete(cacheKey);
+        }
+    })();
+
+    CITY_GEOCODE_IN_FLIGHT.set(cacheKey, request);
+    return request;
+}
+
 // HELPER FUNCTION: Ensure this exists in your script so the dropdowns work
 window.updateCities = function() {
     const stateSelect = document.getElementById('p-state');
     const citySelect = document.getElementById('p-city');
+    if (!stateSelect || !citySelect) return;
+
     const selectedState = stateSelect.value;
+    citySelect.replaceChildren();
 
-    // Clear current cities
-    citySelect.innerHTML = '<option value="">Select City</option>';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select City';
+    citySelect.appendChild(placeholder);
 
-    if (selectedState && locationData[selectedState]) {
-        locationData[selectedState].forEach(city => {
-            const opt = document.createElement('option');
-            opt.value = city;
-            opt.innerText = city;
-            citySelect.appendChild(opt);
-        });
-    }
+    const cities = Array.isArray(locationData[selectedState]) ? locationData[selectedState] : [];
+    cities.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        option.textContent = city;
+        citySelect.appendChild(option);
+    });
 };
 /* =========================================
    2. CORE UTILITY FUNCTIONS
@@ -309,6 +415,77 @@ async function ensureCustomerPrivacyAccepted(user) {
     `;
     return false;
 }
+
+window.confirmCustomerLogout = function() {
+    const existing = document.getElementById('customer-logout-confirmation');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'customer-logout-confirmation';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'customer-logout-title');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:1000000;background:rgba(15,23,42,.68);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+    const card = document.createElement('div');
+    card.style.cssText = 'width:min(430px,100%);background:#fff;border-radius:22px;padding:30px;box-sizing:border-box;box-shadow:0 25px 80px rgba(0,0,0,.30);text-align:center;font-family:Inter,sans-serif;';
+
+    const icon = document.createElement('div');
+    icon.textContent = '🚪';
+    icon.style.cssText = 'width:64px;height:64px;border-radius:18px;background:#fff7ed;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;font-size:31px;';
+
+    const title = document.createElement('h2');
+    title.id = 'customer-logout-title';
+    title.textContent = 'Logout from Customer Dashboard?';
+    title.style.cssText = 'margin:0 0 8px;color:#1e293b;font-size:23px;';
+
+    const message = document.createElement('p');
+    message.textContent = 'Are you sure you want to logout from your Customer account?';
+    message.style.cssText = 'margin:0 0 24px;color:#64748b;font-size:14px;line-height:1.55;';
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:12px;';
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = 'CANCEL';
+    cancel.style.cssText = 'flex:1;padding:13px;border:1px solid #cbd5e1;border-radius:11px;background:#f8fafc;color:#334155;font-weight:900;cursor:pointer;';
+
+    const confirm = document.createElement('button');
+    confirm.type = 'button';
+    confirm.textContent = 'LOGOUT';
+    confirm.style.cssText = 'flex:1;padding:13px;border:0;border-radius:11px;background:#e74c3c;color:#fff;font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(231,76,60,.22);';
+
+    cancel.addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', event => {
+        if (event.target === overlay) overlay.remove();
+    });
+
+    confirm.addEventListener('click', async () => {
+        confirm.disabled = true;
+        cancel.disabled = true;
+        confirm.textContent = 'LOGGING OUT...';
+        confirm.style.opacity = '.7';
+        cancel.style.opacity = '.7';
+        try {
+            await handleLogout();
+        } catch (error) {
+            console.error('Customer logout failed:', error);
+            confirm.disabled = false;
+            cancel.disabled = false;
+            confirm.textContent = 'LOGOUT';
+            confirm.style.opacity = '1';
+            cancel.style.opacity = '1';
+            alert('Logout failed. Please try again.');
+        }
+    });
+
+    actions.append(cancel, confirm);
+    card.append(icon, title, message, actions);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    confirm.focus();
+};
 
 window.toggleCustomerPrivacyApprovalButton = function() {
     const checkbox = document.getElementById('customer-privacy-policy-checkbox');
@@ -1244,7 +1421,7 @@ async function renderCustomerHomepage(user, options = {}) {
                   </div>
                   <div style="display:flex; gap:10px; align-items:center;">
                     <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
-                    <button onclick="confirmAndExecuteLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
+                    <button onclick="confirmCustomerLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
                     <button onclick="triggerDeactivateModalPopup()" style="background:#ff7675; color:white; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
                   </div>
               </div>
@@ -3437,96 +3614,137 @@ function renderPackageCards(data, isFiltered) {
 }
 
 window.searchMatchedAgencies = async function() {
+    const requestId = ++customerOperatorSearchRequestId;
     const start = document.getElementById('search-start')?.value?.trim() || '';
     const dest = document.getElementById('search-dest')?.value?.trim() || '';
+    const state = document.getElementById('search-state')?.value?.trim() || '';
     const container = document.getElementById('customer-pkg-list');
+    const searchButton = document.querySelector('#agency-filter-box button[onclick="searchMatchedAgencies()"]');
+
     if (!container) return;
+
+    if (!state || !start) {
+        renderCustomerPackageMessage(container, 'Select your pickup city', 'Choose a state and city first so we can find operators near you.');
+        return;
+    }
+
+    const mappedState = getCityState(start);
+    if (mappedState && mappedState !== state) {
+        renderCustomerPackageMessage(container, 'Please reselect your city', 'The selected city does not belong to the selected state.');
+        return;
+    }
+
+    const selectedState = mappedState || state;
+
+    if (searchButton) {
+        searchButton.disabled = true;
+        searchButton.textContent = 'SEARCHING...';
+        searchButton.style.opacity = '.7';
+        searchButton.style.cursor = 'wait';
+    }
 
     renderCustomerPackageMessage(
         container,
-        'Finding operators near ' + (start || 'your selected city') + '...',
-        'Checking the selected city first, then nearby cities in the same state.'
+        'Finding operators near ' + start + '...',
+        'Checking ' + start + ' first, then nearby operator cities in ' + selectedState + '.'
     );
 
-    const { data, error } = await getClient().from('packages').select('*');
-    if (error) {
-        console.error('Agency matching error:', error);
-        renderCustomerPackageMessage(container, 'Unable to load operators', 'Please try again.');
-        return;
-    }
+    try {
+        const result = await getClient().from('packages').select('*');
+        if (requestId !== customerOperatorSearchRequestId) return;
 
-    let packages = data || [];
-    if (dest) {
-        packages = packages.filter(function(p) {
-            const pDest = p?.destination || [];
-            if (Array.isArray(pDest)) {
-                return pDest.some(function(value) {
-                    return normalizeMatchCity(value) === normalizeMatchCity(dest);
+        if (result.error) {
+            console.error('Agency matching error:', result.error);
+            renderCustomerPackageMessage(container, 'Unable to load operators', 'Please try again in a moment.');
+            return;
+        }
+
+        let packages = Array.isArray(result.data) ? result.data : [];
+
+        if (dest) {
+            const normalizedDestination = normalizeMatchCity(dest);
+            packages = packages.filter(function(p) {
+                const destinations = Array.isArray(p?.destination) ? p.destination : [p?.destination];
+                return destinations.some(function(value) {
+                    return normalizeMatchCity(value) === normalizedDestination;
                 });
-            }
-            return normalizeMatchCity(pDest).includes(normalizeMatchCity(dest));
+            });
+        }
+
+        const exact = packages.filter(function(p) {
+            return normalizeMatchCity(p?.starting_location) === normalizeMatchCity(start);
         });
-    }
 
-    if (!start) {
-        renderPackageCards(packages, false);
-        return;
-    }
+        if (exact.length) {
+            renderPackageCards(exact.map(function(p) {
+                return { ...p, _cityMatchType: 'selected', _cityMatchDistance: 0 };
+            }), true);
+            return;
+        }
 
-    const selectedState = getCityState(start);
-    const exact = packages.filter(function(p) {
-        return normalizeMatchCity(p?.starting_location) === normalizeMatchCity(start);
-    });
+        const sameState = packages.filter(function(p) {
+            const operatorCity = String(p?.starting_location || '').trim();
+            return operatorCity && getCityState(operatorCity) === selectedState;
+        });
 
-    if (exact.length) {
-        renderPackageCards(exact.map(function(p) {
-            return { ...p, _cityMatchType: 'selected', _cityMatchDistance: 0 };
-        }), true);
-        return;
-    }
+        if (!sameState.length) {
+            renderCustomerPackageMessage(
+                container,
+                'No nearby operators found',
+                'We could not find an operator in ' + start + ' or another known city in ' + selectedState + '.',
+                'VIEW ALL OPERATORS',
+                function() { loadAllPackages(); }
+            );
+            return;
+        }
 
-    const sameState = selectedState
-        ? packages.filter(function(p) { return getCityState(p?.starting_location) === selectedState; })
-        : [];
+        const selectedPoint = await geocodeMatchCity(start, selectedState);
+        if (requestId !== customerOperatorSearchRequestId) return;
 
-    if (!sameState.length) {
-        renderCustomerPackageMessage(
-            container,
-            'No operators found in ' + start,
-            'We also checked other operator cities in ' + (selectedState || 'the selected area') + '.',
-            'VIEW ALL OPERATORS',
-            function() { loadAllPackages(); }
+        const uniqueCities = [...new Set(
+            sameState.map(function(p) {
+                return String(p?.starting_location || '').trim();
+            }).filter(Boolean)
+        )];
+
+        const geoEntries = await Promise.all(
+            uniqueCities.map(async function(city) {
+                return { city: city, point: await geocodeMatchCity(city, selectedState) };
+            })
         );
-        return;
-    }
 
-    const selectedPoint = await geocodeMatchCity(start, selectedState);
-    const uniqueCities = [...new Set(
-        sameState.map(function(p) { return String(p?.starting_location || '').trim(); }).filter(Boolean)
-    )];
+        if (requestId !== customerOperatorSearchRequestId) return;
 
-    const geoEntries = await Promise.all(
-        uniqueCities.map(async function(city) {
-            return { city: city, point: await geocodeMatchCity(city, selectedState) };
-        })
-    );
+        const distanceByCity = {};
+        geoEntries.forEach(function(entry) {
+            distanceByCity[normalizeMatchCity(entry.city)] = cityDistanceKm(selectedPoint, entry.point);
+        });
 
-    const distanceByCity = {};
-    geoEntries.forEach(function(entry) {
-        distanceByCity[normalizeMatchCity(entry.city)] = cityDistanceKm(selectedPoint, entry.point);
-    });
-
-    const ranked = sameState
-        .map(function(p) {
+        const ranked = sameState.map(function(p) {
+            const distance = distanceByCity[normalizeMatchCity(p?.starting_location)];
             return {
                 ...p,
                 _cityMatchType: 'nearby',
-                _cityMatchDistance: distanceByCity[normalizeMatchCity(p?.starting_location)] ?? Number.POSITIVE_INFINITY
+                _cityMatchDistance: Number.isFinite(distance) ? distance : Number.POSITIVE_INFINITY
             };
-        })
-        .sort(function(a, b) { return a._cityMatchDistance - b._cityMatchDistance; });
+        }).sort(function(a, b) {
+            return a._cityMatchDistance - b._cityMatchDistance;
+        });
 
-    renderPackageCards(ranked, true);
+        renderPackageCards(ranked, true);
+    } catch (error) {
+        console.error('Operator search failed:', error);
+        if (requestId === customerOperatorSearchRequestId) {
+            renderCustomerPackageMessage(container, 'Unable to find operators', 'Please try again. Your selected city has not been changed.');
+        }
+    } finally {
+        if (searchButton) {
+            searchButton.disabled = false;
+            searchButton.textContent = 'FIND AGENCIES';
+            searchButton.style.opacity = '1';
+            searchButton.style.cursor = 'pointer';
+        }
+    }
 };
 
 async function loadAllPackages() {
