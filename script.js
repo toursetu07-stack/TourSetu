@@ -252,17 +252,42 @@ function toggleBusinessFields() {
    3. AUTH & DASHBOARD LOGIC
    ========================================= */
 
+let authStateListenerStarted = false;
+
+function isPasswordRecoveryUrl() {
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    return /(?:^|[&#?])type=recovery(?:&|#|$)/i.test(hash + search);
+}
+
+function clearAuthRecoveryUrl() {
+    try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
+}
+
+function startAuthStateListener() {
+    if (authStateListenerStarted) return;
+    authStateListenerStarted = true;
+    const client = getClient();
+    if (!client) return;
+    client.auth.onAuthStateChange(async (event) => {
+        if (event === 'PASSWORD_RECOVERY') renderPasswordResetUI();
+    });
+}
+
 async function initApp() {
     console.log("TourSetu Booting Up...");
     const client = getClient();
     if (!client) return;
-    
-    const { data: { user }, error } = await client.auth.getUser();
-    if (user && !error) {
-        await showDashboard(user);
-    } else {
-        renderAuthUI();
+    startAuthStateListener();
+
+    if (isPasswordRecoveryUrl()) {
+        renderPasswordResetUI();
+        return;
     }
+
+    const { data: { user }, error } = await client.auth.getUser();
+    if (user && !error) await showDashboard(user);
+    else renderAuthUI();
 }
 
 async function showDashboard(user) {
@@ -303,6 +328,7 @@ function renderAuthUI() {
         <h2 id="form-title" style="margin-bottom:18px;">${isLoginMode?"Welcome Back":"Create Account"}</h2>
         <input type="email" id="email" placeholder="Email Address" autocomplete="email" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         <input type="password" id="password" placeholder="Password" autocomplete="${isLoginMode?"current-password":"new-password"}" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" onclick="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
         <div id="role-selection" style="display:${isLoginMode?"none":"block"};margin:12px 0;">
           <label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label>
           <select id="role" onchange="toggleBusinessFields()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
@@ -414,6 +440,96 @@ window.toggleBusinessFields=function(){
         if(genericAuth)genericAuth.style.display='block';
     }
 };
+async function handleForgotPassword() {
+    const status = document.getElementById('status');
+    const email = document.getElementById('email')?.value.trim();
+    if (!email) {
+        if (status) status.innerHTML = '<div style="background:#fff4e6;padding:12px;border-radius:10px;border:1px solid #ffd8a8;color:#b45309;text-align:left;">⚠️ Please enter your email address first.</div>';
+        document.getElementById('email')?.focus();
+        return;
+    }
+    const client = getClient();
+    if (!client) { if (status) status.innerText = '❌ Supabase not initialized'; return; }
+    if (status) status.innerText = '⏳ Sending password reset email...';
+    try {
+        const redirectTo = window.location.origin + window.location.pathname;
+        const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) throw error;
+        if (status) status.innerHTML = '<div style="background:#eafaf1;padding:14px;border-radius:10px;border:1px solid #b7ebc6;color:#1e7e34;text-align:left;"><strong>📩 Password reset email sent</strong><br>Please check <b>'+email+'</b> and open the reset link.</div>';
+    } catch (err) {
+        console.error('Password reset request error:', err);
+        if (status) status.innerText = '❌ ' + (err?.message || 'Could not send password reset email.');
+    }
+}
+
+function renderPasswordResetUI() {
+    const app = document.getElementById('app');
+    if (!app) return;
+    app.innerHTML = `
+      <div class="card" style="max-width:520px;margin:50px auto;padding:32px;background:white;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.1);border-radius:15px;font-family:Inter,sans-serif;">
+        <h1 style="color:#ff9f43;margin-bottom:8px;">TourSetu</h1>
+        <h2 style="margin-bottom:8px;">Reset Password</h2>
+        <p style="color:#636e72;font-size:13px;line-height:1.5;">Enter your new password below. This will become the password for this TourSetu account.</p>
+        <input type="password" id="new-password" placeholder="New Password" autocomplete="new-password" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <input type="password" id="confirm-new-password" placeholder="Confirm New Password" autocomplete="new-password" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <button type="button" onclick="handlePasswordUpdate()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:12px;font-size:16px;">Set New Password</button>
+        <button type="button" onclick="clearAuthRecoveryUrl();isLoginMode=true;renderAuthUI();" style="background:#f1f2f6;color:#2d3436;width:100%;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;border:none;margin-top:10px;">Back to Login</button>
+        <div id="status" style="margin-top:15px;font-size:13px;font-weight:bold;"></div>
+      </div>`;
+}
+
+async function handlePasswordUpdate() {
+    const status = document.getElementById('status');
+    const newPassword = document.getElementById('new-password')?.value || '';
+    const confirmPassword = document.getElementById('confirm-new-password')?.value || '';
+    if (newPassword.length < 6) { if (status) status.innerText = '⚠️ Password must be at least 6 characters.'; return; }
+    if (newPassword !== confirmPassword) { if (status) status.innerText = '⚠️ New password and confirm password do not match.'; return; }
+
+    const client = getClient();
+    if (!client) { if (status) status.innerText = '❌ Supabase not initialized'; return; }
+    const button = document.querySelector('button[onclick="handlePasswordUpdate()"]');
+    if (button) button.disabled = true;
+    if (status) status.innerText = '⏳ Updating password...';
+
+    try {
+        const { error } = await client.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+        await client.auth.signOut();
+        clearAuthRecoveryUrl();
+        isLoginMode = true;
+        renderAuthUI();
+        const loginStatus = document.getElementById('status');
+        if (loginStatus) loginStatus.innerHTML = '<div style="background:#eafaf1;padding:14px;border-radius:10px;border:1px solid #b7ebc6;color:#1e7e34;text-align:left;"><strong>✅ Password updated successfully.</strong><br>Your account password is now the new password you just set. Please login with it.</div>';
+    } catch (err) {
+        console.error('Password update error:', err);
+        if (status) status.innerText = '❌ ' + (err?.message || 'Could not update password.');
+        if (button) button.disabled = false;
+    }
+}
+
+async function resendConfirmationEmail(email) {
+    const client = getClient();
+    if (!client || !email) throw new Error('Please enter your email address.');
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { error } = await client.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: redirectTo }
+    });
+    if (error) throw error;
+}
+
+async function resendConfirmationFromLogin() {
+    const email = document.getElementById('email')?.value.trim();
+    const status = document.getElementById('status');
+    try {
+        await resendConfirmationEmail(email);
+        if (status) status.innerText = '✅ Confirmation email sent again. Please check your inbox.';
+    } catch (e) {
+        if (status) status.innerText = '❌ ' + (e?.message || e);
+    }
+}
+
 /* =========================================
    5. AUTHENTICATION + AGENCY KYC
    ========================================= */
@@ -444,7 +560,15 @@ async function handleAuth(){
     if(btn)btn.disabled=true;if(status)status.innerText='⏳ Processing...';
     try{
         if(isLoginMode){
-            const {data,error}=await client.auth.signInWithPassword({email,password});if(error)throw error;
+            const {data,error}=await client.auth.signInWithPassword({email,password});
+            if(error){
+                const msg=String(error.message||'');
+                if(/email not confirmed/i.test(msg)||/email.*confirm/i.test(msg)){
+                    if(status)status.innerHTML='<div style="background:#fff4e6;padding:14px;border-radius:10px;border:1px solid #ffd8a8;color:#b45309;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Please confirm <b>'+email+'</b> using the link sent by TourSetu, then login again.<br><button type="button" onclick="resendConfirmationFromLogin()" style="margin-top:10px;background:#ff9f43;color:white;border:0;border-radius:7px;padding:9px 12px;font-weight:700;cursor:pointer;">Resend Confirmation Email</button></div>';
+                    return;
+                }
+                throw error;
+            }
             if(data?.user){window.OneSignal=window.OneSignal||[];OneSignal.push(function(){OneSignal.login(data.user.id);});}
             await recordReferralLogin();await showDashboard(data.user);return;
         }
@@ -467,7 +591,7 @@ async function handleAuth(){
             await showDashboard(data.user);
             return;
         }
-        if(data?.session)await showDashboard(data.user);else if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Check your Inbox!</strong><br>A confirmation link was sent to <b>'+email+'</b>. After confirmation, login with your email and password.</div>';
+        if(data?.session)await showDashboard(data.user);else if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>We sent a confirmation link to <b>'+email+'</b>. Please open that email, click the confirmation link, and then login with your email and password.<br><br><small>This applies to Traveler, Travel Agency and Hotel Partner accounts.</small></div>';
     }catch(err){console.error('Auth/KYC error:',err);if(status)status.innerText='❌ '+(err?.message||err);}
     finally{if(btn)btn.disabled=false;}
 }
