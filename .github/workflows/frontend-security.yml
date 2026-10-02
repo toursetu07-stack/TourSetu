@@ -80,6 +80,99 @@ jobs:
               raise SystemExit("Security regression: migrated package renderer missing: " + ", ".join(missing))
           print("OK: customer agency package renderer uses safe DOM/event APIs.")
 
+
+
+      - name: Check global JavaScript security sinks and legacy sink budget
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          files = [Path("script.js")] + list(Path(".").glob("*.js"))
+          js = "\n".join(path.read_text(encoding="utf-8") for path in files if path.name != "security-dom.js")
+
+          forbidden = {
+              "eval()": r"\beval\s*\(",
+              "new Function()": r"\bnew\s+Function\s*\(",
+              "document.write()": r"\bdocument\.(?:write|writeln)\s*\(",
+              "javascript: URL": r"javascript\s*:",
+          }
+          for name, pattern in forbidden.items():
+              if re.search(pattern, js, re.I):
+                  raise SystemExit(f"Security regression: forbidden {name} sink detected.")
+
+          script = Path("script.js").read_text(encoding="utf-8")
+          inner_html_count = len(re.findall(r"\.innerHTML\s*=", script))
+          inline_handler_count = len(re.findall(
+              r"\bon(?:click|change|submit|error|load|mouseover|focus|blur|input|keyup|keydown)\s*=",
+              script,
+              re.I,
+          ))
+
+          if inner_html_count > 146:
+              raise SystemExit(f"Security regression: script.js innerHTML budget increased from 146 to {inner_html_count}.")
+          if inline_handler_count > 165:
+              raise SystemExit(f"Security regression: script.js inline-handler budget increased from 165 to {inline_handler_count}.")
+
+          print(f"OK: forbidden JS sinks absent; legacy budget is innerHTML={inner_html_count}/146, inlineHandlers={inline_handler_count}/165.")
+
+      - name: Validate all frontend JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find . -type f -name '*.js' -not -path './.git/*' -print0)
+
+      - name: Check security headers and upload hardening
+        shell: python
+        run: |
+          from pathlib import Path
+          headers = Path("_headers").read_text(encoding="utf-8")
+          script = Path("script.js").read_text(encoding="utf-8")
+
+          required_headers = [
+              "X-Frame-Options: DENY",
+              "X-Content-Type-Options: nosniff",
+              "Referrer-Policy: strict-origin-when-cross-origin",
+              "Content-Security-Policy-Report-Only:",
+              "script-src-attr 'none'",
+              "object-src 'none'",
+              "frame-ancestors 'none'",
+          ]
+          missing = [item for item in required_headers if item not in headers]
+          if missing:
+              raise SystemExit("Security regression: missing headers/CSP controls: " + ", ".join(missing))
+
+          if "unsafe-eval" in headers:
+              raise SystemExit("Security regression: unsafe-eval must not be allowed.")
+
+          required_upload_controls = [
+              "crypto.randomUUID()",
+              "ALLOWED_DOCUMENT_TYPES",
+              "validateUploadedFile",
+              "file.type",
+              "hotel-media",
+          ]
+          missing = [item for item in required_upload_controls if item not in script]
+          if missing:
+              raise SystemExit("Security regression: upload hardening missing: " + ", ".join(missing))
+
+          print("OK: security headers, CSP report-only controls, and upload validation are present.")
+
+      - name: Check externalized OneSignal bootstrap
+        shell: python
+        run: |
+          from pathlib import Path
+          html = Path("index.html").read_text(encoding="utf-8")
+          init = Path("onesignal-init.js").read_text(encoding="utf-8")
+          if "<script>" in html and "OneSignal.init" in html:
+              raise SystemExit("Security regression: OneSignal initialization returned to inline HTML.")
+          for required in ["OneSignal.init", "__toursetuOneSignalReady", "OneSignalDeferred"]:
+              if required not in init:
+                  raise SystemExit(f"Security regression: missing OneSignal bootstrap control: {required}")
+          print("OK: OneSignal bootstrap is externalized.")
+
       - name: Validate frontend JavaScript syntax
         shell: bash
         run: node --check script.js
