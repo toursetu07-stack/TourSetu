@@ -4263,20 +4263,517 @@ window.loadAgencyVerificationBanner=async function(user){
     container.prepend(banner);
 };
 
+function setAgencyTabMessage(container, message, style) {
+    if (!container) return;
+    const box = createAgencyDashboardElement(
+        'div',
+        null,
+        style || 'padding:20px;color:#666;'
+    );
+    box.textContent = message || '';
+    container.replaceChildren(box);
+}
+
+function createAgencyMetricCard(label, value, accent) {
+    const card = createAgencyDashboardElement(
+        'div',
+        null,
+        'border-top:5px solid ' + accent + ';background:white;padding:25px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.05);'
+    );
+    const small = createAgencyDashboardElement(
+        'small',
+        label,
+        'font-weight:700;letter-spacing:.02em;'
+    );
+    const heading = createAgencyDashboardElement(
+        'h2',
+        value,
+        'margin:8px 0 0;'
+    );
+    card.appendChild(small);
+    card.appendChild(heading);
+    return card;
+}
+
+function createAgencySectionTitle(title, icon) {
+    const heading = createAgencyDashboardElement(
+        'h1',
+        null,
+        'margin:0;'
+    );
+    heading.textContent = (icon ? icon + ' ' : '') + title;
+    return heading;
+}
+
+function createAgencyBookingInfo(label, value, options) {
+    const wrap = createAgencyDashboardElement('div', null, options?.wrapStyle || '');
+    const labelEl = createAgencyDashboardElement(
+        'label',
+        label,
+        'font-size:11px;color:#999;font-weight:bold;display:block;'
+    );
+    const valueEl = createAgencyDashboardElement(
+        options?.tag || 'p',
+        value == null || value === '' ? 'Not Provided' : String(value),
+        options?.valueStyle || 'margin:5px 0;font-size:14px;color:#2d3436;'
+    );
+    wrap.appendChild(labelEl);
+    wrap.appendChild(valueEl);
+    return wrap;
+}
+
+function createAgencyTrekkingBox(title, items, accent, background) {
+    const box = createAgencyDashboardElement(
+        'div',
+        null,
+        'margin-top:10px;padding:12px 15px;background:' + background + ';border-left:4px solid ' + accent + ';border-radius:6px;font-size:13px;box-shadow:0 1px 3px rgba(0,0,0,.02);'
+    );
+    const titleEl = createAgencyDashboardElement(
+        'span',
+        title,
+        'color:' + accent + ';font-weight:bold;display:block;margin-bottom:5px;font-size:14px;'
+    );
+    const list = createAgencyDashboardElement(
+        'span',
+        null,
+        'color:#444;line-height:1.6;'
+    );
+    list.textContent = items.join(' | ');
+    box.appendChild(titleEl);
+    box.appendChild(list);
+    return box;
+}
+
+function createAgencyBookingCard(booking) {
+    const isPaid = booking.status === 'paid';
+    const isPending = booking.status === 'pending';
+    const isCancelled = booking.status === 'cancelled';
+
+    let statusColor = '#ff9f43';
+    if (isCancelled || booking.status === 'denied') statusColor = '#ff7675';
+    if (booking.status === 'approved' || booking.status === 'paid') statusColor = '#2ecc71';
+
+    const displayPhone = isPaid ? (booking.customer_phone || 'Not Provided') : 'Locked (Visible after Payment)';
+    const rawEmail = String(booking.customer_email || '');
+    const displayEmail = isPaid
+        ? rawEmail
+        : rawEmail.replace(/(.{3})(.*)(?=@)/, '$1***');
+    const travelDateStr = booking.travel_date
+        ? new Date(booking.travel_date).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        })
+        : 'Not Set';
+
+    const card = createAgencyDashboardElement(
+        'article',
+        null,
+        'background:white;padding:25px;margin-bottom:20px;border-left:5px solid ' + statusColor + ';border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.05);'
+    );
+
+    const header = createAgencyDashboardElement(
+        'div',
+        null,
+        'display:flex;justify-content:space-between;align-items:flex-start;gap:20px;'
+    );
+
+    const titleWrap = createAgencyDashboardElement('div', null, 'min-width:0;');
+    const title = createAgencyDashboardElement(
+        'h3',
+        booking.package_title || 'Untitled Package',
+        'margin:0;color:#2d3436;overflow-wrap:anywhere;'
+    );
+    const meta = createAgencyDashboardElement(
+        'div',
+        null,
+        'margin-top:5px;display:flex;gap:15px;font-size:12px;color:#636e72;flex-wrap:wrap;'
+    );
+    meta.appendChild(createAgencyDashboardElement(
+        'span',
+        '📩 Requested: ' + new Date(booking.created_at).toLocaleDateString('en-IN')
+    ));
+    meta.appendChild(createAgencyDashboardElement(
+        'span',
+        '📅 TRAVEL DATE: ' + travelDateStr,
+        'color:white;background:#ff9f43;padding:2px 8px;border-radius:4px;font-weight:bold;'
+    ));
+    titleWrap.appendChild(title);
+    titleWrap.appendChild(meta);
+
+    const totalWrap = createAgencyDashboardElement('div', null, 'text-align:right;flex-shrink:0;');
+    totalWrap.appendChild(createAgencyDashboardElement(
+        'div',
+        '₹' + (booking.total_price || 0),
+        'font-size:22px;font-weight:bold;color:#2ecc71;'
+    ));
+    totalWrap.appendChild(createAgencyDashboardElement(
+        'span',
+        String(booking.status || 'pending').toUpperCase(),
+        'display:inline-block;padding:4px 10px;border-radius:15px;font-size:11px;font-weight:bold;background:#f0f0f0;color:' + statusColor + ';'
+    ));
+
+    header.appendChild(titleWrap);
+    header.appendChild(totalWrap);
+    card.appendChild(header);
+
+    const infoGrid = createAgencyDashboardElement(
+        'div',
+        null,
+        'margin-top:20px;padding:15px;background:#f4f7f6;border-radius:10px;display:grid;grid-template-columns:1fr 1fr;gap:15px;'
+    );
+    infoGrid.appendChild(createAgencyBookingInfo(
+        '📍 PICKUP ADDRESS',
+        booking.customer_address || 'Not Provided'
+    ));
+
+    const phoneWrap = createAgencyDashboardElement('div');
+    phoneWrap.appendChild(createAgencyDashboardElement(
+        'label',
+        '📞 CUSTOMER PHONE',
+        'font-size:11px;color:#999;font-weight:bold;display:block;'
+    ));
+    const phoneValue = createAgencyDashboardElement(
+        isPaid ? 'a' : 'p',
+        displayPhone,
+        'margin:5px 0;font-size:15px;font-weight:bold;color:' + (isPaid ? '#ff9f43' : '#999') + ';'
+    );
+    if (isPaid) {
+        const phoneDigits = String(booking.customer_phone || '').replace(/[^0-9+]/g, '');
+        if (phoneDigits) {
+            phoneValue.href = 'tel:' + phoneDigits;
+            phoneValue.rel = 'nofollow';
+        }
+    }
+    phoneWrap.appendChild(phoneValue);
+    infoGrid.appendChild(phoneWrap);
+    card.appendChild(infoGrid);
+
+    const details = createAgencyDashboardElement(
+        'div',
+        null,
+        'margin-top:15px;border-top:1px dashed #ddd;padding-top:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:15px;'
+    );
+    const detailsBody = createAgencyDashboardElement('div', null, 'width:100%;min-width:0;');
+
+    const vehicles = createAgencyDashboardElement(
+        'p',
+        null,
+        'font-size:13px;margin:0;color:#636e72;overflow-wrap:anywhere;'
+    );
+    const vehicleLabel = createAgencyDashboardElement('b', 'Selected Vehicles:');
+    vehicles.appendChild(vehicleLabel);
+    vehicles.appendChild(document.createTextNode(' ' + (booking.selected_vehicles || 'Not Provided')));
+    detailsBody.appendChild(vehicles);
+
+    const kGhodaPrice = parseFloat(booking.kedar_ghoda_Qty) || 0;
+    const kDandiPrice = parseFloat(booking.kedar_dandi_Qty) || 0;
+    const kPitthuPrice = parseFloat(booking.kedar_pitthu_Qty) || 0;
+    const kKandiPrice = parseFloat(booking.kedar_kandi_Qty) || 0;
+    const kGhodaMax = parseInt(booking.kedar_ghoda_max_members || booking.ghoda_max) || 0;
+    const kDandiMax = parseInt(booking.kedar_dandi_max_members || booking.dandi_max) || 0;
+    const kPitthuMax = parseInt(booking.kedar_pitthu_max_members || booking.pitthu_max) || 0;
+    const kKandiMax = parseInt(booking.kedar_kandi_max_members || booking.kandi_max) || 0;
+    const kedarItems = [];
+    if (kGhodaPrice > 0) kedarItems.push('Ghoda: ₹' + kGhodaPrice + ' (' + kGhodaMax + ' Person)');
+    if (kDandiPrice > 0) kedarItems.push('Dandi: ₹' + kDandiPrice + ' (' + kDandiMax + ' Person)');
+    if (kPitthuPrice > 0) kedarItems.push('Pitthu: ₹' + kPitthuPrice + ' (' + kPitthuMax + ' Person)');
+    if (kKandiPrice > 0) kedarItems.push('Kandi: ₹' + kKandiPrice + ' (' + kKandiMax + ' Person)');
+    if (kedarItems.length) {
+        detailsBody.appendChild(createAgencyTrekkingBox(
+            '⛰️ Trekking Service Only For Kedarnath:',
+            kedarItems,
+            '#27ae60',
+            '#f0faf7'
+        ));
+    }
+
+    const vGhodaPrice = parseFloat(booking.vaishno_ghoda_price) || 0;
+    const vDandiPrice = parseFloat(booking.vaishno_dandi_price) || 0;
+    const vPitthuPrice = parseFloat(booking.vaishno_pitthu_price) || 0;
+    const vGhodaMax = parseInt(booking.vaishno_ghoda_max_members || booking.vaishno_ghoda_max) || 0;
+    const vDandiMax = parseInt(booking.vaishno_dandi_max_members || booking.vaishno_dandi_max) || 0;
+    const vPitthuMax = parseInt(booking.vaishno_pitthu_max_members || booking.vaishno_pitthu_max) || 0;
+    const vaishnoItems = [];
+    if (vGhodaPrice > 0) vaishnoItems.push('Ghoda: ₹' + vGhodaPrice + ' (' + vGhodaMax + ' Person)');
+    if (vDandiPrice > 0) vaishnoItems.push('Dandi: ₹' + vDandiPrice + ' (' + vDandiMax + ' Person)');
+    if (vPitthuPrice > 0) vaishnoItems.push('Pitthu: ₹' + vPitthuPrice + ' (' + vPitthuMax + ' Person)');
+    if (vaishnoItems.length) {
+        detailsBody.appendChild(createAgencyTrekkingBox(
+            '⛰️ Trekking Service Only For Vaishno Devi:',
+            vaishnoItems,
+            '#d35400',
+            '#fffcf0'
+        ));
+    }
+
+    detailsBody.appendChild(createAgencyDashboardElement(
+        'p',
+        'Customer Email: ' + (displayEmail || 'Not Provided'),
+        'font-size:12px;margin-top:8px;color:#999;overflow-wrap:anywhere;'
+    ));
+
+    if (booking.policy_agreed) {
+        details.appendChild(detailsBody);
+        details.appendChild(createAgencyDashboardElement(
+            'div',
+            '✅ 18% DEDUCTION POLICY AGREED',
+            'background:#e3faf3;color:#2ecc71;font-size:10px;padding:4px 10px;border-radius:5px;font-weight:bold;border:1px solid #2ecc71;flex-shrink:0;'
+        ));
+    } else {
+        details.appendChild(detailsBody);
+    }
+    card.appendChild(details);
+
+    const actions = createAgencyDashboardElement('div', null, 'margin-top:20px;');
+    if (isCancelled) {
+        actions.appendChild(createAgencyDashboardElement(
+            'div',
+            '🚫 CUSTOMER CANCELLED',
+            'background:#fff5f5;color:#ff7675;padding:12px;border-radius:8px;border:1px solid #ff7675;text-align:center;font-weight:bold;'
+        ));
+    } else if (isPending) {
+        const actionRow = createAgencyDashboardElement(
+            'div',
+            null,
+            'border-top:1px solid #eee;padding-top:15px;display:flex;gap:12px;flex-wrap:wrap;'
+        );
+        const approve = createAgencyDashboardElement(
+            'button',
+            'Approve Request',
+            'background:#2ecc71;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;font-weight:bold;'
+        );
+        approve.type = 'button';
+        approve.dataset.agencyBookingAction = 'approved';
+        approve.dataset.bookingId = String(booking.id || '');
+        approve.dataset.customerId = String(booking.customer_id || '');
+        approve.dataset.packageTitle = String(booking.package_title || '');
+
+        const deny = createAgencyDashboardElement(
+            'button',
+            'Deny Request',
+            'background:#ff7675;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;font-weight:bold;'
+        );
+        deny.type = 'button';
+        deny.dataset.agencyBookingAction = 'denied';
+        deny.dataset.bookingId = String(booking.id || '');
+        deny.dataset.customerId = String(booking.customer_id || '');
+        deny.dataset.packageTitle = String(booking.package_title || '');
+
+        actionRow.appendChild(approve);
+        actionRow.appendChild(deny);
+        actions.appendChild(actionRow);
+    }
+    card.appendChild(actions);
+
+    return card;
+}
+
+async function renderAgencyBookingsTab(container, bookingsData) {
+    container.replaceChildren();
+    container.appendChild(createAgencySectionTitle('Customer Bookings', '📅'));
+
+    const listArea = createAgencyDashboardElement('div', null, 'margin-top:20px;');
+    listArea.id = 'booking-list-area';
+    listArea.appendChild(createAgencyDashboardElement('p', 'Loading...'));
+    container.appendChild(listArea);
+
+    if (!bookingsData || bookingsData.length === 0) {
+        setAgencyTabMessage(listArea, 'No booking requests found.', 'padding:20px;color:#666;background:white;border-radius:10px;');
+        return;
+    }
+
+    listArea.replaceChildren();
+    bookingsData.forEach(function (booking) {
+        listArea.appendChild(createAgencyBookingCard(booking));
+    });
+
+    listArea.addEventListener('click', function (event) {
+        const button = event.target.closest('[data-agency-booking-action]');
+        if (!button || !listArea.contains(button)) return;
+        const action = button.dataset.agencyBookingAction;
+        if (typeof window.openActionModal === 'function') {
+            window.openActionModal(
+                button.dataset.bookingId,
+                action,
+                button.dataset.customerId,
+                button.dataset.packageTitle
+            );
+        }
+    });
+}
+
+async function renderAgencyPackagesTab(container, userId, client) {
+    container.replaceChildren();
+
+    const header = createAgencyDashboardElement(
+        'div',
+        null,
+        'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:15px;flex-wrap:wrap;'
+    );
+    header.appendChild(createAgencySectionTitle('My Packages', '🎒'));
+
+    const createButton = createAgencyDashboardElement(
+        'button',
+        '+ CREATE NEW',
+        'padding:12px 25px;background:#2ecc71;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:bold;'
+    );
+    createButton.type = 'button';
+    createButton.addEventListener('click', function () {
+        if (typeof window.showPackageForm === 'function') window.showPackageForm();
+    });
+    header.appendChild(createButton);
+    container.appendChild(header);
+
+    const formArea = createAgencyDashboardElement('div');
+    formArea.id = 'package-form-area';
+    const listArea = createAgencyDashboardElement('div');
+    listArea.id = 'pkg-list-container';
+    container.appendChild(formArea);
+    container.appendChild(listArea);
+
+    setAgencyTabMessage(listArea, 'Loading packages...', 'padding:20px;color:#666;');
+    const { data: myPackages, error } = await client
+        .from('packages')
+        .select('*')
+        .eq('agency_id', userId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        setAgencyTabMessage(listArea, 'Unable to load packages right now.', 'padding:20px;color:#b23b3b;background:#fff5f5;border-radius:10px;');
+        return;
+    }
+
+    if (!myPackages || myPackages.length === 0) {
+        setAgencyTabMessage(listArea, 'No packages created yet.', 'padding:20px;color:#666;background:white;border-radius:10px;');
+        return;
+    }
+
+    listArea.replaceChildren();
+    myPackages.forEach(function (pkg) {
+        const card = createAgencyDashboardElement(
+            'article',
+            null,
+            'background:white;padding:20px;border-radius:12px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;gap:20px;box-shadow:0 2px 8px rgba(0,0,0,.05);border-left:5px solid #ff9f43;'
+        );
+        const info = createAgencyDashboardElement('div', null, 'flex:1;min-width:0;');
+        info.appendChild(createAgencyDashboardElement(
+            'h3',
+            pkg.title || 'Untitled',
+            'margin:0;color:#2d3436;overflow-wrap:anywhere;'
+        ));
+        const location = createAgencyDashboardElement('p', null, 'margin:5px 0;color:#666;font-size:14px;overflow-wrap:anywhere;');
+        location.appendChild(document.createTextNode('📍 From: '));
+        location.appendChild(createAgencyDashboardElement('b', pkg.starting_location || 'N/A'));
+        info.appendChild(location);
+
+        const editButton = createAgencyDashboardElement(
+            'button',
+            '✏️ Edit',
+            'background:#ff9f43;color:white;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-weight:bold;flex-shrink:0;'
+        );
+        editButton.type = 'button';
+        editButton.addEventListener('click', function () {
+            if (typeof window.showPackageForm === 'function') {
+                window.showPackageForm(encodeURIComponent(JSON.stringify(pkg)));
+            }
+        });
+
+        card.appendChild(info);
+        card.appendChild(editButton);
+        listArea.appendChild(card);
+    });
+}
+
+async function renderAgencyHotelsTab(container) {
+    container.replaceChildren();
+
+    const header = createAgencyDashboardElement(
+        'div',
+        null,
+        'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:15px;flex-wrap:wrap;'
+    );
+    header.appendChild(createAgencySectionTitle('Hotel Packages (Live Stock)', '🏨'));
+
+    const requestButton = createAgencyDashboardElement(
+        'button',
+        '📋 My Hotel Requests',
+        'background:#3498db;color:white;border:none;padding:10px 18px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;'
+    );
+    requestButton.type = 'button';
+    requestButton.addEventListener('click', function () {
+        if (typeof window.renderAgencyHotelBookingRequests === 'function') {
+            window.renderAgencyHotelBookingRequests();
+        }
+    });
+    header.appendChild(requestButton);
+    container.appendChild(header);
+
+    const list = createAgencyDashboardElement(
+        'div',
+        null,
+        'display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:25px;'
+    );
+    list.id = 'agency-hotel-pkg-list';
+    container.appendChild(list);
+
+    if (typeof window.renderAgencyHotelPackages === 'function') {
+        window.renderAgencyHotelPackages();
+    }
+}
+
+function renderAgencyProfileTab(container, user) {
+    container.replaceChildren();
+    container.appendChild(createAgencySectionTitle('Agency Profile', '👤'));
+
+    const meta = user.user_metadata || {};
+    const card = createAgencyDashboardElement(
+        'section',
+        null,
+        'background:white;padding:30px;border-radius:8px;border-left:5px solid #ff9f43;margin-top:20px;'
+    );
+    card.appendChild(createAgencyBookingInfo('Email', user.email || 'Not Provided'));
+    card.appendChild(createAgencyBookingInfo('Phone', meta.phone || 'N/A'));
+    card.appendChild(createAgencyBookingInfo(
+        'Status',
+        meta.is_approved ? '✅ Verified' : '⏳ Pending Approval'
+    ));
+    container.appendChild(card);
+}
+
 window.showTab = async function(tabName) {
     const container = document.getElementById('main-content');
     const client = getClient();
     const { data: { user } } = await client.auth.getUser();
-    if (!user) return;
-    if(tabName==='packages'||tabName==='hotels'){
-        const verification=await getAgencyVerification(user.id).catch(()=>null);
-        if(!verification||verification.status!=='approved'){
-            const statusText=verification?.status==='denied'?'Your verification request was denied. Please contact TourSetu support.':'Your agency account is pending verification. These sections will unlock after your documents are approved.';
-            container.innerHTML='<div style="max-width:720px;margin:30px auto;background:white;border-radius:16px;padding:30px;box-shadow:0 4px 16px rgba(0,0,0,.08);text-align:center;"><div style="font-size:42px;">🔒</div><h2>Agency Verification Required</h2><p style="color:#666;line-height:1.6;">'+statusText+'</p><div style="display:inline-block;padding:8px 14px;border-radius:20px;background:#fff3cd;color:#856404;font-weight:800;text-transform:uppercase;">'+(verification?.status||'pending')+'</div></div>';
+    if (!user || !container) return;
+
+    if (tabName === 'packages' || tabName === 'hotels') {
+        const verification = await getAgencyVerification(user.id).catch(function () {
+            return null;
+        });
+        if (!verification || verification.status !== 'approved') {
+            const statusText = verification?.status === 'denied'
+                ? 'Your verification request was denied. Please contact TourSetu support.'
+                : 'Your agency account is pending verification. These sections will unlock after your documents are approved.';
+
+            container.replaceChildren();
+            const card = createAgencyDashboardElement(
+                'section',
+                null,
+                'max-width:720px;margin:30px auto;background:white;border-radius:16px;padding:30px;box-shadow:0 4px 16px rgba(0,0,0,.08);text-align:center;'
+            );
+            card.appendChild(createAgencyDashboardElement('div', '🔒', 'font-size:42px;'));
+            card.appendChild(createAgencyDashboardElement('h2', 'Agency Verification Required'));
+            card.appendChild(createAgencyDashboardElement('p', statusText, 'color:#666;line-height:1.6;'));
+            card.appendChild(createAgencyDashboardElement(
+                'div',
+                String(verification?.status || 'pending').toUpperCase(),
+                'display:inline-block;padding:8px 14px;border-radius:20px;background:#fff3cd;color:#856404;font-weight:800;text-transform:uppercase;'
+            ));
+            container.appendChild(card);
             return;
         }
     }
-
 
     const { data: bookingsData } = await client
         .from('bookings')
@@ -4284,224 +4781,62 @@ window.showTab = async function(tabName) {
         .eq('agency_id', user.id)
         .order('created_at', { ascending: false });
 
-    const pendingCount = bookingsData ? bookingsData.filter(b => b.status === 'pending').length : 0;
+    const pendingCount = bookingsData
+        ? bookingsData.filter(function (booking) {
+            return booking.status === 'pending';
+        }).length
+        : 0;
+
     const badge = document.getElementById('bell-badge');
     const sideCount = document.getElementById('side-notif-count');
-
-    if (badge && pendingCount > 0) {
-        badge.innerText = pendingCount; badge.style.display = 'block';
-        sideCount.innerText = pendingCount; sideCount.style.display = 'block';
-    } else if (badge) {
-        badge.style.display = 'none'; sideCount.style.display = 'none';
+    if (badge && sideCount) {
+        badge.textContent = String(pendingCount);
+        badge.style.display = pendingCount > 0 ? 'block' : 'none';
+        sideCount.textContent = String(pendingCount);
+        sideCount.style.display = pendingCount > 0 ? 'block' : 'none';
     }
 
     if (tabName === 'earnings') {
-        const totalRevenue = bookingsData ? bookingsData
-                .filter(b => b.status === 'paid')
-                .reduce((sum, b) => sum + (parseFloat(b.total_price) || 0), 0) : 0;
+        const totalRevenue = bookingsData
+            ? bookingsData
+                .filter(function (booking) {
+                    return booking.status === 'paid';
+                })
+                .reduce(function (sum, booking) {
+                    return sum + (parseFloat(booking.total_price) || 0);
+                }, 0)
+            : 0;
 
-        container.innerHTML = `<h1>Overview</h1>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
-                <div class="card" style="border-top:5px solid #2ecc71; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>REVENUE (PAID)</small><h2>₹${totalRevenue.toLocaleString('en-IN')}</h2></div>
-                <div class="card" style="border-top:5px solid #ff9f43; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>PENDING BOOKINGS</small><h2>${pendingCount}</h2></div>
-                <div class="card" style="border-top:5px solid #3498db; background:white; padding:25px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><small>ACTIVE PACKAGES</small><h2 id="act-pkg-count">...</h2></div>
-            </div>`;
-        const { count } = await client.from('packages').select('*', { count: 'exact', head: true }).eq('agency_id', user.id);
-        if(document.getElementById('act-pkg-count')) document.getElementById('act-pkg-count').innerText = count || 0;
-    } 
-    else if (tabName === 'bookings') {
-        container.innerHTML = `<h1>Customer Bookings</h1><div id="booking-list-area">Loading...</div>`;
-        const listArea = document.getElementById('booking-list-area');
+        container.replaceChildren();
+        const heading = createAgencySectionTitle('Overview');
+        heading.style.marginBottom = '20px';
+        container.appendChild(heading);
 
-        if (!bookingsData || bookingsData.length === 0) {
-            listArea.innerHTML = `<p style="padding:20px; color:#666;">No booking requests found.</p>`;
-            return;
-        }
+        const grid = createAgencyDashboardElement(
+            'div',
+            null,
+            'display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;'
+        );
+        grid.appendChild(createAgencyMetricCard('REVENUE (PAID)', '₹' + totalRevenue.toLocaleString('en-IN'), '#2ecc71'));
+        grid.appendChild(createAgencyMetricCard('PENDING BOOKINGS', String(pendingCount), '#ff9f43'));
+        grid.appendChild(createAgencyMetricCard('ACTIVE PACKAGES', '...', '#3498db'));
+        container.appendChild(grid);
 
-        listArea.innerHTML = bookingsData.map(b => {
-            const isPaid = b.status === 'paid';
-            const isPending = b.status === 'pending';
-            const isCancelled = b.status === 'cancelled';
+        const { count } = await client
+            .from('packages')
+            .select('*', { count: 'exact', head: true })
+            .eq('agency_id', user.id);
 
-            const displayPhone = isPaid ? b.customer_phone : "Locked (Visible after Payment)";
-            const displayEmail = isPaid ? b.customer_email : b.customer_email.replace(/(.{3})(.*)(?=@)/, "$1***");
-            const phoneColor = isPaid ? "#ff9f43" : "#999";
-
-            let statusColor = '#ff9f43';
-            if (isCancelled || b.status === 'denied') statusColor = '#ff7675';
-            if (b.status === 'approved' || b.status === 'paid') statusColor = '#2ecc71';
-
-            const travelDateStr = b.travel_date ? new Date(b.travel_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : 'Not Set';
-
-            // --- FIXED SETUP FOR TREKKING SERVICES SECTIONS ---
-            let trekkingHtml = '';
-
-            // 1. KEDARNATH TREKKING SERVICE SELECTION
-            const kGhodaPrice = parseFloat(b.kedar_ghoda_Qty) || 0;
-            const kDandiPrice = parseFloat(b.kedar_dandi_Qty) || 0;
-            const kPitthuPrice = parseFloat(b.kedar_pitthu_Qty) || 0;
-            const kKandiPrice = parseFloat(b.kedar_kandi_Qty) || 0;
-
-            const kGhodaMax = parseInt(b.kedar_ghoda_max_members || b.ghoda_max) || 0;
-            const kDandiMax = parseInt(b.kedar_dandi_max_members || b.dandi_max) || 0;
-            const kPitthuMax = parseInt(b.kedar_pitthu_max_members || b.pitthu_max) || 0;
-            const kKandiMax = parseInt(b.kedar_kandi_max_members || b.kandi_max) || 0;
-
-            if (kGhodaPrice > 0 || kDandiPrice > 0 || kPitthuPrice > 0 || kKandiPrice > 0) {
-                let items = [];
-                if (kGhodaPrice > 0) items.push(`Ghoda: <b>₹${kGhodaPrice}</b> (${kGhodaMax} Person)`);
-                if (kDandiPrice > 0) items.push(`Dandi: <b>₹${kDandiPrice}</b> (${kDandiMax} Person)`);
-                if (kPitthuPrice > 0) items.push(`Pitthu: <b>₹${kPitthuPrice}</b> (${kPitthuMax} Person)`);
-                if (kKandiPrice > 0) items.push(`Kandi: <b>₹${kKandiPrice}</b> (${kKandiMax} Person)`);
-
-                trekkingHtml += `
-                <div style="margin-top: 10px; padding: 12px 15px; background: #f0faf7; border-left: 4px solid #badc58; border-radius: 6px; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-                    <span style="color: #27ae60; font-weight: bold; display: block; margin-bottom: 5px; font-size:14px;">⛰️ Trekking Service Only For Kedarnath:</span>
-                    <span style="color: #444; line-height: 1.6;">${items.join(' | ')}</span>
-                </div>`;
-            }
-
-            // 2. VAISHNO DEVI TREKKING SERVICE SELECTION (FIXED TO READ VAISHNO SPECIFIC COLUMNS)
-            const vGhodaPrice = parseFloat(b.vaishno_ghoda_price) || 0;
-            const vDandiPrice = parseFloat(b.vaishno_dandi_price) || 0;
-            const vPitthuPrice = parseFloat(b.vaishno_pitthu_price) || 0;
-
-            const vGhodaMax = parseInt(b.vaishno_ghoda_max_members || b.vaishno_ghoda_max) || 0;
-            const vDandiMax = parseInt(b.vaishno_dandi_max_members || b.vaishno_dandi_max) || 0;
-            const vPitthuMax = parseInt(b.vaishno_pitthu_max_members || b.vaishno_pitthu_max) || 0;
-
-            if (vGhodaPrice > 0 || vDandiPrice > 0 || vPitthuPrice > 0) {
-                let items = [];
-                if (vGhodaPrice > 0) items.push(`Ghoda: <b>₹${vGhodaPrice}</b> (${vGhodaMax} Person)`);
-                if (vDandiPrice > 0) items.push(`Dandi: <b>₹${vDandiPrice}</b> (${vDandiMax} Person)`);
-                if (vPitthuPrice > 0) items.push(`Pitthu: <b>₹${vPitthuPrice}</b> (${vPitthuMax} Person)`);
-
-                trekkingHtml += `
-                <div style="margin-top: 10px; padding: 12px 15px; background: #fffcf0; border-left: 4px solid #f1c40f; border-radius: 6px; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-                    <span style="color: #d35400; font-weight: bold; display: block; margin-bottom: 5px; font-size:14px;">⛰️ Trekking Service Only For Vaishno Devi:</span>
-                    <span style="color: #444; line-height: 1.6;">${items.join(' | ')}</span>
-                </div>`;
-            }
-
-            return `
-            <div class="card" style="background:white; padding:25px; margin-bottom:20px; border-left:5px solid ${statusColor}; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <div>
-                        <h3 style="margin:0; color:#2d3436;">${b.package_title}</h3>
-                        <div style="margin-top:5px; display:flex; gap:15px; font-size:12px; color:#636e72;">
-                             <span>📩 Requested: ${new Date(b.created_at).toLocaleDateString()}</span>
-                             <span style="color:white; background:#ff9f43; padding:2px 8px; border-radius:4px; font-weight:bold;">📅 TRAVEL DATE: ${travelDateStr}</span>
-                        </div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:22px; font-weight:bold; color:#2ecc71;">₹${b.total_price || 0}</div>
-                        <span style="padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold; background:#f0f0f0; color:${statusColor};">
-                            ${b.status.toUpperCase()}
-                        </span>
-                    </div>
-                </div>
-
-                <div style="margin-top:20px; padding:15px; background:#f4f7f6; border-radius:10px; display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div>
-                        <label style="font-size:11px; color:#999; font-weight:bold;">📍 PICKUP ADDRESS</label>
-                        <p style="margin:5px 0; font-size:14px; color:#2d3436;">${b.customer_address || 'Not Provided'}</p>
-                    </div>
-                    <div>
-                        <label style="font-size:11px; color:#999; font-weight:bold;">📞 CUSTOMER PHONE</label>
-                        <p style="margin:5px 0; font-size:15px; font-weight:bold; color:${phoneColor};">
-                            ${isPaid ? `<a href="tel:${displayPhone}" style="color:inherit;">${displayPhone}</a>` : displayPhone}
-                        </p>
-                    </div>
-                </div>
-
-                <div style="margin-top:15px; border-top: 1px dashed #ddd; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="width: 100%;">
-                        <p style="font-size:13px; margin:0; color:#636e72;"><b>Selected Vehicles:</b> ${b.selected_vehicles}</p>
-
-                        ${trekkingHtml} 
-
-                        <p style="font-size:12px; margin-top:8px; color:#999;">Customer Email: ${displayEmail}</p>
-                    </div>
-                    ${b.policy_agreed ? `
-                        <div style="background:#e3faf3; color:#2ecc71; font-size:10px; padding:4px 10px; border-radius:5px; font-weight:bold; border:1px solid #2ecc71; flex-shrink:0;">
-                            ✅ 18% DEDUCTION POLICY AGREED
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div style="margin-top:20px;">
-                ${isCancelled ? `
-                    <div style="background:#fff5f5; color:#ff7675; padding:12px; border-radius:8px; border:1px solid #ff7675; text-align:center; font-weight:bold;">
-                        🚫 CUSTOMER CANCELLED
-                    </div>
-                ` : (isPending ? `
-                    <div style="border-top:1px solid #eee; padding-top:15px; display:flex; gap:12px;">
-                        <button onclick="openActionModal('${b.id}', 'approved', '${b.customer_id}', '${b.package_title}')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Approve Request</button>
-                        <button onclick="openActionModal('${b.id}', 'denied', '${b.customer_id}', '${b.package_title}')" style="background:#ff7675; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny Request</button>
-                    </div>
-                ` : '')}
-                </div>
-            </div>`;
-        }).join('');
-    }
-    else if (tabName === 'packages') {
-        container.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h1>My Packages</h1>
-                <button onclick="showPackageForm()" style="padding:12px 25px; background:#2ecc71; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">+ CREATE NEW</button>
-            </div>
-            <div id="package-form-area"></div>
-            <div id="pkg-list-container"></div>`;
-
-        const { data: myPackages } = await client.from('packages').select('*').eq('agency_id', user.id).order('created_at', { ascending: false });
-        document.getElementById('pkg-list-container').innerHTML = (myPackages || []).map(p => {
-             const encoded = encodeURIComponent(JSON.stringify(p));
-             return `<div style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.05); border-left:5px solid #ff9f43;">
-                <div style="flex:1;">
-                    <h3 style="margin:0; color:#2d3436;">${p.title || 'Untitled'}</h3>
-                    <p style="margin:5px 0; color:#666; font-size:14px;">📍 <b>From:</b> ${p.starting_location || 'N/A'}</p>
-                </div>
-                <button onclick="showPackageForm('${encoded}')" style="background:#ff9f43; color:white; border:none; padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:bold;">✏️ Edit</button>
-            </div>`;
-        }).join('');
-    }
-else if (tabName === 'hotels') {
-   container.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h1 style="color:#e67e22; display:flex; align-items:center; gap:10px;">
-            🏨 Hotel Packages (Live Stock)
-        </h1>
-
-        <button
-            onclick="renderAgencyHotelBookingRequests()"
-            style="
-                background:#3498db;
-                color:white;
-                border:none;
-                padding:10px 18px;
-                border-radius:8px;
-                font-weight:bold;
-                cursor:pointer;
-                font-size:13px;
-            "
-        >
-            📋 My Hotel Requests
-        </button>
-    </div>
-
-    <div id="agency-hotel-pkg-list"
-         style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:25px;">
-    </div>`;
-        // Fetch and display hotel room inventory
-        renderAgencyHotelPackages();
-    }
-    else if (tabName === 'profile') {
-        const meta = user.user_metadata || {};
-        container.innerHTML = `<h1>Agency Profile</h1><div class="card" style="background:white; padding:30px; border-radius:8px; border-left:5px solid #ff9f43;">
-            <p><b>Email:</b> ${user.email}</p>
-            <p><b>Phone:</b> ${meta.phone || 'N/A'}</p>
-            <p><b>Status:</b> ${meta.is_approved ? '✅ Verified' : '⏳ Pending Approval'}</p>
-        </div>`;
+        const activePackageCount = document.getElementById('act-pkg-count');
+        if (activePackageCount) activePackageCount.textContent = String(count || 0);
+    } else if (tabName === 'bookings') {
+        await renderAgencyBookingsTab(container, bookingsData);
+    } else if (tabName === 'packages') {
+        await renderAgencyPackagesTab(container, user.id, client);
+    } else if (tabName === 'hotels') {
+        await renderAgencyHotelsTab(container);
+    } else if (tabName === 'profile') {
+        renderAgencyProfileTab(container, user);
     }
 };
 
