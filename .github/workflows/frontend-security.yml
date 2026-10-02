@@ -67,9 +67,9 @@ jobs:
               raise SystemExit("Security regression: migrated customer agency package renderer markers missing.")
           block = js[start:end]
           forbidden = [
-              r"innerHTML\\s*=",
-              r"insertAdjacentHTML\\s*\\(",
-              r"\\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\\s*="
+              r"innerHTML\s*=",
+              r"insertAdjacentHTML\s*\(",
+              r"\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\s*="
           ]
           hits = [pattern for pattern in forbidden if re.search(pattern, block, re.I)]
           if hits:
