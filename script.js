@@ -4262,8 +4262,7 @@ window.showPackageDetails = function(pEncoded) {
                         <b>Cancellation & Refund Policy</b>. 
                         I understand that in case of cancellation, 
                         a non-refundable amount of 
-                        <b>9%</b> 
-                        (2% Gateway + 7% Service & Facilitation Fee) 
+                        <b>18%</b>\n                        (2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee) 
                         will be deducted from my total refund. 
                     </span> 
  
