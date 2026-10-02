@@ -3250,7 +3250,7 @@ window.handleBookingInquiry = async function(packageId,packageTitle,agencyId,age
         }
         totalPrice+=pickupDistanceCharge;
 
-        const {error}=await client.from('bookings').insert([{
+        const {data,error}=await client.from('bookings').insert([{
             package_id:packageId,package_title:packageTitle,customer_id:user.id,customer_email:user.email,
             customer_address:city,customer_phone:phone,travel_date:travelDate,
             selected_vehicles:selectedVehicles.join(', '),total_price:Number(totalPrice.toFixed(2)),status:'pending',
