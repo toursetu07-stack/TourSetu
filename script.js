@@ -522,7 +522,7 @@ window.openTourSetuLegalPanel = function(type) {
             '<h3 style="margin-bottom:8px;">Referral Rules</h3><ul style="font-size:12px;color:#555;line-height:1.7;"><li>Referral attribution is linked to the referral code used by User B.</li><li>The reward is created only for an eligible paid booking.</li><li>A booking can create the referral reward only once.</li><li>Referral earnings are recorded in the platform ledger; actual payout/withdrawal is subject to TourSetu payout rules and availability.</li><li>Self-referrals are not eligible.</li></ul>' +
         '</div>',
         terms: window.currentTourSetuUser?.user_metadata?.role === 'agency' ? agencyPartnerTermsHtml() : customerMarketplaceTermsHtml(),
-        privacy: '<h2>🔒 Privacy Policy</h2><p>TourSetu may process account, booking, payment-status and referral information to provide platform services, maintain security, prevent abuse, support users and calculate referral attribution.</p><p>When a referral link is opened, TourSetu may record the referral code, visit event and relevant attribution information. When a referred user signs in or signs up, the referral relationship may be associated with the account for eligible future bookings.</p><p>Referral and booking records are stored in the TourSetu/Supabase database and are used for platform operations, analytics, commission calculation and fraud prevention. TourSetu should only collect and retain information necessary for these purposes and should protect it using appropriate access controls.</p>'
+        privacy: customerPrivacyPolicyHtml()
     };
     const modal=document.createElement('div');
     modal.id='toursetu-legal-modal';
