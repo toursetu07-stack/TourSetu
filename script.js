@@ -1376,7 +1376,7 @@ async function renderCustomerHomepage(user, options = {}) {
                               ${destOptions}
                           </select>
                       </div>
-                      <button onclick="searchMatchedAgencies()" style="background:#ff9f43; color:white; border:none; padding:0 35px; border-radius:12px; font-weight:bold; cursor:pointer; height:48px; margin-top:22px; font-size:15px;">FIND AGENCIES</button>
+                      <button type="button" data-action="search-agencies" style="background:#ff9f43; color:white; border:none; padding:0 35px; border-radius:12px; font-weight:bold; cursor:pointer; height:48px; margin-top:22px; font-size:15px;">FIND AGENCIES</button>
                   </div>
 
               </div>
@@ -3436,6 +3436,20 @@ Total: ₹${Number(totalPrice).toLocaleString('en-IN')}`);
 };
 
 // 7. MATCHING & CARD RENDERING — XSS-safe DOM implementation
+// Customer operator search uses delegated safe DOM events so no inline
+// execution sink is required in the dashboard markup.
+if (!window.__toursetuCustomerAgencySearchDelegated) {
+    window.__toursetuCustomerAgencySearchDelegated = true;
+    document.addEventListener('click', function(event) {
+        const button = event.target.closest('#agency-filter-box button[data-action="search-agencies"]');
+        if (!button) return;
+        event.preventDefault();
+        if (typeof window.searchMatchedAgencies === 'function') {
+            void window.searchMatchedAgencies();
+        }
+    });
+}
+
 function clearCustomerPackageList(container) {
     if (!container) return;
     container.replaceChildren();
@@ -3587,7 +3601,7 @@ window.searchMatchedAgencies = async function() {
     const dest = document.getElementById('search-dest')?.value?.trim() || '';
     const state = document.getElementById('search-state')?.value?.trim() || '';
     const container = document.getElementById('customer-pkg-list');
-    const searchButton = document.querySelector('#agency-filter-box button[onclick="searchMatchedAgencies()"]');
+    const searchButton = document.querySelector('#agency-filter-box button[data-action="search-agencies"]');
 
     if (!container) return;
 
