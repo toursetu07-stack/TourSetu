@@ -3889,7 +3889,7 @@ window.showPackageDetails = function(pEncoded) {
         tourSetuSetStyles(summaryNode, 'cursor:pointer;color:#ff9f43;font-size:13px;font-weight:bold;');
         const historyBody = tourSetuCreateElement('div');
         tourSetuSetStyles(historyBody, 'margin-top:10px;font-size:12px;color:#636e72;background:#f9f9f9;padding:10px;border-radius:8px;');
-        history.slice().reverse().forEach(function(item, index) {
+        historyList.slice().reverse().forEach(function(item, index) {
             const entry = tourSetuCreateElement('div');
             tourSetuSetStyles(entry, 'padding:8px 0;border-bottom:1px solid #eee;margin-bottom:5px;');
             const topLine = tourSetuCreateElement('div');
