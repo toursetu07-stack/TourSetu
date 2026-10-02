@@ -98,6 +98,129 @@ function getClient() {
    ========================================================================= */
 const REFERRAL_STORAGE_KEY = 'toursetu_referral_code';
 
+const CUSTOMER_TERMS_VERSION = '2026-10-02-v1';
+
+function customerMarketplaceTermsHtml() {
+    return `
+        <h2>📄 Marketplace Terms & Conditions</h2>
+        <h3>Marketplace Intermediary Role</h3>
+        <p>Customer acknowledges that TourSetu is an intermediary technology marketplace connecting travelers directly with verified Uttarakhand-based local tour operators and hotels. TourSetu does not directly own or operate transport vehicles or hotels.</p>
+        <h3>1. Booking & Fare Accuracy</h3>
+        <p>All tour package prices are dynamically calculated based on base package rates and selected pickup location distances within Uttarakhand. Final estimated fares are binding upon booking confirmation.</p>
+        <h3>2. Cancellation & Refund Policy</h3>
+        <p>Cancellations made 15+ days prior to the journey start date are eligible for a partial refund as per the booked operator's policy. The platform facilitation/service fee is non-refundable.</p>
+        <h3>3. Safety & On-Ground Execution</h3>
+        <p>Operational execution (vehicle quality, driver conduct, and itinerary adherence) is the direct responsibility of the booked Asset-Owned Integrated Tour Operator. Passengers must comply with local safety and hill-driving guidelines.</p>
+        <h3>4. Natural Calamities & Force Majeure</h3>
+        <p>In cases of landslides, extreme weather, road blockages, or government-mandated Yatra halts (especially on Char Dham routes), TourSetu and the operator reserve the right to modify itineraries or reschedule trips.</p>
+    `;
+}
+
+async function ensureCustomerTermsAccepted(user) {
+    const app = document.getElementById('app');
+    const client = getClient();
+    if (!app || !client || !user?.id) return false;
+
+    const { data, error } = await client
+        .from('customer_terms_acceptances')
+        .select('user_id, terms_version, accepted_at')
+        .eq('user_id', user.id)
+        .eq('terms_version', CUSTOMER_TERMS_VERSION)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Customer terms acceptance check failed:', error);
+        app.innerHTML = `
+            <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f7f6;padding:20px;box-sizing:border-box;font-family:Inter,sans-serif;">
+                <div style="background:#fff;max-width:520px;width:100%;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center;">
+                    <h2 style="margin-top:0;color:#2d3436;">Unable to load Terms & Conditions</h2>
+                    <p style="color:#636e72;line-height:1.6;">Please try again. Your Customer Dashboard will remain locked until the current Terms & Conditions are successfully recorded.</p>
+                    <button onclick="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">TRY AGAIN</button>
+                    <button onclick="handleLogout()" style="margin-left:8px;background:#2d3436;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">LOGOUT</button>
+                </div>
+            </div>
+        `;
+        return false;
+    }
+
+    if (data) return true;
+
+    const existingMenu = document.getElementById('toursetu-utility-menu-root');
+    if (existingMenu) existingMenu.remove();
+
+    app.style.maxWidth = '100%';
+    app.innerHTML = `
+        <div style="min-height:100vh;background:#f4f7f6;padding:28px 18px;box-sizing:border-box;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;">
+            <div style="background:#fff;max-width:760px;width:100%;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.15);padding:30px;box-sizing:border-box;">
+                <div style="text-align:center;margin-bottom:20px;">
+                    <div style="font-size:38px;">📄</div>
+                    <h2 style="margin:5px 0;color:#2d3436;">TourSetu Marketplace Terms & Conditions</h2>
+                    <p style="margin:0;color:#777;font-size:13px;">Please read and accept these Terms & Conditions before entering your Customer Dashboard.</p>
+                </div>
+                <div style="max-height:55vh;overflow-y:auto;padding:20px;background:#fafafa;border:1px solid #e5e7eb;border-radius:12px;color:#444;line-height:1.65;font-size:14px;">
+                    ${customerMarketplaceTermsHtml()}
+                </div>
+                <label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;">
+                    <input type="checkbox" id="customer-marketplace-terms-checkbox" onchange="toggleCustomerTermsApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">
+                    <span style="font-weight:800;color:#2d3436;line-height:1.5;">I agree all terms and conditions</span>
+                </label>
+                <button id="customer-marketplace-terms-approved-btn" onclick="acceptCustomerMarketplaceTerms()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">
+                    APPROVED
+                </button>
+                <p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Customer Dashboard will remain locked until you tick the checkbox and click APPROVED.</p>
+            </div>
+        </div>
+    `;
+    return false;
+}
+
+window.toggleCustomerTermsApprovalButton = function() {
+    const checkbox = document.getElementById('customer-marketplace-terms-checkbox');
+    const button = document.getElementById('customer-marketplace-terms-approved-btn');
+    if (!checkbox || !button) return;
+    button.disabled = !checkbox.checked;
+    button.style.opacity = checkbox.checked ? '1' : '.5';
+    button.style.cursor = checkbox.checked ? 'pointer' : 'not-allowed';
+};
+
+window.acceptCustomerMarketplaceTerms = async function() {
+    const checkbox = document.getElementById('customer-marketplace-terms-checkbox');
+    const button = document.getElementById('customer-marketplace-terms-approved-btn');
+    if (!checkbox?.checked) {
+        alert('Please tick "I agree all terms and conditions" before clicking APPROVED.');
+        return;
+    }
+    const client = getClient();
+    const { data: { user } } = await client.auth.getUser();
+    if (!user?.id) {
+        alert('Your login session has expired. Please login again.');
+        return;
+    }
+    if (button) {
+        button.disabled = true;
+        button.innerText = 'SAVING...';
+        button.style.opacity = '.7';
+        button.style.cursor = 'wait';
+    }
+    const { error } = await client
+        .from('customer_terms_acceptances')
+        .insert({ user_id: user.id, terms_version: CUSTOMER_TERMS_VERSION });
+    if (error) {
+        console.error('Customer terms acceptance save failed:', error);
+        if (button) {
+            button.disabled = false;
+            button.innerText = 'APPROVED';
+            button.style.opacity = '1';
+            button.style.cursor = 'pointer';
+        }
+        alert('Terms acceptance save nahi ho saka: ' + error.message);
+        return;
+    }
+    if (button) button.innerText = 'APPROVED ✓';
+    await renderCustomerHomepage(user, { skipTermsCheck: true });
+};
+
+
 function captureReferralCodeFromUrl() {
     try {
         const code = new URLSearchParams(window.location.search).get('ref');
@@ -207,7 +330,7 @@ window.openTourSetuLegalPanel = function(type) {
             '<div style="padding:14px;background:#f8f9fa;border-radius:12px;font-size:12px;color:#555;"><b>Example — Agency:</b> ₹10,000 payment → 15% platform commission = ₹1,500 → 10% of ₹1,500 = <b>₹150 referral earning for User A</b>.<br><br><b>Example — Hotel:</b> ₹10,000 payment → 4% platform commission = ₹400 → 10% of ₹400 = <b>₹40 referral earning for User A</b>.</div>' +
             '<h3 style="margin-bottom:8px;">Referral Rules</h3><ul style="font-size:12px;color:#555;line-height:1.7;"><li>Referral attribution is linked to the referral code used by User B.</li><li>The reward is created only for an eligible paid booking.</li><li>A booking can create the referral reward only once.</li><li>Referral earnings are recorded in the platform ledger; actual payout/withdrawal is subject to TourSetu payout rules and availability.</li><li>Self-referrals are not eligible.</li></ul>' +
         '</div>',
-        terms: '<h2>📄 Terms & Conditions</h2><p>By using TourSetu, users agree to provide accurate account, booking and payment information. Customers, agencies and hotel owners are responsible for the information and transactions they submit through the platform.</p><p>Referral rewards apply only to eligible paid bookings that are successfully recorded by TourSetu. TourSetu may reject or reverse referral attribution for cancelled, refunded, fraudulent, self-referred or otherwise ineligible transactions.</p><p>Referral earnings shown in the dashboard are ledger amounts and do not by themselves constitute an instant bank/UPI transfer. Any payout is subject to applicable TourSetu payout procedures, verification and minimum payout requirements.</p>',
+        terms: customerMarketplaceTermsHtml(),
         privacy: '<h2>🔒 Privacy Policy</h2><p>TourSetu may process account, booking, payment-status and referral information to provide platform services, maintain security, prevent abuse, support users and calculate referral attribution.</p><p>When a referral link is opened, TourSetu may record the referral code, visit event and relevant attribution information. When a referred user signs in or signs up, the referral relationship may be associated with the account for eligible future bookings.</p><p>Referral and booking records are stored in the TourSetu/Supabase database and are used for platform operations, analytics, commission calculation and fraud prevention. TourSetu should only collect and retain information necessary for these purposes and should protect it using appropriate access controls.</p>'
     };
     const modal=document.createElement('div');
@@ -291,6 +414,7 @@ async function initApp() {
 }
 
 async function showDashboard(user) {
+    window.currentTourSetuUser = user;
     const role=user?.user_metadata?.role||'customer';
     if(role==='agency'){
         const verification=await getAgencyVerification(user.id).catch(()=>null);
@@ -599,7 +723,12 @@ async function handleAuth(){
    6. CUSTOMER HOMEPAGE & BOOKING SYSTEM
    ========================================= */
 
-function renderCustomerHomepage(user) {
+async function renderCustomerHomepage(user, options = {}) {
+    user = user || window.currentTourSetuUser;
+    if (!options.skipTermsCheck) {
+        const accepted = await ensureCustomerTermsAccepted(user);
+        if (!accepted) return;
+    }
     const app = document.getElementById('app');
     app.style.maxWidth = "100%";
     window.mountDashboardUtilityMenu('customer');
