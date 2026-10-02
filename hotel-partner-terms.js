@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    const HOTEL_TERMS_VERSION = '2026-10-02-v2';
+    const HOTEL_TERMS_VERSION = '2026-10-02-v3';
 
     function hotelPartnerTermsHtml() {
         return '<h2>📄 TourSetu Hotel Partner Terms & Conditions</h2>' +
@@ -16,8 +16,8 @@
             '<p>Hotel agrees to provide designated resting spaces/facilities for tour operator drivers as specified in the property amenity profile during the onboarding process.</p>' +
             '<h3>4. No-Show & Emergency Weather Policy</h3>' +
             '<p>In instances of Yatra stoppage due to natural disasters (landslides, severe weather) preventing tourist arrival, the hotel agrees to honor date-shifting or flexible cancellation guidelines without imposing arbitrary penalty fees.</p>' +
-            '<h3>5. Platform Commission</h3>' +
-            '<p>Hotel Partner confirms that it is ready to pay a <strong>4% TourSetu platform commission</strong> from the total package price for bookings generated through the TourSetu marketplace. This commission will be deducted/settled according to TourSetu payout terms.</p>';
+            '<h3>5. Platform Commission & Transaction Fees</h3>' +
+            '<p>Hotel Partner confirms that it is ready to pay <strong>4% TourSetu platform commission + 2% gateway transaction fee + applicable GST on the transaction fee</strong> from the total package price for bookings generated through the TourSetu marketplace. These applicable platform and transaction charges will be deducted/settled according to TourSetu payout terms.</p>';
     }
 
     function renderHotelTermsGate(user, originalDashboard) {
