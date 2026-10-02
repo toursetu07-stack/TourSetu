@@ -5,26 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="TourSetu — trusted travel, hotel and Char Dham booking marketplace.">
     <meta name="theme-color" content="#ff9f43">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta name="referrer" content="strict-origin-when-cross-origin">\n    <meta name="color-scheme" content="light">
     <title>TourSetu | Travel Agency Portal</title>
     
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-      // OneSignal v16: initialize Web Push once. User identity is attached
-      // only after init completes by onesignal-auth-fix.js.
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "1d58b571-868b-4b5b-b370-cd417cac6c28",
-          allowLocalhostAsSecureOrigin: true,
-          serviceWorkerPath: (location.pathname.startsWith("/TourSetu/") ? "/TourSetu/" : "/") + "OneSignalSDKWorker.js",
-          serviceWorkerParam: { scope: location.pathname.startsWith("/TourSetu/") ? "/TourSetu/" : "/" },
-          notifyButton: { enable: true }
-        });
-        window.__toursetuOneSignalReady = true;
-        window.dispatchEvent(new Event('toursetu-onesignal-ready'));
-      });
-    </script>
+    <script src="onesignal-init.js?v=2026-10-02-security-phase4" defer></script>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -109,7 +94,7 @@
 
 <body>
 
-<div id="app">
+<a class="skip-link" href="#app">Skip to main content</a>\n\n<div id="app" role="main">
     <div class="auth-card">
         <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>
         
