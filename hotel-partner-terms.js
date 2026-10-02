@@ -118,7 +118,7 @@
         const client = window.supabase?.createClient
             ? window.supabase.createClient(
                 'https://udfwcqrmksfyeigxgdws.supabase.co',
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ0b3Vy c2V0dSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwiaWF0IjoxNzcyNDUyMjU0LCJleHAiOjIwODgwMjgyNTR9.zf1taGGbEsA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw'
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTIyNTQsImV4cCI6MjA4ODAyODI1NH0.zf1taGGbEszA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw'
             )
             : null;
 
