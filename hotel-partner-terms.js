@@ -98,12 +98,36 @@
             button.style.cursor = 'wait';
         }
 
-        const { error } = await client
+        const acceptancePayload = {
+            user_id: user.id,
+            terms_version: HOTEL_TERMS_VERSION,
+            accepted_at: new Date().toISOString()
+        };
+
+        // Existing hotel acceptance rows use user_id as the primary key.
+        // Update an older terms version first; insert only for a first-time acceptance.
+        const { data: existingAcceptance, error: existingAcceptanceError } = await client
             .from('hotel_terms_acceptances')
-            .upsert(
-                { user_id: user.id, terms_version: HOTEL_TERMS_VERSION, accepted_at: new Date().toISOString() },
-                { onConflict: 'user_id' }
-            );
+            .select('user_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        let acceptanceError = existingAcceptanceError || null;
+
+        if (!acceptanceError && existingAcceptance) {
+            const { error } = await client
+                .from('hotel_terms_acceptances')
+                .update(acceptancePayload)
+                .eq('user_id', user.id);
+            acceptanceError = error || null;
+        } else if (!acceptanceError) {
+            const { error } = await client
+                .from('hotel_terms_acceptances')
+                .insert(acceptancePayload);
+            acceptanceError = error || null;
+        }
+
+        const error = acceptanceError;
 
         if (error) {
             console.error('Hotel terms acceptance save failed:', error);
