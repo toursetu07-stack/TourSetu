@@ -79,11 +79,6 @@ function normalizeMatchCity(value) {
         .replace(/\brudrapryag\b/g, 'rudraprayag');
 }
 
-const UTTARAKHAND_OPERATOR_CITIES = new Set(
-    (typeof UTTARAKHAND_PICKUP_CITIES !== 'undefined' ? UTTARAKHAND_PICKUP_CITIES : [])
-        .map(normalizeMatchCity)
-);
-
 function getCityState(city) {
     const normalized = normalizeMatchCity(city);
     if (!normalized) return '';
@@ -92,7 +87,11 @@ function getCityState(city) {
         if (cities.some(item => normalizeMatchCity(item) === normalized)) return state;
     }
 
-    if (UTTARAKHAND_OPERATOR_CITIES.has(normalized)) return 'Uttarakhand';
+    if (typeof UTTARAKHAND_PICKUP_CITIES !== 'undefined' &&
+        UTTARAKHAND_PICKUP_CITIES.some(item => normalizeMatchCity(item) === normalized)) {
+        return 'Uttarakhand';
+    }
+
     return '';
 }
 
