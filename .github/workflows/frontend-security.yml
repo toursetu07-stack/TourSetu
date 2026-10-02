@@ -342,10 +342,10 @@ jobs:
           block = source[start:end]
 
           forbidden = [
-              r"\\.innerHTML\\s*=",
-              r"\\.innerText\\s*=",
-              r"\\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\\s*=",
-              r'''setAttribute\\(\\s*['"]on''',
+              r"\.innerHTML\s*=",
+              r"\.innerText\s*=",
+              r"\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\s*=",
+              r'''setAttribute\(\s*['"]on''',
           ]
           hits = [pattern for pattern in forbidden if re.search(pattern, block, re.I)]
           if hits:
