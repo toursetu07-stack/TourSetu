@@ -6290,7 +6290,7 @@ if (!hotel) {
         }, 0);
 
         content.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px;">
+            <div id="hotel-arrivals-payouts-view"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px;">
                 <div>
                     <div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#ff9f43;">OPERATIONS & FINANCE</div>
                     <h2 style="margin:5px 0;color:#1e293b;font-size:28px;">📋 Arrivals & Payouts</h2>
@@ -6412,29 +6412,11 @@ function initHotelRealtimeSubscriptions(userId) {
                      * Only refresh the Arrivals & Payout area
                      * when the hotel owner is viewing bookings.
                      */
-                    if (typeof renderArrivalsAndPayouts === 'function') {
+                    const container = document.getElementById('hotel-main-content');
 
-                        const container =
-                            document.getElementById(
-                                'hotel-main-content'
-                            );
-
-                        if (container) {
-
-                            client.auth.getUser()
-                                .then(({ data }) => {
-
-                                    if (data?.user) {
-
-                                        renderArrivalsAndPayouts(
-                                            container,
-                                            data.user
-                                        );
-
-                                    }
-
-                                });
-                        }
+                    // Refresh the Arrivals & Payouts view only when it is open.
+                    if (container && document.getElementById('hotel-arrivals-payouts-view')) {
+                        switchHotelTab('arrivals-payouts');
                     }
                 }
             }
