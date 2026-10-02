@@ -225,9 +225,27 @@ function toggleMode() {
 }
 
 function toggleBusinessFields() {
-    const role = document.getElementById('role').value;
+    const role = document.getElementById('role')?.value || 'customer';
     const businessFields = document.getElementById('business-fields');
-    if (businessFields) businessFields.style.display = (role === 'agency') ? 'block' : 'none';
+    const agencyFields = document.getElementById('agency-basic-fields');
+    const hotelFields = document.getElementById('hotel-basic-fields');
+    const hotelVerificationFields = document.getElementById('hotel-verification-fields');
+    const agencyStep1 = document.getElementById('agency-step-1');
+    const agencyStep2 = document.getElementById('agency-step-2');
+
+    const isAgency = role === 'agency';
+    const isHotel = role === 'hotel';
+
+    if (businessFields) {
+        businessFields.style.display = (isAgency || isHotel) ? 'block' : 'none';
+    }
+    if (agencyFields) agencyFields.style.display = isAgency ? 'block' : 'none';
+    if (hotelFields) hotelFields.style.display = isHotel ? 'block' : 'none';
+    if (hotelVerificationFields) hotelVerificationFields.style.display = isHotel ? 'block' : 'none';
+
+    // Agency-only KYC steps must never appear for Hotel Partner.
+    if (agencyStep1) agencyStep1.style.display = isAgency ? 'block' : 'none';
+    if (agencyStep2 && !isAgency) agencyStep2.style.display = 'none';
 }
 
 /* =========================================
@@ -4281,7 +4299,9 @@ window.renderAgencyHotelPackages = async function() {
         // 2. Fetch Hotels Safely (Without nested string syntax that causes 400 Bad Request)
         const { data: hotelsData, error: hotelErr } = await client
             .from('hotels')
-            .select('*');
+            .select('*')
+            .eq('status', 'active')
+            .eq('hide_from_search', false);
 
         if (hotelErr) {
             console.error("Hotels Fetch Error:", hotelErr);
