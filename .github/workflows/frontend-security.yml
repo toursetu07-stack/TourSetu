@@ -20,13 +20,39 @@ jobs:
           html = Path("index.html").read_text(encoding="utf-8")
           forbidden = [
               r"\bon(?:click|change|submit|error|load|mouseover|focus|blur)\s*=",
-              r"href\s*=\s*["']\s*javascript:",
+              r'''href\s*=\s*["']\s*javascript:''',
           ]
           for pattern in forbidden:
               if re.search(pattern, html, re.I):
                   raise SystemExit(f"Security regression: forbidden inline execution sink: {pattern}")
           print("OK: index.html has no checked inline event/javascript-URL sinks.")
 
+      - name: Check migrated customer agency request renderer
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          js = Path("script.js").read_text(encoding="utf-8")
+          start_marker = "🎒 AGENCY PACKAGES - MY REQUESTS"
+          end_marker = "🎒 AGENCY BOOKING PAYMENT"
+          start = js.find(start_marker)
+          end = js.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit("Security regression: migrated customer agency request renderer markers missing.")
+          block = js[start:end]
+          forbidden = [
+              r"innerHTML\s*=",
+              r"insertAdjacentHTML\s*\(",
+              r"\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\s*="
+          ]
+          hits = [pattern for pattern in forbidden if re.search(pattern, block, re.I)]
+          if hits:
+              raise SystemExit("Security regression: migrated agency request renderer still contains: " + ", ".join(hits))
+          required = ["textContent", "createElement", "addEventListener", "data-agency-request-action"]
+          missing = [item for item in required if item not in block]
+          if missing:
+              raise SystemExit("Security regression: migrated agency request renderer missing: " + ", ".join(missing))
+          print("OK: customer agency request renderer uses safe DOM/event APIs.")
       - name: Check safe DOM helper is present
         shell: python
         run: |
