@@ -3114,7 +3114,7 @@ window.showPackageDetails = function(pEncoded) {
         <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')" style="width:20px; height:20px; cursor:pointer;">
+                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')" aria-label="Select ${v.name || 'vehicle'}" style="width:18px; height:18px; min-width:18px; min-height:18px; padding:0; margin:0; flex:0 0 18px; cursor:pointer; accent-color:#ff9f43;">
                     <span><b>${v.name}</b> <br> <small style="color:#666;">Available Units: ${v.max_cars || 1}</small></span>
                 </div>
                 <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
@@ -3907,8 +3907,8 @@ window.showPackageDetails = function(pEncoded) {
 
         const top = tourSetuCreateElement('div');
         tourSetuSetStyles(top, 'display:flex;justify-content:space-between;align-items:center;gap:12px;');
-        const left = tourSetuCreateElement('div');
-        tourSetuSetStyles(left, 'display:flex;align-items:center;gap:10px;flex:1;');
+        const left = tourSetuCreateElement('label');
+        tourSetuSetStyles(left, 'display:flex;align-items:center;gap:10px;flex:1;min-width:0;margin:0;cursor:pointer;');
 
         const check = tourSetuCreateElement('input');
         check.type = 'checkbox';
@@ -3916,6 +3916,7 @@ window.showPackageDetails = function(pEncoded) {
         check.setAttribute('data-id', String(vehicle.id ?? ''));
         check.setAttribute('data-rate', String(Number.parseFloat(vehicle.rate) || 0));
         check.setAttribute('aria-label', 'Select ' + String(vehicle.name || 'vehicle'));
+        tourSetuSetStyles(check, 'width:18px;height:18px;min-width:18px;min-height:18px;padding:0;margin:0;flex:0 0 18px;cursor:pointer;accent-color:#ff9f43;');
 
         const vehicleInfo = tourSetuCreateElement('div');
         let vehicleName = String(vehicle.name || 'Vehicle');
