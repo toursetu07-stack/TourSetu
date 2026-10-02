@@ -265,3 +265,52 @@ button:active { transform: translateY(0); }
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Accessibility + resilient mobile UX */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000001;
+  transform: translateY(-180%);
+  padding: 10px 14px;
+  border-radius: 9px;
+  background: #1f2937;
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+[role="main"] {
+  scroll-margin-top: 20px;
+}
+textarea {
+  width: 100%;
+  max-width: 100%;
+  resize: vertical;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #7b8490;
+  opacity: 1;
+}
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: #eef1f4;
+  color: #68717c;
+  cursor: not-allowed;
+}
+@media (max-width: 640px) {
+  .custom-modal-card {
+    width: 96vw !important;
+    border-radius: 14px !important;
+  }
+  .modal-room-img {
+    height: 150px;
+  }
+}
