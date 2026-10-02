@@ -100,7 +100,7 @@ const REFERRAL_STORAGE_KEY = 'toursetu_referral_code';
 
 const CUSTOMER_TERMS_VERSION = '2026-10-02-v1';
 
-const AGENCY_TERMS_VERSION = '2026-10-02-v3';
+const AGENCY_TERMS_VERSION = '2026-10-02-v4';
 
 const CUSTOMER_PRIVACY_VERSION = '2026-10-02-v1';
 
@@ -155,7 +155,12 @@ window.acceptAgencyPartnerTerms = async function() {
     const { data: { user } } = await client.auth.getUser();
     if (!user?.id) { alert('Your login session has expired. Please login again.'); return; }
     if (button) { button.disabled = true; button.innerText = 'SAVING...'; button.style.opacity = '.7'; button.style.cursor = 'wait'; }
-    const { error } = await client.from('agency_terms_acceptances').insert({ user_id: user.id, terms_version: AGENCY_TERMS_VERSION });
+    const { error } = await client
+        .from('agency_terms_acceptances')
+        .upsert(
+            { user_id: user.id, terms_version: AGENCY_TERMS_VERSION, accepted_at: new Date().toISOString() },
+            { onConflict: 'user_id' }
+        );
     if (error) {
         console.error('Agency terms acceptance save failed:', error);
         if (button) { button.disabled = false; button.innerText = 'APPROVED'; button.style.opacity = '1'; button.style.cursor = 'pointer'; }
