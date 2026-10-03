@@ -1,7 +1,8 @@
 -- TourSetu security hardening 2026-10-03
 -- Applied to production before committing this migration artifact.
 
-revoke insert, update on public.profiles from authenticated;
+revoke all on public.profiles from authenticated;
+grant select on public.profiles to authenticated;
 grant insert (
   id,email,company_name,business_reg_url,business_license_url,gst_url,gst_no,reg_no,license,phone,updated_at
 ) on public.profiles to authenticated;
@@ -9,7 +10,13 @@ grant update (
   company_name,business_reg_url,business_license_url,gst_url,gst_no,reg_no,license,phone,updated_at
 ) on public.profiles to authenticated;
 
-revoke insert, update on public.hotels from authenticated;
+revoke all on public.hotels from anon, authenticated;
+grant select (
+  hotel_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,
+  hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,
+  proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image
+) on public.hotels to anon, authenticated;
+grant select (owner_id) on public.hotels to authenticated;
 grant insert (
   owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,
   hotel_photos,parking_photos,phone_masked,is_stop_sell,current_season,proximity_distance,
