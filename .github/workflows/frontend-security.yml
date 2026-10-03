@@ -1,5 +1,8 @@
 name: Frontend Security Regression
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -280,6 +283,91 @@ jobs:
       - name: Validate frontend JavaScript syntax
         shell: bash
         run: node --check script.js
+
+
+      - name: Audit customer, agency, and hotel dashboard UI/UX + security contracts
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          js = Path("script.js").read_text(encoding="utf-8")
+          css = Path("style.css").read_text(encoding="utf-8")
+
+          # Customer hotel booking flow: saved hotel room image only; no generic
+          # stock/fallback image is permitted in the booking modal.
+          customer_start = js.find("window.loadCustomerHotelPackages = async function()")
+          customer_end = js.find("function formatDateString", customer_start)
+          if customer_start < 0 or customer_end < 0:
+              raise SystemExit("Security regression: customer hotel inventory flow markers missing.")
+          customer_block = js[customer_start:customer_end]
+          for required in [
+              "room_image",
+              "getHotelRoomImageUrl",
+              "openHotelBookingModal",
+              "data-room-category-id",
+              "addEventListener",
+              "replaceChildren",
+          ]:
+              if required not in customer_block:
+                  raise SystemExit("Customer hotel flow missing required control: " + required)
+          if re.search(r"https://[^'"]*(?:unsplash|pexels|pixabay)\.", customer_block, re.I):
+              raise SystemExit("Customer hotel booking flow contains a generic external stock image.")
+
+          modal_start = js.find("window.openHotelBookingModal = function")
+          modal_end = js.find("// 3. Calculation Handler", modal_start)
+          if modal_start < 0 or modal_end < 0:
+              raise SystemExit("Security regression: hotel booking modal markers missing.")
+          modal = js[modal_start:modal_end]
+          for forbidden in [
+              r"innerHTML\s*=",
+              r"insertAdjacentHTML\s*\(",
+              r"javascript\s*:",
+              r"on(?:click|change|input|submit|error|load)\s*=",
+          ]:
+              if re.search(forbidden, modal, re.I):
+                  raise SystemExit("Hotel booking modal unsafe sink/inline handler: " + forbidden)
+          for required in ["getHotelRoomImageUrl", "textContent", "createElement", "addEventListener", "safeRoomCategoryId"]:
+              if required not in modal:
+                  raise SystemExit("Hotel booking modal missing safe control: " + required)
+
+          # Agency hotel stock flow must use the same saved room image and safe DOM.
+          agency_start = js.find("window.renderAgencyHotelPackages = async function()")
+          agency_end = js.find("window.renderAgencyDashboard", agency_start)
+          if agency_start < 0 or agency_end < 0:
+              raise SystemExit("Security regression: agency hotel flow markers missing.")
+          agency_block = js[agency_start:agency_end]
+          for required in ["room_image", "createElement", "textContent", "addEventListener"]:
+              if required not in agency_block:
+                  raise SystemExit("Agency hotel flow missing required control: " + required)
+
+          # Hotel dashboard: upload validation + ownership checks + UI state controls.
+          hotel_save = js.find("window.saveHotelProfile = async function")
+          room_save = js.find("async function saveOrUpdateRoomCategory")
+          if hotel_save < 0 or room_save < 0:
+              raise SystemExit("Security regression: hotel save workflows missing.")
+          hotel_save_block = js[hotel_save:room_save]
+          room_save_end = js.find("// Alias for backwards compatibility", room_save)
+          room_save_block = js[room_save:room_save_end if room_save_end > room_save else room_save + 20000]
+          for required in ["validateUploadedFile", "hotel-media", "crypto.randomUUID()"]:
+              if required not in hotel_save_block:
+                  raise SystemExit("Hotel profile upload hardening missing: " + required)
+          for required in ["owner_id", "ownedHotelId", ".eq('hotel_id', ownedHotelId)", "aria-busy"]:
+              if required not in room_save_block:
+                  raise SystemExit("Hotel room workflow security/UI control missing: " + required)
+
+          # UI/UX regression contracts for the recently polished agency controls.
+          for selector in [
+              ".agency-create-package-btn",
+              ".agency-package-edit-btn",
+              "input[type=\"checkbox\"].agency-dashboard-checkbox",
+              ".agency-vehicle-row",
+              ".agency-vehicle-row:focus-within",
+          ]:
+              if selector not in css:
+                  raise SystemExit("UI regression: missing required style contract: " + selector)
+
+          print("OK: customer, agency, and hotel workflows retain feature contracts with UI/UX and security safeguards.")
 
       - name: Check safe DOM helper is present
         shell: python
