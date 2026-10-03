@@ -516,3 +516,198 @@ input[type="checkbox"].agency-dashboard-checkbox {
     scroll-behavior: auto !important;
   }
 }
+
+
+/* ============================================================
+   Hotel dashboard UI/UX + accessibility hardening
+   Keeps the existing booking/inventory workflow unchanged.
+   ============================================================ */
+.hotel-dashboard-shell {
+  color-scheme: light;
+}
+
+.hotel-dashboard-sidebar .hotel-nav-btn {
+  width: 100%;
+  justify-content: flex-start;
+  transition: background-color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+.hotel-dashboard-sidebar .hotel-nav-btn:hover {
+  background: rgba(255,255,255,.08) !important;
+  transform: translateX(2px);
+}
+
+.hotel-dashboard-sidebar .hotel-nav-btn:focus-visible,
+.hotel-dashboard-sidebar button:focus-visible,
+#hotel-main-content button:focus-visible,
+#hotel-main-content input:focus-visible,
+#hotel-main-content select:focus-visible,
+#hotel-main-content textarea:focus-visible {
+  outline: 3px solid rgba(255,159,67,.45);
+  outline-offset: 2px;
+}
+
+.hotel-room-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 16px;
+  margin-top: 10px;
+  background: #fff;
+  border: 1px solid #e7edf2;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(15,23,42,.04);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.hotel-room-card:hover {
+  border-color: #ffd3a6;
+  box-shadow: 0 8px 20px rgba(15,23,42,.07);
+  transform: translateY(-1px);
+}
+
+.hotel-room-card-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.hotel-room-card-info h4 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.hotel-room-card-info p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.hotel-room-card-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.hotel-room-stock {
+  min-width: 92px;
+  text-align: right;
+}
+
+.hotel-room-stock small {
+  display: block;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.hotel-room-stock strong {
+  display: block;
+  margin-top: 4px;
+  color: #334155;
+}
+
+.hotel-room-edit-btn {
+  min-height: 36px;
+  padding: 8px 13px;
+  border: 0;
+  border-radius: 8px;
+  background: #2196f3;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hotel-room-edit-btn:hover {
+  filter: brightness(.96);
+}
+
+.hotel-inline-error,
+.hotel-empty-state {
+  margin: 12px 0 0;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.hotel-inline-error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #9f1239;
+}
+
+.hotel-empty-state {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+}
+
+#hotel-main-content input[type="text"],
+#hotel-main-content input[type="number"],
+#hotel-main-content input[type="file"],
+#hotel-main-content select,
+#hotel-main-content textarea {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+@media (max-width: 860px) {
+  .hotel-dashboard-shell {
+    flex-direction: column;
+    margin: -12px !important;
+  }
+
+  .hotel-dashboard-sidebar {
+    width: 100% !important;
+    min-height: auto !important;
+    padding: 16px !important;
+    position: relative !important;
+  }
+
+  .hotel-dashboard-sidebar nav {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+  }
+
+  .hotel-dashboard-sidebar > div:last-child {
+    margin-top: 14px;
+  }
+
+  #hotel-main-content {
+    padding: 22px !important;
+    min-width: 0;
+  }
+
+  .hotel-room-card {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .hotel-dashboard-sidebar nav {
+    grid-template-columns: 1fr;
+  }
+
+  #hotel-main-content {
+    padding: 16px !important;
+  }
+
+  .hotel-room-card {
+    flex-direction: column;
+  }
+
+  .hotel-room-card-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .hotel-room-stock {
+    text-align: left;
+  }
+}
