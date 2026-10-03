@@ -13577,7 +13577,7 @@ window.renderAgencyHotelBookingRequests = async function () {
                                 <div style="
                                     margin-top:5px;
                                 ">
-                                    ${booking.owner_message}
+                                    ${window.TourSetuDOM.escapeHTML(booking.owner_message)}
                                 </div>
                             </div>
                         `
