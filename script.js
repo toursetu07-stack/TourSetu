@@ -7839,7 +7839,77 @@ async function showHotelTab(tabName) {
     const activeBtn = document.getElementById(`nav-${tabName}`);
     if (activeBtn) activeBtn.style.background = '#2c3e50';
 
-    if (tabName === 'checkin') {
+    // Overview is the default landing tab. Replace the initialization shell
+    // immediately so hotel partners never get stuck on a blank dashboard.
+    if (tabName === 'overview') {
+        try {
+            const [{ data: hotel }, { data: rooms }, { data: requests }] = await Promise.all([
+                client.from('hotels').select('hotel_name,hide_from_search').eq('owner_id', user.id).maybeSingle(),
+                client.from('rooms').select('total_rooms,available_rooms').eq('hotel_id', user.id),
+                client.from('hotel_requests').select('status').eq('hotel_id', user.id)
+            ]);
+
+            const safeRooms = Array.isArray(rooms) ? rooms : [];
+            const safeRequests = Array.isArray(requests) ? requests : [];
+            const totalRooms = safeRooms.reduce((sum, room) => sum + Math.max(0, Number(room?.total_rooms) || 0), 0);
+            const availableRooms = safeRooms.reduce((sum, room) => sum + Math.max(0, Number(room?.available_rooms) || 0), 0);
+            const pendingRequests = safeRequests.filter(request => request?.status === 'pending').length;
+            const approvedRequests = safeRequests.filter(request => request?.status === 'approved').length;
+
+            container.replaceChildren();
+
+            const heading = document.createElement('div');
+            heading.style.cssText = 'margin-bottom:24px;';
+            const eyebrow = document.createElement('div');
+            eyebrow.textContent = 'HOTEL PARTNER DASHBOARD';
+            eyebrow.style.cssText = 'font-size:12px;font-weight:900;letter-spacing:.08em;color:#ff9f43;text-transform:uppercase;';
+            const title = document.createElement('h2');
+            title.textContent = hotel?.hotel_name ? `Welcome back, ${hotel.hotel_name} 👋` : 'Welcome to your Hotel Dashboard 👋';
+            title.style.cssText = 'margin:5px 0;color:#1e293b;font-size:28px;';
+            const subtitle = document.createElement('p');
+            subtitle.textContent = hotel
+                ? 'Manage rooms, booking requests, arrivals and property status from one place.'
+                : 'Complete your hotel property setup to start receiving room requests.';
+            subtitle.style.cssText = 'margin:0;color:#64748b;font-size:14px;';
+            heading.append(eyebrow, title, subtitle);
+            container.appendChild(heading);
+
+            const grid = document.createElement('div');
+            grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;';
+
+            const cards = [
+                ['ROOM AVAILABILITY', `${availableRooms} / ${totalRooms}`, availableRooms > 0 ? '🟢 Rooms available' : '🔴 No rooms available'],
+                ['PENDING REQUESTS', String(pendingRequests), 'Requests awaiting action'],
+                ['APPROVED REQUESTS', String(approvedRequests), 'Approved booking requests'],
+                ['PROPERTY STATUS', hotel ? (hotel.hide_from_search ? 'Hidden' : 'Active') : 'Setup required', hotel?.hide_from_search ? 'Not visible in search' : hotel ? 'Visible to customers and agencies' : 'Add property details first']
+            ];
+
+            cards.forEach(([label, value, detail]) => {
+                const card = document.createElement('div');
+                card.style.cssText = 'background:#fff;padding:20px;border-radius:14px;border:1px solid #e2e8f0;box-shadow:0 8px 24px rgba(15,23,42,.06);';
+                const labelEl = document.createElement('small');
+                labelEl.textContent = label;
+                labelEl.style.cssText = 'color:#64748b;font-weight:900;';
+                const valueEl = document.createElement('h3');
+                valueEl.textContent = value;
+                valueEl.style.cssText = 'margin:9px 0 5px;color:#1e293b;font-size:22px;';
+                const detailEl = document.createElement('span');
+                detailEl.textContent = detail;
+                detailEl.style.cssText = 'font-size:12px;color:#64748b;font-weight:700;';
+                card.append(labelEl, valueEl, detailEl);
+                grid.appendChild(card);
+            });
+
+            container.appendChild(grid);
+        } catch (error) {
+            console.error('Hotel dashboard overview error:', error);
+            container.replaceChildren();
+            const errorBox = document.createElement('div');
+            errorBox.style.cssText = 'padding:24px;background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;color:#9a3412;';
+            errorBox.textContent = 'We could not load the hotel overview right now. Please refresh and try again.';
+            container.appendChild(errorBox);
+        }
+    } else if (tabName === 'checkin') {
         renderCheckinDesk(container, user);
     } else if (tabName === 'inventory') {
         renderInventoryManager(container, user);
