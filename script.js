@@ -5080,7 +5080,7 @@ window.renderAgencyHotelPackages = async function() {
                     .order('created_at', { ascending: false }),
                 client
                     .from('hotels')
-                    .select('*')
+                    .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
                     .eq('status', 'active')
                     .eq('hide_from_search', false)
             ]);
@@ -5409,7 +5409,7 @@ async function fetchHotelProfile(userId) {
 
         const { data: hotel, error } = await client
             .from('hotels')
-            .select('*')
+            .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
             
             .maybeSingle();
 
@@ -5949,7 +5949,7 @@ async function fetchHotelProfile(userId) {
 
         const { data: hotel, error } = await client
             .from('hotels')
-            .select('*')
+            .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
             
             .maybeSingle();
 
@@ -6494,7 +6494,7 @@ async function switchHotelTab(tabName) {
    // ✅ SAFE FETCHING LOGIC
 const { data: hotelsList, error } = await client
     .from('hotels')
-    .select('*')
+    .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
     ;
 
 if (error) {
@@ -8894,7 +8894,7 @@ async function renderArrivalsAndPayouts(container, user) {
         const { data: hotel, error: hotelError } =
             await client
                 .from('hotels')
-                .select('*')
+                .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
                 
                 .maybeSingle();
 
@@ -9607,7 +9607,7 @@ async function fetchHotelProfile(userId) {
 
         const { data: hotel, error } = await client
             .from('hotels')
-            .select('*')
+            .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
             
             .maybeSingle();
 
@@ -9824,7 +9824,7 @@ async function saveOrUpdateRoomCategory(hotelId) {
 
     const { data: ownedHotel, error: hotelError } = await client
       .from('hotels')
-      .select('hotel_id,id')
+      .select('hotel_id,owner_id')
       
       .maybeSingle();
 
@@ -9990,7 +9990,7 @@ async function renderArrivalsAndPayouts(container, user) {
             error: hotelError
         } = await client
             .from('hotels')
-            .select('*')
+            .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
             
             .maybeSingle();
 
@@ -11554,7 +11554,7 @@ window.renderHotelBookingRequests =
             } =
                 await client
                     .from('hotels')
-                    .select('*')
+                    .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
                     .eq(
                         'owner_id',
                         user.id
