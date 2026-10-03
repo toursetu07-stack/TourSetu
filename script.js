@@ -2,8 +2,8 @@
 /* =========================================
    1. CONFIGURATION & GLOBAL STATE
    ========================================= */
-const SUPABASE_URL = 'https://udfwcqrmksfyeigxgdws.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZndjcXJta3NmeWVpZ3hnZHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NTIyNTQsImV4cCI6MjA4ODAyODI1NH0.zf1taGGbEszA0cKMwFw8rKBuT2OwYqUjF45MqZXaEBw';
+const SUPABASE_URL = window.__TOURSETU_SUPABASE_CONFIG__?.url || '';
+const SUPABASE_PUBLISHABLE_KEY = window.__TOURSETU_SUPABASE_CONFIG__?.publishableKey || '';
 
 let _supabase = null;
 let isLoginMode = true;
@@ -159,7 +159,7 @@ window.updateCities = function() {
 
 function getClient() {
     if (!_supabase && window.supabase) {
-        _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     }
     return _supabase;
 }
