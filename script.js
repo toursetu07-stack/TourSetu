@@ -1592,7 +1592,11 @@ window.loadCustomerHotelPackages = async function() {
         }
     } catch (err) {
         console.error('Error loading hotel inventory for customer:', err);
-        setMessage('Failed to load hotel packages', err?.message || 'Please try again.', '#ff7675');
+        setMessage(
+            'Failed to load hotel packages',
+            'Hotel inventory is temporarily unavailable. Please refresh and try again.',
+            '#ff7675'
+        );
     }
 };
 
@@ -1601,7 +1605,11 @@ window.loadCustomerHotelPackages = async function() {
 function getHotelRoomImageUrl(imagePath) {
     const value = String(imagePath || '').trim();
     if (!value || value === 'undefined' || value === 'null') return '';
-    return /^https:\/\//i.test(value) ? value : '';
+
+    // Only allow the TourSetu hotel-media public bucket. Never render
+    // arbitrary remote URLs supplied by database/user content.
+    const allowedPrefix = 'https://udfwcqrmksfyeigxgdws.supabase.co/storage/v1/object/public/hotel-media/';
+    return value.startsWith(allowedPrefix) ? value : '';
 }
 
 function formatDateString(dateObj) {
@@ -1662,6 +1670,7 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
         image.loading = 'lazy';
         image.decoding = 'async';
         image.referrerPolicy = 'no-referrer';
+        image.addEventListener('error', () => imageWrap?.remove(), { once: true });
         imageWrap.appendChild(image);
     }
 
@@ -5524,20 +5533,21 @@ async function handleSaveHotelProfile(existingHotelId) {
         if (parkingFile) parkingUrl = await uploadHotelImage(parkingFile, 'parking_views');
         if (roomFile) roomUrl = await uploadHotelImage(roomFile, 'room_views');
 
+        // Match the live hotels schema exactly. Room images are stored as the
+        // hotel room image URL and are then reused by Agency + Customer views.
         const payload = {
             owner_id: user.id,
             hotel_name: hotelName,
             city: city,
             address: address,
-            price_per_night: pricePerNight,
+            room_price_per_night: pricePerNight,
             total_rooms: totalRooms,
             available_rooms: availableRooms,
-            hide_from_search: false,
-            updated_at: new Date()
+            hide_from_search: false
         };
 
-        if (frontUrl) payload.front_image = frontUrl;
-        if (parkingUrl) payload.parking_image = parkingUrl;
+        if (frontUrl) payload.front_pictures_urls = [frontUrl];
+        if (parkingUrl) payload.parking_photos = [parkingUrl];
         if (roomUrl) payload.room_image = roomUrl;
 
         let dbError = null;
