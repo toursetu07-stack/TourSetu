@@ -5786,39 +5786,87 @@ async function loadHotelRooms(hotelId) {
 
     const { data: rooms, error } = await client
         .from('room_categories')
-        .select('*')
+        .select('id,hotel_id,room_type,category_name,price_per_night,price,total_rooms,available_rooms')
         .eq('hotel_id', hotelId);
 
+    listDiv.replaceChildren();
+
     if (error) {
-        listDiv.innerHTML = `<p style="color:red;">Error loading rooms: ${error.message}</p>`;
+        const errorEl = document.createElement('p');
+        errorEl.className = 'hotel-inline-error';
+        errorEl.textContent = 'Unable to load room inventory right now.';
+        listDiv.appendChild(errorEl);
         return;
     }
 
     if (!rooms || rooms.length === 0) {
-        listDiv.innerHTML = `<p style="color:#666;">No room categories added yet.</p>`;
+        const emptyEl = document.createElement('p');
+        emptyEl.className = 'hotel-empty-state';
+        emptyEl.textContent = 'No room categories added yet.';
+        listDiv.appendChild(emptyEl);
         return;
     }
 
-    listDiv.innerHTML = rooms.map(room => `
-        <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:15px; margin-top:10px; background:#fff; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div>
-                <h4 style="margin:0;">${room.category_name || room.room_type || ''}</h4>
-                <p style="margin:5px 0 0; color:#666;">Price: ₹${room.price_per_night || room.price || 0} / night</p>
-            </div>
-            
-            <div style="display:flex; align-items:center; gap:15px;">
-                <div style="text-align:right;">
-                    <small style="color:#888; font-size:10px; display:block;">AVAILABLE / TOTAL</small>
-                    <div><strong>${room.available_rooms ?? 0}</strong> / ${room.total_rooms ?? 0}</div>
-                </div>
-                
-                <button onclick="editRoomCategory('${room.id}', '${room.category_name || room.room_type || ''}', '${room.price_per_night || room.price || 0}', '${room.total_rooms || 0}', '${room.available_rooms || 0}')" 
-                        style="background:#2196F3; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">
-                    ✏️ Edit
-                </button>
-            </div>
-        </div>
-    `).join('');
+    const fragment = document.createDocumentFragment();
+
+    rooms.forEach((room) => {
+        const card = document.createElement('article');
+        card.className = 'hotel-room-card';
+
+        const info = document.createElement('div');
+        info.className = 'hotel-room-card-info';
+
+        const title = document.createElement('h4');
+        title.textContent = String(room.category_name || room.room_type || 'Room Category').slice(0, 100);
+        info.appendChild(title);
+
+        const price = Number(room.price_per_night ?? room.price ?? 0);
+        const priceEl = document.createElement('p');
+        priceEl.textContent = `Price: ₹${Number.isFinite(price) ? price.toLocaleString('en-IN') : '0'} / night`;
+        info.appendChild(priceEl);
+
+        const controls = document.createElement('div');
+        controls.className = 'hotel-room-card-controls';
+
+        const stock = document.createElement('div');
+        stock.className = 'hotel-room-stock';
+        const stockLabel = document.createElement('small');
+        stockLabel.textContent = 'AVAILABLE / TOTAL';
+        const stockValue = document.createElement('strong');
+        stockValue.textContent = `${Number(room.available_rooms ?? 0)} / ${Number(room.total_rooms ?? 0)}`;
+        stock.append(stockLabel, stockValue);
+
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'hotel-room-edit-btn';
+        edit.textContent = '✏️ Edit';
+        edit.setAttribute('aria-label', `Edit ${String(room.category_name || room.room_type || 'room category').slice(0, 100)}`);
+        edit.dataset.roomId = String(room.id || '');
+        edit.dataset.roomType = String(room.category_name || room.room_type || '').slice(0, 100);
+        edit.dataset.price = String(price);
+        edit.dataset.total = String(Number(room.total_rooms ?? 0));
+        edit.dataset.available = String(Number(room.available_rooms ?? 0));
+
+        controls.append(stock, edit);
+        card.append(info, controls);
+        fragment.appendChild(card);
+    });
+
+    listDiv.appendChild(fragment);
+
+    listDiv.onclick = (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const edit = target.closest('.hotel-room-edit-btn');
+        if (!edit) return;
+        editRoomCategory(
+            edit.dataset.roomId || '',
+            edit.dataset.roomType || '',
+            edit.dataset.price || '0',
+            edit.dataset.total || '0',
+            edit.dataset.available || '0'
+        );
+    };
 }
 
 // Edit Button Click Action
@@ -7797,7 +7845,7 @@ async function renderHotelDashboard(user) {
     window.mountDashboardUtilityMenu('hotel');
 
     app.innerHTML = `
-        <div style="display:flex; min-height:100vh; background:#f4f6f9; font-family:'Inter', sans-serif; margin:-20px;">
+        <div class="hotel-dashboard-shell" style="display:flex; min-height:100vh; background:#f4f6f9; font-family:'Inter', sans-serif; margin:-20px;">
             <!-- Hotel Sidebar Navigation -->
             <div style="width:280px; background:linear-gradient(180deg,#17212b 0%,#1e272e 55%,#202b35 100%); color:white; padding:25px 20px; flex-shrink:0; display:flex; flex-direction:column; justify-content:space-between; box-shadow:8px 0 30px rgba(15,23,42,.10);">
                 <div>
@@ -9752,63 +9800,89 @@ async function saveOrUpdateRoomCategory(hotelId) {
     return;
   }
 
-  const categoryInput = document.getElementById('r-type') || document.getElementById('roomCategory');
-  const priceInput = document.getElementById('r-price') || document.getElementById('roomPrice');
-  const totalInput = document.getElementById('r-total') || document.getElementById('totalRooms');
-  const availableInput = document.getElementById('r-available') || document.getElementById('availableRooms');
-
-  const category = categoryInput ? categoryInput.value : '';
-  const price = priceInput ? priceInput.value : '';
-  const total = totalInput ? totalInput.value : 0;
-  const available = availableInput ? availableInput.value : 0;
-
-  if (!category || !price) {
-    alert("Please enter room category and price!");
-    return;
-  }
-
-  // UPDATE MODE
-  if (currentEditingRoomId) {
-    const { error } = await client
-      .from('room_categories')
-      .update({
-        room_type: category,
-        price_per_night: price,
-        total_rooms: total,
-        available_rooms: available
-      })
-      .eq('id', currentEditingRoomId);
-
-    if (error) {
-      alert("Update Failed: " + error.message);
-    } else {
-      alert("Room details updated successfully!");
-      resetRoomForm();
-      if (typeof loadHotelRooms === "function") loadHotelRooms(hotelId);
-      else if (typeof loadInventory === "function") loadInventory();
+  try {
+    const { data: { user } } = await client.auth.getUser();
+    if (!user?.id) {
+      alert("Your hotel session has expired. Please login again.");
+      return;
     }
-  } 
-  // INSERT MODE
-  else {
-    const { error } = await client
-      .from('room_categories')
-      .insert([
-        {
-          hotel_id: hotelId,
-          room_type: category,
-          price_per_night: price,
-          total_rooms: total,
-          available_rooms: available
-        }
-      ]);
 
-    if (error) {
-      alert("Save Failed: " + error.message);
+    const category = String(document.getElementById('r-type')?.value || '').trim();
+    const price = Number(document.getElementById('r-price')?.value);
+    const total = Number(document.getElementById('r-total')?.value || 0);
+    const available = Number(document.getElementById('r-available')?.value || 0);
+
+    if (!category || category.length > 100) {
+      alert("Please enter a valid room category (1–100 characters).");
+      return;
+    }
+    if (!Number.isFinite(price) || price <= 0 || price > 100000000) {
+      alert("Please enter a valid room price.");
+      return;
+    }
+    if (!Number.isInteger(total) || total < 1 || total > 100000) {
+      alert("Total rooms must be a whole number between 1 and 100,000.");
+      return;
+    }
+    if (!Number.isInteger(available) || available < 0 || available > total) {
+      alert("Available rooms must be between 0 and total rooms.");
+      return;
+    }
+
+    const { data: ownedHotel, error: hotelError } = await client
+      .from('hotels')
+      .select('hotel_id,id')
+      .eq('owner_id', user.id)
+      .maybeSingle();
+
+    if (hotelError) throw hotelError;
+
+    const ownedHotelId = ownedHotel?.hotel_id || ownedHotel?.id;
+    if (!ownedHotelId || String(ownedHotelId) !== String(hotelId)) {
+      alert("Security check failed: this property does not belong to your hotel account.");
+      return;
+    }
+
+    const payload = {
+      room_type: category,
+      price_per_night: price,
+      total_rooms: total,
+      available_rooms: available
+    };
+
+    const saveButton = document.getElementById('btn-save-room') || document.getElementById('addRoomBtn');
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.setAttribute('aria-busy', 'true');
+    }
+
+    if (currentEditingRoomId) {
+      const { error } = await client
+        .from('room_categories')
+        .update(payload)
+        .eq('id', currentEditingRoomId)
+        .eq('hotel_id', ownedHotelId);
+      if (error) throw error;
+      alert("Room details updated successfully!");
     } else {
+      const { error } = await client
+        .from('room_categories')
+        .insert([{ hotel_id: ownedHotelId, ...payload }]);
+      if (error) throw error;
       alert("Room added successfully!");
-      resetRoomForm();
-      if (typeof loadHotelRooms === "function") loadHotelRooms(hotelId);
-      else if (typeof loadInventory === "function") loadInventory();
+    }
+
+    resetRoomForm();
+    if (typeof loadHotelRooms === "function") loadHotelRooms(ownedHotelId);
+    else if (typeof loadInventory === "function") loadInventory();
+  } catch (error) {
+    console.error("Hotel room save error:", error);
+    alert("Unable to save room details. Please check the values and try again.");
+  } finally {
+    const saveButton = document.getElementById('btn-save-room') || document.getElementById('addRoomBtn');
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.removeAttribute('aria-busy');
     }
   }
 }
