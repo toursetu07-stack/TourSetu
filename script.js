@@ -1604,7 +1604,7 @@ function getHotelRoomImageUrl(imagePath) {
 
     // Only allow the TourSetu hotel-media public bucket. Never render
     // arbitrary remote URLs supplied by database/user content.
-    const allowedPrefix = 'https://udfwcqrmksfyeigxgdws.supabase.co/storage/v1/object/public/hotel-media/';
+    const allowedPrefix = `${SUPABASE_URL}/storage/v1/object/public/hotel-media/`;
     return value.startsWith(allowedPrefix) ? value : '';
 }
 
