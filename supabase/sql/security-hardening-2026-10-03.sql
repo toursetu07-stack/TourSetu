@@ -22,9 +22,19 @@ grant update (
 ) on public.hotels to authenticated;
 
 drop policy if exists "Public read approved hotels" on public.hotels;
+create policy "Public read approved hotels"
+on public.hotels for select to anon, authenticated
+using (status = 'active' and coalesce(hide_from_search,false) = false);
+
+revoke select on public.hotels from anon, authenticated;
+grant select (
+  hotel_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,
+  hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,
+  proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image
+) on public.hotels to anon, authenticated;
 
 drop view if exists public.public_hotel_inventory;
-create view public.public_hotel_inventory as
+create view public.public_hotel_inventory with (security_invoker=true) as
 select rc.id, rc.created_at, rc.hotel_id, h.hotel_name, h.city, h.address,
        h.room_image, rc.room_type, rc.price_per_night, rc.total_rooms, rc.available_rooms
 from public.room_categories rc
