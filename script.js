@@ -5533,20 +5533,21 @@ async function handleSaveHotelProfile(existingHotelId) {
         if (parkingFile) parkingUrl = await uploadHotelImage(parkingFile, 'parking_views');
         if (roomFile) roomUrl = await uploadHotelImage(roomFile, 'room_views');
 
+        // Match the live hotels schema exactly. Room images are stored as the
+        // hotel room image URL and are then reused by Agency + Customer views.
         const payload = {
             owner_id: user.id,
             hotel_name: hotelName,
             city: city,
             address: address,
-            price_per_night: pricePerNight,
+            room_price_per_night: pricePerNight,
             total_rooms: totalRooms,
             available_rooms: availableRooms,
-            hide_from_search: false,
-            updated_at: new Date()
+            hide_from_search: false
         };
 
-        if (frontUrl) payload.front_image = frontUrl;
-        if (parkingUrl) payload.parking_image = parkingUrl;
+        if (frontUrl) payload.front_pictures_urls = [frontUrl];
+        if (parkingUrl) payload.parking_photos = [parkingUrl];
         if (roomUrl) payload.room_image = roomUrl;
 
         let dbError = null;
