@@ -9448,12 +9448,33 @@ window.showHotelTab = async function(tabName) {
     if (!container) return;
 
     const client = getClient();
-    if (!client) return;
-    
-    const { data: { user } } = await client.auth.getUser();
-    if (!user) return;
+    if (!client) {
+        container.innerHTML = '<div role="alert" style="padding:24px;background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;color:#9a3412;">Secure connection is not ready. Please refresh and try again.</div>';
+        return;
+    }
 
-    const hotel = await fetchHotelProfile(user.id);
+    // Never leave the dashboard on its loading shell if auth/profile I/O stalls.
+    const withHotelTabTimeout = (promise, label, timeoutMs = 8000) => Promise.race([
+        promise,
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(label + ' timed out. Please retry.')), timeoutMs)
+        )
+    ]);
+
+    try {
+        const { data: { user }, error: authError } = await withHotelTabTimeout(
+            client.auth.getUser(),
+            'Hotel session check'
+        );
+        if (authError) throw authError;
+        if (!user?.id) throw new Error('Your hotel session has expired. Please log in again.');
+
+        window.currentHotelDashboardUser = user;
+
+        const hotel = await withHotelTabTimeout(
+            fetchHotelProfile(user.id),
+            'Hotel profile loading'
+        );
 
     // TAB: OVERVIEW
     if (tabName === 'overview') {
@@ -9540,6 +9561,18 @@ window.showHotelTab = async function(tabName) {
             <h1>Booking & Quote Requests</h1>
             <div style="margin-top:20px;" id="hotel-inbox-container">Loading requests...</div>`;
         if (hotel && typeof loadHotelRequests === "function") loadHotelRequests(hotel.hotel_id);
+    }
+    } catch (err) {
+        console.error('Hotel tab load error:', err);
+        const safeMessage = String(err?.message || 'The hotel workspace could not be loaded.').replace(/[<>]/g, '');
+        container.innerHTML = `
+            <div role="alert" style="max-width:760px;margin:40px auto;background:#fff;border:1px solid #fecaca;border-radius:16px;padding:28px;box-shadow:0 8px 24px rgba(15,23,42,.06);">
+                <div style="font-size:30px;margin-bottom:8px;">🏨</div>
+                <h2 style="margin:0 0 8px;color:#1f2937;">Hotel Dashboard couldn't load</h2>
+                <p style="margin:0 0 8px;color:#64748b;line-height:1.6;">We couldn't securely load this hotel workspace. Your data has not been changed.</p>
+                <p style="margin:0 0 18px;color:#94a3b8;font-size:12px;">${safeMessage}</p>
+                <button type="button" onclick="window.showHotelTab('overview')" style="border:0;border-radius:9px;padding:10px 16px;background:#ff9f43;color:#fff;font-weight:800;cursor:pointer;">↻ Retry</button>
+            </div>`;
     }
 };
 
