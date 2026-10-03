@@ -4423,23 +4423,27 @@ function renderAgencyDashboard(user) {
         logoutModal.style.display = 'none';
     });
 
-    [logoutModal, actionModal].forEach(function (modal) {
-        modal.addEventListener('click', function (event) {
-            if (event.target === modal) modal.style.display = 'none';
-        });
+    logoutModal.addEventListener('click', function (event) {
+        if (event.target === logoutModal) logoutModal.style.display = 'none';
     });
 
-    if (!root.dataset.modalKeyboardGuard) {
-        root.dataset.modalKeyboardGuard = 'true';
-        document.addEventListener('keydown', function (event) {
-            if (event.key !== 'Escape') return;
-            if (actionModal.style.display === 'flex') {
-                window.closeActionModal();
-            } else if (logoutModal.style.display === 'flex') {
-                logoutModal.style.display = 'none';
-            }
-        });
-    }
+    actionModal.addEventListener('click', function (event) {
+        if (event.target === actionModal) window.closeActionModal();
+    });
+
+    actionModal.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            window.closeActionModal();
+        }
+    });
+
+    logoutModal.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            logoutModal.style.display = 'none';
+        }
+    });
 
     showTab('earnings');
     loadAgencyVerificationBanner(user);
