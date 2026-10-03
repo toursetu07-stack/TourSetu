@@ -5410,7 +5410,7 @@ async function fetchHotelProfile(userId) {
         const { data: hotel, error } = await client
             .from('hotels')
             .select('*')
-            .eq('owner_id', userId)
+            
             .maybeSingle();
 
         if (error) throw error;
@@ -5950,7 +5950,7 @@ async function fetchHotelProfile(userId) {
         const { data: hotel, error } = await client
             .from('hotels')
             .select('*')
-            .eq('owner_id', userId)
+            
             .maybeSingle();
 
         if (error) throw error;
@@ -6495,7 +6495,7 @@ async function switchHotelTab(tabName) {
 const { data: hotelsList, error } = await client
     .from('hotels')
     .select('*')
-    .eq('owner_id', user.id);
+    ;
 
 if (error) {
     console.error("Hotel fetch error:", error);
@@ -7951,7 +7951,7 @@ async function showHotelTab(tabName) {
     if (tabName === 'overview') {
         try {
             const [{ data: hotel }, { data: rooms }, { data: requests }] = await Promise.all([
-                client.from('hotels').select('hotel_name,hide_from_search').eq('owner_id', user.id).maybeSingle(),
+                client.from('hotels').select('hotel_name,hide_from_search').maybeSingle(),
                 client.from('rooms').select('total_rooms,available_rooms').eq('hotel_id', user.id),
                 client.from('hotel_requests').select('status').eq('hotel_id', user.id)
             ]);
@@ -8521,7 +8521,7 @@ async function fetchAndRenderHotelInventory(hotelId) {
     const client = getClient();
 
     // Fetch Hotel details & Active Holds
-    const { data: hotel } = await client.from('hotels').select('*').eq('id', hotelId).single();
+    const { data: hotel } = await client.from('hotels').select('hotel_id,hotel_name,total_rooms,available_rooms,city,address,room_image,status,hide_from_search').eq('hotel_id', hotelId).single();
     const { data: activeHolds } = await client
         .from('bookings')
         .select('*')
@@ -8895,7 +8895,7 @@ async function renderArrivalsAndPayouts(container, user) {
             await client
                 .from('hotels')
                 .select('*')
-                .eq('owner_id', user.id)
+                
                 .maybeSingle();
 
         if (hotelError) throw hotelError;
@@ -9608,7 +9608,7 @@ async function fetchHotelProfile(userId) {
         const { data: hotel, error } = await client
             .from('hotels')
             .select('*')
-            .eq('owner_id', userId)
+            
             .maybeSingle();
 
         if (error) throw error;
@@ -9825,7 +9825,7 @@ async function saveOrUpdateRoomCategory(hotelId) {
     const { data: ownedHotel, error: hotelError } = await client
       .from('hotels')
       .select('hotel_id,id')
-      .eq('owner_id', user.id)
+      
       .maybeSingle();
 
     if (hotelError) throw hotelError;
@@ -9991,7 +9991,7 @@ async function renderArrivalsAndPayouts(container, user) {
         } = await client
             .from('hotels')
             .select('*')
-            .eq('owner_id', user.id)
+            
             .maybeSingle();
 
         if (hotelError) throw hotelError;
