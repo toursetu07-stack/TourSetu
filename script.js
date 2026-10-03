@@ -6476,6 +6476,8 @@ if (!hotel) {
                 ${(reqs || []).length === 0 ? '<p style="color:#666;">No booking quotes received yet.</p>' : ''}
                 ${(reqs || []).map(req => {
                     const isAgency = req.requester_type === 'agency';
+                    const e = window.TourSetuDOM.escapeHTML;
+                    const a = window.TourSetuDOM.escapeAttribute;
                     return `
                         <div style="background:white; padding:20px; border-radius:12px; border-left:6px solid ${isAgency ? '#3498db' : '#2ecc71'}; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
                             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
