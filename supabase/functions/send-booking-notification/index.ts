@@ -132,13 +132,11 @@ Deno.serve(async (req) => {
 
     if (!oneSignalResponse.ok) {
       console.error("OneSignal API error:", oneSignalResponse.status, oneSignalData);
-      return json({ error: "Push provider rejected the notification.", details: oneSignalData }, 502);
+      return json({ error: "Push provider rejected the notification." }, 502);
     }
 
     return json({
       success: true,
-      target_user_id: targetUserId,
-      notification_id: oneSignalData?.id || null,
       delivered_to_subscriber: Boolean(oneSignalData?.id),
     });
   } catch (error) {
