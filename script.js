@@ -4240,12 +4240,16 @@ function renderAgencyDashboard(user) {
         null,
         "display:flex;min-height:100vh;background:#f8f9fa;margin:-20px;font-family:'Inter',sans-serif;"
     );
+    root.className = 'toursetu-agency-dashboard';
+    root.setAttribute('data-dashboard', 'agency');
 
     const sidebar = createAgencyDashboardElement(
         'aside',
         null,
         'width:260px;background:#2d3436;color:white;padding:25px;position:relative;flex-shrink:0;box-sizing:border-box;'
     );
+    sidebar.className = 'agency-sidebar';
+    sidebar.setAttribute('aria-label', 'Agency navigation');
 
     const brandRow = createAgencyDashboardElement(
         'div',
@@ -4326,6 +4330,8 @@ function renderAgencyDashboard(user) {
         'flex:1;padding:40px;overflow-y:auto;background:#f8f9fa;'
     );
     mainContent.id = 'main-content';
+    mainContent.className = 'agency-main-content';
+    mainContent.setAttribute('tabindex', '-1');
 
     root.appendChild(sidebar);
     root.appendChild(mainContent);
@@ -4336,13 +4342,19 @@ function renderAgencyDashboard(user) {
         'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:1000;justify-content:center;align-items:center;'
     );
     logoutModal.id = 'logout-modal';
+    logoutModal.className = 'agency-overlay-modal';
+    logoutModal.setAttribute('role', 'dialog');
+    logoutModal.setAttribute('aria-modal', 'true');
+    logoutModal.setAttribute('aria-labelledby', 'agency-logout-title');
 
     const logoutCard = createAgencyDashboardElement(
         'div',
         null,
         'background:white;padding:30px;border-radius:12px;text-align:center;max-width:350px;'
     );
-    logoutCard.appendChild(createAgencyDashboardElement('h2', 'Logout?', 'margin:0 0 20px 0;'));
+    const logoutTitle = createAgencyDashboardElement('h2', 'Logout?', 'margin:0 0 20px 0;');
+    logoutTitle.id = 'agency-logout-title';
+    logoutCard.appendChild(logoutTitle);
 
     const logoutActions = createAgencyDashboardElement('div', null, 'display:flex;gap:10px;');
     const logoutYes = createAgencyDashboardElement(
@@ -4372,6 +4384,10 @@ function renderAgencyDashboard(user) {
         'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:2000;justify-content:center;align-items:center;padding:20px;box-sizing:border-box;'
     );
     actionModal.id = 'action-modal';
+    actionModal.className = 'agency-overlay-modal';
+    actionModal.setAttribute('role', 'dialog');
+    actionModal.setAttribute('aria-modal', 'true');
+    actionModal.setAttribute('aria-labelledby', 'agency-action-modal-title');
 
     const actionModalContent = createAgencyDashboardElement(
         'div',
@@ -4379,6 +4395,7 @@ function renderAgencyDashboard(user) {
         'background:white;padding:30px;border-radius:15px;max-width:400px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.3);box-sizing:border-box;'
     );
     actionModalContent.id = 'action-modal-content';
+    actionModalContent.setAttribute('tabindex', '-1');
     actionModal.appendChild(actionModalContent);
 
     app.replaceChildren(root, logoutModal, actionModal);
@@ -4405,6 +4422,24 @@ function renderAgencyDashboard(user) {
     logoutNo.addEventListener('click', function () {
         logoutModal.style.display = 'none';
     });
+
+    [logoutModal, actionModal].forEach(function (modal) {
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) modal.style.display = 'none';
+        });
+    });
+
+    if (!root.dataset.modalKeyboardGuard) {
+        root.dataset.modalKeyboardGuard = 'true';
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') return;
+            if (actionModal.style.display === 'flex') {
+                window.closeActionModal();
+            } else if (logoutModal.style.display === 'flex') {
+                logoutModal.style.display = 'none';
+            }
+        });
+    }
 
     showTab('earnings');
     loadAgencyVerificationBanner(user);
@@ -5203,60 +5238,67 @@ window.renderAgencyHotelPackages = async function() {
 window.openActionModal = function(bookingId, type, customerId, packageTitle) {
     const modal = document.getElementById('action-modal');
     const content = document.getElementById('action-modal-content');
-    modal.style.display = 'flex';
-
+    if (!modal || !content) return;
+    const safeBookingId = String(bookingId || '').trim();
+    const safeCustomerId = String(customerId || '').trim();
+    const safePackageTitle = String(packageTitle || 'this package').trim();
+    if (!safeBookingId || !safeCustomerId || !['approved', 'denied'].includes(type)) return;
+    content.replaceChildren();
+    const title = createAgencyDashboardElement('h3', type === 'approved' ? 'Approve Booking?' : 'Deny Request?', 'margin:0;color:' + (type === 'approved' ? '#168a4a' : '#c0392b') + ';');
+    title.id = 'agency-action-modal-title';
+    const message = createAgencyDashboardElement('p', type === 'approved' ? 'Provide the contact number for payment collection (GPay/PhonePe).' : 'This action will notify the customer and cancel the request.', 'font-size:14px;color:#666;line-height:1.5;margin:10px 0 18px;');
     if (type === 'approved') {
-        content.innerHTML = `
-            <h3 style="color:#2ecc71; margin-top:0;">Approve Booking?</h3>
-            <p style="font-size:14px; color:#666;">Provide the contact number for payment collection (GPay/PhonePe).</p>
-            <input type="text" id="modal-contact-input" placeholder="Enter Contact Number" style="width:100%; padding:12px; margin-bottom:20px; border:1px solid #ddd; border-radius:5px;">
-            <div style="display:flex; gap:10px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'approved', '${customerId}', '${packageTitle}')" style="flex:1; background:#2ecc71; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">CONFIRM</button>
-                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
-            </div>`;
-    } else {
-        content.innerHTML = `
-            <h3 style="color:#ff7675; margin-top:0;">Deny Request?</h3>
-            <p style="font-size:14px; color:#666;">This action will notify the customer and cancel the request.</p>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="processStatusUpdate('${bookingId}', 'denied', '${customerId}', '${packageTitle}')" style="flex:1; background:#ff7675; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; font-weight:bold;">DENY</button>
-                <button onclick="closeActionModal()" style="flex:1; background:#eee; border:none; padding:12px; border-radius:5px; cursor:pointer;">CANCEL</button>
-            </div>`;
-    }
+        const input = createAgencyDashboardElement('input');
+        input.type = 'tel'; input.id = 'modal-contact-input'; input.className = 'agency-modal-input';
+        input.inputMode = 'tel'; input.autocomplete = 'tel'; input.maxLength = 16;
+        input.placeholder = 'Enter contact number'; input.setAttribute('aria-label', 'Agency contact number');
+        content.append(title, message, input);
+    } else { content.append(title, message); }
+    const actions = createAgencyDashboardElement('div', null, 'display:flex;gap:10px;margin-top:18px;');
+    actions.className = 'agency-modal-actions';
+    const confirm = createAgencyDashboardElement('button', type === 'approved' ? 'CONFIRM' : 'DENY', 'flex:1;background:' + (type === 'approved' ? '#2ecc71' : '#ff7675') + ';color:white;border:none;padding:12px;border-radius:7px;cursor:pointer;font-weight:800;');
+    confirm.type = 'button'; confirm.className = 'agency-modal-primary'; confirm.dataset.action = 'confirm';
+    const cancel = createAgencyDashboardElement('button', 'CANCEL', 'flex:1;background:#eee;color:#2d3436;border:none;padding:12px;border-radius:7px;cursor:pointer;font-weight:700;');
+    cancel.type = 'button'; cancel.className = 'agency-modal-secondary';
+    confirm.addEventListener('click', function () { if (!confirm.disabled) window.processStatusUpdate(safeBookingId, type, safeCustomerId, safePackageTitle, confirm); });
+    cancel.addEventListener('click', window.closeActionModal);
+    actions.append(confirm, cancel); content.appendChild(actions);
+    modal.style.display = 'flex';
+    window.__tourSetuActiveAgencyAction = { bookingId: safeBookingId, type, customerId: safeCustomerId, packageTitle: safePackageTitle };
+    window.setTimeout(function () { (document.getElementById('modal-contact-input') || confirm).focus(); }, 0);
 };
 
-window.closeActionModal = () => document.getElementById('action-modal').style.display = 'none';
+window.closeActionModal = function () {
+    const modal = document.getElementById('action-modal');
+    const content = document.getElementById('action-modal-content');
+    if (modal) modal.style.display = 'none';
+    if (content) content.replaceChildren();
+    window.__tourSetuActiveAgencyAction = null;
+};
 
-window.processStatusUpdate = async function(bookingId, newStatus, customerId, packageTitle) {
+window.processStatusUpdate = async function(bookingId, newStatus, customerId, packageTitle, triggerButton) {
     const client = getClient();
-    let updateData = { status: newStatus };
-
+    if (!client || !bookingId || !customerId || !['approved', 'denied'].includes(newStatus)) return;
+    const updateData = { status: newStatus };
     if (newStatus === 'approved') {
-        const contact = document.getElementById('modal-contact-input').value;
-        if (!contact.trim()) { alert("Please enter a contact number!"); return; }
+        const input = document.getElementById('modal-contact-input');
+        const contact = String(input?.value || '').trim();
+        const digits = contact.replace(/\D/g, '');
+        if (digits.length < 10 || digits.length > 15) { alert('Please enter a valid contact number.'); input?.focus(); return; }
         updateData.agency_contact = contact;
     }
-
-    const { error } = await client.from('bookings').update(updateData).eq('id', bookingId);
-    if (!error) {
-        if (newStatus === 'approved') {
-            sendPushNotification(
-                customerId, 
-                "Booking Approved! ✅", 
-                `Your trip for ${packageTitle} has been confirmed. Check the app for payment details.`
-            );
-        } else if (newStatus === 'denied') {
-            sendPushNotification(
-                customerId, 
-                "Booking Update", 
-                `Your booking request for ${packageTitle} was not accepted.`
-            );
-        }
-
-        closeActionModal();
-        showTab('bookings');
-    } else {
-        alert("Update Error: " + error.message);
+    const button = triggerButton instanceof HTMLButtonElement ? triggerButton : document.querySelector('#action-modal [data-action="confirm"]');
+    if (button) { button.disabled = true; button.textContent = 'PROCESSING…'; button.setAttribute('aria-busy', 'true'); }
+    try {
+        const result = await client.from('bookings').update(updateData).eq('id', String(bookingId));
+        if (result.error) throw result.error;
+        if (newStatus === 'approved') sendPushNotification(customerId, 'Booking Approved! ✅', 'Your trip for ' + String(packageTitle || 'your package') + ' has been confirmed. Check the app for payment details.');
+        else sendPushNotification(customerId, 'Booking Update', 'Your booking request for ' + String(packageTitle || 'your package') + ' was not accepted.');
+        window.closeActionModal(); showTab('bookings');
+    } catch (error) {
+        console.error('Agency booking status update failed:', error);
+        alert('Unable to update this booking right now. Please try again.');
+        if (button) { button.disabled = false; button.textContent = newStatus === 'approved' ? 'CONFIRM' : 'DENY'; button.removeAttribute('aria-busy'); }
     }
 };
 
