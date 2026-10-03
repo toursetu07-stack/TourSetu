@@ -9447,13 +9447,24 @@ window.showHotelTab = async function(tabName) {
     const container = document.getElementById('hotel-main-content');
     if (!container) return;
 
-    const client = getClient();
-    if (!client) return;
-    
-    const { data: { user } } = await client.auth.getUser();
-    if (!user) return;
+    container.innerHTML = `
+        <div style="max-width:900px;margin:0 auto;">
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;box-shadow:0 8px 24px rgba(15,23,42,.06);">
+                <div style="height:14px;width:190px;background:#e2e8f0;border-radius:999px;margin-bottom:16px;"></div>
+                <div style="height:34px;width:55%;background:#f1f5f9;border-radius:10px;margin-bottom:12px;"></div>
+                <div style="height:14px;width:80%;background:#f1f5f9;border-radius:999px;"></div>
+            </div>
+        </div>`;
 
-    const hotel = await fetchHotelProfile(user.id);
+    try {
+        const client = getClient();
+        if (!client) throw new Error('Secure connection is not ready. Please refresh and try again.');
+
+        const { data: { user }, error: authError } = await client.auth.getUser();
+        if (authError) throw authError;
+        if (!user?.id) throw new Error('Your hotel session has expired. Please log in again.');
+
+        const hotel = await fetchHotelProfile(user.id);
 
     // TAB: OVERVIEW
     if (tabName === 'overview') {
@@ -9467,7 +9478,15 @@ window.showHotelTab = async function(tabName) {
             return;
         }
 
-        const { data: requests } = await client.from('hotel_requests').select('*').eq('hotel_id', hotel.hotel_id);
+        const { data: requests, error: requestsError } = await client
+            .from('hotel_requests')
+            .select('*')
+            .eq('hotel_id', hotel.hotel_id);
+
+        if (requestsError) {
+            console.warn('Hotel requests overview load warning:', requestsError.message);
+        }
+
         const pendingCount = requests ? requests.filter(r => r.status === 'pending').length : 0;
         const approvedCount = requests ? requests.filter(r => r.status === 'approved').length : 0;
 
@@ -9540,6 +9559,16 @@ window.showHotelTab = async function(tabName) {
             <h1>Booking & Quote Requests</h1>
             <div style="margin-top:20px;" id="hotel-inbox-container">Loading requests...</div>`;
         if (hotel && typeof loadHotelRequests === "function") loadHotelRequests(hotel.hotel_id);
+    }
+    } catch (err) {
+        console.error('Hotel dashboard initialization error:', err);
+        container.innerHTML = `
+            <div style="max-width:760px;margin:40px auto;background:#fff;border:1px solid #fecaca;border-radius:16px;padding:28px;box-shadow:0 8px 24px rgba(15,23,42,.06);">
+                <div style="font-size:30px;margin-bottom:8px;">🏨</div>
+                <h2 style="margin:0 0 8px;color:#1f2937;">Hotel Dashboard couldn't load</h2>
+                <p style="margin:0 0 18px;color:#64748b;line-height:1.6;">We couldn't securely load your hotel workspace. Your data has not been changed.</p>
+                <button type="button" onclick="window.location.reload()" style="border:0;border-radius:9px;padding:10px 16px;background:#ff9f43;color:#fff;font-weight:800;cursor:pointer;">↻ Reload Dashboard</button>
+            </div>`;
     }
 };
 
