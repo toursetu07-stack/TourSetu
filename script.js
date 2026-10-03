@@ -1462,15 +1462,8 @@ window.loadCustomerHotelPackages = async function() {
     try {
         const client = getClient();
         const { data, error } = await client
-            .from('room_categories')
-            .select(`
-                *,
-                hotels (
-                    city,
-                    address,
-                    room_image
-                )
-            `)
+            .from('public_hotel_inventory')
+            .select('*')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
