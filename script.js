@@ -1632,7 +1632,7 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
     const safeMaxRooms = Number.isFinite(Number(maxAvailableRooms)) && Number(maxAvailableRooms) >= 0
         ? Math.floor(Number(maxAvailableRooms))
         : 0;
-    const safeRoomCategoryId = /^\\d+$/.test(safeRoomCategoryId.trim())
+    const safeRoomCategoryId = /^\d+$/.test(String(roomCategoryId || '').trim())
         ? String(roomCategoryId).trim()
         : '';
     if (!safeRoomCategoryId || safeMaxRooms < 1) {
@@ -1823,7 +1823,7 @@ window.calculateHotelTotalPrice = function(pricePerNight, maxAvailableRooms) {
 
 // 4. Booking Submission Handler (Saves direct to Supabase SQL Table)
 window.submitHotelRoomBooking = async function(hotelName, roomType, location, pricePerNight, maxAvailableRooms, roomCategoryId) {
-    const safeRoomCategoryId = /^\\d+$/.test(String(roomCategoryId || '').trim())
+    const safeRoomCategoryId = /^\d+$/.test(String(roomCategoryId || '').trim())
         ? String(roomCategoryId).trim()
         : '';
     const safeMaxAvailableRooms = Number.isFinite(Number(maxAvailableRooms))
