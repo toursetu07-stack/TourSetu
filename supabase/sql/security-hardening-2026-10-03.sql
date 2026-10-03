@@ -1,15 +1,25 @@
 -- TourSetu security hardening 2026-10-03
 -- Applied to production before committing this migration artifact.
 
-revoke update (id, email, role, is_approved, approved_at, approval_status, hotel_id, hotel_name)
-  on public.profiles from authenticated;
-revoke insert (role, is_approved, approved_at, approval_status, hotel_id, hotel_name)
-  on public.profiles from authenticated;
+revoke insert, update on public.profiles from authenticated;
+grant insert (
+  id,email,company_name,business_reg_url,business_license_url,gst_url,gst_no,reg_no,license,phone,updated_at
+) on public.profiles to authenticated;
+grant update (
+  company_name,business_reg_url,business_license_url,gst_url,gst_no,reg_no,license,phone,updated_at
+) on public.profiles to authenticated;
 
-revoke update (hotel_id, owner_id, status, hide_from_search)
-  on public.hotels from authenticated;
-revoke insert (hotel_id, status, hide_from_search)
-  on public.hotels from authenticated;
+revoke insert, update on public.hotels from authenticated;
+grant insert (
+  owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,
+  hotel_photos,parking_photos,phone_masked,is_stop_sell,current_season,proximity_distance,
+  city,front_pictures_urls,room_image
+) on public.hotels to authenticated;
+grant update (
+  hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,
+  hotel_photos,parking_photos,phone_masked,is_stop_sell,current_season,proximity_distance,
+  city,front_pictures_urls,room_image
+) on public.hotels to authenticated;
 
 drop policy if exists "Public read approved hotels" on public.hotels;
 
