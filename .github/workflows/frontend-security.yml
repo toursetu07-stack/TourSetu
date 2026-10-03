@@ -1,4 +1,5 @@
 name: Frontend Security Regression
+# Hotel Dashboard phase regression guard included.
 
 on:
   push:
@@ -276,6 +277,93 @@ jobs:
               raise SystemExit("Security regression: agency showTab missing safe control(s): " + ", ".join(missing))
 
           print("OK: agency showTab uses safe DOM/event APIs and delegated action data.")
+
+      - name: Check migrated active hotel dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          source = Path("script.js").read_text(encoding="utf-8")
+          dashboard_start = source.rfind("async function renderHotelDashboard(user) {")
+          dashboard_end = source.find("Dynamic Tab Switcher for Hotel Dashboard", dashboard_start)
+          if dashboard_start < 0 or dashboard_end < 0:
+              raise SystemExit("Security regression: active hotel dashboard markers missing.")
+          dashboard = source[dashboard_start:dashboard_end]
+
+          tab_start = source.rfind("window.showHotelTab = async function(tabName) {")
+          tab_end = source.find("// 3. Edit Button Click Function", tab_start)
+          if tab_start < 0 or tab_end < 0:
+              raise SystemExit("Security regression: active hotel showHotelTab markers missing.")
+          tab = source[tab_start:tab_end]
+
+          request_start = source.rfind("window.renderHotelBookingRequests =")
+          request_end = source.find("\n/* ACTIVE HOTEL BOOKING RENDERER END */", request_start + 30)
+          if request_start < 0 or request_end < 0:
+              raise SystemExit("Security regression: hotel booking renderer markers missing.")
+          requests = source[request_start:request_end]
+
+          forbidden = [
+              r"\.innerHTML\s*=",
+              r"\.innerText\s*=",
+              r"\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\s*=",
+              r'''setAttribute\(\s*['"]on''',
+          ]
+
+          for name, block in [("dashboard shell", dashboard), ("showHotelTab", tab), ("booking renderer", requests)]:
+              for pattern in forbidden:
+                  if re.search(pattern, block, re.I):
+                      raise SystemExit(f"Security regression: unsafe DOM sink/inline handler in {name}: {pattern}")
+
+          required = {
+              "dashboard shell": ["createHotelDashboardElement", "replaceChildren", "addEventListener", "data-hotel-tab"],
+              "showHotelTab": ["textContent", "replaceChildren", "renderHotelPropertyTab", "renderHotelRequestsTab"],
+              "booking renderer": ["textContent", "replaceChildren", "data-hotel-booking-action", "openHotelBookingApproval", "denyHotelBookingRequest"],
+          }
+          for name, values in required.items():
+              block = {"dashboard shell": dashboard, "showHotelTab": tab, "booking renderer": requests}[name]
+              missing = [item for item in values if item not in block]
+              if missing:
+                  raise SystemExit(f"Security regression: {name} missing: " + ", ".join(missing))
+
+          print("OK: active hotel dashboard, tab switcher, and booking renderer use safe DOM/event APIs.")
+
+      - name: Check migrated Hotel Arrivals & Payouts block
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          source = Path("script.js").read_text(encoding="utf-8")
+          start = source.find("/* HOTEL ARRIVALS PAYOUTS SAFE DOM BLOCK */")
+          end = source.find("/* HOTEL ARRIVALS PAYOUTS SAFE DOM BLOCK END */", start)
+          if start < 0 or end < 0:
+              raise SystemExit("Security regression: Hotel Arrivals & Payouts markers missing.")
+          block = source[start:end]
+
+          forbidden = [
+              r"\.innerHTML\s*=",
+              r"\.innerText\s*=",
+              r"\bon(?:click|change|input|error|load|submit|mouseover|focus|blur|keyup|keydown)\s*=",
+              r"setAttribute\(\s*['\"]on",
+          ]
+          hits = [pattern for pattern in forbidden if re.search(pattern, block, re.I)]
+          if hits:
+              raise SystemExit("Security regression: Hotel Arrivals & Payouts still contains: " + ", ".join(hits))
+
+          required = [
+              "replaceChildren",
+              "createHotelDashboardElement",
+              "textContent",
+              "addEventListener",
+              "approveCustomerHotelBooking",
+              "denyCustomerHotelBooking",
+          ]
+          missing = [item for item in required if item not in block]
+          if missing:
+              raise SystemExit("Security regression: Hotel Arrivals & Payouts missing: " + ", ".join(missing))
+
+          print("OK: Hotel Arrivals & Payouts uses safe DOM/event APIs.")
 
       - name: Validate frontend JavaScript syntax
         shell: bash
