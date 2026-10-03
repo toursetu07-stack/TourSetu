@@ -7817,7 +7817,7 @@ async function renderHotelDashboard(user) {
                             <span>🏨</span> Room Inventory & Lock
                         </button>
                        <div
-    onclick="openHotelBookingRequestSection()"
+    data-hotel-action="booking-request"
     class="hotel-nav-btn"
     id="nav-booking-request"
     style="
@@ -7843,10 +7843,10 @@ async function renderHotelDashboard(user) {
 
                 <div style="border-top:1px solid #485460; padding-top:20px;">
                     <div style="font-size:12px; color:#a4b0be; margin-bottom:10px;">Property Status:</div>
-                    <button id="stop-sell-btn" onclick="toggleStopSell('${user.id}')" style="width:100%; padding:10px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; background:#2ecc71; color:white; margin-bottom:15px;">
+                    <button id="stop-sell-btn" data-hotel-action="toggle-stop-sell" style="width:100%; padding:10px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; background:#2ecc71; color:white; margin-bottom:15px;">
                         🟢 Normal Selling Mode
                     </button>
-                    <button onclick="window.confirmAndExecuteLogout()" style="width:100%; padding:11px; border-radius:10px; border:1px solid rgba(255,118,117,.55); background:rgba(255,118,117,.08); color:#ff7675; font-weight:900; cursor:pointer;">
+                    <button data-hotel-action="logout" style="width:100%; padding:11px; border-radius:10px; border:1px solid rgba(255,118,117,.55); background:rgba(255,118,117,.08); color:#ff7675; font-weight:900; cursor:pointer;">
                         🚪 Logout Desk
                     </button>
                 </div>
@@ -7865,6 +7865,35 @@ async function renderHotelDashboard(user) {
             <div id="hotel-modal-body" style="background:white; border-radius:16px; max-width:500px; width:100%; padding:30px; box-shadow:0 20px 40px rgba(0,0,0,0.4);"></div>
         </div>
     `;
+
+    // Secure dashboard actions use event listeners instead of inline executable handlers.
+    app.querySelectorAll('[data-hotel-tab]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const tabName = button.getAttribute('data-hotel-tab');
+            if (tabName) window.showHotelTab(tabName);
+        });
+    });
+
+    const bookingRequestButton = app.querySelector('[data-hotel-action="booking-request"]');
+    if (bookingRequestButton) {
+        bookingRequestButton.addEventListener('click', () => {
+            if (typeof openHotelBookingRequestSection === 'function') openHotelBookingRequestSection();
+        });
+    }
+
+    const stopSellButton = app.querySelector('[data-hotel-action="toggle-stop-sell"]');
+    if (stopSellButton) {
+        stopSellButton.addEventListener('click', () => {
+            if (typeof toggleStopSell === 'function') toggleStopSell(user.id);
+        });
+    }
+
+    const logoutButton = app.querySelector('[data-hotel-action="logout"]');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+            if (typeof window.confirmAndExecuteLogout === 'function') window.confirmAndExecuteLogout();
+        });
+    }
 
     // Initialize Real-time WebSocket Listeners with Fallback Alerts
     setupRealtimeBookingsSubscription(user.id);
