@@ -5951,6 +5951,7 @@ async function fetchHotelProfile(userId) {
             .from('hotels')
             .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
             
+            .eq('owner_id', userId)
             .maybeSingle();
 
         if (error) throw error;
@@ -9609,6 +9610,7 @@ async function fetchHotelProfile(userId) {
             .from('hotels')
             .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
             
+            .eq('owner_id', userId)
             .maybeSingle();
 
         if (error) throw error;
@@ -9992,6 +9994,7 @@ async function renderArrivalsAndPayouts(container, user) {
             .from('hotels')
             .select('hotel_id,owner_id,hotel_name,address,nearest_temple,total_rooms,available_rooms,room_price_per_night,hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image')
             
+            .eq('owner_id', user.id)
             .maybeSingle();
 
         if (hotelError) throw hotelError;
