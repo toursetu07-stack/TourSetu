@@ -4786,9 +4786,11 @@ async function renderAgencyPackagesTab(container, userId, client) {
     const createButton = createAgencyDashboardElement(
         'button',
         '+ CREATE NEW',
-        'padding:12px 25px;background:#2ecc71;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:bold;'
+        'background:#2ecc71;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:800;'
     );
+    createButton.className = 'agency-create-package-btn';
     createButton.type = 'button';
+    createButton.setAttribute('aria-label', 'Create a new travel package');
     createButton.addEventListener('click', function () {
         if (typeof window.showPackageForm === 'function') window.showPackageForm();
     });
@@ -4840,9 +4842,11 @@ async function renderAgencyPackagesTab(container, userId, client) {
         const editButton = createAgencyDashboardElement(
             'button',
             '✏️ Edit',
-            'background:#ff9f43;color:white;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-weight:bold;flex-shrink:0;'
+            'background:#ff9f43;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:800;flex-shrink:0;'
         );
+        editButton.className = 'agency-package-edit-btn';
         editButton.type = 'button';
+        editButton.setAttribute('aria-label', 'Edit package');
         editButton.addEventListener('click', function () {
             if (typeof window.showPackageForm === 'function') {
                 window.showPackageForm(encodeURIComponent(JSON.stringify(pkg)));
@@ -6978,8 +6982,9 @@ window.showPackageForm = function(pEncoded = null) {
         ">
             <input
                 type="checkbox"
-                class="d-check"
+                class="d-check agency-dashboard-checkbox agency-destination-checkbox"
                 value="${d}"
+                aria-label="Select destination ${d}"
                 ${activeDests.includes(d) ? 'checked' : ''}
             >
             ${d}
@@ -6995,21 +7000,22 @@ window.showPackageForm = function(pEncoded = null) {
         const existing = pkgVehicles.find(ev => ev.id === v.id);
 
         return `
-        <div style="
+        <div class="agency-vehicle-row" style="
             display:flex;
             align-items:center;
-            gap:10px;
-            background:#fff8f0;
-            padding:10px;
+            gap:12px;
+            background:#fffaf5;
+            padding:10px 12px;
             border-radius:10px;
-            border:1px solid #ffeaa7;
+            border:1px solid #ffe2bf;
             margin-bottom:8px;
         ">
 
             <input
                 type="checkbox"
-                class="v-enable"
+                class="v-enable agency-dashboard-checkbox agency-vehicle-checkbox"
                 data-id="${v.id}"
+                aria-label="Enable ${v.name}"
                 ${existing ? 'checked' : ''}
             >
 
@@ -7062,6 +7068,7 @@ window.showPackageForm = function(pEncoded = null) {
                 padding:30px;
                 border:1px solid #ff9f43;
                 border-radius:12px;
+                width:min(100%, 800px);
                 max-width:800px;
                 margin:auto;
                 box-shadow:0 10px 25px rgba(0,0,0,0.1);
