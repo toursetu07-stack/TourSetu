@@ -32,6 +32,7 @@ grant select (
   hotel_photos,parking_photos,phone_masked,is_stop_sell,created_at,current_season,
   proximity_distance,hide_from_search,city,front_pictures_urls,status,room_image
 ) on public.hotels to anon, authenticated;
+grant select (owner_id) on public.hotels to authenticated;
 
 drop view if exists public.public_hotel_inventory;
 create view public.public_hotel_inventory with (security_invoker=true) as
