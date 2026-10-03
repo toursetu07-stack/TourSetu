@@ -9550,11 +9550,28 @@ window.showHotelTab = async function(tabName) {
         const client = getClient();
         if (!client) throw new Error('Secure connection is not ready. Please refresh and try again.');
 
-        const { data: { user }, error: authError } = await client.auth.getUser();
+        // Bound auth/profile reads so a stalled request cannot leave the
+        // hotel dashboard permanently stuck on its initialization shell.
+        const withHotelDashboardTimeout = (promise, label, timeoutMs = 8000) => Promise.race([
+            promise,
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error(label + ' timed out. Please retry.')), timeoutMs)
+            )
+        ]);
+
+        const { data: { user }, error: authError } = await withHotelDashboardTimeout(
+            client.auth.getUser(),
+            'Hotel session check'
+        );
         if (authError) throw authError;
         if (!user?.id) throw new Error('Your hotel session has expired. Please log in again.');
 
-        const hotel = await fetchHotelProfile(user.id);
+        window.currentHotelDashboardUser = user;
+
+        const hotel = await withHotelDashboardTimeout(
+            fetchHotelProfile(user.id),
+            'Hotel profile loading'
+        );
 
     // TAB: OVERVIEW
     if (tabName === 'overview') {
@@ -9656,7 +9673,8 @@ window.showHotelTab = async function(tabName) {
             <div style="max-width:760px;margin:40px auto;background:#fff;border:1px solid #fecaca;border-radius:16px;padding:28px;box-shadow:0 8px 24px rgba(15,23,42,.06);">
                 <div style="font-size:30px;margin-bottom:8px;">🏨</div>
                 <h2 style="margin:0 0 8px;color:#1f2937;">Hotel Dashboard couldn't load</h2>
-                <p style="margin:0 0 18px;color:#64748b;line-height:1.6;">We couldn't securely load your hotel workspace. Your data has not been changed.</p>
+                <p style="margin:0 0 8px;color:#64748b;line-height:1.6;">We couldn't securely load your hotel workspace. Your data has not been changed.</p>
+                <p style="margin:0 0 18px;color:#94a3b8;font-size:12px;">${String(err?.message || 'Temporary loading error.').replace(/[<>]/g, '')}</p>
                 <button type="button" onclick="window.location.reload()" style="border:0;border-radius:9px;padding:10px 16px;background:#ff9f43;color:#fff;font-weight:800;cursor:pointer;">↻ Reload Dashboard</button>
             </div>`;
     }
