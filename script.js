@@ -5257,67 +5257,6 @@ window.executeLogout = async () => {
    ========================================= */
 
 // Agency ke Dashboard par Hotel Packages Render Karne Ka Logic
-async function renderAgencyHotelPackages() {
-    const container = document.getElementById('agency-hotel-pkg-list');
-    if (!container) return;
-
-    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px;"><h3>Loading Live Inventory Stock...</h3></div>`;
-
-    try {
-        const client = getClient();
-        // Supabase ki room_categories table se Live Stock packages fetch kar rahe hain
-        const { data, error } = await client
-            .from('room_categories')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-            container.innerHTML = `
-                <div style="grid-column: 1/-1; text-align:center; padding:50px; background:white; border-radius:12px;">
-                    <h3>🏨 No Hotel Packages Available</h3>
-                    <p style="color:#636e72;">Hotels dwara koi Live Inventory Stock abhi publish nahi kiya gaya hai.</p>
-                </div>`;
-            return;
-        }
-
-        container.innerHTML = data.map(item => {
-            const price = item.price || item.room_price || 0;
-            const availableRooms = item.available_rooms || item.total_rooms || 0;
-            const hotelName = item.hotel_name || item.property_name || 'Hotel Partner 🏨';
-            const location = item.city || item.location || item.address || 'N/A';
-            const roomType = item.category_name || item.room_type || item.title || 'Standard Room';
-
-            return `
-            <div class="card result-card" style="background:white; overflow:hidden; border:1px solid #eee; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05); display:flex; flex-direction:column; justify-content:space-between;">
-                <div style="padding:25px;">
-                    <div style="display:flex; justify-content:space-between; align-items:start;">
-                        <span style="background:#e8f5e9; color:#2e7d32; font-size:11px; padding:4px 10px; border-radius:12px; font-weight:bold;">LIVE STOCK</span>
-                        <span style="font-size:20px; font-weight:bold; color:#2ecc71;">₹${price}<small style="font-size:12px; color:#666;">/night</small></span>
-                    </div>
-                    
-                    <h3 style="margin:15px 0 5px 0; color:#2d3436;">${roomType}</h3>
-                    <p style="margin:0; color:#ff9f43; font-weight:bold; font-size:14px;">🏨 ${hotelName}</p>
-                    
-                    <div style="font-size:13px; color:#636e72; margin:15px 0;">
-                        <div>📍 <b>Location:</b> ${location}</div>
-                        <div style="margin-top:5px;">🛏️ <b>Available Rooms:</b> <span style="color:#d35400; font-weight:bold;">${availableRooms} Left</span></div>
-                        ${item.amenities ? `<div style="margin-top:5px;">✨ <b>Amenities:</b> ${Array.isArray(item.amenities) ? item.amenities.join(', ') : item.amenities}</div>` : ''}
-                    </div>
-                </div>
-
-                <div style="padding:15px 25px; background:#f9f9f9; border-top:1px solid #eee;">
-                    <button onclick="alert('Hotel Booking feature coming soon!')" style="background:#3498db; color:white; width:100%; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">BOOK ROOM STOCK</button>
-                </div>
-            </div>`;
-        }).join('');
-
-    } catch (err) {
-        console.error("Error loading hotel live inventory:", err);
-        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff7675; padding:40px;"><h3>Failed to load hotel packages: ${err.message}</h3></div>`;
-    }
-}
 /* =========================================================
    HOTEL PARTNER MODULE - PROPERTY & INVENTORY MANAGEMENT
    ========================================================= */
