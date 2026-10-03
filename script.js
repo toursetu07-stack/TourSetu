@@ -7797,9 +7797,9 @@ async function renderHotelDashboard(user) {
     window.mountDashboardUtilityMenu('hotel');
 
     app.innerHTML = `
-        <div style="display:flex; min-height:100vh; background:#f4f6f9; font-family:'Inter', sans-serif; margin:-20px;">
+        <div class="hotel-dashboard-shell" style="display:flex; min-height:100vh; background:#f4f6f9; font-family:'Inter', sans-serif; margin:-20px;">
             <!-- Hotel Sidebar Navigation -->
-            <div style="width:280px; background:linear-gradient(180deg,#17212b 0%,#1e272e 55%,#202b35 100%); color:white; padding:25px 20px; flex-shrink:0; display:flex; flex-direction:column; justify-content:space-between; box-shadow:8px 0 30px rgba(15,23,42,.10);">
+            <aside class="hotel-dashboard-sidebar" aria-label="Hotel partner navigation" style="width:280px; background:linear-gradient(180deg,#17212b 0%,#1e272e 55%,#202b35 100%); color:white; padding:25px 20px; flex-shrink:0; display:flex; flex-direction:column; justify-content:space-between; box-shadow:8px 0 30px rgba(15,23,42,.10);">
                 <div>
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:30px;">
                         <span style="font-size:28px;">🏔️</span>
@@ -7810,10 +7810,10 @@ async function renderHotelDashboard(user) {
                     </div>
                     
                     <nav style="display:flex; flex-direction:column; gap:8px;">
-                        <div onclick="window.showHotelTab('overview')" class="hotel-nav-btn" id="nav-overview" style="padding:14px; cursor:pointer; border-radius:10px; background:#2c3e50; font-weight:600; display:flex; align-items:center; gap:10px;">
+                        <button type="button" class="hotel-nav-btn" id="nav-overview" data-hotel-tab="overview" aria-current="page" style="padding:14px; cursor:pointer; border-radius:10px; background:#2c3e50; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>📊</span> Dashboard
                         </div>
-                        <div onclick="showHotelTab('inventory')" class="hotel-nav-btn" id="nav-inventory" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
+                        <button type="button" class="hotel-nav-btn" id="nav-inventory" data-hotel-tab="inventory" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>🏨</span> Room Inventory & Lock
                         </div>
                        <div
@@ -7832,10 +7832,10 @@ async function renderHotelDashboard(user) {
 >
     <span>📋</span> Booking Request
 </div>
-                        <div onclick="window.showHotelTab('bookings')" class="hotel-nav-btn" id="nav-bookings" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
+                        <button type="button" class="hotel-nav-btn" id="nav-bookings" data-hotel-tab="bookings" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>📋</span> Arrivals & Payouts
                         </div>
-                        <div onclick="showHotelTab('landslide')" class="hotel-nav-btn" id="nav-landslide" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; color:#ff7675; gap:10px;">
+                        <button type="button" class="hotel-nav-btn" id="nav-landslide" data-hotel-tab="landslide" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; color:#ff7675; gap:10px;">
                             <span>⚠️</span> Landslide / Weather Policy
                         </div>
                     </nav>
