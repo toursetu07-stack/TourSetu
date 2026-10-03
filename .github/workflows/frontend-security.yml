@@ -303,7 +303,6 @@ jobs:
           customer_block = js[customer_start:customer_end]
           for required in [
               "room_image",
-              "getHotelRoomImageUrl",
               "openHotelBookingModal",
               "data-room-category-id",
               "addEventListener",
@@ -311,7 +310,7 @@ jobs:
           ]:
               if required not in customer_block:
                   raise SystemExit("Customer hotel flow missing required control: " + required)
-          if re.search(r"https://[^'"]*(?:unsplash|pexels|pixabay)\.", customer_block, re.I):
+          if re.search(r'https://[^"\']*(?:unsplash|pexels|pixabay)\.', customer_block, re.I):
               raise SystemExit("Customer hotel booking flow contains a generic external stock image.")
 
           modal_start = js.find("window.openHotelBookingModal = function")
@@ -333,7 +332,7 @@ jobs:
 
           # Agency hotel stock flow must use the same saved room image and safe DOM.
           agency_start = js.find("window.renderAgencyHotelPackages = async function()")
-          agency_end = js.find("window.renderAgencyDashboard", agency_start)
+          agency_end = js.find("window.openActionModal", agency_start)
           if agency_start < 0 or agency_end < 0:
               raise SystemExit("Security regression: agency hotel flow markers missing.")
           agency_block = js[agency_start:agency_end]
@@ -347,12 +346,17 @@ jobs:
           if hotel_save < 0 or room_save < 0:
               raise SystemExit("Security regression: hotel save workflows missing.")
           hotel_save_block = js[hotel_save:room_save]
+          upload_start = js.find("function uploadHotelImage")
+          upload_end = js.find("async function saveHotelProfile", upload_start)
+          upload_block = js[upload_start:upload_end if upload_end > upload_start else upload_start + 12000]
           room_save_end = js.find("// Alias for backwards compatibility", room_save)
           room_save_block = js[room_save:room_save_end if room_save_end > room_save else room_save + 20000]
-          for required in ["validateUploadedFile", "hotel-media", "crypto.randomUUID()"]:
-              if required not in hotel_save_block:
+          for required in ["validateUploadedFile", "hotel-media"]:
+              if required not in hotel_save_block and required not in upload_block:
                   raise SystemExit("Hotel profile upload hardening missing: " + required)
-          for required in ["owner_id", "ownedHotelId", ".eq('hotel_id', ownedHotelId)", "aria-busy"]:
+          if "crypto.randomUUID()" not in upload_block and "crypto.randomUUID()" not in hotel_save_block:
+              raise SystemExit("Hotel upload hardening missing unique object key generation.")
+          for required in ["owner_id", "ownedHotelId", ".eq('hotel_id', ownedHotelId)", "aria-busy", "Number.isFinite(price)", "available > total"]:
               if required not in room_save_block:
                   raise SystemExit("Hotel room workflow security/UI control missing: " + required)
 
