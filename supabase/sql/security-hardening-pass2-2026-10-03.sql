@@ -168,3 +168,38 @@ where id in ('hotel-images','hotel-media');
 alter default privileges in schema public revoke all on tables from anon, authenticated;
 alter default privileges in schema public revoke all on functions from anon, authenticated;
 alter default privileges in schema public revoke all on sequences from anon, authenticated;
+
+
+-- Follow-up: move public referral visit authorization to RLS + a private lookup helper.
+create or replace function private.resolve_referral_code(p_code text)
+returns uuid language sql stable security definer set search_path=''
+as $$
+  select rc.user_id from public.referral_codes rc
+  where upper(rc.code)=upper(trim(p_code)) limit 1;
+$$;
+revoke all on function private.resolve_referral_code(text) from public;
+grant execute on function private.resolve_referral_code(text) to anon, authenticated;
+
+revoke all on table public.referral_visits from anon, authenticated;
+grant insert on table public.referral_visits to anon, authenticated;
+drop policy if exists "Public referral visit insert" on public.referral_visits;
+create policy "Public referral visit insert"
+on public.referral_visits for insert to anon, authenticated
+with check (
+  visitor_key is not null
+  and length(visitor_key) between 16 and 128
+  and referrer_user_id=(select private.resolve_referral_code(referral_code))
+);
+
+create or replace function public.record_referral_visit(p_code text,p_visitor_key text default null)
+returns void language plpgsql security invoker set search_path=''
+as $$
+begin
+  if p_code is null or length(trim(p_code)) not between 3 and 64 then return; end if;
+  if p_visitor_key is null or length(p_visitor_key) not between 16 and 128 then return; end if;
+  insert into public.referral_visits(referral_code,referrer_user_id,visitor_key)
+  values(upper(trim(p_code)),(select private.resolve_referral_code(p_code)),p_visitor_key);
+end;
+$$;
+revoke all on function public.record_referral_visit(text,text) from public,anon,authenticated;
+grant execute on function public.record_referral_visit(text,text) to anon,authenticated;
