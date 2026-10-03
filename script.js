@@ -1319,10 +1319,9 @@ async function renderCustomerHomepage(user, options = {}) {
     app.style.maxWidth = "100%";
     window.mountDashboardUtilityMenu('customer');
     
-    // Get all unique states from locationData
-    const stateOptions = Object.keys(locationData).sort().map(state => 
-        `<option value="${state}">${state}</option>`
-    ).join('');
+    // Customer search is intentionally limited to Uttarakhand.
+    // Keep locationData as the single source for its city list.
+    const stateOptions = '<option value="Uttarakhand" selected>Uttarakhand</option>';
 
     const destOptions = tourDestinations.map(d => 
         `<option value="${d}">${d}</option>`
@@ -1404,6 +1403,10 @@ async function renderCustomerHomepage(user, options = {}) {
            </div>
         </div>
     `;
+    // Populate the city list immediately for the fixed Uttarakhand state.
+    if (typeof window.updateCityDropdown === 'function') {
+        window.updateCityDropdown();
+    }
     loadAllPackages();
 }
 
