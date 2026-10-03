@@ -832,7 +832,7 @@ async function showDashboard(user) {
         const verification=await getAgencyVerification(user.id).catch(()=>null);
         window.currentAgencyVerificationStatus=verification?.status||'pending';
         if(typeof renderAgencyDashboard==="function")renderAgencyDashboard(user);
-        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, '+user.email+'</p><button onclick="handleLogout()">Logout</button></div>';
+        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button onclick="handleLogout()">Logout</button></div>';
         return;
     }
     if(role==='hotel'){
@@ -840,10 +840,10 @@ async function showDashboard(user) {
         window.currentHotelVerificationStatus=hotelVerification?.status||'pending';
         if(typeof initHotelDashboard==="function")await initHotelDashboard(user);
         else if(typeof renderHotelDashboard==="function")renderHotelDashboard(user);
-        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, '+user.email+'</p><button onclick="handleLogout()">Logout</button></div>';
+        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button onclick="handleLogout()">Logout</button></div>';
     }else{
         if(typeof renderCustomerHomepage==="function")renderCustomerHomepage(user);
-        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, '+user.email+'</p><button onclick="handleLogout()">Logout</button></div>';
+        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button onclick="handleLogout()">Logout</button></div>';
     }
 }
 
@@ -1038,7 +1038,7 @@ async function handleForgotPassword() {
         const redirectTo = window.location.origin + window.location.pathname;
         const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
         if (error) throw error;
-        if (status) status.innerHTML = '<div style="background:#eafaf1;padding:14px;border-radius:10px;border:1px solid #b7ebc6;color:#1e7e34;text-align:left;"><strong>📩 Password reset email sent</strong><br>Please check <b>'+email+'</b> and open the reset link.</div>';
+        if (status) status.innerHTML = '<div style="background:#eafaf1;padding:14px;border-radius:10px;border:1px solid #b7ebc6;color:#1e7e34;text-align:left;"><strong>📩 Password reset email sent</strong><br>Please check <b>'+window.TourSetuDOM.escapeHTML(email)+'</b> and open the reset link.</div>';
     } catch (err) {
         console.error('Password reset request error:', err);
         if (status) status.innerText = '❌ ' + (err?.message || 'Could not send password reset email.');
@@ -1270,7 +1270,7 @@ async function handleAuth(){
             if(error){
                 const msg=String(error.message||'');
                 if(/email not confirmed/i.test(msg)||/email.*confirm/i.test(msg)){
-                    if(status)status.innerHTML='<div style="background:#fff4e6;padding:14px;border-radius:10px;border:1px solid #ffd8a8;color:#b45309;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Please confirm <b>'+email+'</b> using the link sent by TourSetu, then login again.<br><button type="button" onclick="resendConfirmationFromLogin()" style="margin-top:10px;background:#ff9f43;color:white;border:0;border-radius:7px;padding:9px 12px;font-weight:700;cursor:pointer;">Resend Confirmation Email</button></div>';
+                    if(status)status.innerHTML='<div style="background:#fff4e6;padding:14px;border-radius:10px;border:1px solid #ffd8a8;color:#b45309;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Please confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b> using the link sent by TourSetu, then login again.<br><button type="button" onclick="resendConfirmationFromLogin()" style="margin-top:10px;background:#ff9f43;color:white;border:0;border-radius:7px;padding:9px 12px;font-weight:700;cursor:pointer;">Resend Confirmation Email</button></div>';
                     return;
                 }
                 throw error;
@@ -1284,12 +1284,12 @@ async function handleAuth(){
         const redirectUrl=window.location.origin+window.location.pathname;
         const {data,error}=await client.auth.signUp({email,password,options:{data:metadata,emailRedirectTo:redirectUrl}});if(error)throw error;if(!data?.user)throw new Error('Account could not be created.');
         if(role==='agency'){
-            if(!data.session){if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Supabase has email confirmation enabled, so documents can only be uploaded after the account is signed in. Please confirm <b>'+email+'</b>, then login once to complete the KYC upload.<br><br><small>The agency request is already created in Supabase with <b>pending</b> status.</small></div>';return;}
+            if(!data.session){if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Supabase has email confirmation enabled, so documents can only be uploaded after the account is signed in. Please confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>, then login once to complete the KYC upload.<br><br><small>The agency request is already created in Supabase with <b>pending</b> status.</small></div>';return;}
             await submitAgencyKYC(data.user);if(status)status.innerText='✅ Registration submitted. Opening your Agency Dashboard...';await showDashboard(data.user);return;
         }
         if(role==='hotel'){
             if(!data.session){
-                if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Supabase email confirmation is enabled, so the Hotel Dashboard will open after you confirm <b>'+email+'</b> and login.<br><br><small>Your hotel verification request is already saved as <b>pending</b>. The documents are optional.</small></div>';
+                if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Supabase email confirmation is enabled, so the Hotel Dashboard will open after you confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b> and login.<br><br><small>Your hotel verification request is already saved as <b>pending</b>. The documents are optional.</small></div>';
                 return;
             }
             await submitHotelKYC(data.user);
@@ -1947,7 +1947,7 @@ window.submitHotelRoomBooking = async function(hotelName, roomType, location, pr
 
     } catch (err) {
         console.error("Database Insert Error:", err);
-        alert(`Booking failed: ${err.message}`);
+        alert(`Booking failed: ${window.TourSetuDOM.escapeHTML(err?.message || 'Temporary loading error.')}`);
     }
 };
 /* ============================================================
@@ -2585,7 +2585,7 @@ window.updateCityDropdown = () => {
         return;
     }
     const cities = locationData[state] || [];
-    citySelect.innerHTML = cities.sort().map(c => `<option value="${c}">${c}</option>`).join('');
+    citySelect.innerHTML = cities.sort().map(c => { const safe = window.TourSetuDOM.escapeAttribute(c); return `<option value="${safe}">${window.TourSetuDOM.escapeHTML(c)}</option>`; }).join('');
 };
 
 window.renderCustomerRequests = async () => {
@@ -3125,180 +3125,6 @@ window.cancelBookingWithPenalty = async function(id) {
     } catch (e) {
         alert("Error during cancellation: " + e.message);
     }
-};
-
-window.showPackageDetails = function(pEncoded) {
-    const p = JSON.parse(decodeURIComponent(pEncoded));
-    window.currentBookingPackage = p;
-    const modal = document.getElementById('detail-modal');
-    const body = document.getElementById('detail-view-body');
-    
-    const historyList = p.updates_history || [];
-    let historyHtml = '';
-    if (historyList.length > 0) {
-        const historyItems = historyList.map((h, i) => `
-            <div style="padding:8px 0; border-bottom:1px solid #eee; margin-bottom:5px;">
-                <div style="display:flex; justify-content:space-between;">
-                    <b>Update #${i+1}</b>
-                    <span style="font-size:10px; color:#999;">${new Date(h.updated_at).toLocaleDateString()}</span>
-                </div>
-                <div style="margin-top:4px;"><b>Title:</b> ${h.title}</div>
-            </div>`).reverse().join('');
-        
-        historyHtml = `<div style="margin-top:20px; border-top: 1px dashed #ddd; padding-top:15px;">
-            <details>
-                <summary style="cursor:pointer; color:#ff9f43; font-size:13px; font-weight:bold;">View Previous Package Updates (${historyList.length})</summary>
-                <div style="margin-top:10px; font-size:12px; color:#636e72; background:#f9f9f9; padding:10px; border-radius:8px;">${historyItems}</div>
-            </details>
-        </div>`;
-    }
-
-    const vehicleListHtml = (p.vehicles || []).map(v => `
-        <div style="padding:15px; border:1px solid #eee; border-radius:12px; background:white; margin-bottom:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <input type="checkbox" class="book-v-check" data-id="${v.id}" data-rate="${v.rate}" onchange="toggleQtyInput('${v.id}')" aria-label="Select ${v.name || 'vehicle'}" style="width:18px; height:18px; min-width:18px; min-height:18px; padding:0; margin:0; flex:0 0 18px; cursor:pointer; accent-color:#ff9f43;">
-                    <span><b>${v.name}</b> <br> <small style="color:#666;">Available Units: ${v.max_cars || 1}</small></span>
-                </div>
-                <span style="color:#2ecc71; font-weight:bold;">₹${v.rate}</span>
-            </div>
-            <div id="qty-container-${v.id}" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid #f0f0f0;">
-                <label style="font-size:12px; color:#636e72; display:block; margin-bottom:5px;">Quantity (Max: ${v.max_cars || 1})</label>
-                <input type="number" class="book-v-qty" data-id="${v.id}" value="1" min="1" max="${v.max_cars || 1}" oninput="updateLivePrice()" style="width:80px; padding:8px; border:2px solid #ff9f43; border-radius:5px;">
-            </div>
-        </div>`).join('');
-
-    const routeInfo = `${p.starting_location} ➔ ${Array.isArray(p.destination) ? p.destination.join(' ➔ ') : p.destination}`;
-    const escapedTitle = p.title.replace(/'/g, "\\'");
-
-    const destString = Array.isArray(p.destination) ? p.destination.join(' ').toLowerCase() : String(p.destination || '').toLowerCase();
-    
-    const isKedarnath = destString.includes("kedarnath") || destString.includes("char dham") || destString.includes("chardham");
-    const isVaishnoDevi = destString.includes("vaishno") || destString.includes("katra");
-
-    let kedaHtmlBlock = '';
-    if (isKedarnath) {
-        const kedarnathServices = [
-            { id: 'ghoda', label: '🐴 Khachhar / Ghoda (Horse)', cost: parseFloat(p.ghoda_price) || 0, max: parseInt(p.ghoda_max) || 1 },
-            { id: 'dandi', label: '🪑 Dandi (Palanquin)', cost: parseFloat(p.dandi_price) || 0, max: parseInt(p.dandi_max) || 1 },
-            { id: 'kandi', label: '🧺 Kandi (Wicker Cradle)', cost: parseFloat(p.kandi_price) || 0, max: parseInt(p.kandi_max) || 1 },
-            { id: 'pitthu', label: '🎒 Pitthu (Porter Service)', cost: parseFloat(p.pitthu_price) || 0, max: parseInt(p.pitthu_max) || 1 }
-        ].filter(s => s.cost > 0);
-
-        if (kedarnathServices.length > 0) {
-            kedaHtmlBlock = `<h4 style="margin-top:20px; color:#e67e22;">Mountain Trek Services (Only for Kedarnath)</h4>`;
-            kedaHtmlBlock += kedarnathServices.map(s => `
-                <div style="padding:12px; border:1px solid #ffeaa7; background:#fffdf0; border-radius:10px; margin-bottom:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.cost}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
-                            <b>${s.label}</b>
-                        </div>
-                        <span style="color:#e67e22; font-weight:bold;">₹${s.cost} / person</span>
-                    </div>
-                    <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max Allowed: ${s.max}):</label>
-                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
-                    </div>
-                </div>
-              `).join('');
-        }
-    }
-
-    let vaishnoHtmlBlock = '';
-    if (isVaishnoDevi) {
-        const vaishnoServices = [
-            { id: 'vaishno_ghoda', label: '🐴 Horse (Ghoda) - Vaishno Devi', cost: parseFloat(p.vaishno_ghoda_price) || 0, max: parseInt(p.vaishno_ghoda_max) || 1 },
-            { id: 'vaishno_palki', label: '🪑 Palanquin (Palki) - Vaishno Devi', cost: parseFloat(p.vaishno_palki_price) || 0, max: parseInt(p.vaishno_palki_max) || 1 },
-            { id: 'vaishno_pitthu', label: '🎒 Porters (Pitthu) - Vaishno Devi', cost: parseFloat(p.vaishno_pitthu_price) || 0, max: parseInt(p.vaishno_pitthu_max) || 1 }
-        ].filter(s => s.cost > 0);
-
-        if (vaishnoServices.length > 0) {
-            vaishnoHtmlBlock = `<h4 style="margin-top:20px; color:#2980b9;">Mountain Trek Services (Only for Vaishno Devi)</h4>`;
-            vaishnoHtmlBlock += vaishnoServices.map(s => `
-                <div style="padding:12px; border:1px solid #b2bec3; background:#f5f6fa; border-radius:10px; margin-bottom:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <input type="checkbox" class="book-trek-check" id="check-${s.id}" data-id="${s.id}" data-rate="${s.cost}" onchange="document.getElementById('trek-qty-box-${s.id}').style.display = this.checked ? 'block' : 'none'; updateLivePrice();">
-                            <b>${s.label}</b>
-                        </div>
-                        <span style="color:#2980b9; font-weight:bold;">₹${s.cost} / person</span>
-                    </div>
-                    <div id="trek-qty-box-${s.id}" style="display:none; margin-top:10px;">
-                        <label style="font-size:11px; font-weight:bold;">Number of Persons / Quantity (Max Allowed: ${s.max}):</label>
-                        <input type="number" class="book-trek-qty" id="qty-${s.id}" data-id="${s.id}" value="1" min="1" max="${s.max}" oninput="updateLivePrice()" style="width:70px; padding:5px; border:1px solid #ccc; border-radius:5px; margin-left:5px;">
-                    </div>
-                </div>
-              `).join('');
-        }
-    }
-
-    const trekServicesHtml = kedaHtmlBlock + vaishnoHtmlBlock;
-
-    body.innerHTML = `
-        <div style="text-align:left;">
-            <div style="display:flex; justify-content:space-between; align-items:start;">
-                <h2 style="margin:0; color:#2d3436;">${p.title}</h2>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="background:none; border:none; font-size:28px; color:#999; cursor:pointer; line-height:1;">✕</button>
-            </div>
-            <p style="color:#ff9f43; font-weight:bold; font-size:1.1rem; margin:10px 0;">Routes: ${routeInfo}</p>
-            ${Number(p.pickup_km_rate) > 0 ? `
-                <div style="margin:10px 0 20px; padding:12px 15px; background:#fff8f0; border:1px solid #ffeaa7; border-radius:10px;">
-                    <b style="color:#e67e22;">🚗 Customer Pickup Distance Charge: ₹${Number(p.pickup_km_rate).toLocaleString('en-IN')} / km</b>
-                    <div style="font-size:12px; color:#666; margin-top:5px; line-height:1.5;">
-                        We will calculate the road distance from the package starting location to your pickup location and add the applicable distance charge to your package total.
-                    </div>
-                </div>
-            ` : ''}
-            
-            <div style="margin:20px 0; padding:15px; background:#f9f9f9; border-radius:12px; font-size:14px;">
-                <h4 style="margin-top:0;">Itinerary / Description</h4>
-                <p style="white-space: pre-line; color:#636e72; line-height:1.6;">${p.description || 'No description provided.'}</p>
-            </div>
-            
-            <div style="background:#fff4e6; padding:20px; border-radius:15px; border:1px solid #ffd8a8; margin-bottom:20px;">
-                <h4 style="margin-top:0; color:#e67e22;">📅 SELECT TRAVEL DATE</h4>
-                <input type="date" id="cust-travel-date" 
-                       min="${new Date().toISOString().split('T')[0]}" 
-                       style="width:100%; padding:15px; border:2px solid #ff9f43; border-radius:10px; font-weight:bold; color:#2d3436; font-family:inherit; font-size:16px; background:white; display:block; appearance: none; -webkit-appearance: none;">
-                <small style="color:#636e72; display:block; margin-top:5px;">Click the icon or the field to open the calendar</small>
-            </div>
-
-            <h4>Select Vehicles to Book</h4>
-            <div style="display:grid; gap:5px;">${vehicleListHtml}</div>
-
-            <div id="trek-addons-placeholder">
-                ${trekServicesHtml}
-            </div>
-
-            <div style="margin-top:25px; background:#2d3436; color:white; padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold;">ESTIMATED PACKAGE TOTAL:</span>
-                <span id="live-total-display" style="font-size:22px; font-weight:bold; color:#ff9f43;">₹0</span>
-            </div>
-
-            <div style="margin-top:25px; border-top: 2px solid #eee; padding-top:20px;">
-                <h4 style="margin-top:0; color:#2d3436;">Pickup & Contact Details</h4>
-                <div style="display:grid; gap:15px;">
-                    <div>
-                        <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">🏠 FULL PICKUP ADDRESS</label>
-                        <textarea id="cust-address" placeholder="e.g. Flat 101, Sunny Heights, Sector 15, Meerut..." style="width:100%; height:70px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box; font-family:inherit;"></textarea><small style="display:block; margin-top:6px; color:#777; font-size:11px;">Pickup distance charge is calculated after you enter your address and send the booking request.</small>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:#636e72; font-weight:bold; display:block; margin-bottom:5px;">📞 MOBILE NUMBER</label>
-                        <input type="text" id="cust-phone" placeholder="Enter 10-digit number" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                    </div>
-                </div>
-            </div>
-
-            ${historyHtml}
-
-            <div style="margin-top:30px; display:flex; gap:10px;">
-                <button onclick="handleBookingInquiry('${p.id}', '${escapedTitle}', '${p.agency_id}', '${p.agency_email}')" style="flex:2; background:#ff9f43; color:white; padding:15px; font-weight:bold; cursor:pointer; border-radius:10px; border:none; transition:0.3s; font-size:16px;">SEND BOOKING REQUEST</button>
-                <button onclick="document.getElementById('detail-modal').style.display='none'" style="flex:1; background:#eee; padding:15px; border-radius:10px; cursor:pointer; border:none; font-weight:bold; color:#666;">BACK</button>
-            </div>
-        </div>
-    `;
-    modal.style.display = 'flex';
 };
 
 window.updateLivePrice = function() {
@@ -6242,7 +6068,7 @@ async function loadHotelRequests(hotelId) {
                     <p style="margin:5px 0; font-size:13px;">Dates: ${req.requested_dates || 'Not Specified'}</p>
                 </div>
                 <div style="text-align:right;">
-                    <span style="background:${statusBadge}; color:white; font-size:10px; padding:3px 8px; border-radius:4px; font-weight:bold;">${req.status.toUpperCase()}</span>
+                    <span style="background:${statusBadge}; color:white; font-size:10px; padding:3px 8px; border-radius:4px; font-weight:bold;">${e(String(req.status || '').toUpperCase())}</span>
                 </div>
             </div>
 
@@ -6426,7 +6252,7 @@ async function renderHotelDashboard(user) {
             banner.style.background = '#fff0f0';
             banner.style.border = '1px solid #f5b7b1';
             banner.style.color = '#c0392b';
-            banner.innerHTML = '❌ Hotel verification denied.' + (hotelVerification?.denial_reason ? ' Reason: ' + hotelVerification.denial_reason : '');
+            banner.innerHTML = '❌ Hotel verification denied.' + (hotelVerification?.denial_reason ? ' Reason: ' + window.TourSetuDOM.escapeHTML(hotelVerification.denial_reason) : '');
         } else {
             banner.style.background = '#fff8e8';
             banner.style.border = '1px solid #ffd59a';
@@ -6655,30 +6481,30 @@ if (!hotel) {
                             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                                 <div>
                                     <span style="background:${isAgency ? '#ebf5fb' : '#e8f8f5'}; color:${isAgency ? '#2980b9' : '#27ae60'}; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; letter-spacing:0.5px;">
-                                        ${req.requester_type.toUpperCase()} REQUEST
+                                        ${e(String(req.requester_type || 'request').toUpperCase())} REQUEST
                                     </span>
-                                    <h3 style="margin:10px 0 0 0; color:#2c3e50;">${req.rooms?.room_type || 'Room Package Request'}</h3>
+                                    <h3 style="margin:10px 0 0 0; color:#2c3e50;">${e(req.rooms?.room_type || 'Room Package Request')}</h3>
                                 </div>
                                 <div style="text-align:right;">
-                                    <h3 style="margin:0; color:#2ecc71;">₹${req.total_amount}</h3>
+                                    <h3 style="margin:0; color:#2ecc71;">₹${e(req.total_amount)}</h3>
                                     <span style="display:inline-block; margin-top:4px; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; background:#eee; color:#555;">
-                                        ${req.status.toUpperCase()}
+                                        ${e(String(req.status || '').toUpperCase())}
                                     </span>
                                 </div>
                             </div>
                             <div style="margin:15px 0; font-size:13px; color:#555; display:flex; gap:20px;">
-                                <span>📅 Check-in: <b>${req.check_in}</b> to <b>${req.check_out}</b></span>
-                                <span>🚪 Quantity: <b>${req.quantity} Room(s)</b></span>
+                                <span>📅 Check-in: <b>${e(req.check_in)}</b> to <b>${e(req.check_out)}</b></span>
+                                <span>🚪 Quantity: <b>${e(req.quantity)} Room(s)</b></span>
                             </div>
                             ${req.status === 'pending' ? `
                                 <div style="display:flex; gap:10px; margin-top:15px;">
-                                    <button onclick="handleHotelRequestAction('${req.request_id}', 'approve')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Accept Request</button>
-                                    <button onclick="handleHotelRequestAction('${req.request_id}', 'deny')" style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Deny Request</button>
+                                    <button onclick="handleHotelRequestAction('${a(req.request_id)}', 'approve')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Accept Request</button>
+                                    <button onclick="handleHotelRequestAction('${a(req.request_id)}', 'deny')" style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Deny Request</button>
                                 </div>
                             ` : ''}
                             ${req.status === 'approved' ? `
                                 <div style="background:#f0fff4; padding:10px; border-radius:6px; font-size:12px; color:#27ae60; margin-top:10px;">
-                                    <strong>Shared Payment Instructions:</strong> ${req.payment_details || 'N/A'}
+                                    <strong>Shared Payment Instructions:</strong> ${e(req.payment_details || 'N/A')}
                                 </div>
                             ` : ''}
                         </div>`;
@@ -6767,19 +6593,19 @@ if (!hotel) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${rows.map(booking => `
+                        ${rows.map(booking => { const e = window.TourSetuDOM.escapeHTML; return `
                             <tr style="border-top:1px solid #f1f5f9;">
                                 <td style="padding:14px;">
-                                    <div style="font-weight:800;color:#1e293b;">${booking.customer_email || 'Customer'}</div>
-                                    <div style="font-size:11px;color:#64748b;">${booking.customer_phone || ''}</div>
+                                    <div style="font-weight:800;color:#1e293b;">${e(booking.customer_email || 'Customer')}</div>
+                                    <div style="font-size:11px;color:#64748b;">${e(booking.customer_phone || '')}</div>
                                 </td>
                                 <td style="padding:14px;color:#334155;">
-                                    <div style="font-weight:800;">${booking.room_type || 'Room'}</div>
-                                    <div style="font-size:11px;color:#64748b;">${booking.hotel_name || hotel.hotel_name}</div>
+                                    <div style="font-weight:800;">${e(booking.room_type || 'Room')}</div>
+                                    <div style="font-size:11px;color:#64748b;">${e(booking.hotel_name || hotel.hotel_name)}</div>
                                 </td>
-                                <td style="padding:14px;color:#1d4ed8;font-weight:800;">${booking.check_in_date || '—'}</td>
-                                <td style="padding:14px;color:#475569;">${booking.check_out_date || '—'}</td>
-                                <td style="padding:14px;text-align:center;font-weight:800;">${booking.rooms_booked || 0}</td>
+                                <td style="padding:14px;color:#1d4ed8;font-weight:800;">${e(booking.check_in_date || '—')}</td>
+                                <td style="padding:14px;color:#475569;">${e(booking.check_out_date || '—')}</td>
+                                <td style="padding:14px;text-align:center;font-weight:800;">${e(booking.rooms_booked || 0)}</td>
                                 <td style="padding:14px;text-align:right;font-weight:900;color:#15803d;">₹${Number(booking.total_amount || 0).toLocaleString('en-IN')}</td>
                                 <td style="padding:14px;text-align:center;"><span style="background:#dcfce7;color:#166534;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;">PAID</span></td>
                             </tr>
@@ -7703,6 +7529,8 @@ window.renderAgencyBookings = function(bookings) {
     }
 
     const html = bookings.map(b => {
+        const e = window.TourSetuDOM.escapeHTML;
+        const a = window.TourSetuDOM.escapeAttribute;
         const isCancelled = b.status === 'cancelled';
         const isApprovedOrConfirmed = b.status === 'confirmed' || b.status === 'approved';
         const statusColor = isCancelled ? '#e74c3c' : (isApprovedOrConfirmed ? '#2ecc71' : '#f39c12');
@@ -7750,8 +7578,8 @@ window.renderAgencyBookings = function(bookings) {
         <div class="card" style="border-left: 6px solid ${statusColor}; margin-bottom:15px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05); opacity: ${isCancelled ? '0.75' : '1'}">
             <div style="display:flex; justify-content:space-between; align-items:start;">
                 <div>
-                    <h4 style="margin:0 0 5px 0; color:#333;">${b.package_title || 'Package Booking'}</h4>
-                    <p style="font-size:11px; color:#888; margin:0;">Request ID: ${b.id}</p>
+                    <h4 style="margin:0 0 5px 0; color:#333;">${e(b.package_title || 'Package Booking')}</h4>
+                    <p style="font-size:11px; color:#888; margin:0;">Request ID: ${e(b.id)}</p>
                 </div>
                 ${policyTag}
             </div>
@@ -7767,11 +7595,11 @@ window.renderAgencyBookings = function(bookings) {
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; color:#444;">
-                <div>👤 <b>Customer:</b> ${b.customer_email}</div>
-                <div>📞 <b>Contact:</b> ${b.customer_phone}</div>
-                <div>🚗 <b>Vehicle:</b> ${b.selected_vehicle || b.selected_vehicles || 'None'}</div>
-                <div>💰 <b>Total:</b> ₹${b.total_price}</div>
-                <div style="grid-column: span 2;">📍 <b>Pickup Address:</b> ${b.customer_address || 'N/A'}</div>
+                <div>👤 <b>Customer:</b> ${e(b.customer_email)}</div>
+                <div>📞 <b>Contact:</b> ${e(b.customer_phone)}</div>
+                <div>🚗 <b>Vehicle:</b> ${e(b.selected_vehicle || b.selected_vehicles || 'None')}</div>
+                <div>💰 <b>Total:</b> ₹${e(b.total_price)}</div>
+                <div style="grid-column: span 2;">📍 <b>Pickup Address:</b> ${e(b.customer_address || 'N/A')}</div>
                 ${trekkingDetailsHtml}
             </div>
 
@@ -7785,8 +7613,8 @@ window.renderAgencyBookings = function(bookings) {
                 </div>
             ` : `
                 <div style="margin-top:15px; display:flex; gap:10px;">
-                    <button onclick="window.updateBookingStatus('${b.id}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
-                    <button onclick="window.updateBookingStatus('${b.id}', 'rejected')" style="background:#f4f4f4; color:#666; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Decline</button>
+                    <button onclick="window.updateBookingStatus('${a(b.id)}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
+                    <button onclick="window.updateBookingStatus('${a(b.id)}', 'rejected')" style="background:#f4f4f4; color:#666; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Decline</button>
                 </div>
             `)}
         </div>`;
@@ -7818,7 +7646,7 @@ window.loadAgencyDashboard = async function() {
         }
     } catch (err) {
         console.error("Fetch Error:", err);
-        if (container) container.innerHTML = `<div style="color:red; padding:20px;">Load Error: ${err.message}</div>`;
+        if (container) container.innerHTML = `<div style="color:red; padding:20px;">Load Error: ${window.TourSetuDOM.escapeHTML(err?.message || 'Temporary loading error.')}</div>`;
     }
 };
 /* =========================================================================
@@ -8375,7 +8203,7 @@ async function startCameraScanner() {
             (errorMessage) => { /* scanning ... */ }
         );
     } catch(err) {
-        box.innerHTML = `<div style="padding:20px; text-align:center; color:#e74c3c;">Camera Access Denied or Unavailable: ${err.message}</div>`;
+        box.innerHTML = `<div style="padding:20px; text-align:center; color:#e74c3c;">Camera Access Denied or Unavailable: ${window.TourSetuDOM.escapeHTML(err?.message || 'Camera unavailable.')}</div>`;
     }
 }
 
@@ -8436,7 +8264,7 @@ async function executeCheckInVerification(bookingId, checkinOtp) {
                 <div style="text-align:center;">
                     <div style="font-size:50px; color:#f39c12;">⚠️</div>
                     <h2 style="color:#f39c12; margin-top:10px;">Already Checked-In</h2>
-                    <p style="color:#636e72;">Guest <b>${booking.customer_email || 'Traveler'}</b> checked in on ${new Date(booking.updated_at).toLocaleString()}.</p>
+                    <p style="color:#636e72;">Guest <b>${window.TourSetuDOM.escapeHTML(booking.customer_email || 'Traveler')}</b> checked in on ${new Date(booking.updated_at).toLocaleString()}.</p>
                     <button onclick="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close</button>
                 </div>
             `;
@@ -8448,7 +8276,7 @@ async function executeCheckInVerification(bookingId, checkinOtp) {
                 <div style="text-align:center;">
                     <div style="font-size:50px; color:#e74c3c;">⛔</div>
                     <h2 style="color:#e74c3c; margin-top:10px;">Unpaid / Held Booking</h2>
-                    <p style="color:#636e72;">Booking Status is <b>${booking.status.toUpperCase()}</b>. Check-in cannot be verified until booking status is PAID.</p>
+                    <p style="color:#636e72;">Booking Status is <b>${window.TourSetuDOM.escapeHTML(String(booking.status || '').toUpperCase())}</b>. Check-in cannot be verified until booking status is PAID.</p>
                     <button onclick="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close</button>
                 </div>
             `;
@@ -8474,11 +8302,11 @@ async function executeCheckInVerification(bookingId, checkinOtp) {
             <div style="text-align:center;">
                 <div style="font-size:60px; color:#2ecc71;">✅</div>
                 <h2 style="color:#2ecc71; margin:10px 0 5px 0;">Check-in Successful!</h2>
-                <p style="color:#2d3436; font-size:16px; margin-bottom:15px;">Welcome Guest: <b>${booking.customer_email}</b></p>
+                <p style="color:#2d3436; font-size:16px; margin-bottom:15px;">Welcome Guest: <b>${window.TourSetuDOM.escapeHTML(booking.customer_email)}</b></p>
 
                 <div style="background:#f8f9fa; padding:15px; border-radius:10px; text-align:left; font-size:13px; line-height:1.6; margin-bottom:20px;">
-                    <div>🆔 <b>Booking ID:</b> ${booking.booking_id}</div>
-                    <div>🛌 <b>Room Type:</b> ${booking.room_type || 'Standard Deluxe'}</div>
+                    <div>🆔 <b>Booking ID:</b> ${window.TourSetuDOM.escapeHTML(booking.booking_id)}</div>
+                    <div>🛌 <b>Room Type:</b> ${window.TourSetuDOM.escapeHTML(booking.room_type || 'Standard Deluxe')}</div>
                     <div>⏳ <b>Duration:</b> ${booking.duration_days || 1} Night(s)</div>
                     <div>💰 <b>Commission Payout:</b> <span style="color:#2ecc71; font-weight:bold;">₹${payoutAmount.toLocaleString('en-IN')} (Released)</span></div>
                 </div>
@@ -8490,7 +8318,7 @@ async function executeCheckInVerification(bookingId, checkinOtp) {
         `;
 
     } catch(err) {
-        modalBody.innerHTML = `<div style="color:red; text-align:center;">Error verifying check-in: ${err.message}</div>`;
+        modalBody.innerHTML = `<div style="color:red; text-align:center;">Error verifying check-in: ${window.TourSetuDOM.escapeHTML(err?.message || 'Verification failed.')}</div>`;
     }
 }
 
@@ -8700,8 +8528,8 @@ function handleNewPaidBookingNotification(booking) {
         statusBanner.innerHTML = `
             <div style="background:#e8f8f5; border:2px solid #2ecc71; padding:20px; border-radius:12px; color:#27ae60;">
                 <h3 style="margin:0 0 10px 0;">🔔 NEW PAID BOOKING RECEIVED!</h3>
-                <p style="margin:0;">Booking ID: <b>${booking.booking_id}</b> | Guest OTP: <b>${booking.checkin_otp}</b></p>
-                <button onclick="acknowledgeBookingAlert('${booking.booking_id}')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:12px;">
+                <p style="margin:0;">Booking ID: <b>${window.TourSetuDOM.escapeHTML(booking.booking_id)}</b> | Guest OTP: <b>${window.TourSetuDOM.escapeHTML(booking.checkin_otp)}</b></p>
+                <button onclick="acknowledgeBookingAlert('${window.TourSetuDOM.escapeHTML(booking.booking_id)}')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:12px;">
                     ACKNOWLEDGE RECEIPT (Stop Fallback SMS)
                 </button>
             </div>
@@ -8737,7 +8565,7 @@ async function triggerOfflineSmsWhatsAppAlert(booking) {
                 booking_id: booking.booking_id,
                 hotel_id: booking.hotel_id,
                 checkin_otp: booking.checkin_otp,
-                message: `[TourSetu Urgent Alert] New Paid Booking #${booking.booking_id}. Guest OTP is ${booking.checkin_otp}. Please prepare room.` 
+                message: `[TourSetu Urgent Alert] New Paid Booking #${window.TourSetuDOM.escapeHTML(booking.booking_id)}. Guest OTP is ${window.TourSetuDOM.escapeHTML(booking.checkin_otp)}. Please prepare room.` 
             }
         });
     } catch(err) {
@@ -8795,7 +8623,7 @@ async function populatePaidBookingsDropdown(hotelId) {
     const { data } = await client.from('bookings').select('*').eq('hotel_id', hotelId).eq('status', 'paid');
     if (data && data.length > 0) {
         select.innerHTML = `<option value="">Select Booking...</option>` + data.map(b => `
-            <option value="${b.booking_id}">Booking ID: ${b.booking_id} - ₹${b.total_price} (${b.customer_email})</option>
+            <option value="${b.booking_id}">Booking ID: ${b.booking_id} - ₹${e(b.total_price)} (${e(b.customer_email)})</option>
         `).join('');
     } else {
         select.innerHTML = `<option value="">No Active Paid Bookings Eligible for Dispute</option>`;
@@ -9151,7 +8979,7 @@ async function renderArrivalsAndPayouts(container, user) {
                             color:#555;
                         ">
                             👤 <b>Customer:</b>
-                            ${b.customer_email}
+                            ${e(b.customer_email)}
                         </div>
                         `
                         : ''
@@ -9455,7 +9283,7 @@ async function renderArrivalsAndPayouts(container, user) {
 
                             <div style="margin-top:5px;">
                                 Payment instructions:
-                                <b>${req.payment_details || 'N/A'}</b>
+                                <b>${e(req.payment_details || 'N/A')}</b>
                             </div>
                         </div>
                         `
@@ -9576,7 +9404,7 @@ async function renderArrivalsAndPayouts(container, user) {
                 border-radius:10px;
             ">
                 ❌ Failed to load Arrivals & Payout:
-                ${err.message}
+                ${window.TourSetuDOM.escapeHTML(err?.message || 'Temporary loading error.')}
             </div>
         `;
     }
@@ -9763,7 +9591,7 @@ window.showHotelTab = async function(tabName) {
                 <div style="font-size:30px;margin-bottom:8px;">🏨</div>
                 <h2 style="margin:0 0 8px;color:#1f2937;">Hotel Dashboard couldn't load</h2>
                 <p style="margin:0 0 8px;color:#64748b;line-height:1.6;">We couldn't securely load your hotel workspace. Your data has not been changed.</p>
-                <p style="margin:0 0 18px;color:#94a3b8;font-size:12px;">${String(err?.message || 'Temporary loading error.').replace(/[<>]/g, '')}</p>
+                <p style="margin:0 0 18px;color:#94a3b8;font-size:12px;">${window.TourSetuDOM.escapeHTML(String(err?.message || 'Temporary loading error.'))}</p>
                 <button type="button" onclick="window.location.reload()" style="border:0;border-radius:9px;padding:10px 16px;background:#ff9f43;color:#fff;font-weight:800;cursor:pointer;">↻ Reload Dashboard</button>
             </div>`;
     }
@@ -9915,7 +9743,7 @@ async function loadHotelRooms(hotelId) {
         .eq('hotel_id', hotelId);
 
     if (error) {
-        listDiv.innerHTML = `<p style="color:red;">Error loading rooms: ${error.message}</p>`;
+        listDiv.innerHTML = `<p style="color:red;">Error loading rooms: ${window.TourSetuDOM.escapeHTML(error?.message || 'Unable to load rooms.')}</p>`;
         return;
     }
 
@@ -10463,7 +10291,7 @@ async function renderArrivalsAndPayouts(container, user) {
                                 color:#555;
                             ">
                                 👤 <b>Customer:</b>
-                                ${b.customer_email}
+                                ${e(b.customer_email)}
                             </div>
 
                             `
@@ -11252,7 +11080,7 @@ async function renderArrivalsAndPayouts(container, user) {
 
                 ❌ Failed to load Arrivals & Payout:
 
-                ${err.message}
+                ${window.TourSetuDOM.escapeHTML(err?.message || 'Temporary loading error.')}
 
             </div>
         `;
@@ -12194,7 +12022,7 @@ window.renderHotelBookingRequests =
                                                         margin-left:8px;
                                                     ">
 
-                                                        ${booking.customer_email}
+                                                        ${window.TourSetuDOM.escapeHTML(booking.customer_email)}
 
                                                     </span>
 
@@ -12456,7 +12284,7 @@ window.renderHotelBookingRequests =
                         margin-top:7px;
                     ">
 
-                        ${err.message}
+                        ${window.TourSetuDOM.escapeHTML(err?.message || 'Temporary loading error.')}
 
                     </div>
 
@@ -13482,7 +13310,7 @@ window.renderAgencyHotelBookingRequests = async function () {
                                 font-weight:bold;
                                 margin-top:4px;
                             ">
-                                🛏️ ${booking.rooms_booked || 0}
+                                🛏️ ${e(booking.rooms_booked || 0)}
                             </div>
                         </div>
 
