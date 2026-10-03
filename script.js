@@ -6611,7 +6611,7 @@ if (!hotel) {
                                 <td style="padding:14px;text-align:right;font-weight:900;color:#15803d;">₹${Number(booking.total_amount || 0).toLocaleString('en-IN')}</td>
                                 <td style="padding:14px;text-align:center;"><span style="background:#dcfce7;color:#166534;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;">PAID</span></td>
                             </tr>
-                        `).join('')}
+                        `; }).join('')}
                     </tbody>
                 </table>` : `
                     <div style="padding:48px 20px;text-align:center;color:#64748b;">
