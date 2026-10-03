@@ -1464,7 +1464,8 @@ window.loadCustomerHotelPackages = async function() {
                 *,
                 hotels (
                     city,
-                    address
+                    address,
+                    room_image
                 )
             `)
             .order('created_at', { ascending: false });
@@ -1584,7 +1585,7 @@ window.loadCustomerHotelPackages = async function() {
                     String(item.category_name || item.room_type || item.title || 'Standard Room'),
                     Number(item.price_per_night || item.price || 0),
                     Number(item.available_rooms || item.total_rooms || 0),
-                    String(item.image || item.image_url || item.room_image || ''),
+                    String(hotelObj.room_image || ''),
                     String(item.id || '')
                 );
             });
@@ -1595,27 +1596,12 @@ window.loadCustomerHotelPackages = async function() {
     }
 };
 
-// Safe fallback used when a hotel image is missing, invalid, or unavailable.
-// Kept on an allowlisted HTTPS origin already permitted by the site's image policy.
-const FALLBACK_ROOM_IMAGE =
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
-
-// Safe hotel image URL helper retained from the legacy renderer.
+// Only display the Room Interior Image saved by the hotel partner.
+// No generic/stock fallback is used.
 function getHotelRoomImageUrl(imagePath) {
-    if (!imagePath || String(imagePath).trim() === '' || imagePath === 'undefined' || imagePath === 'null') {
-        return FALLBACK_ROOM_IMAGE;
-    }
-    const value = String(imagePath).trim();
-    if (/^https?:\/\//i.test(value)) return value;
-    try {
-        const client = getClient();
-        const cleanPath = value.includes('/') ? value : `rooms/${value}`;
-        const { data } = client.storage.from('hotel-media').getPublicUrl(cleanPath);
-        const publicUrl = data?.publicUrl || '';
-        return /^https?:\/\//i.test(publicUrl) ? publicUrl : FALLBACK_ROOM_IMAGE;
-    } catch (e) {
-        return FALLBACK_ROOM_IMAGE;
-    }
+    const value = String(imagePath || '').trim();
+    if (!value || value === 'undefined' || value === 'null') return '';
+    return /^https:\/\//i.test(value) ? value : '';
 }
 
 function formatDateString(dateObj) {
@@ -1665,16 +1651,19 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
     closeBtn.textContent = '✕';
     closeBtn.addEventListener('click', () => overlay.remove());
 
-    const imageWrap = document.createElement('div');
-    imageWrap.className = 'modal-image-wrapper';
-    const image = document.createElement('img');
-    image.className = 'modal-room-img';
-    image.alt = String(roomType || 'Hotel room');
-    image.src = imageUrl;
-    image.addEventListener('error', () => {
-        if (image.src !== FALLBACK_ROOM_IMAGE) image.src = FALLBACK_ROOM_IMAGE;
-    });
-    imageWrap.appendChild(image);
+    let imageWrap = null;
+    if (imageUrl) {
+        imageWrap = document.createElement('div');
+        imageWrap.className = 'modal-image-wrapper';
+        const image = document.createElement('img');
+        image.className = 'modal-room-img';
+        image.alt = String(roomType || 'Hotel room');
+        image.src = imageUrl;
+        image.loading = 'lazy';
+        image.decoding = 'async';
+        image.referrerPolicy = 'no-referrer';
+        imageWrap.appendChild(image);
+    }
 
     const body = document.createElement('div');
     body.className = 'modal-content-body';
@@ -1782,7 +1771,8 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
     });
 
     body.append(title, locationEl, categoryBox, dateGrid, formGrid, totalBox, termsWrap, confirmBtn);
-    card.append(closeBtn, imageWrap, body);
+    if (imageWrap) card.append(closeBtn, imageWrap, body);
+    else card.append(closeBtn, body);
     overlay.appendChild(card);
     document.body.appendChild(overlay);
     window.calculateHotelTotalPrice(pricePerNight, maxAvailableRooms);
@@ -5082,7 +5072,7 @@ window.renderAgencyHotelPackages = async function() {
             const categoryName = String(
                 category?.room_type || category?.category_name || category?.name || 'Room Package'
             );
-            const imagePath = String(hotelInfo.image_url || category?.image || category?.image_url || '');
+            const imagePath = String(hotelInfo.room_image || '');
 
             window.__tourSetuAgencyHotelBookingItems.set(categoryId, {
                 hotelName,
