@@ -203,3 +203,64 @@ end;
 $$;
 revoke all on function public.record_referral_visit(text,text) from public,anon,authenticated;
 grant execute on function public.record_referral_visit(text,text) to anon,authenticated;
+
+
+-- Pin search_path on remaining intentional SECURITY DEFINER RPCs.
+create or replace function public.ensure_my_hotel_verification_request()
+returns public.hotel_verification_requests language plpgsql security definer set search_path=''
+as $$
+declare result_row public.hotel_verification_requests;
+begin
+  if auth.uid() is null then raise exception 'Authentication required'; end if;
+  insert into public.hotel_verification_requests(user_id,email,phone,status)
+  values(auth.uid(),auth.email(),nullif((select raw_user_meta_data->>'phone' from auth.users where id=auth.uid()),''),'pending')
+  on conflict (user_id) do nothing;
+  select * into result_row from public.hotel_verification_requests where user_id=auth.uid();
+  return result_row;
+end;
+$$;
+
+create or replace function public.get_or_create_referral_code()
+returns text language plpgsql security definer set search_path=''
+as $$
+declare uid uuid:=auth.uid(); existing_code text; new_code text;
+begin
+  if uid is null then raise exception 'Not authenticated'; end if;
+  select code into existing_code from public.referral_codes where user_id=uid;
+  if existing_code is not null then return existing_code; end if;
+  new_code:='TS-'||upper(substr(replace(uid::text,'-',''),1,10));
+  insert into public.referral_codes(user_id,code) values(uid,new_code)
+  on conflict(user_id) do update set code=excluded.code;
+  return new_code;
+end;
+$$;
+
+create or replace function public.get_referral_dashboard_stats()
+returns table(referral_visits bigint,login_events bigint,referred_users bigint,paid_conversions bigint,referred_payment_volume numeric,platform_commission_generated numeric,referral_earnings numeric)
+language sql security definer set search_path=''
+as $$
+  select
+    (select count(*) from public.referral_visits v where v.referrer_user_id=auth.uid()),
+    (select count(*) from public.referral_login_events le where le.referrer_user_id=auth.uid()),
+    (select count(*) from public.referrals r where r.referrer_user_id=auth.uid()),
+    (select count(rr.id) from public.referral_rewards rr where rr.referrer_user_id=auth.uid()),
+    coalesce((select sum(rr.payment_amount) from public.referral_rewards rr where rr.referrer_user_id=auth.uid()),0)::numeric(12,2),
+    coalesce((select sum(rr.platform_commission_amount) from public.referral_rewards rr where rr.referrer_user_id=auth.uid()),0)::numeric(12,2),
+    coalesce((select sum(rr.referral_reward_amount) from public.referral_rewards rr where rr.referrer_user_id=auth.uid()),0)::numeric(12,2);
+$$;
+
+create or replace function public.record_referral_login(p_code text)
+returns void language plpgsql security definer set search_path=''
+as $$
+declare rid uuid; uid uuid:=auth.uid();
+begin
+  if uid is null then return; end if;
+  select user_id into rid from public.referral_codes where upper(code)=upper(trim(p_code));
+  if rid is null or rid=uid then return; end if;
+  insert into public.referral_login_events(referrer_user_id,referred_user_id,referral_code)
+  values(rid,uid,trim(p_code));
+  insert into public.referrals as r(referral_code,referrer_user_id,referred_user_id,first_login_at)
+  values(trim(p_code),rid,uid,now())
+  on conflict(referred_user_id) do update set first_login_at=coalesce(r.first_login_at,excluded.first_login_at);
+end;
+$$;
