@@ -314,3 +314,79 @@ textarea:disabled {
     height: 150px;
   }
 }
+
+
+/* ============================================================
+   Agency package controls: compact, accessible, CSP-safe UI
+   ============================================================ */
+.agency-create-package-btn,
+.agency-package-edit-btn {
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 7px 16px !important;
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.agency-create-package-btn {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(46, 204, 113, .18);
+}
+
+.agency-package-edit-btn {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(255, 159, 67, .18);
+}
+
+/* Global input width rules must never stretch checkbox controls. */
+input[type="checkbox"].agency-dashboard-checkbox {
+  width: 18px !important;
+  min-width: 18px !important;
+  max-width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex: 0 0 18px !important;
+  accent-color: #ff9f43;
+  cursor: pointer;
+}
+
+.agency-vehicle-row {
+  min-width: 0;
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+
+.agency-vehicle-row:focus-within {
+  border-color: #ffb86b !important;
+  box-shadow: 0 0 0 3px rgba(255, 159, 67, .12);
+}
+
+.agency-vehicle-row b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+
+@media (max-width: 640px) {
+  .agency-create-package-btn,
+  .agency-package-edit-btn {
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .agency-vehicle-row {
+    gap: 8px !important;
+    padding: 9px !important;
+  }
+}
