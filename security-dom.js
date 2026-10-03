@@ -44,6 +44,14 @@
       return node.textContent.replace(/[&<>"']/g, ch => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
       })[ch]);
+    },
+
+    escapeHTML(value) {
+      const clean = requireSanitizer().sanitize(String(value ?? ''), {
+        ALLOWED_TAGS: [],
+        ALLOWED_ATTR: []
+      });
+      return clean;
     }
   });
 
