@@ -3967,10 +3967,17 @@ window.showPackageDetails = function(pEncoded) {
         tourSetuSetStyles(check, 'width:18px;height:18px;min-width:18px;min-height:18px;padding:0;margin:0;flex:0 0 18px;cursor:pointer;accent-color:#ff9f43;');
 
         const vehicleInfo = tourSetuCreateElement('div');
-        let vehicleName = String(vehicle.name || 'Vehicle');
-        const lowerName = vehicleName.toLowerCase();
-        if (lowerName.includes('tempo traveler')) vehicleName = 'Tempo Traveler (26 Seater)';
-        if (lowerName.includes('luxury bus')) vehicleName = 'Luxury Bus (55 Seaters)';
+        const vehicleDefinition = vehicleTypes.find(function(definition) {
+            return definition.id === String(vehicle.id || '');
+        });
+
+        // Prefer the canonical vehicle name from the application definition.
+        // This also fixes older packages that were saved before vehicle names
+        // were persisted, without trusting arbitrary database text for identity.
+        const vehicleName = vehicleDefinition
+            ? vehicleDefinition.name
+            : String(vehicle.name || 'Vehicle');
+
         const vehicleNameNode = tourSetuCreateElement('div', vehicleName);
         tourSetuSetStyles(vehicleNameNode, 'font-weight:700;color:#2d3436;font-size:15px;');
         const maxVehicles = Math.max(1, Number.parseInt(vehicle.max_cars, 10) || 1);
@@ -7485,10 +7492,20 @@ window.processSave = async function(packageId = '') {
             const rateInput = document.querySelector(`.v-rate[data-id="${vid}"]`);
             const maxInput = document.querySelector(`.v-max[data-id="${vid}"]`);
 
+            const vehicleDefinition = vehicleTypes.find(function(vehicle) {
+                return vehicle.id === vid;
+            });
+
+            if (!vehicleDefinition) return;
+
+            const rate = Math.max(0, Number.parseFloat(rateInput?.value) || 0);
+            const maxCars = Math.max(1, Number.parseInt(maxInput?.value, 10) || 1);
+
             vehicles.push({
-                id: vid,
-                rate: parseFloat(rateInput?.value) || 0,
-                max_cars: parseInt(maxInput?.value, 10) || 1
+                id: vehicleDefinition.id,
+                name: vehicleDefinition.name,
+                rate: rate,
+                max_cars: maxCars
             });
         });
 
