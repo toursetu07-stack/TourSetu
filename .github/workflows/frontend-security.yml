@@ -303,7 +303,7 @@ jobs:
           for required in [
               "room_image",
               "openHotelBookingModal",
-              "data-room-category-id",
+              "dataset.roomCategoryId",
               "addEventListener",
               "replaceChildren",
           ]:
