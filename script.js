@@ -9574,58 +9574,85 @@ async function saveOrUpdateRoomCategory(hotelId) {
   const totalInput = document.getElementById('r-total') || document.getElementById('totalRooms');
   const availableInput = document.getElementById('r-available') || document.getElementById('availableRooms');
 
-  const category = categoryInput ? categoryInput.value : '';
-  const price = priceInput ? priceInput.value : '';
-  const total = totalInput ? totalInput.value : 0;
-  const available = availableInput ? availableInput.value : 0;
+  const category = String(categoryInput?.value || '').trim().slice(0, 100);
+  const price = Number(priceInput?.value);
+  const total = Math.floor(Number(totalInput?.value || 0));
+  const available = Math.floor(Number(availableInput?.value || 0));
 
-  if (!category || !price) {
-    alert("Please enter room category and price!");
+  if (!category || !Number.isFinite(price) || price < 0 || !Number.isInteger(total) || total < 1 ||
+      !Number.isInteger(available) || available < 0 || available > total) {
+    alert("Please enter valid room category, price and inventory values.");
     return;
   }
 
-  // UPDATE MODE
-  if (currentEditingRoomId) {
-    const { error } = await client
-      .from('room_categories')
-      .update({
-        room_type: category,
-        price_per_night: price,
-        total_rooms: total,
-        available_rooms: available
-      })
-      .eq('id', currentEditingRoomId);
+  const { data: { user }, error: authError } = await client.auth.getUser();
+  if (authError || !user) {
+    alert("Your session has expired. Please sign in again.");
+    return;
+  }
 
-    if (error) {
-      alert("Update Failed: " + error.message);
-    } else {
+  // Defense-in-depth ownership check. Supabase RLS remains the final
+  // authorization boundary for every read/write.
+  const { data: ownedHotel, error: hotelError } = await client
+    .from('hotels')
+    .select('hotel_id,id')
+    .eq('owner_id', user.id)
+    .maybeSingle();
+
+  if (hotelError) {
+    console.error("Hotel ownership check failed:", hotelError.message);
+    alert("Unable to verify your hotel account right now.");
+    return;
+  }
+
+  const ownedHotelId = ownedHotel?.hotel_id || ownedHotel?.id;
+  if (!ownedHotelId || String(ownedHotelId) !== String(hotelId)) {
+    alert("Security check failed: this property does not belong to your hotel account.");
+    return;
+  }
+
+  const payload = {
+    room_type: category,
+    price_per_night: price,
+    total_rooms: total,
+    available_rooms: available
+  };
+
+  const saveButton = document.getElementById('btn-save-room') || document.getElementById('addRoomBtn');
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.setAttribute('aria-busy', 'true');
+  }
+
+  try {
+    if (currentEditingRoomId) {
+      const { error } = await client
+        .from('room_categories')
+        .update(payload)
+        .eq('id', currentEditingRoomId)
+        .eq('hotel_id', ownedHotelId);
+
+      if (error) throw error;
       alert("Room details updated successfully!");
-      resetRoomForm();
-      if (typeof loadHotelRooms === "function") loadHotelRooms(hotelId);
-      else if (typeof loadInventory === "function") loadInventory();
-    }
-  } 
-  // INSERT MODE
-  else {
-    const { error } = await client
-      .from('room_categories')
-      .insert([
-        {
-          hotel_id: hotelId,
-          room_type: category,
-          price_per_night: price,
-          total_rooms: total,
-          available_rooms: available
-        }
-      ]);
-
-    if (error) {
-      alert("Save Failed: " + error.message);
     } else {
+      const { error } = await client
+        .from('room_categories')
+        .insert([{ hotel_id: ownedHotelId, ...payload }]);
+
+      if (error) throw error;
       alert("Room added successfully!");
-      resetRoomForm();
-      if (typeof loadHotelRooms === "function") loadHotelRooms(hotelId);
-      else if (typeof loadInventory === "function") loadInventory();
+    }
+
+    resetRoomForm();
+    if (typeof loadHotelRooms === "function") loadHotelRooms(ownedHotelId);
+    else if (typeof loadInventory === "function") loadInventory();
+  } catch (error) {
+    console.error("Hotel room save error:", error);
+    alert("Unable to save room details. Please check the values and try again.");
+  } finally {
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.removeAttribute('aria-busy');
     }
   }
 }
