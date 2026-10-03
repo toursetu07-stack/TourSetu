@@ -16,8 +16,8 @@ const vehicleTypes = [
     { id: 'car4', name: '4 Seater Car', icon: '🚗' },
     { id: 'car6', name: '6 Seater SUV', icon: '🚙' },
     { id: 'car7', name: '7 Seater SUV', icon: '🚐' },
-    { id: 'tempo', name: 'Tempo Traveler', icon: '🚌' },
-    { id: 'bus', name: 'Luxury Bus', icon: '🚍' }
+    { id: 'tempo', name: 'Tempo Traveler (26 Seater)', icon: '🚌' },
+    { id: 'bus', name: 'Luxury Bus (55 Seaters)', icon: '🚍' }
 ];
 
 const locationData = {
@@ -3970,7 +3970,7 @@ window.showPackageDetails = function(pEncoded) {
         let vehicleName = String(vehicle.name || 'Vehicle');
         const lowerName = vehicleName.toLowerCase();
         if (lowerName.includes('tempo traveler')) vehicleName = 'Tempo Traveler (26 Seater)';
-        if (lowerName.includes('luxury bus')) vehicleName = 'Luxury Bus (60 Seater)';
+        if (lowerName.includes('luxury bus')) vehicleName = 'Luxury Bus (55 Seaters)';
         const vehicleNameNode = tourSetuCreateElement('div', vehicleName);
         tourSetuSetStyles(vehicleNameNode, 'font-weight:700;color:#2d3436;font-size:15px;');
         const maxVehicles = Math.max(1, Number.parseInt(vehicle.max_cars, 10) || 1);
