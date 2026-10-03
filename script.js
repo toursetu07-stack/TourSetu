@@ -7812,10 +7812,10 @@ async function renderHotelDashboard(user) {
                     <nav style="display:flex; flex-direction:column; gap:8px;">
                         <button type="button" class="hotel-nav-btn" id="nav-overview" data-hotel-tab="overview" aria-current="page" style="padding:14px; cursor:pointer; border-radius:10px; background:#2c3e50; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>📊</span> Dashboard
-                        </div>
+                        </button>
                         <button type="button" class="hotel-nav-btn" id="nav-inventory" data-hotel-tab="inventory" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>🏨</span> Room Inventory & Lock
-                        </div>
+                        </button>
                        <div
     onclick="openHotelBookingRequestSection()"
     class="hotel-nav-btn"
@@ -7834,10 +7834,10 @@ async function renderHotelDashboard(user) {
 </div>
                         <button type="button" class="hotel-nav-btn" id="nav-bookings" data-hotel-tab="bookings" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>📋</span> Arrivals & Payouts
-                        </div>
+                        </button>
                         <button type="button" class="hotel-nav-btn" id="nav-landslide" data-hotel-tab="landslide" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; color:#ff7675; gap:10px;">
                             <span>⚠️</span> Landslide / Weather Policy
-                        </div>
+                        </button>
                     </nav>
                 </div>
 
