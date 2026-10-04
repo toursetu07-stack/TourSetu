@@ -6108,7 +6108,7 @@ async function loadHotelRequests(hotelId) {
                     <p style="margin:5px 0; font-size:13px;">Dates: ${req.requested_dates || 'Not Specified'}</p>
                 </div>
                 <div style="text-align:right;">
-                    <span style="background:${statusBadge}; color:white; font-size:10px; padding:3px 8px; border-radius:4px; font-weight:bold;">${e(String(req.status || '').toUpperCase())}</span>
+                    <span style="background:${statusBadge}; color:white; font-size:10px; padding:3px 8px; border-radius:4px; font-weight:bold;">${window.TourSetuDOM.escapeHTML(String(req.status || '').toUpperCase())}</span>
                 </div>
             </div>
 
@@ -6523,20 +6523,20 @@ if (!hotel) {
                             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                                 <div>
                                     <span style="background:${isAgency ? '#ebf5fb' : '#e8f8f5'}; color:${isAgency ? '#2980b9' : '#27ae60'}; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; letter-spacing:0.5px;">
-                                        ${e(String(req.requester_type || 'request').toUpperCase())} REQUEST
+                                        ${window.TourSetuDOM.escapeHTML(String(req.requester_type || 'request').toUpperCase())} REQUEST
                                     </span>
-                                    <h3 style="margin:10px 0 0 0; color:#2c3e50;">${e(req.rooms?.room_type || 'Room Package Request')}</h3>
+                                    <h3 style="margin:10px 0 0 0; color:#2c3e50;">${window.TourSetuDOM.escapeHTML(req.rooms?.room_type || 'Room Package Request')}</h3>
                                 </div>
                                 <div style="text-align:right;">
-                                    <h3 style="margin:0; color:#2ecc71;">₹${e(req.total_amount)}</h3>
+                                    <h3 style="margin:0; color:#2ecc71;">₹${window.TourSetuDOM.escapeHTML(req.total_amount)}</h3>
                                     <span style="display:inline-block; margin-top:4px; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; background:#eee; color:#555;">
-                                        ${e(String(req.status || '').toUpperCase())}
+                                        ${window.TourSetuDOM.escapeHTML(String(req.status || '').toUpperCase())}
                                     </span>
                                 </div>
                             </div>
                             <div style="margin:15px 0; font-size:13px; color:#555; display:flex; gap:20px;">
-                                <span>📅 Check-in: <b>${e(req.check_in)}</b> to <b>${e(req.check_out)}</b></span>
-                                <span>🚪 Quantity: <b>${e(req.quantity)} Room(s)</b></span>
+                                <span>📅 Check-in: <b>${window.TourSetuDOM.escapeHTML(req.check_in)}</b> to <b>${window.TourSetuDOM.escapeHTML(req.check_out)}</b></span>
+                                <span>🚪 Quantity: <b>${window.TourSetuDOM.escapeHTML(req.quantity)} Room(s)</b></span>
                             </div>
                             ${req.status === 'pending' ? `
                                 <div style="display:flex; gap:10px; margin-top:15px;">
@@ -6546,7 +6546,7 @@ if (!hotel) {
                             ` : ''}
                             ${req.status === 'approved' ? `
                                 <div style="background:#f0fff4; padding:10px; border-radius:6px; font-size:12px; color:#27ae60; margin-top:10px;">
-                                    <strong>Shared Payment Instructions:</strong> ${e(req.payment_details || 'N/A')}
+                                    <strong>Shared Payment Instructions:</strong> ${window.TourSetuDOM.escapeHTML(req.payment_details || 'N/A')}
                                 </div>
                             ` : ''}
                         </div>`;
@@ -6638,16 +6638,16 @@ if (!hotel) {
                         ${rows.map(booking => { const e = window.TourSetuDOM.escapeHTML; return `
                             <tr style="border-top:1px solid #f1f5f9;">
                                 <td style="padding:14px;">
-                                    <div style="font-weight:800;color:#1e293b;">${e(booking.customer_email || 'Customer')}</div>
-                                    <div style="font-size:11px;color:#64748b;">${e(booking.customer_phone || '')}</div>
+                                    <div style="font-weight:800;color:#1e293b;">${window.TourSetuDOM.escapeHTML(booking.customer_email || 'Customer')}</div>
+                                    <div style="font-size:11px;color:#64748b;">${window.TourSetuDOM.escapeHTML(booking.customer_phone || '')}</div>
                                 </td>
                                 <td style="padding:14px;color:#334155;">
-                                    <div style="font-weight:800;">${e(booking.room_type || 'Room')}</div>
-                                    <div style="font-size:11px;color:#64748b;">${e(booking.hotel_name || hotel.hotel_name)}</div>
+                                    <div style="font-weight:800;">${window.TourSetuDOM.escapeHTML(booking.room_type || 'Room')}</div>
+                                    <div style="font-size:11px;color:#64748b;">${window.TourSetuDOM.escapeHTML(booking.hotel_name || hotel.hotel_name)}</div>
                                 </td>
-                                <td style="padding:14px;color:#1d4ed8;font-weight:800;">${e(booking.check_in_date || '—')}</td>
-                                <td style="padding:14px;color:#475569;">${e(booking.check_out_date || '—')}</td>
-                                <td style="padding:14px;text-align:center;font-weight:800;">${e(booking.rooms_booked || 0)}</td>
+                                <td style="padding:14px;color:#1d4ed8;font-weight:800;">${window.TourSetuDOM.escapeHTML(booking.check_in_date || '—')}</td>
+                                <td style="padding:14px;color:#475569;">${window.TourSetuDOM.escapeHTML(booking.check_out_date || '—')}</td>
+                                <td style="padding:14px;text-align:center;font-weight:800;">${window.TourSetuDOM.escapeHTML(booking.rooms_booked || 0)}</td>
                                 <td style="padding:14px;text-align:right;font-weight:900;color:#15803d;">₹${Number(booking.total_amount || 0).toLocaleString('en-IN')}</td>
                                 <td style="padding:14px;text-align:center;"><span style="background:#dcfce7;color:#166534;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900;">PAID</span></td>
                             </tr>
@@ -7620,8 +7620,8 @@ window.renderAgencyBookings = function(bookings) {
         <div class="card" style="border-left: 6px solid ${statusColor}; margin-bottom:15px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05); opacity: ${isCancelled ? '0.75' : '1'}">
             <div style="display:flex; justify-content:space-between; align-items:start;">
                 <div>
-                    <h4 style="margin:0 0 5px 0; color:#333;">${e(b.package_title || 'Package Booking')}</h4>
-                    <p style="font-size:11px; color:#888; margin:0;">Request ID: ${e(b.id)}</p>
+                    <h4 style="margin:0 0 5px 0; color:#333;">${window.TourSetuDOM.escapeHTML(b.package_title || 'Package Booking')}</h4>
+                    <p style="font-size:11px; color:#888; margin:0;">Request ID: ${window.TourSetuDOM.escapeHTML(b.id)}</p>
                 </div>
                 ${policyTag}
             </div>
@@ -7637,11 +7637,11 @@ window.renderAgencyBookings = function(bookings) {
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; color:#444;">
-                <div>👤 <b>Customer:</b> ${e(b.customer_email)}</div>
-                <div>📞 <b>Contact:</b> ${e(b.customer_phone)}</div>
-                <div>🚗 <b>Vehicle:</b> ${e(b.selected_vehicle || b.selected_vehicles || 'None')}</div>
-                <div>💰 <b>Total:</b> ₹${e(b.total_price)}</div>
-                <div style="grid-column: span 2;">📍 <b>Pickup Address:</b> ${e(b.customer_address || 'N/A')}</div>
+                <div>👤 <b>Customer:</b> ${window.TourSetuDOM.escapeHTML(b.customer_email)}</div>
+                <div>📞 <b>Contact:</b> ${window.TourSetuDOM.escapeHTML(b.customer_phone)}</div>
+                <div>🚗 <b>Vehicle:</b> ${window.TourSetuDOM.escapeHTML(b.selected_vehicle || b.selected_vehicles || 'None')}</div>
+                <div>💰 <b>Total:</b> ₹${window.TourSetuDOM.escapeHTML(b.total_price)}</div>
+                <div style="grid-column: span 2;">📍 <b>Pickup Address:</b> ${window.TourSetuDOM.escapeHTML(b.customer_address || 'N/A')}</div>
                 ${trekkingDetailsHtml}
             </div>
 
@@ -8665,7 +8665,7 @@ async function populatePaidBookingsDropdown(hotelId) {
     const { data } = await client.from('bookings').select('*').eq('hotel_id', hotelId).eq('status', 'paid');
     if (data && data.length > 0) {
         select.innerHTML = `<option value="">Select Booking...</option>` + data.map(b => `
-            <option value="${b.booking_id}">Booking ID: ${b.booking_id} - ₹${e(b.total_price)} (${e(b.customer_email)})</option>
+            <option value="${b.booking_id}">Booking ID: ${b.booking_id} - ₹${window.TourSetuDOM.escapeHTML(b.total_price)} (${window.TourSetuDOM.escapeHTML(b.customer_email)})</option>
         `).join('');
     } else {
         select.innerHTML = `<option value="">No Active Paid Bookings Eligible for Dispute</option>`;
@@ -9021,7 +9021,7 @@ async function renderArrivalsAndPayouts(container, user) {
                             color:#555;
                         ">
                             👤 <b>Customer:</b>
-                            ${e(b.customer_email)}
+                            ${window.TourSetuDOM.escapeHTML(b.customer_email)}
                         </div>
                         `
                         : ''
@@ -9325,7 +9325,7 @@ async function renderArrivalsAndPayouts(container, user) {
 
                             <div style="margin-top:5px;">
                                 Payment instructions:
-                                <b>${e(req.payment_details || 'N/A')}</b>
+                                <b>${window.TourSetuDOM.escapeHTML(req.payment_details || 'N/A')}</b>
                             </div>
                         </div>
                         `
@@ -10333,7 +10333,7 @@ async function renderArrivalsAndPayouts(container, user) {
                                 color:#555;
                             ">
                                 👤 <b>Customer:</b>
-                                ${e(b.customer_email)}
+                                ${window.TourSetuDOM.escapeHTML(b.customer_email)}
                             </div>
 
                             `
@@ -11144,6 +11144,149 @@ styleTag.innerHTML = `
 `;
 document.head.appendChild(styleTag); 
 initApp();
+
+/* =========================================================================
+   🏨 AGENCY — REGISTERED HOTEL REQUEST CANCELLATION
+   Customer-side cancellation for hotel_bookings created by an agency.
+   The database remains the source of truth; the update is scoped by
+   authenticated customer_id and records cancelled_by='customer'.
+   ========================================================================= */
+
+window.openAgencyHotelCancellationModal = function (bookingId) {
+    const safeBookingId = String(bookingId || '').trim();
+    if (!safeBookingId) return;
+
+    let modal = document.getElementById('agency-hotel-cancel-confirm-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'agency-hotel-cancel-confirm-modal';
+        modal.style.cssText = [
+            'position:fixed','inset:0','background:rgba(15,23,42,.72)',
+            'display:flex','align-items:center','justify-content:center',
+            'z-index:100001','padding:20px','box-sizing:border-box'
+        ].join(';');
+
+        const card = document.createElement('div');
+        card.style.cssText = [
+            'width:100%','max-width:480px','background:#fff',
+            'border-radius:18px','padding:26px','box-sizing:border-box',
+            'box-shadow:0 24px 70px rgba(0,0,0,.28)'
+        ].join(';');
+
+        const title = document.createElement('h2');
+        title.textContent = 'Cancel Hotel Booking Request?';
+        title.style.cssText = 'margin:0;color:#c0392b;font-size:21px;';
+
+        const message = document.createElement('p');
+        message.textContent = 'Are you sure you want to cancel this hotel booking request? The hotel owner will see that the customer/agency cancelled the request.';
+        message.style.cssText = 'margin:12px 0 0;color:#475569;line-height:1.6;font-size:14px;';
+
+        const note = document.createElement('div');
+        note.textContent = 'After confirmation, this request will be marked as CUSTOMER CANCELLED and cannot be accepted by the hotel.';
+        note.style.cssText = 'margin-top:15px;padding:12px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:12px;line-height:1.5;font-weight:700;';
+
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display:flex;gap:10px;margin-top:22px;';
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.type = 'button';
+        confirmBtn.id = 'agency-hotel-cancel-confirm-btn';
+        confirmBtn.textContent = 'CONFIRM';
+        confirmBtn.style.cssText = 'flex:1;background:#c0392b;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:900;cursor:pointer;min-height:44px;';
+
+        const denyBtn = document.createElement('button');
+        denyBtn.type = 'button';
+        denyBtn.textContent = 'DENY / KEEP REQUEST';
+        denyBtn.style.cssText = 'flex:1;background:#eef2f7;color:#334155;border:none;padding:12px;border-radius:10px;font-weight:800;cursor:pointer;min-height:44px;';
+
+        denyBtn.addEventListener('click', () => modal.remove());
+        confirmBtn.addEventListener('click', () => window.confirmAgencyHotelCancellation(safeBookingId, confirmBtn));
+
+        actions.append(confirmBtn, denyBtn);
+        card.append(title, message, note, actions);
+        modal.appendChild(card);
+        document.body.appendChild(modal);
+    }
+
+    modal.dataset.bookingId = safeBookingId;
+    modal.style.display = 'flex';
+    window.setTimeout(() => document.getElementById('agency-hotel-cancel-confirm-btn')?.focus(), 0);
+};
+
+window.confirmAgencyHotelCancellation = async function (bookingId, triggerButton) {
+    const client = getClient();
+    const safeBookingId = String(bookingId || '').trim();
+    if (!client || !safeBookingId) return;
+
+    const button = triggerButton instanceof HTMLButtonElement
+        ? triggerButton
+        : document.getElementById('agency-hotel-cancel-confirm-btn');
+
+    if (button?.disabled) return;
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'CANCELLING…';
+        button.setAttribute('aria-busy', 'true');
+    }
+
+    try {
+        const { data: { user }, error: authError } = await client.auth.getUser();
+        if (authError) throw authError;
+        if (!user?.id) throw new Error('Your login session has expired. Please login again.');
+
+        const { data: booking, error: fetchError } = await client
+            .from('hotel_bookings')
+            .select('id,customer_id,booking_status,cancelled_by')
+            .eq('id', safeBookingId)
+            .eq('customer_id', user.id)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+        if (!booking) throw new Error('Hotel booking request not found or access is not permitted.');
+
+        const currentStatus = String(booking.booking_status || '').toLowerCase();
+        if (!['pending','approved','confirmed'].includes(currentStatus)) {
+            throw new Error('This booking request can no longer be cancelled.');
+        }
+
+        const cancellationMessage =
+            'Customer cancelled this Registered Hotel booking request.';
+
+        const { data: updatedBooking, error: updateError } = await client
+            .from('hotel_bookings')
+            .update({
+                booking_status: 'cancelled',
+                cancelled_by: 'customer',
+                cancelled_at: new Date().toISOString(),
+                cancellation_reason: cancellationMessage,
+                owner_message: cancellationMessage
+            })
+            .eq('id', safeBookingId)
+            .eq('customer_id', user.id)
+            .in('booking_status', ['pending','approved','confirmed'])
+            .select('id,booking_status,cancelled_by,cancelled_at')
+            .maybeSingle();
+
+        if (updateError) throw updateError;
+        if (!updatedBooking || updatedBooking.cancelled_by !== 'customer') {
+            throw new Error('Cancellation could not be verified. Please refresh and try again.');
+        }
+
+        document.getElementById('agency-hotel-cancel-confirm-modal')?.remove();
+        alert('✅ Hotel booking request cancelled. The hotel dashboard will show CUSTOMER CANCELLED.');
+        await window.renderAgencyHotelBookingRequests();
+
+    } catch (error) {
+        console.error('Agency hotel booking cancellation failed:', error);
+        alert('Unable to cancel this hotel booking request: ' + String(error?.message || 'Temporary error.'));
+        if (button) {
+            button.disabled = false;
+            button.textContent = 'CONFIRM';
+            button.removeAttribute('aria-busy');
+        }
+    }
+};
+
 /* =========================================================================
    🏨 HOTEL DASHBOARD — BOOKING REQUEST ITEM
    CUSTOMER + AGENCY REQUESTS
@@ -12188,17 +12331,26 @@ window.renderHotelBookingRequests =
 
                                             <div style="
                                                 margin-top:18px;
-                                                background:#f5f5f5;
-                                                border:
-                                                    1px solid #b2bec3;
+                                                background:${String(booking.cancelled_by || '').toLowerCase() === 'customer' ? '#fff1f2' : '#f5f5f5'};
+                                                border:1px solid ${String(booking.cancelled_by || '').toLowerCase() === 'customer' ? '#fb7185' : '#b2bec3'};
                                                 padding:15px;
                                                 border-radius:10px;
-                                                color:#636e72;
+                                                color:${String(booking.cancelled_by || '').toLowerCase() === 'customer' ? '#be123c' : '#636e72'};
                                             ">
 
                                                 <b>
-                                                    🚫 BOOKING CANCELLED
+                                                    ${
+                                                        String(booking.cancelled_by || '').toLowerCase() === 'customer'
+                                                            ? '🚫 CUSTOMER CANCELLED'
+                                                            : '🚫 BOOKING CANCELLED'
+                                                    }
                                                 </b>
+
+                                                ${
+                                                    String(booking.cancelled_by || '').toLowerCase() === 'customer'
+                                                        ? `<div style="margin-top:6px;font-size:12px;line-height:1.5;">The customer/agency cancelled this hotel booking request.</div>`
+                                                        : ''
+                                                }
 
                                             </div>
 
@@ -13304,6 +13456,38 @@ window.renderAgencyHotelBookingRequests = async function () {
                     </div>
 
 
+                    ${
+                        ['pending','approved','confirmed'].includes(bookingStatus)
+                            ? `
+                                <div style="
+                                    margin:0 0 12px;
+                                    display:flex;
+                                    justify-content:flex-end;
+                                ">
+                                    <button
+                                        type="button"
+                                        class="agency-hotel-cancel-request-btn"
+                                        data-booking-id="${window.TourSetuDOM.escapeHTML(String(booking.id || ''))}"
+                                        style="
+                                            background:#fff0f0;
+                                            color:#c0392b;
+                                            border:1px solid #ff7675;
+                                            padding:9px 14px;
+                                            border-radius:9px;
+                                            font-weight:800;
+                                            font-size:12px;
+                                            cursor:pointer;
+                                            min-height:40px;
+                                        "
+                                        aria-label="Cancel this hotel booking request"
+                                    >
+                                        ✕ CANCEL REQUEST
+                                    </button>
+                                </div>
+                            `
+                            : ''
+                    }
+
                     <div style="
                         display:grid;
                         grid-template-columns:
@@ -13352,7 +13536,7 @@ window.renderAgencyHotelBookingRequests = async function () {
                                 font-weight:bold;
                                 margin-top:4px;
                             ">
-                                🛏️ ${e(booking.rooms_booked || 0)}
+                                🛏️ ${window.TourSetuDOM.escapeHTML(booking.rooms_booked || 0)}
                             </div>
                         </div>
 
@@ -13515,6 +13699,19 @@ window.renderAgencyHotelBookingRequests = async function () {
             `;
 
         }).join('');
+
+        if (!list.dataset.agencyHotelCancelDelegation) {
+            list.dataset.agencyHotelCancelDelegation = 'true';
+            list.addEventListener('click', event => {
+                const target = event.target instanceof Element
+                    ? event.target.closest('.agency-hotel-cancel-request-btn')
+                    : null;
+                if (!(target instanceof HTMLButtonElement)) return;
+                const bookingId = String(target.dataset.bookingId || '').trim();
+                if (!bookingId) return;
+                window.openAgencyHotelCancellationModal(bookingId);
+            });
+        }
 
     } catch (err) {
 
