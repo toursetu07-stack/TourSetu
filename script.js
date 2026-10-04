@@ -536,11 +536,15 @@ async function ensureCustomerTermsAccepted(user) {
     const client = getClient();
     if (!app || !client || !user?.id) return false;
 
+    // Customer marketplace terms are accepted once per account.
+    // Do not re-prompt an existing customer simply because the current
+    // display version changed; the stored acceptance remains the account's
+    // acknowledgement unless the product explicitly introduces a new
+    // mandatory re-consent flow.
     const { data, error } = await client
         .from('customer_terms_acceptances')
         .select('user_id, terms_version, accepted_at')
         .eq('user_id', user.id)
-        .eq('terms_version', CUSTOMER_TERMS_VERSION)
         .maybeSingle();
 
     if (error) {
