@@ -211,9 +211,9 @@ window.sendTourSetuBookingNotification = async function(bookingId, bookingType) 
    ========================================================================= */
 const REFERRAL_STORAGE_KEY = 'toursetu_referral_code';
 
-const CUSTOMER_TERMS_VERSION = '2026-10-02-v1';
+const CUSTOMER_TERMS_VERSION = '2026-10-04-v2';
 
-const AGENCY_TERMS_VERSION = '2026-10-02-v4';
+const AGENCY_TERMS_VERSION = '2026-10-04-v5';
 
 const CUSTOMER_PRIVACY_VERSION = '2026-10-02-v1';
 
@@ -230,7 +230,11 @@ function agencyPartnerTermsHtml() {
         '<h3>4. Payout Settlement & Commission</h3>' +
         '<p>Payouts for completed trips will be processed to the operator\'s registered business bank account after deduction of the agreed TourSetu platform commission fee, subject to successful customer check-in and service delivery.</p>' +
         '<h3>5. Platform Commission & Transaction Fees</h3>' +
-        '<p>Operator confirms that it is ready to pay <strong>15% TourSetu platform commission + 2% gateway transaction fee + applicable GST on the transaction fee</strong> from the total package price for bookings generated through the TourSetu marketplace. These applicable platform and transaction charges will be deducted/settled according to TourSetu payout terms.</p>';
+        '<p>Operator confirms that it is ready to pay <strong>15% TourSetu platform commission + 2% gateway transaction fee + applicable GST on the transaction fee</strong> from the total package price for bookings generated through the TourSetu marketplace. These applicable platform and transaction charges will be deducted/settled according to TourSetu payout terms.</p>' +
+        '<h3>6. Customer Respect, Conduct & Service-Failure Penalty</h3>' +
+        '<p>The Operator is responsible for the conduct of its drivers, guides, coordinators, staff, and any other personnel assigned to a TourSetu booking. Fighting, abusive language, threats, harassment, intimidation, deliberate disrespect, or other serious misconduct toward a customer is strictly prohibited.</p>' +
+        '<p>If a customer complaint regarding such misconduct is reported and, after TourSetu review of the available evidence and circumstances, the complaint is found to be substantiated, the Operator will receive <strong>only 20% of the applicable booking amount as the Operator settlement/commission for that affected booking, and 80% of the booking amount will be refunded to the customer</strong>. This remedy is in addition to any further account action that may be appropriate under TourSetu policies.</p>' +
+        '<p>Operators must cooperate with TourSetu investigations and provide relevant trip records, driver/guide details, messages, or other evidence when requested.</p>';
 }
 
 async function ensureAgencyTermsAccepted(user) {
@@ -518,7 +522,11 @@ function customerMarketplaceTermsHtml() {
         <p>Cancellations made 15+ days prior to the journey start date are eligible for a partial refund as per the booked operator's policy. The platform facilitation/service fee is non-refundable.</p>
         <h3>3. Safety & On-Ground Execution</h3>
         <p>Operational execution (vehicle quality, driver conduct, and itinerary adherence) is the direct responsibility of the booked Asset-Owned Integrated Tour Operator. Passengers must comply with local safety and hill-driving guidelines.</p>
-        <h3>4. Natural Calamities & Force Majeure</h3>
+        <h3>4. Customer Protection Against Operator Misconduct</h3>
+        <p>If a TourSetu tour operator, driver, guide, coordinator, staff member, or other assigned representative fights with, threatens, harasses, abuses, intimidates, or seriously disrespects the customer, the customer may report the incident to TourSetu with the available evidence.</p>
+        <p>If TourSetu reviews the complaint and finds the misconduct substantiated, <strong>80% of the affected booking amount will be refunded to the customer, while the operator will receive only 20% as the applicable settlement/commission for that affected booking</strong>. Further action may also be taken against the operator under TourSetu policies.</p>
+        <p>Customers should report serious incidents as soon as reasonably possible and cooperate with TourSetu's review by providing relevant messages, photos, videos, call records, or other available evidence.</p>
+        <h3>5. Natural Calamities & Force Majeure</h3>
         <p>In cases of landslides, extreme weather, road blockages, or government-mandated Yatra halts (especially on Char Dham routes), TourSetu and the operator reserve the right to modify itineraries or reschedule trips.</p>
     `;
 }
