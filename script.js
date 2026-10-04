@@ -7778,14 +7778,53 @@ async function renderHotelDashboard(user) {
         </div>
     `;
 
-    // Initialize Real-time WebSocket Listeners with Fallback Alerts
-    setupRealtimeBookingsSubscription(user.id);
-    
-    // Auto-run Dynamic Hold Release Sweeper
-    runInventoryHoldSweeper();
-    
-    // Default Tab — open the modern dashboard overview.
-    await window.showHotelTab('overview');
+    // Start non-blocking background services. A realtime/SMS helper failure
+    // must never prevent the hotel dashboard itself from opening.
+    try {
+        if (typeof setupRealtimeBookingsSubscription === 'function') {
+            setupRealtimeBookingsSubscription(user.id);
+        }
+    } catch (error) {
+        console.warn('Hotel realtime listener could not start:', error);
+    }
+
+    try {
+        if (typeof runInventoryHoldSweeper === 'function') {
+            void runInventoryHoldSweeper().catch(error => {
+                console.warn('Hotel inventory sweeper could not start:', error);
+            });
+        }
+    } catch (error) {
+        console.warn('Hotel inventory sweeper could not start:', error);
+    }
+
+    // Open the dashboard overview immediately after login. Do not leave the
+    // initialization shell on screen if a background listener is unavailable.
+    try {
+        const openOverview = typeof window.showHotelTab === 'function'
+            ? window.showHotelTab('overview')
+            : (typeof showHotelTab === 'function' ? showHotelTab('overview') : Promise.resolve());
+
+        await Promise.race([
+            Promise.resolve(openOverview),
+            new Promise((_, reject) => setTimeout(
+                () => reject(new Error('Hotel dashboard overview loading timed out.')),
+                10000
+            ))
+        ]);
+    } catch (error) {
+        console.error('Hotel dashboard overview could not open:', error);
+        const container = document.getElementById('hotel-main-content');
+        if (container) {
+            container.innerHTML = `
+                <div style="max-width:760px;margin:40px auto;background:#fff;border:1px solid #fed7aa;border-radius:16px;padding:28px;box-shadow:0 8px 24px rgba(15,23,42,.06);">
+                    <div style="font-size:30px;margin-bottom:8px;">🏨</div>
+                    <h2 style="margin:0 0 8px;color:#1f2937;">Hotel Dashboard is ready</h2>
+                    <p style="margin:0 0 18px;color:#64748b;line-height:1.6;">Your login is successful, but the overview could not be loaded immediately. Your hotel data was not changed.</p>
+                    <button type="button" onclick="window.showHotelTab('overview')" style="border:0;border-radius:9px;padding:10px 16px;background:#ff9f43;color:#fff;font-weight:800;cursor:pointer;">↻ Open Dashboard</button>
+                </div>`;
+        }
+    }
 }
 
 /**
