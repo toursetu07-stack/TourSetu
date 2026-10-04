@@ -617,18 +617,46 @@ window.acceptCustomerMarketplaceTerms = async function() {
         button.style.opacity = '.7';
         button.style.cursor = 'wait';
     }
-    const { error } = await client
+    const acceptancePayload = {
+        user_id: user.id,
+        terms_version: CUSTOMER_TERMS_VERSION,
+        accepted_at: new Date().toISOString()
+    };
+
+    // customer_terms_acceptances uses user_id as its primary key.
+    // If an older terms version is already stored for this customer,
+    // update that row instead of inserting a second row and triggering
+    // customer_terms_acceptances_pkey duplicate-key errors.
+    const { data: existingAcceptance, error: existingAcceptanceError } = await client
         .from('customer_terms_acceptances')
-        .insert({ user_id: user.id, terms_version: CUSTOMER_TERMS_VERSION });
-    if (error) {
-        console.error('Customer terms acceptance save failed:', error);
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    let acceptanceError = existingAcceptanceError || null;
+
+    if (!acceptanceError && existingAcceptance) {
+        const { error } = await client
+            .from('customer_terms_acceptances')
+            .update(acceptancePayload)
+            .eq('user_id', user.id);
+        acceptanceError = error || null;
+    } else if (!acceptanceError) {
+        const { error } = await client
+            .from('customer_terms_acceptances')
+            .insert(acceptancePayload);
+        acceptanceError = error || null;
+    }
+
+    if (acceptanceError) {
+        console.error('Customer terms acceptance save failed:', acceptanceError);
         if (button) {
             button.disabled = false;
             button.innerText = 'APPROVED';
             button.style.opacity = '1';
             button.style.cursor = 'pointer';
         }
-        alert('Terms acceptance save nahi ho saka: ' + error.message);
+        alert('Terms acceptance save nahi ho saka: ' + acceptanceError.message);
         return;
     }
     if (button) button.innerText = 'APPROVED ✓';
