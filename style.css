@@ -692,3 +692,174 @@ input[type="checkbox"].agency-dashboard-checkbox {
     text-align:left;
   }
 }
+
+
+/* ============================================================
+   Customer Dashboard — mobile/tablet responsive layout
+   Keeps the desktop visual design while preventing desktop-width
+   cards, controls and grids from being scaled down on phones.
+   ============================================================ */
+@media (max-width: 1024px) {
+  body:has(.customer-dashboard-shell) {
+    padding: 0 !important;
+  }
+
+  #app:has(.customer-dashboard-shell) {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .customer-dashboard-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    overflow-x: hidden;
+  }
+
+  .customer-dashboard-shell > div:first-child {
+    width: 100% !important;
+    min-height: 420px !important;
+    padding: 34px 18px !important;
+  }
+
+  .customer-dashboard-shell > div:first-child > h1 {
+    max-width: 900px;
+    font-size: clamp(2rem, 5vw, 2.8rem) !important;
+    line-height: 1.12 !important;
+  }
+
+  .customer-dashboard-shell > div:first-child > p {
+    max-width: 760px;
+    text-align: center;
+    font-size: clamp(.98rem, 2.5vw, 1.1rem) !important;
+    line-height: 1.5 !important;
+  }
+
+  .customer-search-card {
+    width: min(100%, 1000px) !important;
+    max-width: 100% !important;
+  }
+
+  .customer-search-options > div {
+    min-width: min(200px, 100%) !important;
+  }
+
+  .customer-results-shell {
+    width: 100% !important;
+    max-width: 1200px !important;
+    padding: 28px 18px !important;
+  }
+
+  .customer-results-header {
+    align-items: flex-start !important;
+  }
+
+  .customer-package-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)) !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .customer-dashboard-shell > div:first-child {
+    min-height: 0 !important;
+    padding: 28px 14px 34px !important;
+  }
+
+  .customer-dashboard-shell > div:first-child > h1 {
+    font-size: 2rem !important;
+  }
+
+  .customer-search-card {
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .customer-search-type {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+
+  .customer-search-type > div {
+    width: 100%;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .customer-search-type label {
+    width: 100%;
+  }
+
+  .customer-search-options {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .customer-search-options > div {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: none !important;
+  }
+
+  .customer-search-options button {
+    width: 100% !important;
+    margin-top: 4px !important;
+  }
+
+  .customer-results-shell {
+    padding: 24px 14px 32px !important;
+  }
+
+  .customer-results-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
+  }
+
+  .customer-results-header #result-title {
+    font-size: 1.65rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .customer-dashboard-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .customer-dashboard-actions button {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .customer-package-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .customer-dashboard-shell > div:first-child {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .customer-dashboard-shell > div:first-child > h1 {
+    font-size: 1.75rem !important;
+  }
+
+  .customer-search-card {
+    padding: 12px !important;
+  }
+
+  .customer-results-shell {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+}
