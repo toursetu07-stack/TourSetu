@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- Keep the full desktop layout on phones/tablets as requested.
+         Mobile browsers will use a 1200px CSS layout instead of triggering
+         the app's mobile media-query breakpoints. Users can still zoom. -->
+    <meta name="viewport" content="width=1200, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="TourSetu — trusted travel, hotel and Char Dham booking marketplace.">
     <meta name="theme-color" content="#ff9f43">
     <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -95,7 +98,9 @@
 
 <body>
 
-<a class="skip-link" href="#app">Skip to main content</a>\n\n<div id="app" role="main">
+<a class="skip-link" href="#app">Skip to main content</a>
+
+<div id="app" role="main">
     <div class="auth-card">
         <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>
         
