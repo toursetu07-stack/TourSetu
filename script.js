@@ -2624,8 +2624,21 @@ window.updateCityDropdown = () => {
         citySelect.innerHTML = '<option value="">Select City First</option>';
         return;
     }
-    const cities = locationData[state] || [];
-    citySelect.innerHTML = cities.sort().map(c => { const safe = window.TourSetuDOM.escapeAttribute(c); return `<option value="${safe}">${window.TourSetuDOM.escapeHTML(c)}</option>`; }).join('');
+
+    // Customer search must use the same complete Uttarakhand pickup-city
+    // master list that is used by the booking modal. This keeps SELECT CITY
+    // consistent with CUSTOMER PICKUP CITY and prevents cities from being
+    // missing from the initial customer search.
+    const sourceCities = state === 'Uttarakhand' && Array.isArray(UTTARAKHAND_PICKUP_CITIES)
+        ? UTTARAKHAND_PICKUP_CITIES
+        : (locationData[state] || []);
+
+    // De-duplicate without mutating the shared source arrays.
+    const cities = [...new Set(sourceCities)];
+    citySelect.innerHTML = cities.map(c => {
+        const safe = window.TourSetuDOM.escapeAttribute(c);
+        return `<option value="${safe}">${window.TourSetuDOM.escapeHTML(c)}</option>`;
+    }).join('');
 };
 
 window.renderCustomerRequests = async () => {
