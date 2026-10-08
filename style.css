@@ -692,3 +692,17 @@ input[type="checkbox"].agency-dashboard-checkbox {
     text-align:left;
   }
 }
+
+
+/* ============================================================
+   TourSetu desktop layout on phones
+   The mobile viewport intentionally uses the same desktop canvas.
+   ============================================================ */
+html,
+body {
+  min-width: 1200px;
+}
+
+body {
+  overflow-x: auto;
+}
