@@ -121,9 +121,10 @@
     if (!menu || menu.querySelector('[data-toursetu-about-us]')) return;
 
     const candidates = Array.from(menu.querySelectorAll('button, a, [role="button"], div'));
-    const privacy = candidates.find(el =>
-      (el.textContent || '').trim().toLowerCase() === 'privacy policy'
-    );
+    const privacy = candidates.find(el => {
+      const text = (el.textContent || '').trim().toLowerCase();
+      return text.includes('privacy policy') && text.length <= 80;
+    });
 
     if (!privacy) return;
 
