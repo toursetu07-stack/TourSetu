@@ -2620,12 +2620,39 @@ window.confirmAndExecuteLogout = async function() {
 window.updateCityDropdown = () => {
     const state = document.getElementById('search-state').value;
     const citySelect = document.getElementById('search-start');
+    if (!citySelect) return;
     if (!state) {
         citySelect.innerHTML = '<option value="">Select City First</option>';
         return;
     }
-    const cities = locationData[state] || [];
-    citySelect.innerHTML = cities.sort().map(c => { const safe = window.TourSetuDOM.escapeAttribute(c); return `<option value="${safe}">${window.TourSetuDOM.escapeHTML(c)}</option>`; }).join('');
+
+    // Customer "SELECT CITY" must expose the same complete Uttarakhand
+    // pickup-city catalogue used by the booking modal. Keep the normal
+    // state catalogue for every other state and de-duplicate labels safely.
+    const baseCities = Array.isArray(locationData[state]) ? locationData[state] : [];
+    const pickupCities = state === 'Uttarakhand' &&
+        typeof UTTARAKHAND_PICKUP_CITIES !== 'undefined' &&
+        Array.isArray(UTTARAKHAND_PICKUP_CITIES)
+        ? UTTARAKHAND_PICKUP_CITIES
+        : [];
+
+    const cities = [...new Set([...baseCities, ...pickupCities])]
+        .filter(city => String(city ?? '').trim())
+        .sort((a, b) => String(a).localeCompare(String(b), 'en', { sensitivity: 'base' }));
+
+    citySelect.replaceChildren();
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select City';
+    citySelect.appendChild(placeholder);
+
+    cities.forEach(city => {
+        const option = document.createElement('option');
+        option.value = String(city);
+        option.textContent = String(city);
+        citySelect.appendChild(option);
+    });
 };
 
 window.renderCustomerRequests = async () => {
