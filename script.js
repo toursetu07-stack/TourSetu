@@ -7046,6 +7046,24 @@ window.showPackageForm = function(pEncoded = null) {
         ? (pkg.tour_days || '')
         : '';
 
+    // Keep the selected tour time explicit and consistent across browsers.
+    const savedStartTiming = isEdit ? String(pkg.start_tour_timing || '').slice(0, 5) : '';
+    const savedHour24 = savedStartTiming ? Number(savedStartTiming.split(':')[0]) : null;
+    const savedMinute = savedStartTiming ? savedStartTiming.split(':')[1] : '';
+    const savedPeriod = savedHour24 === null ? '' : (savedHour24 >= 12 ? 'PM' : 'AM');
+    const savedHour12 = savedHour24 === null ? '' : String((savedHour24 % 12) || 12);
+    const startHourOptions = Array.from({ length: 12 }, (_, index) => {
+        const hour = String(index + 1);
+        return '<option value="' + hour + '"' + (savedHour12 === hour ? ' selected' : '') + '>' + hour + '</option>';
+    }).join('');
+    const startMinuteOptions = Array.from({ length: 60 }, (_, index) => {
+        const minute = String(index).padStart(2, '0');
+        return '<option value="' + minute + '"' + (savedMinute === minute ? ' selected' : '') + '>' + minute + '</option>';
+    }).join('');
+    const startPeriodOptions = ['AM', 'PM'].map(period =>
+        '<option value="' + period + '"' + (savedPeriod === period ? ' selected' : '') + '>' + period + '</option>'
+    ).join('');
+
 
     // =========================================
     // BUILD COMPLETE PACKAGE FORM
@@ -7211,35 +7229,23 @@ window.showPackageForm = function(pEncoded = null) {
 
 
             <!-- START TOUR TIMING -->
-            <div style="
-                margin-bottom:15px;
-                max-width:50%;
-            ">
-                <label for="p-start-tour-timing" style="
-                    font-size:11px;
-                    font-weight:bold;
-                    color:#666;
-                    display:block;
-                    margin-bottom:5px;
-                ">START TOUR TIMING</label>
-                <input
-                    type="time"
-                    id="p-start-tour-timing"
-                    value="${isEdit ? (pkg.start_tour_timing || '') : ''}"
-                    aria-label="Start tour timing"
-                    style="
-                        width:100%;
-                        min-height:40px;
-                        padding:10px;
-                        border:1px solid #ccc;
-                        border-radius:6px;
-                        box-sizing:border-box;
-                        font-size:14px;
-                    "
-                >
-                <small style="display:block;margin-top:5px;color:#888;font-size:11px;">
-                    Enter the daily tour departure time.
-                </small>
+            <div style="margin-bottom:15px;width:100%;max-width:420px;">
+                <label style="font-size:11px;font-weight:bold;color:#666;display:block;margin-bottom:7px;" id="p-start-tour-timing-label">START TOUR TIMING</label>
+                <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:6px;">Hours (1–12) &nbsp; Minutes &nbsp; AM / PM</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                    <select id="p-start-tour-hour" aria-label="Start tour hour, 1 to 12" style="width:100%;min-height:42px;padding:9px;border:1px solid #ccc;border-radius:6px;background:#fff;box-sizing:border-box;font-size:14px;">
+                        <option value="">Hour</option>
+                        ${startHourOptions}
+                    </select>
+                    <select id="p-start-tour-minute" aria-label="Start tour minutes, 00 to 59" style="width:100%;min-height:42px;padding:9px;border:1px solid #ccc;border-radius:6px;background:#fff;box-sizing:border-box;font-size:14px;">
+                        <option value="">Minutes</option>
+                        ${startMinuteOptions}
+                    </select>
+                    <select id="p-start-tour-period" aria-label="AM or PM" style="width:100%;min-height:42px;padding:9px;border:1px solid #ccc;border-radius:6px;background:#fff;box-sizing:border-box;font-size:14px;">
+                        <option value="">AM/PM</option>
+                        ${startPeriodOptions}
+                    </select>
+                </div>
             </div>
 
 
@@ -7549,7 +7555,20 @@ window.processSave = async function(packageId = '') {
             throw new Error("Only an agency account can create or edit packages.");
         }
 
-        const startTourTiming = document.getElementById('p-start-tour-timing')?.value || null;
+        const selectedHour12 = Number(document.getElementById('p-start-tour-hour')?.value || 0);
+        const selectedMinute = document.getElementById('p-start-tour-minute')?.value || '';
+        const selectedPeriod = document.getElementById('p-start-tour-period')?.value || '';
+        let startTourTiming = null;
+        const timingPartsChosen = selectedHour12 >= 1 && selectedHour12 <= 12 && /^\d{2}$/.test(selectedMinute) && ['AM', 'PM'].includes(selectedPeriod);
+        const timingPartsEmpty = !selectedHour12 && !selectedMinute && !selectedPeriod;
+        if (!timingPartsEmpty && !timingPartsChosen) {
+            throw new Error('Please select Hours (1–12), Minutes, and AM/PM for START TOUR TIMING.');
+        }
+        if (timingPartsChosen) {
+            let selectedHour24 = selectedHour12 % 12;
+            if (selectedPeriod === 'PM') selectedHour24 += 12;
+            startTourTiming = String(selectedHour24).padStart(2, '0') + ':' + selectedMinute;
+        }
 
         const payload = {
             title,
