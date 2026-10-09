@@ -3747,10 +3747,21 @@ window.showPackageDetails = function(pEncoded) {
     const duration = tourSetuCreateElement('div');
     tourSetuSetStyles(duration, 'background:#fff8ef;border:1px solid #ffd8a8;border-radius:12px;padding:15px;');
     tourSetuAddField(duration, 'TOUR DURATION', tourDays + (tourDays === 1 ? ' Day' : ' Days'));
+    const timingCard = tourSetuCreateElement('div');
+    tourSetuSetStyles(timingCard, 'background:#f0fff7;border:1px solid #b8ebd0;border-radius:12px;padding:15px;');
+    const rawTiming = typeof p.start_tour_timing === 'string' ? p.start_tour_timing : '';
+    const timingLabel = rawTiming ? (() => {
+        const match = rawTiming.match(/^(\d{2}):(\d{2})/);
+        if (!match) return rawTiming;
+        const hour = Number(match[1]);
+        const minute = match[2];
+        return `${hour % 12 || 12}:${minute} ${hour >= 12 ? 'PM' : 'AM'}`;
+    })() : 'Not specified';
+    tourSetuAddField(timingCard, 'START TOUR TIMING', timingLabel);
     const startCard = tourSetuCreateElement('div');
     tourSetuSetStyles(startCard, 'background:#f5f9ff;border:1px solid #cfe2ff;border-radius:12px;padding:15px;');
     tourSetuAddField(startCard, 'STARTING FROM', p.starting_location || 'N/A');
-    summary.append(duration, startCard);
+    summary.append(duration, timingCard, startCard);
     wrapper.appendChild(summary);
 
     const description = tourSetuCreateElement('div');
@@ -7199,6 +7210,39 @@ window.showPackageForm = function(pEncoded = null) {
             </div>
 
 
+            <!-- START TOUR TIMING -->
+            <div style="
+                margin-bottom:15px;
+                max-width:50%;
+            ">
+                <label for="p-start-tour-timing" style="
+                    font-size:11px;
+                    font-weight:bold;
+                    color:#666;
+                    display:block;
+                    margin-bottom:5px;
+                ">START TOUR TIMING</label>
+                <input
+                    type="time"
+                    id="p-start-tour-timing"
+                    value="${isEdit ? (pkg.start_tour_timing || '') : ''}"
+                    aria-label="Start tour timing"
+                    style="
+                        width:100%;
+                        min-height:40px;
+                        padding:10px;
+                        border:1px solid #ccc;
+                        border-radius:6px;
+                        box-sizing:border-box;
+                        font-size:14px;
+                    "
+                >
+                <small style="display:block;margin-top:5px;color:#888;font-size:11px;">
+                    Enter the daily tour departure time.
+                </small>
+            </div>
+
+
             <!-- STARTING CITY -->
             <label style="
                 font-size:11px;
@@ -7505,9 +7549,12 @@ window.processSave = async function(packageId = '') {
             throw new Error("Only an agency account can create or edit packages.");
         }
 
+        const startTourTiming = document.getElementById('p-start-tour-timing')?.value || null;
+
         const payload = {
             title,
             tour_days: tourDays,
+            start_tour_timing: startTourTiming,
             starting_location: city,
 
             // Use the existing packages.destination column.
