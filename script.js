@@ -4780,6 +4780,94 @@ async function renderAgencyPackagesTab(container, userId, client) {
         timingRow.appendChild(createAgencyDashboardElement('b', timingDisplay));
         info.appendChild(timingRow);
 
+        // Show the latest persisted package details on the agency card so edits
+        // are visible immediately after the packages list is reloaded.
+        const durationValue = Number(pkg.tour_days);
+        const durationRow = createAgencyDashboardElement(
+            'p',
+            null,
+            'margin:5px 0;color:#666;font-size:14px;overflow-wrap:anywhere;'
+        );
+        durationRow.appendChild(document.createTextNode('📅 Tour duration: '));
+        durationRow.appendChild(createAgencyDashboardElement(
+            'b',
+            Number.isFinite(durationValue) && durationValue > 0
+                ? durationValue + (durationValue === 1 ? ' day' : ' days')
+                : 'Not specified'
+        ));
+        info.appendChild(durationRow);
+
+        let savedDestinations = pkg.destination ?? pkg.destinations ?? [];
+        if (typeof savedDestinations === 'string') {
+            try { savedDestinations = JSON.parse(savedDestinations); } catch (_) {
+                savedDestinations = savedDestinations.split(',').map(function (value) { return value.trim(); }).filter(Boolean);
+            }
+        }
+        if (!Array.isArray(savedDestinations)) savedDestinations = savedDestinations ? [savedDestinations] : [];
+        const destinationsRow = createAgencyDashboardElement(
+            'p',
+            null,
+            'margin:5px 0;color:#666;font-size:14px;overflow-wrap:anywhere;'
+        );
+        destinationsRow.appendChild(document.createTextNode('📍 Destinations: '));
+        destinationsRow.appendChild(createAgencyDashboardElement(
+            'b',
+            savedDestinations.length ? savedDestinations.join(', ') : 'Not specified'
+        ));
+        info.appendChild(destinationsRow);
+
+        let savedVehicles = pkg.vehicles;
+        if (typeof savedVehicles === 'string') {
+            try { savedVehicles = JSON.parse(savedVehicles); } catch (_) { savedVehicles = []; }
+        }
+        if (!Array.isArray(savedVehicles)) savedVehicles = [];
+        const vehicleSummary = savedVehicles.map(function (vehicle) {
+            if (!vehicle || typeof vehicle !== 'object') return '';
+            const name = String(vehicle.name || vehicle.id || '').trim();
+            const rate = Number(vehicle.rate);
+            const maxCars = Number(vehicle.max_cars);
+            if (!name) return '';
+            return name + (Number.isFinite(rate) ? ' — ₹' + rate.toLocaleString('en-IN') : '') +
+                (Number.isFinite(maxCars) && maxCars > 0 ? ' (' + maxCars + ' available)' : '');
+        }).filter(Boolean);
+        const vehiclesRow = createAgencyDashboardElement(
+            'p',
+            null,
+            'margin:5px 0;color:#666;font-size:14px;overflow-wrap:anywhere;'
+        );
+        vehiclesRow.appendChild(document.createTextNode('🚐 Vehicles & pricing: '));
+        vehiclesRow.appendChild(createAgencyDashboardElement(
+            'b',
+            vehicleSummary.length ? vehicleSummary.join(' · ') : 'No vehicles selected'
+        ));
+        info.appendChild(vehiclesRow);
+
+        const pickupRate = Number(pkg.pickup_km_rate);
+        const pickupRow = createAgencyDashboardElement(
+            'p',
+            null,
+            'margin:5px 0;color:#666;font-size:14px;overflow-wrap:anywhere;'
+        );
+        pickupRow.appendChild(document.createTextNode('🛣️ Customer pickup distance charge: '));
+        pickupRow.appendChild(createAgencyDashboardElement(
+            'b',
+            Number.isFinite(pickupRate) && pickupRate >= 0 ? '₹' + pickupRate.toLocaleString('en-IN') + ' / km' : 'Not specified'
+        ));
+        info.appendChild(pickupRow);
+
+        const description = String(pkg.description || '').trim();
+        const descriptionRow = createAgencyDashboardElement(
+            'p',
+            null,
+            'margin:5px 0;color:#666;font-size:14px;overflow-wrap:anywhere;white-space:pre-line;'
+        );
+        descriptionRow.appendChild(document.createTextNode('📝 Itinerary: '));
+        descriptionRow.appendChild(createAgencyDashboardElement(
+            'span',
+            description || 'Not specified'
+        ));
+        info.appendChild(descriptionRow);
+
         const editButton = createAgencyDashboardElement(
             'button',
             '✏️ Edit',
@@ -7618,7 +7706,8 @@ window.processSave = async function(packageId = '') {
             const { error } = await _supabase
                 .from('packages')
                 .update(payload)
-                .eq('id', packageId);
+                .eq('id', packageId)
+                .eq('agency_id', user.id);
 
             resultError = error;
         } else {
