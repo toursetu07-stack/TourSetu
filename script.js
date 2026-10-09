@@ -1186,7 +1186,7 @@ function hasBytes(bytes, expected) {
 async function validateUploadedFile(file, label, allowedTypes, maxBytes) {
     if (!file) return label + ' is required.';
     if (!Number.isFinite(file.size) || file.size <= 0) return label + ' is empty or invalid.';
-    if (file.size > maxBytes) return label + ' must be 10 MB or smaller.';
+    if (file.size > maxBytes) return label + ' must be ' + Math.round(maxBytes / (1024 * 1024)) + ' MB or smaller.';
     const type = String(file.type || '').toLowerCase();
     if (!Object.prototype.hasOwnProperty.call(allowedTypes, type)) {
         return label + ' must be a PDF, JPG/JPEG, PNG, or WEBP file.';
@@ -5547,11 +5547,11 @@ window.processStatusUpdate = async function(bookingId, newStatus, customerId, pa
         const result = await client.from('bookings').update(updateData)
             .eq('id', String(bookingId))
             .eq('agency_id', user.id)
-            .not('status', 'in', '(approved,confirmed,paid,cancelled)');
+            .not('status', 'in', '(approved,confirmed,paid,cancelled)')
+            .select('id,status');
         if (result.error) throw result.error;
-        if (result.data && result.data.length === 0) {
-            const { data: current, error: checkError } = await client.from('bookings').select('id,status').eq('id', String(bookingId)).eq('agency_id', user.id).maybeSingle();
-            if (checkError || !current || current.status !== newStatus) throw new Error('Booking was not updated. It may no longer be awaiting approval.');
+        if (!Array.isArray(result.data) || result.data.length !== 1 || result.data[0].status !== newStatus) {
+            throw new Error('Booking was not updated. It may no longer be awaiting approval.');
         }
         if (newStatus === 'approved') sendPushNotification(customerId, 'Booking Approved! ✅', 'Your trip for ' + String(packageTitle || 'your package') + ' has been approved after vehicle, driver and permit details were submitted.');
         else sendPushNotification(customerId, 'Booking Update', 'Your booking request for ' + String(packageTitle || 'your package') + ' was not accepted.');
