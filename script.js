@@ -3226,7 +3226,7 @@ window.openCustomerPassengerManifest = async function(bookingId) {
             pickup.input.focus();
             return;
         }
-        if (!leaderName || !/^\\d{10,15}$/.test(mobile) || !Number.isInteger(adultCount) || !Number.isInteger(kidCount) || adultCount < 0 || kidCount < 0 || adultCount + kidCount < 1 || !file || !consent.checked) {
+        if (!leaderName || !/^\d{10,15}$/.test(mobile) || !Number.isInteger(adultCount) || !Number.isInteger(kidCount) || adultCount < 0 || kidCount < 0 || adultCount + kidCount < 1 || !file || !consent.checked) {
             errorText.textContent = 'Please complete every required field, enter a valid WhatsApp number, add at least one passenger, upload the Aadhaar photo, and accept the confirmation.';
             errorText.hidden = false; return;
         }
