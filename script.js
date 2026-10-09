@@ -7559,7 +7559,7 @@ window.processSave = async function(packageId = '') {
         const selectedMinute = document.getElementById('p-start-tour-minute')?.value || '';
         const selectedPeriod = document.getElementById('p-start-tour-period')?.value || '';
         let startTourTiming = null;
-        const timingPartsChosen = selectedHour12 >= 1 && selectedHour12 <= 12 && /^\\d{2}$/.test(selectedMinute) && ['AM', 'PM'].includes(selectedPeriod);
+        const timingPartsChosen = selectedHour12 >= 1 && selectedHour12 <= 12 && /^\d{2}$/.test(selectedMinute) && ['AM', 'PM'].includes(selectedPeriod);
         const timingPartsEmpty = !selectedHour12 && !selectedMinute && !selectedPeriod;
         if (!timingPartsEmpty && !timingPartsChosen) {
             throw new Error('Please select Hours (1–12), Minutes, and AM/PM for START TOUR TIMING.');
