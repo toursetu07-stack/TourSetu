@@ -5396,19 +5396,70 @@ window.openActionModal = function(bookingId, type, customerId, packageTitle) {
     const safePackageTitle = String(packageTitle || 'this package').trim();
     if (!safeBookingId || !safeCustomerId || !['approved', 'denied'].includes(type)) return;
     content.replaceChildren();
-    const title = createAgencyDashboardElement('h3', type === 'approved' ? 'Approve Booking?' : 'Deny Request?', 'margin:0;color:' + (type === 'approved' ? '#168a4a' : '#c0392b') + ';');
+    const title = createAgencyDashboardElement('h3', type === 'approved' ? 'Vehicle & Driver Details' : 'Deny Booking Request', 'margin:0;color:' + (type === 'approved' ? '#168a4a' : '#c0392b') + ';');
     title.id = 'agency-action-modal-title';
-    const message = createAgencyDashboardElement('p', type === 'approved' ? 'Provide the contact number for payment collection (GPay/PhonePe).' : 'This action will notify the customer and cancel the request.', 'font-size:14px;color:#666;line-height:1.5;margin:10px 0 18px;');
+    const message = createAgencyDashboardElement('p', type === 'approved'
+        ? 'Complete all vehicle, driver and permit checks. The booking will be approved only after these details and document photos are saved.'
+        : 'This action will notify the customer and decline this request.',
+        'font-size:14px;color:#666;line-height:1.5;margin:10px 0 18px;');
+    content.append(title, message);
+
     if (type === 'approved') {
-        const input = createAgencyDashboardElement('input');
-        input.type = 'tel'; input.id = 'modal-contact-input'; input.className = 'agency-modal-input';
-        input.inputMode = 'tel'; input.autocomplete = 'tel'; input.maxLength = 16;
-        input.placeholder = 'Enter contact number'; input.setAttribute('aria-label', 'Agency contact number');
-        content.append(title, message, input);
-    } else { content.append(title, message); }
+        const form = createAgencyDashboardElement('form', null, 'display:grid;grid-template-columns:1fr 1fr;gap:12px;');
+        form.id = 'agency-vehicle-driver-form';
+        form.noValidate = true;
+        const field = (labelText, id, options = {}) => {
+            const wrap = createAgencyDashboardElement('label', null, 'display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;color:#344054;');
+            wrap.textContent = labelText;
+            let input;
+            if (options.kind === 'file') {
+                input = createAgencyDashboardElement('input');
+                input.type = 'file'; input.accept = 'image/jpeg,image/png,image/webp';
+                input.required = true;
+            } else {
+                input = createAgencyDashboardElement('input');
+                input.type = options.type || 'text'; input.required = true;
+                input.maxLength = options.maxLength || 120;
+                input.autocomplete = options.autocomplete || 'off';
+                input.placeholder = options.placeholder || '';
+            }
+            input.id = id;
+            input.name = id;
+            input.style.cssText = 'box-sizing:border-box;width:100%;padding:11px;border:1px solid #d0d5dd;border-radius:8px;background:#fff;font:inherit;';
+            input.setAttribute('aria-label', labelText);
+            wrap.appendChild(input);
+            return wrap;
+        };
+        const section = (text) => {
+            const el = createAgencyDashboardElement('div', text, 'grid-column:1/-1;font-size:13px;font-weight:900;color:#344054;border-bottom:1px solid #e5e7eb;padding:7px 0 5px;margin-top:4px;');
+            return el;
+        };
+        form.append(
+            section('🚐 VEHICLE DETAILS'),
+            field('Vehicle Model & Name', 'agency-vehicle-model', {placeholder:'e.g. Toyota Innova Crysta'}),
+            field('Vehicle Registration Number', 'agency-vehicle-registration', {placeholder:'e.g. UK 07 AB 1234', maxLength:20}),
+            section('🧑‍✈️ DRIVER DETAILS'),
+            field('Assigned Driver Name', 'agency-driver-name', {autocomplete:'name'}),
+            field('Driver Contact Number', 'agency-driver-phone', {type:'tel', placeholder:'10-digit mobile number', maxLength:16, autocomplete:'tel'}),
+            field('Driver Commercial Driving License (photo)', 'agency-driver-license-photo', {kind:'file'}),
+            section('📄 PERMITS & COMMERCIAL DOCUMENTS CHECK'),
+            field('Green Card / Trip Card Status (upload photo)', 'agency-trip-card-photo', {kind:'file'})
+        );
+        const permitWrap = createAgencyDashboardElement('label', null, 'grid-column:1/-1;display:flex;gap:10px;align-items:flex-start;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;font-size:12px;font-weight:700;line-height:1.5;color:#166534;');
+        const permit = createAgencyDashboardElement('input');
+        permit.type = 'checkbox'; permit.required = true; permit.id = 'agency-tourist-permit-confirmed';
+        permit.style.cssText = 'width:18px;height:18px;flex:0 0 auto;margin-top:1px;';
+        const permitText = createAgencyDashboardElement('span', 'I confirm the vehicle has a valid All India Tourist Permit or applicable State Tourist Permit for this trip.');
+        permitWrap.append(permit, permitText);
+        form.appendChild(permitWrap);
+        const hint = createAgencyDashboardElement('p', 'Uploads: JPG, PNG or WEBP only, maximum 5 MB each. Documents are stored in a private bucket.', 'grid-column:1/-1;font-size:11px;color:#667085;margin:0;');
+        form.appendChild(hint);
+        content.appendChild(form);
+    }
+
     const actions = createAgencyDashboardElement('div', null, 'display:flex;gap:10px;margin-top:18px;');
     actions.className = 'agency-modal-actions';
-    const confirm = createAgencyDashboardElement('button', type === 'approved' ? 'CONFIRM' : 'DENY', 'flex:1;background:' + (type === 'approved' ? '#2ecc71' : '#ff7675') + ';color:white;border:none;padding:12px;border-radius:7px;cursor:pointer;font-weight:800;');
+    const confirm = createAgencyDashboardElement('button', type === 'approved' ? 'SAVE DETAILS & APPROVE' : 'DENY BOOKING', 'flex:1;background:' + (type === 'approved' ? '#168a4a' : '#c0392b') + ';color:white;border:none;padding:12px;border-radius:7px;cursor:pointer;font-weight:800;');
     confirm.type = 'button'; confirm.className = 'agency-modal-primary'; confirm.dataset.action = 'confirm';
     const cancel = createAgencyDashboardElement('button', 'CANCEL', 'flex:1;background:#eee;color:#2d3436;border:none;padding:12px;border-radius:7px;cursor:pointer;font-weight:700;');
     cancel.type = 'button'; cancel.className = 'agency-modal-secondary';
@@ -5417,7 +5468,7 @@ window.openActionModal = function(bookingId, type, customerId, packageTitle) {
     actions.append(confirm, cancel); content.appendChild(actions);
     modal.style.display = 'flex';
     window.__tourSetuActiveAgencyAction = { bookingId: safeBookingId, type, customerId: safeCustomerId, packageTitle: safePackageTitle };
-    window.setTimeout(function () { (document.getElementById('modal-contact-input') || confirm).focus(); }, 0);
+    window.setTimeout(function () { (document.getElementById('agency-vehicle-model') || confirm).focus(); }, 0);
 };
 
 window.closeActionModal = function () {
@@ -5431,26 +5482,85 @@ window.closeActionModal = function () {
 window.processStatusUpdate = async function(bookingId, newStatus, customerId, packageTitle, triggerButton) {
     const client = getClient();
     if (!client || !bookingId || !customerId || !['approved', 'denied'].includes(newStatus)) return;
-    const updateData = { status: newStatus };
-    if (newStatus === 'approved') {
-        const input = document.getElementById('modal-contact-input');
-        const contact = String(input?.value || '').trim();
-        const digits = contact.replace(/\D/g, '');
-        if (digits.length < 10 || digits.length > 15) { alert('Please enter a valid contact number.'); input?.focus(); return; }
-        updateData.agency_contact = contact;
-    }
     const button = triggerButton instanceof HTMLButtonElement ? triggerButton : document.querySelector('#action-modal [data-action="confirm"]');
-    if (button) { button.disabled = true; button.textContent = 'PROCESSING…'; button.setAttribute('aria-busy', 'true'); }
+    const active = window.__tourSetuActiveAgencyAction;
+    if (!active || active.bookingId !== String(bookingId) || active.type !== newStatus) {
+        alert('This booking action has expired. Please open the booking request again.');
+        return;
+    }
+    const updateData = { status: newStatus };
+    let assignment = null;
+    let uploadedPaths = [];
     try {
-        const result = await client.from('bookings').update(updateData).eq('id', String(bookingId));
+        const { data: { user }, error: authError } = await client.auth.getUser();
+        if (authError || !user?.id) throw new Error('Your session has expired. Please sign in again.');
+
+        if (newStatus === 'approved') {
+            const value = id => String(document.getElementById(id)?.value || '').trim();
+            const vehicleModel = value('agency-vehicle-model');
+            const registration = value('agency-vehicle-registration').toUpperCase();
+            const driverName = value('agency-driver-name');
+            const phone = value('agency-driver-phone');
+            const phoneDigits = phone.replace(/\D/g, '');
+            const licenseFile = document.getElementById('agency-driver-license-photo')?.files?.[0];
+            const tripCardFile = document.getElementById('agency-trip-card-photo')?.files?.[0];
+            const permitConfirmed = document.getElementById('agency-tourist-permit-confirmed')?.checked === true;
+            if (vehicleModel.length < 2 || registration.length < 5 || driverName.length < 2) throw new Error('Please complete the vehicle model, registration number and driver name.');
+            if (phoneDigits.length < 10 || phoneDigits.length > 15) throw new Error('Please enter a valid driver contact number.');
+            if (!permitConfirmed) throw new Error('Please confirm the applicable All India / State Tourist Permit.');
+            for (const [file, label] of [[licenseFile, 'Driver Commercial Driving License photo'], [tripCardFile, 'Green Card / Trip Card photo']]) {
+                const issue = await validateUploadedFile(file, label, ALLOWED_IMAGE_TYPES, IMAGE_MAX_FILE_BYTES);
+                if (issue) throw new Error(issue);
+            }
+            if (button) { button.disabled = true; button.textContent = 'VALIDATING & SAVING…'; button.setAttribute('aria-busy', 'true'); }
+            const bucket = client.storage.from('agency-booking-vehicle-documents');
+            const uploadOne = async (file, kind) => {
+                const extension = safeFileExtension(file);
+                if (!extension || !['jpg','png','webp'].includes(extension)) throw new Error('Unsupported image format.');
+                const path = user.id + '/' + String(bookingId) + '/' + kind + '-' + crypto.randomUUID() + '.' + extension;
+                const { data, error } = await bucket.upload(path, file, { cacheControl:'3600', upsert:false, contentType:file.type });
+                if (error) throw new Error('Could not upload ' + kind.replace(/-/g, ' ') + '. Please try again.');
+                uploadedPaths.push(data.path);
+                return data.path;
+            };
+            const licensePath = await uploadOne(licenseFile, 'driver-commercial-license');
+            const tripCardPath = await uploadOne(tripCardFile, 'green-card-trip-card');
+            assignment = {
+                booking_id: String(bookingId),
+                agency_id: user.id,
+                vehicle_model_name: vehicleModel,
+                vehicle_registration_number: registration,
+                assigned_driver_name: driverName,
+                driver_contact_number: phone,
+                driver_commercial_license_path: licensePath,
+                green_card_trip_card_path: tripCardPath,
+                tourist_permit_type: 'confirmed',
+                tourist_permit_confirmed: true,
+                updated_at: new Date().toISOString()
+            };
+            const { error: saveError } = await client.from('agency_booking_vehicle_assignments').upsert(assignment, { onConflict:'booking_id' });
+            if (saveError) throw saveError;
+            updateData.agency_contact = phone;
+        }
+
+        if (button) { button.disabled = true; button.textContent = 'APPROVING…'; button.setAttribute('aria-busy', 'true'); }
+        const result = await client.from('bookings').update(updateData)
+            .eq('id', String(bookingId))
+            .eq('agency_id', user.id)
+            .not('status', 'in', '(approved,confirmed,paid,cancelled)');
         if (result.error) throw result.error;
-        if (newStatus === 'approved') sendPushNotification(customerId, 'Booking Approved! ✅', 'Your trip for ' + String(packageTitle || 'your package') + ' has been confirmed. Check the app for payment details.');
+        if (result.data && result.data.length === 0) {
+            const { data: current, error: checkError } = await client.from('bookings').select('id,status').eq('id', String(bookingId)).eq('agency_id', user.id).maybeSingle();
+            if (checkError || !current || current.status !== newStatus) throw new Error('Booking was not updated. It may no longer be awaiting approval.');
+        }
+        if (newStatus === 'approved') sendPushNotification(customerId, 'Booking Approved! ✅', 'Your trip for ' + String(packageTitle || 'your package') + ' has been approved after vehicle, driver and permit details were submitted.');
         else sendPushNotification(customerId, 'Booking Update', 'Your booking request for ' + String(packageTitle || 'your package') + ' was not accepted.');
-        window.closeActionModal(); showTab('bookings');
+        window.closeActionModal();
+        showTab('bookings');
     } catch (error) {
         console.error('Agency booking status update failed:', error);
-        alert('Unable to update this booking right now. Please try again.');
-        if (button) { button.disabled = false; button.textContent = newStatus === 'approved' ? 'CONFIRM' : 'DENY'; button.removeAttribute('aria-busy'); }
+        alert(error?.message || 'Unable to update this booking right now. Please try again.');
+        if (button) { button.disabled = false; button.textContent = newStatus === 'approved' ? 'SAVE DETAILS & APPROVE' : 'DENY BOOKING'; button.removeAttribute('aria-busy'); }
     }
 };
 
