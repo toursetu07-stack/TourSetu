@@ -3110,12 +3110,179 @@ if (selectedType === 'hotel') {
             if(actionElement.dataset.agencyRequestAction==='cancel'){
                 void window.cancelBookingWithPenalty(bookingId);
             }else if(actionElement.dataset.agencyRequestAction==='payment'){
-                void window.simulatePayment(bookingId);
+                void window.openCustomerPassengerManifest(bookingId);
             }
         });
     }
 };
 
+
+/* =========================================================================
+   CUSTOMER PASSENGER MANIFEST — required before payment
+   Aadhaar images are stored in a private bucket; never expose a public URL.
+   ========================================================================= */
+window.openCustomerPassengerManifest = async function(bookingId) {
+    const client = getClient();
+    const { data: { user }, error: authError } = await client.auth.getUser();
+    if (authError || !user) { alert('Please sign in again before continuing.'); return; }
+
+    const { data: booking, error: bookingError } = await client.from('bookings')
+        .select('id,customer_id,status,total_price,package_title,travel_date')
+        .eq('id', String(bookingId)).eq('customer_id', user.id).single();
+    if (bookingError || !booking) { alert('Booking could not be verified. Please refresh and try again.'); return; }
+    if (!['approved','confirmed'].includes(String(booking.status || '').toLowerCase())) {
+        alert('Payment is available only after the agency approves your request.'); return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'customer-passenger-manifest-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.72);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto;';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:#fff;width:min(680px,100%);max-height:92vh;overflow:auto;border-radius:18px;padding:26px;box-shadow:0 24px 70px rgba(0,0,0,.25);';
+    const title = document.createElement('h2');
+    title.textContent = 'Customer Passenger Manifest';
+    title.style.cssText = 'margin:0 0 6px;color:#1f2937;';
+    const intro = document.createElement('p');
+    intro.textContent = 'Please complete all passenger and pickup details before continuing to payment.';
+    intro.style.cssText = 'margin:0 0 20px;color:#64748b;font-size:14px;line-height:1.5;';
+    const form = document.createElement('form');
+    form.noValidate = true;
+    form.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:14px;';
+    const makeField = (labelText, name, type, placeholder, required=true) => {
+        const wrap = document.createElement('label');
+        wrap.style.cssText = 'display:flex;flex-direction:column;gap:7px;color:#334155;font-size:13px;font-weight:700;';
+        const label = document.createElement('span'); label.textContent = labelText + (required ? ' *' : '');
+        const input = document.createElement(type === 'textarea' ? 'textarea' : 'input');
+        input.name = name;
+        if (type !== 'textarea') input.type = type;
+        input.placeholder = placeholder || '';
+        input.required = required;
+        input.autocomplete = name === 'leaderName' ? 'name' : name === 'whatsapp' ? 'tel' : 'off';
+        input.style.cssText = 'box-sizing:border-box;width:100%;min-height:44px;padding:11px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#0f172a;font:inherit;';
+        if (type === 'textarea') { input.rows = 3; input.style.resize = 'vertical'; }
+        wrap.append(label,input);
+        return {wrap,input};
+    };
+    const name = makeField('Leader Traveler Name','leaderName','text','Full name');
+    const whatsapp = makeField('WhatsApp Mobile Number','whatsapp','tel','10-digit mobile number');
+    whatsapp.input.inputMode = 'numeric'; whatsapp.input.maxLength = 15;
+    const pickup = makeField('Exact Pickup Address','pickupAddress','textarea','House / hotel, street, landmark, city, PIN code');
+    pickup.wrap.style.gridColumn = '1 / -1';
+    const adults = makeField('Adults (12+ years)','adults','number','0');
+    adults.input.min = '0'; adults.input.step = '1'; adults.input.value = '1';
+    const kids = makeField('Kids (under 12 years)','kids','number','0');
+    kids.input.min = '0'; kids.input.step = '1'; kids.input.value = '0';
+    const totalWrap = document.createElement('div');
+    totalWrap.style.cssText = 'grid-column:1/-1;padding:12px 14px;background:#f1f5f9;border-radius:9px;color:#334155;font-weight:700;';
+    const totalLabel = document.createElement('span'); totalLabel.textContent = 'Total Number of Passengers (Adults + Kids): ';
+    const totalValue = document.createElement('strong'); totalValue.textContent = '1';
+    totalWrap.append(totalLabel,totalValue);
+    const updateTotal = () => { totalValue.textContent = String(Math.max(0, Number(adults.input.value)||0) + Math.max(0, Number(kids.input.value)||0)); };
+    adults.input.addEventListener('input',updateTotal); kids.input.addEventListener('input',updateTotal);
+    const idProof = makeField('Leader Traveler Aadhaar Card Photo','aadhaarPhoto','file','');
+    idProof.input.accept = 'image/jpeg,image/png,image/webp';
+    idProof.input.setAttribute('aria-describedby','manifest-aadhaar-help');
+    const help = document.createElement('small');
+    help.id = 'manifest-aadhaar-help';
+    help.textContent = 'Upload a clear image (JPG, PNG or WebP), max 5 MB. Aadhaar is sensitive personal data; upload only if required for this trip.';
+    help.style.cssText = 'font-weight:400;color:#64748b;line-height:1.45;';
+    idProof.wrap.appendChild(help); idProof.wrap.style.gridColumn = '1 / -1';
+    const consentWrap = document.createElement('label');
+    consentWrap.style.cssText = 'grid-column:1/-1;display:flex;align-items:flex-start;gap:9px;color:#475569;font-size:12px;line-height:1.5;';
+    const consent = document.createElement('input'); consent.type='checkbox'; consent.required=true; consent.style.marginTop='3px';
+    const consentText = document.createElement('span');
+    consentText.textContent = 'I confirm these details are accurate and consent to sharing necessary trip details with the assigned agency for booking operations.';
+    consentWrap.append(consent,consentText);
+    const errorText = document.createElement('p');
+    errorText.style.cssText = 'grid-column:1/-1;color:#b91c1c;font-size:13px;margin:0;';
+    errorText.hidden = true;
+    const actions = document.createElement('div');
+    actions.style.cssText = 'grid-column:1/-1;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:5px;';
+    const cancel = document.createElement('button'); cancel.type='button'; cancel.textContent='Cancel';
+    cancel.style.cssText='padding:11px 18px;border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:9px;font-weight:700;cursor:pointer;';
+    cancel.addEventListener('click',()=>overlay.remove());
+    const submit = document.createElement('button'); submit.type='submit'; submit.textContent='Save Manifest & Continue to Payment';
+    submit.style.cssText='padding:11px 18px;border:0;background:#16a34a;color:#fff;border-radius:9px;font-weight:800;cursor:pointer;';
+    actions.append(cancel,submit);
+    form.append(name.wrap,whatsapp.wrap,pickup.wrap,adults.wrap,kids.wrap,totalWrap,idProof.wrap,consentWrap,errorText,actions);
+    panel.append(title,intro,form); overlay.appendChild(panel);
+    overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+    document.addEventListener('keydown', function esc(e){if(e.key==='Escape'&&document.body.contains(overlay)){overlay.remove();document.removeEventListener('keydown',esc);}});
+    document.body.appendChild(overlay);
+    name.input.focus();
+
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        errorText.hidden = true;
+        const leaderName = name.input.value.trim();
+        const mobile = whatsapp.input.value.replace(/[\s()+-]/g,'');
+        const address = pickup.input.value.trim();
+        const adultCount = Number(adults.input.value);
+        const kidCount = Number(kids.input.value);
+        const file = idProof.input.files && idProof.input.files[0];
+        if (!leaderName || !/^\d{10,15}$/.test(mobile) || !address || !Number.isInteger(adultCount) || !Number.isInteger(kidCount) || adultCount < 0 || kidCount < 0 || adultCount + kidCount < 1 || !file || !consent.checked) {
+            errorText.textContent = 'Please complete every required field, enter a valid WhatsApp number, add at least one passenger, upload the Aadhaar photo, and accept the confirmation.';
+            errorText.hidden = false; return;
+        }
+        if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 5*1024*1024) {
+            errorText.textContent = 'Aadhaar photo must be JPG, PNG or WebP and no larger than 5 MB.';
+            errorText.hidden = false; return;
+        }
+        submit.disabled = true; cancel.disabled = true; submit.textContent = 'Saving securely…';
+        try {
+            const extension = ({'image/jpeg':'jpg','image/png':'png','image/webp':'webp'})[file.type];
+            const path = user.id + '/' + String(booking.id) + '/' + crypto.randomUUID() + '.' + extension;
+            const {error: uploadError} = await client.storage.from('passenger-manifests').upload(path,file,{upsert:false,contentType:file.type,cacheControl:'3600'});
+            if (uploadError) throw new Error('Secure ID photo upload failed. Please contact support if this continues.');
+            const {error: saveError} = await client.from('customer_passenger_manifests').upsert({
+                booking_id: String(booking.id), customer_id: user.id, leader_traveler_name: leaderName,
+                whatsapp_mobile_number: mobile, aadhaar_photo_path: path, exact_pickup_address: address,
+                adults_count: adultCount, kids_count: kidCount, total_passengers: adultCount + kidCount,
+                consented_at: new Date().toISOString()
+            },{onConflict:'booking_id'});
+            if (saveError) {
+                await client.storage.from('passenger-manifests').remove([path]);
+                throw new Error('Manifest could not be saved. Please retry; no payment was started.');
+            }
+            overlay.remove();
+            // A real gateway checkout requires a server-created order and server-side signature verification.
+            // Never mark the booking paid from a browser-only confirmation.
+            let gatewayResult;
+            try {
+                gatewayResult = await client.functions.invoke('create-razorpay-order',{body:{bookingId:String(booking.id)}});
+            } catch (_) {
+                gatewayResult = {error:new Error('Payment gateway setup is unavailable.')};
+            }
+            if (gatewayResult?.error || !gatewayResult?.data?.orderId || !gatewayResult?.data?.keyId || !window.Razorpay) {
+                alert('Passenger Manifest saved securely. The payment gateway is not configured yet, so no payment was taken. Please contact TourSetu support to complete payment.');
+                return;
+            }
+            const order = gatewayResult.data;
+            const checkout = new window.Razorpay({
+                key: order.keyId, order_id: order.orderId, amount: order.amount, currency: order.currency || 'INR',
+                name: 'TourSetu', description: booking.package_title || 'Tour booking',
+                prefill: {name:leaderName, contact:mobile},
+                notes: {booking_id:String(booking.id)},
+                handler: async response => {
+                    const verified = await client.functions.invoke('verify-razorpay-payment',{body:{bookingId:String(booking.id),...response}});
+                    if (verified.error || !verified.data?.verified) {
+                        alert('Payment verification is pending. Do not pay again; please contact TourSetu support.');
+                        return;
+                    }
+                    alert('Payment verified successfully.');
+                    await window.renderCustomerRequests();
+                },
+                modal: {ondismiss:()=>window.renderCustomerRequests()}
+            });
+            checkout.open();
+        } catch (err) {
+            console.error('Passenger manifest save failed:',err);
+            errorText.textContent = err?.message || 'Unable to save passenger manifest. Please try again.';
+            errorText.hidden = false;
+            submit.disabled = false; cancel.disabled = false; submit.textContent = 'Save Manifest & Continue to Payment';
+        }
+    });
+};
 
 /* =========================================================================
    🎒 AGENCY BOOKING PAYMENT CONFIRMATION
