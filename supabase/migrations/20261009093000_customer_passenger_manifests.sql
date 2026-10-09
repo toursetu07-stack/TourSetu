@@ -1,7 +1,8 @@
 -- Passenger manifests are private customer booking data. Aadhaar photos are stored
 -- in a private Storage bucket and referenced by object path, never a public URL.
+-- IMPORTANT: public.bookings.id is an integer in this project.
 create table if not exists public.customer_passenger_manifests (
-    booking_id uuid primary key references public.bookings(id) on delete cascade,
+    booking_id integer primary key references public.bookings(id) on delete cascade,
     customer_id uuid not null references auth.users(id) on delete cascade,
     leader_traveler_name text not null check (char_length(trim(leader_traveler_name)) between 2 and 120),
     whatsapp_mobile_number text not null check (char_length(whatsapp_mobile_number) between 10 and 15),
@@ -17,6 +18,8 @@ create table if not exists public.customer_passenger_manifests (
 );
 
 alter table public.customer_passenger_manifests enable row level security;
+-- SQL grants permit the API role to access the table; RLS still limits rows to the owner.
+grant select, insert, update on table public.customer_passenger_manifests to authenticated;
 
 drop policy if exists "Customers read own passenger manifests" on public.customer_passenger_manifests;
 create policy "Customers read own passenger manifests"
@@ -57,7 +60,16 @@ on conflict (id) do update set public = false, file_size_limit = 5242880, allowe
 drop policy if exists "Customers upload own passenger manifest images" on storage.objects;
 create policy "Customers upload own passenger manifest images"
 on storage.objects for insert to authenticated
-with check (bucket_id = 'passenger-manifests' and (storage.foldername(name))[1] = (select auth.uid())::text);
+with check (
+    bucket_id = 'passenger-manifests'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and exists (
+        select 1 from public.bookings b
+        where b.id::text = (storage.foldername(name))[2]
+          and b.customer_id = (select auth.uid())
+          and lower(coalesce(b.status, '')) in ('approved','confirmed')
+    )
+);
 
 drop policy if exists "Customers read own passenger manifest images" on storage.objects;
 create policy "Customers read own passenger manifest images"

@@ -3220,7 +3220,13 @@ window.openCustomerPassengerManifest = async function(bookingId) {
         const adultCount = Number(adults.input.value);
         const kidCount = Number(kids.input.value);
         const file = idProof.input.files && idProof.input.files[0];
-        if (!leaderName || !/^\d{10,15}$/.test(mobile) || !address || !Number.isInteger(adultCount) || !Number.isInteger(kidCount) || adultCount < 0 || kidCount < 0 || adultCount + kidCount < 1 || !file || !consent.checked) {
+        if (address.length < 5 || address.length > 1000) {
+            errorText.textContent = 'Please enter a complete pickup address (5–1000 characters), including a street or landmark and city.';
+            errorText.hidden = false;
+            pickup.input.focus();
+            return;
+        }
+        if (!leaderName || !/^\\d{10,15}$/.test(mobile) || !Number.isInteger(adultCount) || !Number.isInteger(kidCount) || adultCount < 0 || kidCount < 0 || adultCount + kidCount < 1 || !file || !consent.checked) {
             errorText.textContent = 'Please complete every required field, enter a valid WhatsApp number, add at least one passenger, upload the Aadhaar photo, and accept the confirmation.';
             errorText.hidden = false; return;
         }
@@ -3241,40 +3247,72 @@ window.openCustomerPassengerManifest = async function(bookingId) {
                 consented_at: new Date().toISOString()
             },{onConflict:'booking_id'});
             if (saveError) {
+                console.error('Passenger manifest database save failed:', {
+                    code: saveError.code,
+                    message: saveError.message,
+                    details: saveError.details,
+                    hint: saveError.hint
+                });
                 await client.storage.from('passenger-manifests').remove([path]);
+                if (saveError.code === '23514' && String(saveError.message || '').includes('exact_pickup_address')) {
+                    throw new Error('Please enter a complete pickup address (at least 5 characters). No payment was started.');
+                }
                 throw new Error('Manifest could not be saved. Please retry; no payment was started.');
             }
-            overlay.remove();
-            // A real gateway checkout requires a server-created order and server-side signature verification.
-            // Never mark the booking paid from a browser-only confirmation.
-            let gatewayResult;
-            try {
-                gatewayResult = await client.functions.invoke('create-razorpay-order',{body:{bookingId:String(booking.id)}});
-            } catch (_) {
-                gatewayResult = {error:new Error('Payment gateway setup is unavailable.')};
-            }
-            if (gatewayResult?.error || !gatewayResult?.data?.orderId || !gatewayResult?.data?.keyId || !window.Razorpay) {
-                alert('Passenger Manifest saved securely. The payment gateway is not configured yet, so no payment was taken. Please contact TourSetu support to complete payment.');
-                return;
-            }
-            const order = gatewayResult.data;
-            const checkout = new window.Razorpay({
-                key: order.keyId, order_id: order.orderId, amount: order.amount, currency: order.currency || 'INR',
-                name: 'TourSetu', description: booking.package_title || 'Tour booking',
-                prefill: {name:leaderName, contact:mobile},
-                notes: {booking_id:String(booking.id)},
-                handler: async response => {
-                    const verified = await client.functions.invoke('verify-razorpay-payment',{body:{bookingId:String(booking.id),...response}});
-                    if (verified.error || !verified.data?.verified) {
-                        alert('Payment verification is pending. Do not pay again; please contact TourSetu support.');
-                        return;
-                    }
-                    alert('Payment verified successfully.');
-                    await window.renderCustomerRequests();
-                },
-                modal: {ondismiss:()=>window.renderCustomerRequests()}
+            // Keep the manifest confirmation visible until checkout can be opened. If gateway
+            // setup is temporarily unavailable, the customer gets an explicit Pay Now retry button
+            // without re-uploading Aadhaar or submitting the manifest a second time.
+            const openPaymentCheckout = async () => {
+                let gatewayResult;
+                try {
+                    gatewayResult = await client.functions.invoke('create-razorpay-order',{body:{bookingId:String(booking.id)}});
+                } catch (_) {
+                    gatewayResult = {error:new Error('Payment gateway setup is unavailable.')};
+                }
+                if (gatewayResult?.error || !gatewayResult?.data?.orderId || !gatewayResult?.data?.keyId || !window.Razorpay) {
+                    paymentButton.disabled = false;
+                    paymentButton.textContent = 'Retry Payment';
+                    paymentStatus.textContent = 'Manifest saved securely. Payment has not been taken yet. Please retry when checkout is available.';
+                    paymentStatus.hidden = false;
+                    return;
+                }
+                const order = gatewayResult.data;
+                overlay.remove();
+                const checkout = new window.Razorpay({
+                    key: order.keyId, order_id: order.orderId, amount: order.amount, currency: order.currency || 'INR',
+                    name: 'TourSetu', description: booking.package_title || 'Tour booking',
+                    prefill: {name:leaderName, contact:mobile},
+                    notes: {booking_id:String(booking.id)},
+                    handler: async response => {
+                        const verified = await client.functions.invoke('verify-razorpay-payment',{body:{bookingId:String(booking.id),...response}});
+                        if (verified.error || !verified.data?.verified) {
+                            alert('Payment verification is pending. Do not pay again; please contact TourSetu support.');
+                            return;
+                        }
+                        alert('Payment verified successfully.');
+                        await window.renderCustomerRequests();
+                    },
+                    modal: {ondismiss:()=>window.renderCustomerRequests()}
+                });
+                checkout.open();
+            };
+            form.hidden = true;
+            intro.textContent = 'Passenger Manifest saved securely. Continue to payment below.';
+            const paymentStatus = document.createElement('p');
+            paymentStatus.hidden = true;
+            paymentStatus.setAttribute('role','status');
+            paymentStatus.style.cssText = 'color:#b45309;font-size:14px;line-height:1.5;';
+            const paymentButton = document.createElement('button');
+            paymentButton.type = 'button';
+            paymentButton.textContent = 'Pay Now';
+            paymentButton.style.cssText = 'width:100%;min-height:48px;margin-top:12px;border:0;border-radius:10px;background:#0f766e;color:#fff;font-weight:800;font-size:16px;cursor:pointer;';
+            paymentButton.addEventListener('click', async () => {
+                paymentButton.disabled = true;
+                paymentButton.textContent = 'Opening secure checkout…';
+                await openPaymentCheckout();
             });
-            checkout.open();
+            panel.append(paymentStatus,paymentButton);
+            await openPaymentCheckout();
         } catch (err) {
             console.error('Passenger manifest save failed:',err);
             errorText.textContent = err?.message || 'Unable to save passenger manifest. Please try again.';
