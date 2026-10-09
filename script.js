@@ -3751,7 +3751,7 @@ window.showPackageDetails = function(pEncoded) {
     tourSetuSetStyles(timingCard, 'background:#f0fff7;border:1px solid #b8ebd0;border-radius:12px;padding:15px;');
     const rawTiming = typeof p.start_tour_timing === 'string' ? p.start_tour_timing : '';
     const timingLabel = rawTiming ? (() => {
-        const match = rawTiming.match(/^(\\d{2}):(\\d{2})/);
+        const match = rawTiming.match(/^(\d{2}):(\d{2})/);
         if (!match) return rawTiming;
         const hour = Number(match[1]);
         const minute = match[2];
