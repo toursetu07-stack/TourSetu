@@ -7237,9 +7237,6 @@ window.showPackageForm = function(pEncoded = null) {
                         font-size:14px;
                     "
                 >
-                <small style="display:block;margin-top:5px;color:#888;font-size:11px;">
-                    Enter the daily tour departure time.
-                </small>
             </div>
 
 
