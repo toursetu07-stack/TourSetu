@@ -4770,6 +4770,16 @@ async function renderAgencyPackagesTab(container, userId, client) {
         location.appendChild(createAgencyDashboardElement('b', pkg.starting_location || 'N/A'));
         info.appendChild(location);
 
+        const timingText = typeof pkg.start_tour_timing === 'string' ? pkg.start_tour_timing : '';
+        const timingMatch = timingText.match(/^(\\d{1,2}):(\\d{2})/);
+        const timingDisplay = timingMatch
+            ? `${Number(timingMatch[1]) % 12 || 12}:${timingMatch[2]} ${Number(timingMatch[1]) >= 12 ? 'PM' : 'AM'}`
+            : 'Not specified';
+        const timingRow = createAgencyDashboardElement('p', null, 'margin:5px 0;color:#666;font-size:14px;overflow-wrap:anywhere;');
+        timingRow.appendChild(document.createTextNode('🕒 Start tour: '));
+        timingRow.appendChild(createAgencyDashboardElement('b', timingDisplay));
+        info.appendChild(timingRow);
+
         const editButton = createAgencyDashboardElement(
             'button',
             '✏️ Edit',
@@ -7047,6 +7057,20 @@ window.showPackageForm = function(pEncoded = null) {
         : '';
 
 
+    // Keep the existing database format (24-hour HH:mm) while showing
+    // clear 12-hour hour/minute/AM-PM controls in the form.
+    const existingTimingMatch = isEdit && typeof pkg.start_tour_timing === 'string'
+        ? pkg.start_tour_timing.match(/^(\\d{1,2}):(\\d{2})/)
+        : null;
+    const existingTimingHour24 = existingTimingMatch ? Number(existingTimingMatch[1]) : null;
+    const existingStartHour = existingTimingHour24 === null
+        ? null
+        : (existingTimingHour24 % 12 || 12);
+    const existingStartMinute = existingTimingMatch ? Number(existingTimingMatch[2]) : null;
+    const existingStartPeriod = existingTimingHour24 === null
+        ? ''
+        : (existingTimingHour24 >= 12 ? 'PM' : 'AM');
+
     // =========================================
     // BUILD COMPLETE PACKAGE FORM
     // =========================================
@@ -7210,36 +7234,36 @@ window.showPackageForm = function(pEncoded = null) {
             </div>
 
 
-            <!-- START TOUR TIMING -->
-            <div style="
-                margin-bottom:15px;
-                max-width:50%;
-            ">
-                <label for="p-start-tour-timing" style="
-                    font-size:11px;
-                    font-weight:bold;
-                    color:#666;
-                    display:block;
-                    margin-bottom:5px;
-                ">START TOUR TIMING</label>
-                <input
-                    type="time"
-                    id="p-start-tour-timing"
-                    value="${isEdit ? (pkg.start_tour_timing || '') : ''}"
-                    aria-label="Start tour timing"
-                    style="
-                        width:100%;
-                        min-height:40px;
-                        padding:10px;
-                        border:1px solid #ccc;
-                        border-radius:6px;
-                        box-sizing:border-box;
-                        font-size:14px;
-                    "
-                >
-                <small style="display:block;margin-top:5px;color:#888;font-size:11px;">
-                    Enter the daily tour departure time.
-                </small>
+            <!-- START TOUR TIMING: explicit 12-hour controls on every device -->
+            <div style="margin-bottom:15px;width:100%;max-width:520px;">
+                <label for="p-start-tour-hour" style="font-size:11px;font-weight:bold;color:#666;display:block;margin-bottom:5px;">
+                    START TOUR TIMING
+                </label>
+                <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+                    <div>
+                        <label for="p-start-tour-hour" style="display:block;font-size:11px;color:#777;margin-bottom:4px;">Hours (1–12)</label>
+                        <select id="p-start-tour-hour" aria-label="Start tour hour" style="width:100%;min-height:42px;padding:9px;border:1px solid #ccc;border-radius:6px;background:#fff;box-sizing:border-box;font-size:14px;">
+                            <option value="">Hour</option>
+                            ${Array.from({length:12}, (_, i) => i + 1).map(h => `<option value="${h}" ${existingStartHour === h ? 'selected' : ''}>${h}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="p-start-tour-minute" style="display:block;font-size:11px;color:#777;margin-bottom:4px;">Minutes</label>
+                        <select id="p-start-tour-minute" aria-label="Start tour minutes" style="width:100%;min-height:42px;padding:9px;border:1px solid #ccc;border-radius:6px;background:#fff;box-sizing:border-box;font-size:14px;">
+                            <option value="">Minute</option>
+                            ${Array.from({length:60}, (_, i) => i).map(m => `<option value="${String(m).padStart(2,'0')}" ${existingStartMinute === m ? 'selected' : ''}>${String(m).padStart(2,'0')}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="p-start-tour-period" style="display:block;font-size:11px;color:#777;margin-bottom:4px;">AM / PM</label>
+                        <select id="p-start-tour-period" aria-label="Start tour AM or PM" style="width:100%;min-height:42px;padding:9px;border:1px solid #ccc;border-radius:6px;background:#fff;box-sizing:border-box;font-size:14px;">
+                            <option value="">AM/PM</option>
+                            <option value="AM" ${existingStartPeriod === 'AM' ? 'selected' : ''}>AM</option>
+                            <option value="PM" ${existingStartPeriod === 'PM' ? 'selected' : ''}>PM</option>
+                        </select>
+                    </div>
+                </div>
+                <small style="display:block;margin-top:5px;color:#888;font-size:11px;">Choose hours from 1 to 12, minutes, and AM or PM.</small>
             </div>
 
 
@@ -7549,7 +7573,26 @@ window.processSave = async function(packageId = '') {
             throw new Error("Only an agency account can create or edit packages.");
         }
 
-        const startTourTiming = document.getElementById('p-start-tour-timing')?.value || null;
+        const startHour = document.getElementById('p-start-tour-hour')?.value || '';
+        const startMinute = document.getElementById('p-start-tour-minute')?.value || '';
+        const startPeriod = document.getElementById('p-start-tour-period')?.value || '';
+        let startTourTiming = null;
+
+        if (startHour || startMinute || startPeriod) {
+            if (!startHour || startMinute === '' || !startPeriod) {
+                alert("Please select the start tour hour, minutes, and AM/PM.");
+                document.getElementById(!startHour ? 'p-start-tour-hour' : startMinute === '' ? 'p-start-tour-minute' : 'p-start-tour-period')?.focus();
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerText = packageId ? 'SAVE CHANGES' : 'PUBLISH PACKAGE';
+                }
+                return;
+            }
+
+            let hour24 = Number(startHour) % 12;
+            if (startPeriod === 'PM') hour24 += 12;
+            startTourTiming = `${String(hour24).padStart(2, '0')}:${startMinute}`;
+        }
 
         const payload = {
             title,
