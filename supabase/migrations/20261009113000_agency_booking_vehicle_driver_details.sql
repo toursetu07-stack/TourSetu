@@ -17,6 +17,10 @@ create table if not exists public.agency_booking_vehicle_assignments (
 
 alter table public.agency_booking_vehicle_assignments enable row level security;
 
+-- SQL privileges allow the authenticated role to reach the table; RLS below still
+-- restricts every row to the agency that owns the booking.
+grant select, insert, update on table public.agency_booking_vehicle_assignments to authenticated;
+
 drop policy if exists "Agencies read own booking vehicle assignments" on public.agency_booking_vehicle_assignments;
 create policy "Agencies read own booking vehicle assignments"
 on public.agency_booking_vehicle_assignments for select to authenticated
