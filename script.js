@@ -3220,7 +3220,13 @@ window.openCustomerPassengerManifest = async function(bookingId) {
         const adultCount = Number(adults.input.value);
         const kidCount = Number(kids.input.value);
         const file = idProof.input.files && idProof.input.files[0];
-        if (!leaderName || !/^\d{10,15}$/.test(mobile) || !address || !Number.isInteger(adultCount) || !Number.isInteger(kidCount) || adultCount < 0 || kidCount < 0 || adultCount + kidCount < 1 || !file || !consent.checked) {
+        if (address.length < 5 || address.length > 1000) {
+            errorText.textContent = 'Please enter a complete pickup address (5–1000 characters), including a street or landmark and city.';
+            errorText.hidden = false;
+            pickup.input.focus();
+            return;
+        }
+        if (!leaderName || !/^\\d{10,15}$/.test(mobile) || !Number.isInteger(adultCount) || !Number.isInteger(kidCount) || adultCount < 0 || kidCount < 0 || adultCount + kidCount < 1 || !file || !consent.checked) {
             errorText.textContent = 'Please complete every required field, enter a valid WhatsApp number, add at least one passenger, upload the Aadhaar photo, and accept the confirmation.';
             errorText.hidden = false; return;
         }
@@ -3241,7 +3247,16 @@ window.openCustomerPassengerManifest = async function(bookingId) {
                 consented_at: new Date().toISOString()
             },{onConflict:'booking_id'});
             if (saveError) {
+                console.error('Passenger manifest database save failed:', {
+                    code: saveError.code,
+                    message: saveError.message,
+                    details: saveError.details,
+                    hint: saveError.hint
+                });
                 await client.storage.from('passenger-manifests').remove([path]);
+                if (saveError.code === '23514' && String(saveError.message || '').includes('exact_pickup_address')) {
+                    throw new Error('Please enter a complete pickup address (at least 5 characters). No payment was started.');
+                }
                 throw new Error('Manifest could not be saved. Please retry; no payment was started.');
             }
             overlay.remove();
