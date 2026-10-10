@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="light">
+<title>TourSetu Admin</title>
+<link rel="stylesheet" href="admin.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script>
+<script src="/supabase-config"></script>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="/">Tour<span>Setu</span> <small>ADMIN</small></a><div id="session-label">Secure administration</div><button id="signout" class="secondary hidden" type="button">Sign out</button></header>
+<main class="wrap">
+<section id="login-card" class="panel login">
+<div class="eyebrow">PRIVATE WORKSPACE</div><h1>Admin sign in</h1><p>Only accounts explicitly authorized by the database administrator can access this dashboard.</p>
+<form id="login-form"><label for="email">Admin email</label><input id="email" type="email" autocomplete="username" required maxlength="254"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required maxlength="256><button class="primary" type="submit">Sign in securely</button></form>
+<div id="login-status" class="notice" role="status" aria-live="polite"></div>
+</section>
+<section id="denied-card" class="panel hidden"><h1>Admin access not enabled</h1><p>Your account is signed in, but it is not on the TourSetu admin allowlist. Ask the project owner to grant access through Supabase SQL Editor. The website cannot grant admin rights to itself.</p><button id="denied-signout" class="secondary" type="button">Sign out</button></section>
+<section id="dashboard" class="hidden">
+<div class="heading"><div><div class="eyebrow">TOURSETU CONTROL CENTER</div><h1>Admin dashboard</h1><p>Partner verification, marketplace activity and financial oversight.</p></div><button id="refresh" class="secondary" type="button">Refresh data</button></div>
+<div id="stats" class="stats"></div>
+<nav id="tabs" class="tabs" aria-label="Admin sections">
+<button data-tab="approvals" class="active">Approvals</button><button data-tab="bookings">Bookings &amp; payments</button><button data-tab="revenue">Revenue &amp; commission</button><button data-tab="partners">Agency &amp; hotel management</button><button data-tab="customers">Customer management</button><button data-tab="disputes">Complaints &amp; refunds</button>
+</nav>
+<div id="page-status" class="notice" role="status" aria-live="polite"></div><section id="content" class="panel table-panel"></section>
+</section>
+</main>
+<footer>TourSetu Admin · Access is audited · Never share passwords or secret API keys</footer>
+<script src="admin.js"></script>
+</body></html>
