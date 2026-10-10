@@ -27,7 +27,7 @@ async function renderSource(src){
  const tableWrap=node('div',undefined,'table-scroll'),table=node('table'),thead=node('thead'),hr=node('tr');
  src.cols.forEach(c=>hr.appendChild(node('th',c.replaceAll('_',' '))));hr.appendChild(node('th','Admin actions'));thead.appendChild(hr);table.appendChild(thead);
  const tbody=node('tbody');table.appendChild(tbody);tableWrap.appendChild(table);section.appendChild(tableWrap);
- const {data,error}=await db.from(src.table).select(src.cols.join(',')).order(src.cols.includes('created_at')?'created_at':'id',{ascending:false}).limit(200);
+ const {data,error}=await db.from(src.table).select(src.cols.join(',')).order(src.cols.includes('created_at')?'created_at':(src.cols.includes('id')?'id':src.cols[0]),{ascending:false}).limit(200);
  if(error){const p=node('p','Could not load '+src.label+': '+error.message,'empty');section.appendChild(p);return section}
  let rows=data||[];if(src.partnerOnly)rows=rows.filter(r=>r.role==='agency'||r.role==='hotel');if(src.customerOnly)rows=rows.filter(r=>r.role==='customer');if(src.filter)rows=rows.filter(src.filter);cache[src.table]=rows;
  if(!rows.length){section.appendChild(node('p','No records found.','empty'));return section}
