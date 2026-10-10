@@ -5,12 +5,15 @@ create table if not exists public.toursetu_admin_users (
 );
 alter table public.toursetu_admin_users enable row level security;
 revoke all on public.toursetu_admin_users from anon, authenticated;
+grant select on public.toursetu_admin_users to authenticated;
+drop policy if exists toursetu_admin_users_read_self on public.toursetu_admin_users;
+create policy toursetu_admin_users_read_self on public.toursetu_admin_users for select to authenticated using (user_id = (select auth.uid()));
 
 create or replace function public.is_toursetu_admin()
 returns boolean
 language sql
 stable
-security definer
+security invoker
 set search_path = ''
 as $$
   select exists (
