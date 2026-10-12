@@ -1,180 +1,108 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <!-- Keep the full desktop layout on phones. The page uses a 1200 CSS-pixel viewport so mobile browsers scale the desktop UI instead of switching to a separate mobile layout. -->
-    <meta name="viewport" content="width=1200, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="TourSetu — trusted travel, hotel and Char Dham booking marketplace.">
-    <meta name="theme-color" content="#ff9f43">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta name="color-scheme" content="light">
-    <title>TourSetu | Travel Agency Portal</title>
-    
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script src="onesignal-init.js?v=2026-10-02-security-phase4" defer></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
-    <!-- XSS defense-in-depth: maintained sanitizer loaded before app code. -->
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js"></script>
-    <script src="security-dom.js?v=2026-10-02-xss-phase1"></script>
-
-    <style>
-        /* FORCE CALENDAR VISIBILITY & STYLE */
-        input[type="date"] {
-            appearance: auto !important;
-            -webkit-appearance: listbox !important;
-            min-height: 50px;
-            cursor: pointer;
-            background-color: #ffffff !important;
-            color: #2d3436 !important;
-            font-family: 'Inter', sans-serif;
-            position: relative;
-            border: 2px solid #ff9f43 !important;
-            display: block !important;
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-
-        /* Calendar Icon for Chrome/Edge/Windows 7 */
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            background-color: #ff9f43;
-            padding: 8px;
-            cursor: pointer;
-            border-radius: 4px;
-            display: block !important;
-            opacity: 1 !important;
-        }
-
-        #detail-modal {
-            z-index: 999999 !important;
-        }
-
-        .modal-content {
-            z-index: 1000000 !important;
-        }
-
-        /* Refund Policy Checkbox Styling */
-        .policy-container {
-            margin-top: 20px;
-            padding: 15px;
-            background: #fff5f5;
-            border: 1px solid #ff7675;
-            border-radius: 10px;
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
-        }
-
-        .policy-container input {
-            width: 20px !important;
-            height: 20px !important;
-            margin-top: 4px !important;
-            cursor: pointer;
-        }
-
-        /* Hotel Sidebar Styling */
-        .nav-item {
-            padding: 12px 15px;
-            cursor: pointer;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            color: #d1d5db;
-        }
-
-        .nav-item:hover {
-            background: #374151;
-            color: #ffffff;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123c35">
+  <meta name="description" content="Discover Uttarakhand with TourSetu. Explore Char Dham Yatra travel packages, trusted travel agencies and stays in one place.">
+  <title>TourSetu | Your Uttarakhand Journey Starts Here</title>
+  <style>
+    :root{--ink:#17332f;--muted:#63736f;--green:#164b3f;--green2:#24745c;--lime:#d5edaa;--cream:#fbfaf6;--line:#e7e9e2;--white:#fff;--shadow:0 20px 55px rgba(18,60,53,.12)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:84px}body{margin:0;background:var(--cream);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6}a{color:inherit;text-decoration:none}button,input,textarea{font:inherit}.wrap{width:min(1160px,calc(100% - 40px));margin-inline:auto}
+    .topbar{position:sticky;top:0;z-index:20;background:rgba(251,250,246,.93);backdrop-filter:blur(14px);border-bottom:1px solid rgba(231,233,226,.85)}.nav{height:76px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:10px;font-weight:850;font-size:1.3rem;letter-spacing:-.04em}.brand-mark{width:38px;height:38px;border-radius:13px;background:var(--green);display:grid;place-items:center;color:var(--lime);font-size:1.2rem}.brand span:last-child{color:var(--green2)}.navlinks{display:flex;align-items:center;gap:30px;color:#4b605a;font-size:.93rem}.navlinks a:hover{color:var(--green2)}.nav-cta,.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;border:0;border-radius:999px;padding:12px 19px;font-weight:750;transition:transform .2s,background .2s;cursor:pointer}.nav-cta,.btn-primary{background:var(--green);color:white}.nav-cta:hover,.btn-primary:hover{background:#0d372e;transform:translateY(-1px)}.menu-toggle{display:none;border:1px solid var(--line);background:white;border-radius:12px;padding:9px 12px;color:var(--ink)}
+    .hero{padding:62px 0 70px;overflow:hidden}.hero-grid{display:grid;grid-template-columns:1fr 1.02fr;gap:54px;align-items:center}.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--green2);font-size:.78rem;font-weight:850;letter-spacing:.12em;text-transform:uppercase}.eyebrow:before{content:"";width:24px;height:2px;background:var(--green2)}h1,h2,h3,p{margin-top:0}h1{font-size:clamp(2.8rem,5.4vw,5.2rem);line-height:1.02;letter-spacing:-.065em;margin:20px 0 22px;max-width:630px}h1 em{font-style:normal;color:var(--green2)}.hero-copy{font-size:1.08rem;color:var(--muted);max-width:500px;margin-bottom:29px}.hero-actions{display:flex;gap:12px;flex-wrap:wrap}.btn{padding:14px 21px}.btn-outline{border:1px solid #cdd8d0;background:transparent;color:var(--ink)}.btn-outline:hover{background:#f0f4ed}.trust-row{display:flex;gap:24px;flex-wrap:wrap;margin-top:32px;color:#62716c;font-size:.84rem}.trust-row span{display:flex;align-items:center;gap:7px}.check{color:var(--green2);font-weight:900}
+    .hero-visual{min-height:475px;position:relative}.hero-photo{position:absolute;inset:0 0 24px 24px;border-radius:34px 34px 110px 34px;background:#dbe8d9 url('https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=85') center/cover no-repeat;box-shadow:var(--shadow)}.photo-shade{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,transparent 48%,rgba(8,36,30,.65))}.photo-caption{position:absolute;bottom:30px;left:32px;right:32px;color:white}.photo-caption small{letter-spacing:.12em;text-transform:uppercase;font-weight:800;font-size:.72rem}.photo-caption h3{font-size:1.8rem;line-height:1.15;margin:8px 0 0;letter-spacing:-.04em}.floating-card{position:absolute;left:0;top:48px;padding:16px 18px;border:1px solid rgba(255,255,255,.75);background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-radius:18px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}.floating-icon{width:42px;height:42px;display:grid;place-items:center;background:#e7f3d8;border-radius:13px;font-size:1.2rem}.floating-card strong{display:block;font-size:.9rem}.floating-card small{color:var(--muted);font-size:.76rem}.floating-note{position:absolute;right:-12px;bottom:0;background:var(--lime);padding:17px 20px;border-radius:18px 18px 18px 4px;max-width:220px;font-weight:750;font-size:.91rem;box-shadow:var(--shadow)}
+    .stats{border-block:1px solid var(--line);background:#fff}.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);padding:23px 0}.stat{padding:4px 25px;border-right:1px solid var(--line)}.stat:first-child{padding-left:0}.stat:last-child{border:0}.stat strong{display:block;font-size:1.02rem}.stat span{font-size:.84rem;color:var(--muted)}
+    section.content-section{padding:92px 0}.section-head{max-width:660px;margin-bottom:38px}.section-head h2{font-size:clamp(2.1rem,4vw,3.25rem);line-height:1.08;letter-spacing:-.055em;margin:14px 0}.section-head p{color:var(--muted);font-size:1.02rem}.services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.service-card{padding:27px;border:1px solid var(--line);border-radius:24px;background:white;transition:transform .2s,box-shadow .2s}.service-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}.service-icon{width:51px;height:51px;border-radius:16px;display:grid;place-items:center;background:#e8f1df;font-size:1.45rem;margin-bottom:24px}.service-card h3{font-size:1.15rem;margin-bottom:9px}.service-card p{font-size:.93rem;color:var(--muted);margin-bottom:0}.about{background:#eef2e9}.about-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:72px;align-items:center}.about-art{min-height:420px;border-radius:30px;background:#d7e5d6 url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1000&q=85') center/cover no-repeat;position:relative;overflow:hidden}.about-art:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(13,49,39,.5))}.about-label{position:absolute;z-index:1;bottom:25px;left:25px;color:#fff;font-size:1.25rem;font-weight:800;max-width:250px;line-height:1.2}.about-copy h2{font-size:clamp(2.1rem,4vw,3.15rem);line-height:1.08;letter-spacing:-.055em;margin:14px 0 18px}.about-copy p{color:var(--muted)}.value-list{list-style:none;padding:0;margin:24px 0 0;display:grid;gap:15px}.value-list li{display:flex;gap:12px;align-items:flex-start}.value-list .checkmark{flex:0 0 25px;width:25px;height:25px;border-radius:50%;background:#dceccf;display:grid;place-items:center;color:var(--green);font-size:.82rem;font-weight:900;margin-top:1px}.value-list strong{display:block;font-size:.95rem}.value-list small{color:var(--muted);font-size:.87rem}
+    .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}.step{border-top:1px solid #ccd7cd;padding-top:22px}.step-num{font-size:.78rem;color:var(--green2);font-weight:900;letter-spacing:.1em}.step h3{margin:13px 0 8px;font-size:1.18rem}.step p{font-size:.92rem;color:var(--muted);margin-bottom:0}
+    .cta-band{background:var(--green);color:white;border-radius:30px;padding:48px 52px;display:flex;justify-content:space-between;align-items:center;gap:30px}.cta-band h2{font-size:clamp(1.8rem,3.5vw,2.8rem);line-height:1.1;letter-spacing:-.05em;margin:0 0 10px}.cta-band p{color:#d1e1d8;margin:0;max-width:570px}.cta-band .btn{background:var(--lime);color:var(--green);white-space:nowrap}.contact-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:60px}.contact-info h2{font-size:clamp(2.1rem,4vw,3.2rem);line-height:1.08;letter-spacing:-.055em;margin:14px 0}.contact-info p{color:var(--muted)}.contact-panel{background:#fff;border:1px solid var(--line);border-radius:24px;padding:28px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.field{display:grid;gap:7px}.field.full{grid-column:1/-1}.field label{font-size:.85rem;font-weight:750}.field input,.field textarea,.field select{width:100%;border:1px solid #dce2da;background:#fcfcf9;border-radius:12px;padding:12px 13px;color:var(--ink);outline:none}.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--green2);box-shadow:0 0 0 3px rgba(36,116,92,.12)}.field textarea{min-height:120px;resize:vertical}.form-foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:18px}.form-note{font-size:.78rem;color:var(--muted)}.notice{display:none;margin-top:14px;padding:12px 14px;background:#f0f5e9;border-radius:12px;color:var(--green);font-size:.9rem}.footer{background:#102f29;color:#fff;padding:40px 0 24px}.footer-top{display:flex;justify-content:space-between;gap:30px;align-items:flex-start;padding-bottom:28px}.footer .brand{color:white}.footer p{color:#b7c9c0;max-width:360px;font-size:.9rem;margin-top:14px}.footer-links{display:flex;gap:23px;flex-wrap:wrap;color:#d2ded8;font-size:.88rem}.footer-bottom{border-top:1px solid rgba(255,255,255,.15);padding-top:20px;display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;color:#a9beb4;font-size:.8rem}
+    @media(max-width:900px){.hero-grid{grid-template-columns:1fr;gap:34px}.hero{padding-top:45px}.hero-copy{max-width:650px}.hero-visual{min-height:430px}.hero-photo{inset:0 8px 20px 18px}.floating-note{right:0}.about-grid{gap:35px}.contact-grid{gap:30px}.cta-band{padding:38px}.navlinks{gap:18px}}
+    @media(max-width:700px){.wrap{width:min(100% - 30px,560px)}.nav{height:68px}.menu-toggle{display:inline-flex}.nav-cta{display:none}.navlinks{display:none;position:absolute;top:68px;left:0;right:0;background:var(--cream);padding:18px 22px 24px;border-bottom:1px solid var(--line);flex-direction:column;align-items:stretch;gap:0}.navlinks.open{display:flex}.navlinks a{padding:12px 4px}.navlinks a:last-child{display:block}.hero{padding:40px 0 48px}h1{font-size:clamp(2.65rem,12vw,4rem)}.hero-copy{font-size:1rem}.hero-visual{min-height:350px}.hero-photo{border-radius:26px 26px 75px 26px;inset:0 0 18px 8px}.floating-card{top:22px;padding:12px}.floating-icon{width:36px;height:36px}.floating-note{right:0;max-width:175px;font-size:.8rem;padding:13px 14px}.photo-caption{left:22px;bottom:24px}.photo-caption h3{font-size:1.45rem}.stats-grid{grid-template-columns:1fr;gap:0;padding:10px 0}.stat,.stat:first-child{padding:13px 2px;border-right:0;border-bottom:1px solid var(--line)}.stat:last-child{border-bottom:0}.services-grid,.steps-grid{grid-template-columns:1fr}.service-card{padding:23px}.content-section{padding:65px 0!important}.about-grid,.contact-grid{grid-template-columns:1fr}.about-art{min-height:300px;order:2}.about-copy{order:1}.cta-band{padding:30px 24px;display:block}.cta-band .btn{margin-top:22px}.contact-panel{padding:20px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.footer-top{display:block}.footer-links{margin-top:24px;gap:15px}.footer-bottom{display:block}.footer-bottom span{display:block;margin-top:7px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+  </style>
 </head>
-
 <body>
-
-<a class="skip-link" href="#app">Skip to main content</a>
-
-<div id="app" role="main">
-    <div class="auth-card">
-        <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>
-        
-        <div id="auth-section">
-            <input type="email" id="email" placeholder="Email Address" autocomplete="email" inputmode="email" aria-label="Email Address">
-            <input type="password" id="password" placeholder="Password" autocomplete="current-password" aria-label="Password">
-            
-            <div id="role-selection">
-                <label>I am a:</label>
-                <select id="role">
-                    <option value="customer">Traveler</option>
-                    <option value="agency">Travel Agency</option>
-                    <option value="hotel">Hotel Partner</option>
-                </select>
-            </div>
-
-            <div id="business-fields" style="display:none; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
-                <input type="text" id="gst-no" placeholder="GST Number">
-                <input type="text" id="biz-reg" placeholder="Business Registration No.">
-                <input type="text" id="biz-lic" placeholder="Trade License / License No.">
-                <p style="font-size:0.75rem; color:#666; margin-top:5px;">
-                    Note: Partner accounts require verification to go public.
-                </p>
-            </div>
-
-            <button id="auth-btn">Create Account</button>
-            
-            <p id="toggle-text">
-                Already have an account? <a href="#" id="toggle-mode-link">Login here</a>
-            </p>
+  <header class="topbar">
+    <div class="wrap nav">
+      <a class="brand" href="#home" aria-label="TourSetu home"><span class="brand-mark" aria-hidden="true">↗</span><span>Tour<span>Setu</span></span></a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="navlinks">Menu ☰</button>
+      <nav class="navlinks" id="navlinks" aria-label="Main navigation">
+        <a href="#home">Home</a><a href="#about">About Us</a><a href="#services">Services</a><a href="#contact">Contact Us</a>
+      </nav>
+      <a class="nav-cta" href="/signin.html" target="_blank" rel="noopener noreferrer">Explore TourSetu <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+  <main>
+    <section class="hero" id="home">
+      <div class="wrap hero-grid">
+        <div>
+          <div class="eyebrow">Your Uttarakhand travel companion</div>
+          <h1>Find your way to <em>extraordinary.</em></h1>
+          <p class="hero-copy">From sacred Char Dham journeys to mountain escapes, TourSetu helps bring travellers and local travel partners together in one convenient place.</p>
+          <div class="hero-actions"><a class="btn btn-primary" href="/signin.html" target="_blank" rel="noopener noreferrer">Start exploring <span aria-hidden="true">→</span></a><a class="btn btn-outline" href="#services">Discover our services</a></div>
+          <div class="trust-row"><span><b class="check">✓</b> Explore travel options</span><span><b class="check">✓</b> Connect with local partners</span><span><b class="check">✓</b> Plan with confidence</span></div>
         </div>
-        
-        <div id="status" style="margin-top:15px; font-weight:bold;"></div>
-
-        <!-- MY REQUESTS SECTION -->
-        <div id="my-requests-section" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
-            <h3>My Requests</h3>
-            <div id="requests-list">
-                <!-- Yahan JavaScript se requests dynamic load hongi -->
-            </div>
+        <div class="hero-visual" aria-label="Scenic Himalayan mountains">
+          <div class="hero-photo"><div class="photo-shade"></div><div class="photo-caption"><small>Made for meaningful journeys</small><h3>The mountains are calling.<br>Let’s plan your way.</h3></div></div>
+          <div class="floating-card"><div class="floating-icon" aria-hidden="true">⌖</div><div><strong>Discover Uttarakhand</strong><small>Journeys, stays & local expertise</small></div></div>
+          <div class="floating-note">A simpler way to plan your next journey ✦</div>
         </div>
-    </div>
-</div>
-
-<!-- LIVE HOTEL INVENTORY CONTAINER (JS will render items here) -->
-<div id="live-hotel-inventory-list"></div>
-
-<!-- Hotel Owner Dashboard UI (Initially Hidden) -->
-<div id="owner-dashboard-section" style="display: none; max-width: 800px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-    <h2>Incoming Booking Requests</h2>
-    
-    <!-- Refresh Button -->
-    <button id="owner-refresh-btn" style="padding: 10px 15px; background: #ff9f43; color: white; border: none; border-radius: 6px; cursor:pointer;">
-        🔄 Fetch/Refresh Requests
-    </button>
-
-    <!-- Requests Display List -->
-    <div id="owner-requests-list" style="margin-top: 15px;">
-        <!-- Javascript dynamic cards yahan render karega -->
-    </div>
-</div>
-
-<div id="detail-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); justify-content:center; align-items:start; overflow-y:auto; padding:20px;">
-    <div class="modal-content card" style="background:white; width:100%; max-width:750px; padding:30px; border-radius:20px; position:relative; margin: 40px auto;">
-        <div id="detail-view-body"></div>
-    </div>
-</div>
-
-<script src="/supabase-config"></script>
-<script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
-<script src="script.js?v=2026-10-09-passenger-manifest-v1"></script>
-<script src="onesignal-auth-fix.js?v=2026-10-02-onesignal-fix-v1"></script>
-<script src="about-us.js?v=2026-10-08-about-us-v1"></script>
-<script src="hotel-partner-terms.js?v=2026-10-02-hotel-terms-v5"></script>
-<script src="agency-partner-privacy.js?v=2026-10-02-agency-privacy-v1"></script>
-<script src="hotel-partner-privacy.js?v=2026-10-02-hotel-privacy-v3"></script>
-
+      </div>
+    </section>
+    <div class="stats"><div class="wrap stats-grid"><div class="stat"><strong>One convenient place</strong><span>Explore travel options together</span></div><div class="stat"><strong>Local travel partners</strong><span>Discover services for your trip</span></div><div class="stat"><strong>Journeys that matter</strong><span>From pilgrimage to mountain breaks</span></div></div></div>
+    <section class="content-section" id="services">
+      <div class="wrap">
+        <div class="section-head"><div class="eyebrow">What we help you discover</div><h2>Your journey, connected.</h2><p>Plan key parts of your Uttarakhand trip with a clearer starting point and options that fit the journey you have in mind.</p></div>
+        <div class="services-grid">
+          <article class="service-card"><div class="service-icon" aria-hidden="true">🛕</div><h3>Char Dham Yatra</h3><p>Explore travel options for a meaningful pilgrimage through Uttarakhand’s sacred Himalayan destinations.</p></article>
+          <article class="service-card"><div class="service-icon" aria-hidden="true">🚐</div><h3>Travel & Transport</h3><p>Discover available travel packages and vehicle options offered by participating travel agencies.</p></article>
+          <article class="service-card"><div class="service-icon" aria-hidden="true">🏡</div><h3>Hotel & Stays</h3><p>Explore accommodation options and property details shared by participating hotel partners.</p></article>
+        </div>
+      </div>
+    </section>
+    <section class="content-section about" id="about">
+      <div class="wrap about-grid">
+        <div class="about-art" role="img" aria-label="A dramatic Himalayan mountain landscape"><div class="about-label">Rooted in local discovery. Made for your next adventure.</div></div>
+        <div class="about-copy"><div class="eyebrow">About TourSetu</div><h2>A bridge between travellers and local experiences.</h2><p>TourSetu is designed to make it easier to discover travel services in Uttarakhand by bringing travellers, travel agencies and hotel partners into one digital marketplace.</p><ul class="value-list"><li><span class="checkmark">✓</span><div><strong>Convenient discovery</strong><small>Explore travel packages and stays from one starting point.</small></div></li><li><span class="checkmark">✓</span><div><strong>Partner-led services</strong><small>Travel and accommodation services are provided by the respective partners.</small></div></li><li><span class="checkmark">✓</span><div><strong>Built for smoother planning</strong><small>Clear information helps you compare options and take the next step.</small></div></li></ul></div>
+      </div>
+    </section>
+    <section class="content-section" id="how-it-works">
+      <div class="wrap"><div class="section-head"><div class="eyebrow">Getting started</div><h2>Three simple steps to get moving.</h2><p>Start with the journey you want. Explore the options available and connect through the TourSetu platform.</p></div>
+        <div class="steps-grid"><article class="step"><div class="step-num">STEP 01</div><h3>Tell us about your trip</h3><p>Choose the travel service or package that suits your plans.</p></article><article class="step"><div class="step-num">STEP 02</div><h3>Explore your options</h3><p>Review available package, transport or accommodation details.</p></article><article class="step"><div class="step-num">STEP 03</div><h3>Continue on TourSetu</h3><p>Use the platform to proceed with the options available for your journey.</p></article></div>
+      </div>
+    </section>
+    <section class="content-section" aria-label="Explore TourSetu"><div class="wrap"><div class="cta-band"><div><h2>Your next Uttarakhand story starts here.</h2><p>Explore travel options and start planning your journey with TourSetu.</p></div><a class="btn" href="/signin.html" target="_blank" rel="noopener noreferrer">Visit TourSetu <span aria-hidden="true">↗</span></a></div></div></section>
+    <section class="content-section" id="contact">
+      <div class="wrap contact-grid"><div class="contact-info"><div class="eyebrow">Contact us</div><h2>Let’s talk about your journey.</h2><p>Have a question about TourSetu or want to explore a partnership? Send a message using the form.</p><p><strong>For your privacy:</strong> please do not include payment details, passwords or identity documents in this form.</p></div>
+        <div class="contact-panel"><form id="contact-form"><div class="form-grid"><div class="field"><label for="name">Your name</label><input id="name" name="name" autocomplete="name" required maxlength="100" placeholder="Enter your name"></div><div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></div><div class="field full"><label for="topic">I’m contacting about</label><select id="topic" name="topic" required><option value="">Choose a topic</option><option>Travel enquiry</option><option>Hotel partnership</option><option>Travel agency partnership</option><option>General question</option></select></div><div class="field full"><label for="message">Message</label><textarea id="message" name="message" required maxlength="2000" placeholder="How can we help?"></textarea></div></div><div class="form-foot"><button class="btn btn-primary" type="submit">Prepare message <span aria-hidden="true">→</span></button><span class="form-note">Demo form: email delivery needs to be connected before launch.</span></div><div class="notice" id="form-notice" role="status" aria-live="polite"></div></form></div>
+      </div>
+    </section>
+  </main>
+  <footer class="footer"><div class="wrap"><div class="footer-top"><div><a class="brand" href="#home"><span class="brand-mark" aria-hidden="true">↗</span><span>Tour<span>Setu</span></span></a><p>Connecting travellers with travel and stay options for journeys across Uttarakhand.</p></div><nav class="footer-links" aria-label="Footer navigation"><a href="#home">Home</a><a href="#about">About Us</a><a href="#services">Services</a><a href="#contact">Contact Us</a><a href="/signin.html" target="_blank" rel="noopener noreferrer">Open web app ↗</a></nav></div><div class="footer-bottom"><span>© <span id="year"></span> TourSetu. All rights reserved.</span><span>Travel and accommodation services are provided by their respective partners.</span></div></div></footer>
+  <script>
+    (() => {
+      const toggle = document.querySelector('.menu-toggle');
+      const nav = document.querySelector('#navlinks');
+      toggle.addEventListener('click', () => {
+        const open = nav.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', String(open));
+        toggle.textContent = open ? 'Close ✕' : 'Menu ☰';
+      });
+      nav.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+        nav.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.textContent = 'Menu ☰';
+      }));
+      document.querySelector('#year').textContent = new Date().getFullYear();
+      document.querySelector('#contact-form').addEventListener('submit', event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        if (!form.reportValidity()) return;
+        const notice = document.querySelector('#form-notice');
+        notice.textContent = 'Thanks! The page design is ready, but this demo form does not send or store messages yet. Connect an approved email service or secure backend before publishing.';
+        notice.style.display = 'block';
+      });
+    })();
+  </script>
 </body>
 </html>
