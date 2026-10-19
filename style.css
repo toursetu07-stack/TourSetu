@@ -692,3 +692,133 @@ input[type="checkbox"].agency-dashboard-checkbox {
     text-align:left;
   }
 }
+
+
+/* ============================================================
+   TourSetu device-aware layout
+   Desktop/laptop/tablet: preserve the existing desktop sizing.
+   Phones: use the actual viewport width without horizontal
+   squeezing/overflow. No transform/zoom is used.
+   ============================================================ */
+
+html,
+body {
+  max-width: 100%;
+}
+
+@media (max-width: 767px) {
+  html {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left)) !important;
+    overflow-x: hidden;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 14px !important;
+  }
+
+  #app,
+  .auth-card,
+  .toursetu-agency-dashboard,
+  .hotel-dashboard-shell,
+  .agency-main-content,
+  #hotel-main-content {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Keep cards readable instead of forcing desktop rows into phone width. */
+  .card,
+  .custom-modal-card,
+  .modal-content {
+    max-width: 100% !important;
+  }
+
+  /* Long rows should wrap instead of creating a horizontal page scroll. */
+  .toursetu-agency-dashboard *,
+  .hotel-dashboard-shell *,
+  .card * {
+    max-width: 100%;
+  }
+
+  img,
+  video,
+  canvas,
+  iframe {
+    max-width: 100%;
+    height: auto;
+  }
+
+  table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Preserve comfortable touch targets without making the UI crowded. */
+  button,
+  .nav-item,
+  select,
+  input,
+  textarea {
+    max-width: 100%;
+  }
+
+  /* Phone-only: action groups stack when there is not enough room. */
+  .agency-modal-actions,
+  .hotel-room-card-controls {
+    min-width: 0;
+  }
+}
+
+/* Small phones: slightly tighter outer spacing, but readable controls. */
+@media (max-width: 390px) {
+  body {
+    padding: 8px !important;
+  }
+
+  #app {
+    padding: 12px !important;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+
+  .modal-content,
+  .custom-modal-card {
+    width: 100% !important;
+    padding: 16px !important;
+  }
+}
+
+/* Phones in landscape: use the wider viewport while retaining mobile UX. */
+@media (max-width: 767px) and (orientation: landscape) {
+  body {
+    padding: 8px !important;
+  }
+
+  #app {
+    max-width: 760px;
+    margin-inline: auto;
+  }
+}
+
+/* Desktop/laptop (768px+): intentionally no device-specific resizing.
+   Existing desktop layout remains the source of truth. */
