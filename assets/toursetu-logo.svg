@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 620" role="img" aria-labelledby="title desc">
+<title id="title">TourSetu — Your Uttarakhand Travel Companion</title><desc id="desc">Golden travel emblem with mountains, a sunrise and a traveller, above the TourSetu wordmark on a navy background.</desc>
+<defs><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0a3"/><stop offset=".48" stop-color="#e9c75f"/><stop offset="1" stop-color="#b98a28"/></linearGradient></defs>
+<rect width="600" height="620" rx="44" fill="#07152e"/>
+<circle cx="300" cy="245" r="116" fill="none" stroke="url(#gold)" stroke-width="13" stroke-dasharray="680 55" transform="rotate(135 300 245)"/>
+<circle cx="300" cy="235" r="51" fill="url(#gold)"/>
+<path d="M153 259 Q183 218 208 244 L248 275 300 292 353 273 393 243 Q417 219 449 261 L406 318 356 337 300 315 244 338 192 316Z" fill="url(#gold)"/>
+<path d="M287 292 Q262 309 287 322 Q321 335 300 355 Q283 369 306 385 Q330 401 302 414 Q270 399 280 382 Q289 369 270 356 Q245 339 267 323 Q282 312 287 292Z" fill="#07152e"/>
+<path d="M294 215 Q300 202 307 215 L313 234 308 257 302 271 297 255 291 234Z" fill="#07152e"/>
+<path d="M174 303 Q145 278 136 263 Q128 252 122 263 Q119 273 130 293 L163 346 Q194 378 248 390 L280 378 Q247 363 224 341 L193 309 Q182 300 176 307 Q169 315 184 331 L207 353 Q181 347 167 329Z" fill="url(#gold)"/>
+<path d="M426 303 Q455 278 464 263 Q472 252 478 263 Q481 273 470 293 L437 346 Q406 378 352 390 L320 378 Q353 363 376 341 L407 309 Q418 300 424 307 Q431 315 416 331 L393 353 Q419 347 433 329Z" fill="url(#gold)"/>
+<path d="M331 171 Q350 158 367 174 Q378 163 393 171 Q378 172 370 184 Q358 174 345 179Z" fill="url(#gold)"/>
+<text x="300" y="486" text-anchor="middle" font-family="Georgia,serif" font-weight="bold" font-size="77" letter-spacing="-3" fill="url(#gold)">TourSetu</text>
+<text x="300" y="535" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-style="italic" fill="#dce6ff">Your Uttarakhand</text>
+<text x="300" y="570" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-style="italic" fill="#dce6ff">Travel Companion</text>
+</svg>
