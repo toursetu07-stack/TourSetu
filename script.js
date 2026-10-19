@@ -1368,16 +1368,16 @@ async function renderCustomerHomepage(user, options = {}) {
     ).join('');
 
     app.innerHTML = `
-        <div style="font-family:'Inter', sans-serif; background:#f4f7f6; min-height:100vh; margin:-20px;">
+        <div class="customer-dashboard-shell" style="font-family:'Inter', sans-serif; background:#f4f7f6; min-height:100vh; margin:-20px;">
             <div style="background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1600&q=80');
                     height:auto; min-height:480px; background-size:cover; background-position:center; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; padding:30px 20px;">
                 <h1 style="font-size:2.8rem; margin-bottom:10px; text-align:center;">Find Your Perfect Match</h1>
                 <p style="font-size:1.1rem; margin-bottom:25px; opacity:0.9;">Direct connections with verified local travel agencies & registered hotels</p>
                 
-                <div class="card" style="background:white; padding:25px; border-radius:20px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                <div class="card customer-search-card" style="background:white; padding:25px; border-radius:20px; width:95%; max-width:1000px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
                   
                   <!-- SEARCH TYPE SELECTION BOX (AGENCY vs HOTEL) -->
-                  <div style="margin-bottom:20px; background:#f8f9fa; padding:12px 20px; border-radius:12px; border:2px solid #ff9f43; display:flex; align-items:center; gap:15px; justify-content:space-between; flex-wrap:wrap;">
+                  <div class="customer-search-type" style="margin-bottom:20px; background:#f8f9fa; padding:12px 20px; border-radius:12px; border:2px solid #ff9f43; display:flex; align-items:center; gap:15px; justify-content:space-between; flex-wrap:wrap;">
                       <label style="color:#2d3436; font-weight:bold; font-size:14px; display:flex; align-items:center; gap:6px;">
                           🔍 <span>SELECT SEARCH TYPE:</span>
                       </label>
@@ -1394,7 +1394,7 @@ async function renderCustomerHomepage(user, options = {}) {
                   </div>
 
                   <!-- AGENCY FILTERS CONTAINER -->
-                  <div id="agency-filter-box" style="display:flex; gap:15px; flex-wrap:wrap;">
+                  <div id="agency-filter-box" class="customer-search-options" style="display:flex; gap:15px; flex-wrap:wrap;">
                       <div style="flex:1; min-width:200px; text-align:left;">
                           <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
                           <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
@@ -1421,19 +1421,19 @@ async function renderCustomerHomepage(user, options = {}) {
               </div>
             </div>
 
-            <div style="max-width:1200px; margin:auto; padding:40px 20px;">
-               <div style="display:flex; justify-content:space-between; align-items:end; margin-bottom:30px; border-bottom:2px solid #eee; padding-bottom:15px; flex-wrap:wrap; gap:15px;">
+            <div class="customer-results-shell" style="max-width:1200px; margin:auto; padding:40px 20px;">
+               <div class="customer-results-header" style="display:flex; justify-content:space-between; align-items:end; margin-bottom:30px; border-bottom:2px solid #eee; padding-bottom:15px; flex-wrap:wrap; gap:15px;">
                   <div>
                       <h2 id="result-title" style="margin:0; color:#2d3436; font-size:2rem;">Popular Packages</h2>
                       <p id="result-subtitle" style="color:#636e72; margin-top:5px;">Explore tours from all over India</p>
                   </div>
-                  <div style="display:flex; gap:10px; align-items:center;">
+                  <div class="customer-dashboard-actions" style="display:flex; gap:10px; align-items:center;">
                     <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
                     <button onclick="confirmCustomerLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
                     <button onclick="triggerDeactivateModalPopup()" style="background:#ff7675; color:white; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
                   </div>
               </div>
-               <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap:25px;"></div>
+               <div id="customer-pkg-list" class="customer-package-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap:25px;"></div>
             </div>
         </div>
 
