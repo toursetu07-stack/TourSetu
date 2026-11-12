@@ -100,20 +100,17 @@
 
 <div id="app" role="main">
     <div class="auth-card">
-        <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>
-        
-        <p style="margin:10px 0 18px;text-align:center;"><a href="driver.html" style="color:#17634f;font-weight:700;">Independent Taxi Driver? Register / Login here</a></p>
-
-        <div id="auth-section">
+        <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>\n        <div id="auth-section">
             <input type="email" id="email" placeholder="Email Address" autocomplete="email" inputmode="email" aria-label="Email Address">
             <input type="password" id="password" placeholder="Password" autocomplete="current-password" aria-label="Password">
             
             <div id="role-selection">
                 <label>I am a:</label>
-                <select id="role">
+                <select id="role" onchange="handleRegisterRoleChange()">
                     <option value="customer">Traveler</option>
                     <option value="agency">Travel Agency</option>
                     <option value="hotel">Hotel Partner</option>
+                    <option value="driver">Taxi Driver</option>
                 </select>
             </div>
 
