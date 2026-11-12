@@ -954,8 +954,8 @@ function renderAuthUI() {
         ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" onclick="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
         <div id="role-selection" style="display:${isLoginMode?"none":"block"};margin:12px 0;">
           <label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label>
-          <select id="role" onchange="toggleBusinessFields()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-            <option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option>
+          <select id="role" onchange="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+            <option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option>
           </select>
         </div>
         <div id="business-fields" style="display:none;text-align:left;margin-top:12px;border-top:1px solid #eee;padding-top:12px;">
@@ -1023,6 +1023,7 @@ window.goToAgencyDocumentStep2=function(){
     document.getElementById('agency-step-1').style.display='none';document.getElementById('agency-step-2').style.display='block';document.getElementById('status').innerText='';
 };
 window.backToAgencyDocumentStep1=function(){document.getElementById('agency-step-2').style.display='none';document.getElementById('agency-step-1').style.display='block';document.getElementById('status').innerText='';};
+window.handleRegisterRoleChange=function(){const role=document.getElementById('role')?.value;if(role==='driver'){window.location.href='driver.html';return;}window.toggleBusinessFields();};
 window.toggleBusinessFields=function(){
     const role=document.getElementById('role')?.value;
     const businessFields=document.getElementById('business-fields');
