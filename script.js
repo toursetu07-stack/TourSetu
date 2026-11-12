@@ -866,6 +866,7 @@ async function showDashboard(user) {
         window.identifyOneSignalUser(user.id);
     }
     const role=user?.user_metadata?.role||'customer';
+    if(role==='driver'){window.location.replace('driver.html');return;}
     if(role==='agency'){
         const termsAccepted = await ensureAgencyTermsAccepted(user);
         if (!termsAccepted) return;
@@ -952,8 +953,8 @@ function renderAuthUI() {
         <input type="email" id="email" placeholder="Email Address" autocomplete="email" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         <input type="password" id="password" placeholder="Password" autocomplete="${isLoginMode?"current-password":"new-password"}" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" onclick="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
-        <div id="role-selection" style="display:${isLoginMode?"none":"block"};margin:12px 0;">
-          <label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label>
+        <div id="role-selection" style="display:block;margin:12px 0;">
+          <label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">${isLoginMode?"LOGIN AS":"REGISTER AS"}</label>
           <select id="role" onchange="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
             <option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option>
           </select>
@@ -1023,7 +1024,7 @@ window.goToAgencyDocumentStep2=function(){
     document.getElementById('agency-step-1').style.display='none';document.getElementById('agency-step-2').style.display='block';document.getElementById('status').innerText='';
 };
 window.backToAgencyDocumentStep1=function(){document.getElementById('agency-step-2').style.display='none';document.getElementById('agency-step-1').style.display='block';document.getElementById('status').innerText='';};
-window.handleRegisterRoleChange=function(){const role=document.getElementById('role')?.value;if(role==='driver'){window.location.href='driver.html';return;}window.toggleBusinessFields();};
+window.handleRegisterRoleChange=function(){const role=document.getElementById('role')?.value;if(role==='driver'&&!isLoginMode){window.location.href='driver.html';return;}if(isLoginMode){const fields=document.getElementById('business-fields');if(fields)fields.style.display='none';return;}window.toggleBusinessFields();};
 window.toggleBusinessFields=function(){
     const role=document.getElementById('role')?.value;
     const businessFields=document.getElementById('business-fields');
@@ -1296,7 +1297,7 @@ async function uploadHotelDocuments(userId, files) {
 async function getHotelVerification(userId){const {data,error}=await getClient().from('hotel_verification_requests').select('id,status,denial_reason,email,phone,created_at,updated_at').eq('user_id',userId).maybeSingle();if(error)throw error;return data;}
 async function submitHotelKYC(user){const files=getSelectedHotelDocuments(),validationError=await validateHotelDocuments(files);if(validationError)throw new Error(validationError);const client=getClient();const {error:ensureError}=await client.rpc('ensure_my_hotel_verification_request');if(ensureError)throw ensureError;const paths=await uploadHotelDocuments(user.id,files);if(Object.keys(paths).length===0)return;const {error:saveError}=await client.rpc('save_hotel_verification_documents',{p_uttarakhand_tourism_utbm_registration_path:paths.uttarakhand_tourism_utbm_registration_path||null,p_trade_license_local_authority_license_path:paths.trade_license_local_authority_license_path||null,p_gst_certificate_msme_udyam_path:paths.gst_certificate_msme_udyam_path||null,p_fire_safety_noc_path:paths.fire_safety_noc_path||null,p_police_noc_path:paths.police_noc_path||null});if(saveError)throw saveError;}
 async function handleAuth(){
-    const status=document.getElementById('status'),role=!isLoginMode?document.getElementById('role')?.value:null,btn=document.getElementById('agency-register-btn')||document.getElementById('auth-btn'),email=document.getElementById('email')?.value.trim(),password=document.getElementById('password')?.value||'';
+    const status=document.getElementById('status'),role=document.getElementById('role')?.value||'customer',btn=document.getElementById('agency-register-btn')||document.getElementById('auth-btn'),email=document.getElementById('email')?.value.trim(),password=document.getElementById('password')?.value||'';
     if(!email||!password){if(status)status.innerText='⚠️ Please enter email and password';return;}
     const client=getClient();if(!client){if(status)status.innerText='❌ Supabase not initialized';return;}
     if(!isLoginMode&&role==='agency'){
@@ -1316,7 +1317,10 @@ async function handleAuth(){
                 }
                 throw error;
             }
+            const actualRole=data?.user?.user_metadata?.role||'customer';
+            if(role!==actualRole){await client.auth.signOut();if(status)status.innerText='❌ This account is registered as '+actualRole+'. Please select the matching login role.';return;}
             if(data?.user){window.identifyOneSignalUser(data.user.id);}
+            if(actualRole==='driver'){window.location.href='driver.html';return;}
             await recordReferralLogin();await showDashboard(data.user);return;
         }
         const metadata={role,is_approved:role==='customer'};
