@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#123c35"><title>Independent Driver | TourSetu</title>
+<link rel="stylesheet" href="style.css">
+<style>
+:root{--g:#164b3f;--o:#ff9f43}body{background:#f5f7f4;color:#17332f;font-family:Inter,system-ui,sans-serif;margin:0}.driver-wrap{max-width:960px;margin:36px auto;padding:0 18px}.driver-card{background:white;border:1px solid #e2e8e2;border-radius:18px;padding:26px;box-shadow:0 12px 36px #17332f12;margin-bottom:18px}.driver-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.driver-grid label{display:grid;gap:6px;font-weight:650;font-size:.9rem}.driver-grid input,.driver-grid select{width:100%;padding:12px;border:1px solid #ccd8cf;border-radius:10px;box-sizing:border-box}.driver-grid .full{grid-column:1/-1}.driver-btn{background:var(--g);color:white;border:0;border-radius:10px;padding:12px 18px;font-weight:750;cursor:pointer}.driver-btn.secondary{background:#e8efe9;color:var(--g)}.driver-muted{color:#62736b}.driver-status{padding:12px;border-radius:10px;background:#edf4ed;margin-top:14px;white-space:pre-wrap}.driver-hidden{display:none!important}.driver-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #e5ebe5;border-radius:12px;padding:14px;margin-top:10px}.driver-actions{display:flex;gap:8px}@media(max-width:650px){.driver-grid{grid-template-columns:1fr}.driver-grid .full{grid-column:auto}.driver-card{padding:18px}.driver-row{align-items:flex-start;flex-direction:column}}
+</style></head><body><main class="driver-wrap">
+<a href="signin.html">← Back to TourSetu sign in</a>
+<header class="driver-card"><h1>Independent Taxi Driver</h1><p class="driver-muted">Register directly with TourSetu, submit your documents for verification, and manage customer requests after approval.</p></header>
+<section id="auth-card" class="driver-card"><h2 id="auth-title">Driver registration</h2>
+<div class="driver-grid" id="register-fields">
+<label>Full name<input id="full-name" autocomplete="name" required></label><label>Mobile number<input id="phone" type="tel" autocomplete="tel" required></label>
+<label>City<input id="city" autocomplete="address-level2"></label><label>Email<input id="email" type="email" autocomplete="email" required></label>
+<label>Password<input id="password" type="password" minlength="8" autocomplete="new-password" required></label>
+<label class="full">Government ID (Aadhaar / other ID)<input id="id-doc" type="file" accept=".pdf,image/*" required></label>
+<label>PAN card<input id="pan-doc" type="file" accept=".pdf,image/*" required></label><label>Driving licence – front<input id="lic-front" type="file" accept=".pdf,image/*" required></label>
+<label>Driving licence – back<input id="lic-back" type="file" accept=".pdf,image/*" required></label><label>Police verification<input id="police-doc" type="file" accept=".pdf,image/*" required></label>
+<label class="full">Bank passbook / cancelled cheque<input id="bank-doc" type="file" accept=".pdf,image/*" required></label>
+</div>
+<div id="login-fields" class="driver-grid driver-hidden"><label class="full">Email<input id="login-email" type="email" autocomplete="username"></label><label class="full">Password<input id="login-password" type="password" autocomplete="current-password"></label></div>
+<p class="driver-muted">Documents are stored in a private bucket and are visible only to you and authorized TourSetu administrators. Maximum 10 MB per file.</p>
+<button id="auth-submit" class="driver-btn">Create driver account</button> <button id="switch-auth" class="driver-btn secondary">Already registered? Login</button><div id="auth-message" class="driver-status" role="status"></div>
+</section>
+<section id="dashboard" class="driver-hidden">
+<div class="driver-card"><h2>Driver dashboard</h2><p id="approval-status" class="driver-status"></p><button id="logout" class="driver-btn secondary">Logout</button></div>
+<div id="vehicle-card" class="driver-card driver-hidden"><h3>Add your vehicle</h3><div class="driver-grid">
+<label>Vehicle type<select id="vehicle-type"><option>Hatchback</option><option>Sedan</option><option>SUV</option><option>Tempo Traveller</option><option>Other</option></select></label>
+<label>Make / model<input id="vehicle-model"></label><label>Registration number<input id="vehicle-reg"></label><label>Seats<input id="vehicle-seats" type="number" min="1" max="100"></label><label>Price per km (₹)<input id="vehicle-rate" type="number" min="0" step=".5"></label>
+<label>RC document<input id="vehicle-rc" type="file" accept=".pdf,image/*"></label><label>Permit (if applicable)<input id="vehicle-permit" type="file" accept=".pdf,image/*"></label><label>Insurance<input id="vehicle-insurance" type="file" accept=".pdf,image/*"></label><label>Fitness certificate<input id="vehicle-fitness" type="file" accept=".pdf,image/*"></label><label>PUC<input id="vehicle-puc" type="file" accept=".pdf,image/*"></label><label>Vehicle photo<input id="vehicle-photo" type="file" accept="image/*"></label>
+</div><p><button id="save-vehicle" class="driver-btn">Submit vehicle for verification</button></p></div>
+<div class="driver-card"><h3>Customer requests</h3><p class="driver-muted">New customer requests assigned to your driver account will appear here. Confirm or deny each request.</p><div id="requests"></div></div>
+<div class="driver-card"><h3>Your vehicles</h3><div id="vehicles"></div></div>
+</section></main>
+<script src="/supabase-config"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script><script src="driver-portal.js"></script></body></html>
