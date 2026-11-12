@@ -22,6 +22,7 @@
 </section>
 <section id="dashboard" class="driver-hidden">
 <div class="driver-card"><h2>Driver dashboard</h2><p id="approval-status" class="driver-status"></p><button id="logout" class="driver-btn secondary">Logout</button></div>
+<div id="kyc-completion" class="driver-card driver-hidden"><h3>Complete your verification documents</h3><p class="driver-muted">Upload any documents still missing from your application.</p><div id="kyc-fields" class="driver-grid"></div><p><button id="submit-kyc" class="driver-btn">Submit verification documents</button></p></div>
 <div id="vehicle-card" class="driver-card driver-hidden"><h3>Add your vehicle</h3><div class="driver-grid">
 <label>Vehicle type<select id="vehicle-type"><option>Hatchback</option><option>Sedan</option><option>SUV</option><option>Tempo Traveller</option><option>Other</option></select></label>
 <label>Make / model<input id="vehicle-model"></label><label>Registration number<input id="vehicle-reg"></label><label>Seats<input id="vehicle-seats" type="number" min="1" max="100"></label><label>Price per km (₹)<input id="vehicle-rate" type="number" min="0" step=".5"></label>
