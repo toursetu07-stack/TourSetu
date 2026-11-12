@@ -22,14 +22,14 @@
 </style>
 </head>
 <body>
-<div class="driver-app">
+<div class="driver-app driver-hidden" id="dashboard">
 <aside class="sidebar">
 <div class="brand"><span class="brand-mark">T</span><span>TourSetu</span></div>
 <div class="side-label">Driver workspace</div>
 <nav class="side-nav">
 <a class="side-link active" href="#overview"><span class="side-icon">▦</span>Overview</a>
 <a class="side-link" href="#requests"><span class="side-icon">↗</span>Trip requests</a>
-<a class="side-link" href="#vehicles"><span class="side-icon">▣</span>My vehicles</a>
+<a class="side-link" href="#vehicles-panel"><span class="side-icon">▣</span>My vehicles</a>
 <a class="side-link" href="#verification"><span class="side-icon">✓</span>Verification</a>
 <a class="side-link" href="#earnings"><span class="side-icon">₹</span>Earnings</a>
 <a class="side-link" href="#profile"><span class="side-icon">◉</span>Profile</a>
@@ -49,8 +49,8 @@
 </section>
 <div class="panel-grid">
 <div>
-<section class="panel" id="requests"><div class="panel-head"><div><h2>Trip requests</h2><p>Review and respond to customer requests</p></div><button class="btn light" id="refresh-requests" type="button">Refresh</button></div><div class="panel-body"><div id="requests"><div class="empty"><div class="empty-icon">🧭</div>Your assigned trip requests will appear here.</div></div></div></section>
-<section class="panel" id="vehicles"><div class="panel-head"><div><h2>My vehicles</h2><p>Your submitted fleet and verification status</p></div></div><div class="panel-body"><div id="vehicles"><div class="empty">No vehicle details loaded yet.</div></div></div></section>
+<section class="panel" id="request-panel"><div class="panel-head"><div><h2>Trip requests</h2><p>Review and respond to customer requests</p></div><button class="btn light" id="refresh-requests" type="button">Refresh</button></div><div class="panel-body"><div id="requests"><div class="empty"><div class="empty-icon">🧭</div>Your assigned trip requests will appear here.</div></div></div></section>
+<section class="panel" id="vehicles-panel"><div class="panel-head"><div><h2>My vehicles</h2><p>Your submitted fleet and verification status</p></div></div><div class="panel-body"><div id="vehicles"><div class="empty">No vehicle details loaded yet.</div></div></div></section>
 <section class="panel" id="earnings"><div class="panel-head"><div><h2>Earnings & payouts</h2><p>Payment summary</p></div></div><div class="panel-body"><div class="empty"><div class="empty-icon">₹</div>Earnings will be shown here when completed-trip payout records are connected to the driver account. No estimated or unverified amounts are displayed.</div></div></section>
 </div>
 <div>
