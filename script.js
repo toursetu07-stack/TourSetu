@@ -8,9 +8,7 @@ const SUPABASE_PUBLISHABLE_KEY = window.__TOURSETU_SUPABASE_CONFIG__?.publishabl
 let _supabase = null;
 let isLoginMode = true;
 
-const tourDestinations = [
-  "Char Dham Yatra (Uttarakhand)"
-];
+const tourDestinations = window.TOURSETU_UK_TEMPLES || ["Char Dham Yatra (Uttarakhand)"];
 
 const vehicleTypes = [
     { id: 'car4', name: '4 Seater Car', icon: '🚗' },
@@ -860,14 +858,41 @@ async function initApp() {
     else renderAuthUI();
 }
 
+async function resolveTourSetuRole(user) {
+    const allowed = new Set(['customer','agency','hotel','driver']);
+    const appRole = String(user?.app_metadata?.role || '').toLowerCase();
+    if (allowed.has(appRole) && appRole !== 'customer') return appRole;
+    let profileRole = '';
+    try {
+        const { data, error } = await getClient().from('profiles').select('role').eq('id', user.id).maybeSingle();
+        if (!error) profileRole = String(data?.role || '').toLowerCase();
+        if (allowed.has(profileRole) && profileRole !== 'customer') return profileRole;
+    } catch (error) { console.warn('Profile role lookup unavailable:', error); }
+    try {
+        const { data, error } = await getClient().from('driver_profiles').select('user_id').eq('user_id', user.id).maybeSingle();
+        if (!error && data) return 'driver';
+    } catch (error) { console.warn('Driver role lookup unavailable:', error); }
+    try {
+        const { data, error } = await getClient().from('agency_profiles').select('id').eq('id', user.id).maybeSingle();
+        if (!error && data) return 'agency';
+    } catch (error) { console.warn('Agency role lookup unavailable:', error); }
+    try {
+        const { data, error } = await getClient().from('hotel_verification_requests').select('user_id').eq('user_id', user.id).maybeSingle();
+        if (!error && data) return 'hotel';
+    } catch (error) { console.warn('Hotel role lookup unavailable:', error); }
+    if (profileRole === 'customer') return 'customer';
+    const metadataRole = String(user?.user_metadata?.role || '').toLowerCase();
+    return allowed.has(metadataRole) ? metadataRole : 'customer';
+}
+
 async function showDashboard(user) {
     window.currentTourSetuUser = user;
+    const role = await resolveTourSetuRole(user);
     if (user?.id && typeof window.identifyOneSignalUser === 'function') {
         window.identifyOneSignalUser(user.id);
     }
-    const role=user?.user_metadata?.role||'customer';
     if(role==='driver'){
-        window.location.assign('driver.html');
+        window.location.assign('/driver');
         return;
     }
     if(role==='agency'){
@@ -956,12 +981,7 @@ function renderAuthUI() {
         <input type="email" id="email" placeholder="Email Address" autocomplete="email" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         <input type="password" id="password" placeholder="Password" autocomplete="${isLoginMode?"current-password":"new-password"}" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" onclick="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
-        <div id="role-selection" style="display:block;margin:12px 0;">
-          <label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">${isLoginMode?"LOGIN AS":"REGISTER AS"}</label>
-          <select id="role" onchange="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-            <option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option>
-          </select>
-        </div>
+        ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" onchange="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select></div>'}
         <div id="business-fields" style="display:none;text-align:left;margin-top:12px;border-top:1px solid #eee;padding-top:12px;">
           <div id="agency-basic-fields">
             <label>Email Address</label><input type="email" id="agency-email" readonly placeholder="Email Address" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;background:#f8f9fa;">
@@ -1320,12 +1340,6 @@ async function handleAuth(){
                 }
                 throw error;
             }
-            const actualRole=data?.user?.user_metadata?.role||'customer';
-            if(role!==actualRole){
-                await client.auth.signOut();
-                if(status)status.innerText='❌ This account is registered as '+actualRole+'. Please choose '+actualRole+' in the LOGIN AS selector.';
-                return;
-            }
             if(data?.user){window.identifyOneSignalUser(data.user.id);}
             await recordReferralLogin();await showDashboard(data.user);return;
         }
@@ -1485,7 +1499,7 @@ window.toggleCustomerSearchType = function() {
         if(resultSubtitle) resultSubtitle.innerText = "Book directly with independent taxi drivers";
         const button=document.querySelector('#agency-filter-box button[data-action="search-agencies"]');
         if(button)button.textContent='FIND TAXIS';
-        void loadCustomerTaxiListings(document.getElementById('search-start')?.value||'');
+        void loadCustomerTaxiListings(document.getElementById('search-start')?.value||'',document.getElementById('search-dest')?.value||'');
     } else {
         const button=document.querySelector('#agency-filter-box button[data-action="search-agencies"]');
         if(button)button.textContent='FIND AGENCIES';
@@ -3441,7 +3455,7 @@ window.toggleQtyInput = (id) => {
    CUSTOMER PICKUP DISTANCE PRICING
    Uses Nominatim geocoding + OSRM road distance.
    ============================================================ */
-const UTTARAKHAND_PICKUP_CITIES = ["Almora","Ranikhet","Dwarahat","Chaukhutia","Bhikiyasen","Bageshwar","Kapkot","Garur","Champawat","Banbasa","Tanakpur","Lohaghat","Pati","Gopeshwar","Joshimath","Gauchar","Karnaprayag","Nandprayag","Badrinath","Pokhari","Tharali","Gairsain","Pipalkoti","Nandanagar","Dehradun","Rishikesh","Vikasnagar","Mussoorie","Herbertpur","Selaqui","Doiwala","Haridwar","Roorkee","Adampur-Sultanpur","Dhandera","Imlikhera","Padligurjar","Rampur","Manglaur","Jhabreda","Laksar","Landhaura","Shivalik Nagar","Bhagwanpur","Piran Kaliyer","Haldwani","Ramnagar","Bhowali","Kaladhungi","Lalkuan","Nainital","Bhimtal","Pauri","Srinagar","Swargashram-Jaunk","Satpuli","Dogadda","Kotdwar","Thalisain","Pithoragarh","Dharchula","Didihat","Gangolihat","Berinag","Munsyari","Rudraprayag","Kedarnath","Augustmuni","Tilwara","Ukhimath","Guptkashi","Tehri","Narendranagar","Chamba","Muni-ki-Reti","Kirtinagar","Devprayag","Gaja","Ghansali","Lambgaon","Chamiyala","Tapovan","Gadarpur","Jaspur","Kichha","Sitarganj","Bazpur","Khatima","Mahuakheraganj","Mahuwadawara","Sultanpur","Kelakheda","Dineshpur","Shaktigarh","Nanakmatta","Gularbhoj","Kashipur","Rudrapur","Nagla","Lalpur","Garhinegi","Seroli Kalan","Uttarkashi","Barkot","Chinyalisaur","Gangotri","Purola","Naugaon"];
+const UTTARAKHAND_PICKUP_CITIES = window.TOURSETU_UK_CITIES || ["Almora","Ranikhet","Dwarahat","Chaukhutia","Bhikiyasen","Bageshwar","Kapkot","Garur","Champawat","Banbasa","Tanakpur","Lohaghat","Pati","Gopeshwar","Joshimath","Gauchar","Karnaprayag","Nandprayag","Badrinath","Pokhari","Tharali","Gairsain","Pipalkoti","Nandanagar","Dehradun","Rishikesh","Vikasnagar","Mussoorie","Herbertpur","Selaqui","Doiwala","Haridwar","Roorkee","Adampur-Sultanpur","Dhandera","Imlikhera","Padligurjar","Rampur","Manglaur","Jhabreda","Laksar","Landhaura","Shivalik Nagar","Bhagwanpur","Piran Kaliyer","Haldwani","Ramnagar","Bhowali","Kaladhungi","Lalkuan","Nainital","Bhimtal","Pauri","Srinagar","Swargashram-Jaunk","Satpuli","Dogadda","Kotdwar","Thalisain","Pithoragarh","Dharchula","Didihat","Gangolihat","Berinag","Munsyari","Rudraprayag","Kedarnath","Augustmuni","Tilwara","Ukhimath","Guptkashi","Tehri","Narendranagar","Chamba","Muni-ki-Reti","Kirtinagar","Devprayag","Gaja","Ghansali","Lambgaon","Chamiyala","Tapovan","Gadarpur","Jaspur","Kichha","Sitarganj","Bazpur","Khatima","Mahuakheraganj","Mahuwadawara","Sultanpur","Kelakheda","Dineshpur","Shaktigarh","Nanakmatta","Gularbhoj","Kashipur","Rudrapur","Nagla","Lalpur","Garhinegi","Seroli Kalan","Uttarkashi","Barkot","Chinyalisaur","Gangotri","Purola","Naugaon"];
 window.currentPickupDistanceCharge = 0;
 window.currentPickupDistanceKm = 0;
 window.pickupDistanceRequestId = 0;
@@ -3759,7 +3773,7 @@ window.searchMatchedAgencies = async function() {
     const selectedSearchType=document.querySelector('input[name="search-type"]:checked')?.value||'agency';
     if(selectedSearchType==='taxi'){
         if(!start){renderCustomerPackageMessage(container,'Select your pickup city','Choose a city to find independent taxi drivers.');return;}
-        await loadCustomerTaxiListings(start);
+        await loadCustomerTaxiListings(start, dest);
         return;
     }
 
@@ -8002,7 +8016,7 @@ window.processSave = async function(packageId = '') {
             throw new Error("Your login session has expired. Please login again.");
         }
 
-        const role = user.user_metadata?.role || '';
+        const role = await resolveTourSetuRole(user);
         if (role !== 'agency') {
             throw new Error("Only an agency account can create or edit packages.");
         }
@@ -14309,23 +14323,25 @@ window.renderAgencyHotelBookingRequests = async function () {
 /* =========================================================================
    INDEPENDENT TAXI MARKETPLACE — public safe view + driver/customer sync
    ========================================================================= */
-window.loadCustomerTaxiListings = async function(cityFilter='') {
+window.loadCustomerTaxiListings = async function(cityFilter='', destinationFilter='') {
     const container=document.getElementById('customer-pkg-list');
     if(!container)return;
     container.dataset.view='taxi-listings';
     renderCustomerPackageMessage(container,'Loading independent taxis…','Fetching currently published driver vehicles.');
     try{
         let query=getClient().from('active_driver_vehicles')
-            .select('id,driver_id,vehicle_type,make_model,seating_capacity,price_per_km,vehicle_photo_path,driver_name,driver_city,created_at')
+            .select('id,driver_id,vehicle_type,make_model,registration_number,seating_capacity,price_per_km,vehicle_photo_path,driver_name,driver_city,created_at,status,starting_location,tour_destination')
             .order('created_at',{ascending:false});
         const {data,error}=await query;
         if(error)throw error;
         let rows=Array.isArray(data)?data:[];
         const city=String(cityFilter||'').trim();
-        if(city)rows=rows.filter(v=>String(v.driver_city||'').toLowerCase()===city.toLowerCase());
+        if(city)rows=rows.filter(v=>normalizeMatchCity(v.starting_location||'')===normalizeMatchCity(city));
+        const destination=String(destinationFilter||'').trim();
+        if(destination)rows=rows.filter(v=>{const saved=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);return saved.some(item=>normalizeMatchCity(item)===normalizeMatchCity(destination));});
         container.replaceChildren();
         if(!rows.length){
-            renderCustomerPackageMessage(container,'No independent taxis found',city?'No published taxi is currently listed in '+city+'.':'No active driver vehicles are available right now.');
+            renderCustomerPackageMessage(container,'No independent taxis found',city?'No taxi is listed from '+city+(destination?' for '+destination:'')+'.':'No saved independent taxi vehicles are available right now.');
             return;
         }
         rows.forEach(v=>{
@@ -14343,8 +14359,8 @@ window.loadCustomerTaxiListings = async function(cityFilter='') {
             const title=document.createElement('h3');title.textContent=(v.vehicle_type||'Taxi')+' · '+(v.make_model||'Vehicle');title.style.cssText='margin:0 0 9px;color:#2d3436;';
             const badge=document.createElement('span');badge.textContent='TAXI';badge.style.cssText='display:inline-block;background:#fff0df;color:#9a5a1c;border:1px solid #ffd8a8;border-radius:20px;padding:5px 10px;font-size:10px;font-weight:900;letter-spacing:.7px;margin-bottom:12px;';
             const details=document.createElement('div');details.style.cssText='font-size:13px;color:#636e72;line-height:1.8;';
-            details.textContent='Seats: '+Number(v.seating_capacity||0)+' · ₹'+Number(v.price_per_km||0).toLocaleString('en-IN')+'/km · Driver: '+(v.driver_name||'Independent driver')+' · City: '+(v.driver_city||'Not specified');
-            const action=document.createElement('button');action.type='button';action.textContent='Book Taxi';action.style.cssText='margin-top:17px;width:100%;background:#ff9f43;color:#263238;border:0;border-radius:9px;padding:12px 16px;font-weight:800;cursor:pointer;';
+            details.textContent='Registration: '+(v.registration_number||'Not provided')+' · Seats: '+Number(v.seating_capacity||0)+' · ₹'+Number(v.price_per_km||0).toLocaleString('en-IN')+'/km · Driver: '+(v.driver_name||'Independent driver')+' · City: '+(v.driver_city||'Not specified');
+            const action=document.createElement('button');action.type='button';action.textContent='Book Now / Request Taxi';action.style.cssText='margin-top:17px;width:100%;background:#ff9f43;color:#263238;border:0;border-radius:9px;padding:12px 16px;font-weight:800;cursor:pointer;';
             action.addEventListener('click',()=>openTaxiBookingForm(v));
             body.append(badge,title,details,action);card.append(media,body);container.appendChild(card);
         });

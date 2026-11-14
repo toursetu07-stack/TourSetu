@@ -61,6 +61,8 @@
 <section class="panel driver-hidden" id="vehicle-card"><div class="panel-head"><div><h2 id="vehicle-form-title">Add a vehicle</h2><p>Save your vehicle details and publish your listing instantly</p></div></div><div class="panel-body"><div class="driver-grid">
 <label>Vehicle type<select id="vehicle-type"><option>Hatchback</option><option>Sedan</option><option>SUV</option><option>Tempo Traveller</option><option>Other</option></select></label>
 <label>Make / model<input id="vehicle-model" placeholder="e.g. Maruti Ertiga"></label><label>Registration number<input id="vehicle-reg" placeholder="UK 00 AB 0000"></label><label>Seats<input id="vehicle-seats" type="number" min="1" max="100"></label><label>Price per km (₹)<input id="vehicle-rate" type="number" min="0" step=".5"></label>
+<label>Starting Location<select id="vehicle-starting-location" required><option value="">Select Uttarakhand city</option></select></label>
+<label class="full">Tour Destination (select one or more)<select id="vehicle-tour-destination" multiple size="6" required aria-describedby="vehicle-destination-help"></select><span id="vehicle-destination-help" class="field-note">Hold Ctrl (Windows) or Command (Mac) to select multiple destinations.</span></label>
 <label>RC document<input id="vehicle-rc" type="file" accept=".pdf,image/*"></label><label>Permit (if applicable)<input id="vehicle-permit" type="file" accept=".pdf,image/*"></label><label>Insurance<input id="vehicle-insurance" type="file" accept=".pdf,image/*"></label><label>Fitness certificate<input id="vehicle-fitness" type="file" accept=".pdf,image/*"></label><label>PUC<input id="vehicle-puc" type="file" accept=".pdf,image/*"></label><label>Vehicle photo<input id="vehicle-photo" type="file" accept="image/*"></label>
 </div><div id="vehicle-edit-note" class="field-note" aria-live="polite"></div><div id="vehicle-edit-files" class="field-note" aria-live="polite"></div><img id="vehicle-edit-photo" alt="Current vehicle photo" class="driver-hidden" style="max-width:180px;max-height:120px;object-fit:cover;border-radius:10px;"><p><button id="save-vehicle" class="btn" type="button">Save & Publish Vehicle</button></p></div></section>
 
@@ -83,5 +85,6 @@
 <div class="auth-actions"><button id="auth-submit" class="btn" type="button">Create driver account</button><button id="switch-auth" class="btn light" type="button">Already registered? Login</button></div><div id="auth-message" class="driver-status" role="status" aria-live="polite"></div>
 </div></section>
 </div>
-<script src="/supabase-config"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script><script src="driver-portal.js?v=2026-11-14-taxi-marketplace-v1"></script>
+<script src="/supabase-config"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script><script src="toursetu-shared-data.js?v=2026-11-14-shared-master-data"></script>
+<script src="driver-portal.js?v=2026-11-14-taxi-marketplace-v1"></script>
 </body></html>
