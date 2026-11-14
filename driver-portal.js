@@ -55,6 +55,9 @@ function editVehicle(v){
  $('vehicle-rate').value=v.price_per_km||'';
  ['vehicle-rc','vehicle-permit','vehicle-insurance','vehicle-fitness','vehicle-puc','vehicle-photo'].forEach(id=>{$(id).value='';});
  $('vehicle-edit-note').textContent='Existing uploaded documents/photos will be kept unless you choose replacement files.';
+ const available=[['RC',v.rc_document_path],['Permit',v.permit_document_path],['Insurance',v.insurance_document_path],['Fitness',v.fitness_document_path],['PUC',v.puc_document_path],['Photo',v.vehicle_photo_path]].filter(x=>x[1]).map(x=>x[0]+' uploaded');
+ $('vehicle-edit-files').textContent=available.length?'On file: '+available.join(' · '):'No existing documents recorded.';
+ const preview=$('vehicle-edit-photo');preview.classList.add('driver-hidden');if(v.vehicle_photo_path){const u=db.storage.from('driver-vehicle-photos').getPublicUrl(v.vehicle_photo_path).data?.publicUrl;if(u){preview.src=u;preview.classList.remove('driver-hidden');}}
  $('vehicle-form-title').textContent='Edit vehicle';
  $('save-vehicle').textContent='Save Vehicle Changes';
  $('vehicle-card').classList.remove('driver-hidden');
@@ -126,7 +129,7 @@ $('save-vehicle').addEventListener('click',async()=>{
     :await db.from('driver_vehicles').insert(payload);
    if(result.error)throw result.error;
    alert(editingVehicleId?'Vehicle updated and published.':'Vehicle saved and published.');
-   editingVehicleId=null;$('vehicle-form-title').textContent='Add a vehicle';$('save-vehicle').textContent='Save & Publish Vehicle';$('vehicle-edit-note').textContent='';
+   editingVehicleId=null;$('vehicle-form-title').textContent='Add a vehicle';$('save-vehicle').textContent='Save & Publish Vehicle';$('vehicle-edit-note').textContent='';$('vehicle-edit-files').textContent='';$('vehicle-edit-photo').classList.add('driver-hidden');$('vehicle-edit-photo').removeAttribute('src');
    ['vehicle-model','vehicle-reg','vehicle-seats','vehicle-rate','vehicle-rc','vehicle-permit','vehicle-insurance','vehicle-fitness','vehicle-puc','vehicle-photo'].forEach(id=>{$(id).value='';});
    await loadVehicles(user.id);
  }catch(e){alert(e.message||'Unable to save vehicle.');}
