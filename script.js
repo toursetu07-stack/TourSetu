@@ -7393,24 +7393,9 @@ window.showPackageForm = function(pEncoded = null) {
     // =========================================
     // FIND SELECTED STATE DURING EDIT
     // =========================================
-    let selectedState = "";
-
-    if (isEdit && pkg.starting_location) {
-        for (let s in locationData) {
-            if (locationData[s].includes(pkg.starting_location)) {
-                selectedState = s;
-                break;
-            }
-        }
-    }
-
-
-    // =========================================
-    // STATE OPTIONS
-    // =========================================
-    const stateOptions = Object.keys(locationData).map(s =>
-        `<option value="${s}" ${selectedState === s ? 'selected' : ''}>${s}</option>`
-    ).join('');
+    // TourSetu package pickup is intentionally restricted to Uttarakhand.
+    const selectedState = 'Uttarakhand';
+    const stateOptions = '<option value="Uttarakhand" selected>Uttarakhand</option>';
 
 
     // =========================================
@@ -7606,10 +7591,6 @@ window.showPackageForm = function(pEncoded = null) {
                             background:white;
                         "
                     >
-                        <option value="">
-                            Select State
-                        </option>
-
                         ${stateOptions}
                     </select>
                 </div>
