@@ -14312,6 +14312,7 @@ window.renderAgencyHotelBookingRequests = async function () {
 window.loadCustomerTaxiListings = async function(cityFilter='') {
     const container=document.getElementById('customer-pkg-list');
     if(!container)return;
+    container.dataset.view='taxi-listings';
     renderCustomerPackageMessage(container,'Loading independent taxis…','Fetching currently published driver vehicles.');
     try{
         let query=getClient().from('active_driver_vehicles')
