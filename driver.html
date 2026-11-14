@@ -50,7 +50,7 @@
 <div class="panel-grid">
 <div>
 <section class="panel" id="request-panel"><div class="panel-head"><div><h2>Trip requests</h2><p>Review and respond to customer requests</p></div><button class="btn light" id="refresh-requests" type="button">Refresh</button></div><div class="panel-body"><div id="requests"><div class="empty"><div class="empty-icon">🧭</div>Your assigned trip requests will appear here.</div></div></div></section>
-<section class="panel" id="vehicles-panel"><div class="panel-head"><div><h2>My vehicles</h2><p>Your submitted fleet and verification status</p></div></div><div class="panel-body"><div id="vehicles"><div class="empty">No vehicle details loaded yet.</div></div></div></section>
+<section class="panel" id="vehicles-panel"><div class="panel-head"><div><h2>My vehicles</h2><p>Your published vehicles</p></div></div><div class="panel-body"><div id="vehicles"><div class="empty">No vehicle details loaded yet.</div></div></div></section>
 <section class="panel" id="earnings"><div class="panel-head"><div><h2>Earnings & payouts</h2><p>Payment summary</p></div></div><div class="panel-body"><div class="empty"><div class="empty-icon">₹</div>Earnings will be shown here when completed-trip payout records are connected to the driver account. No estimated or unverified amounts are displayed.</div></div></section>
 </div>
 <div>
@@ -58,11 +58,13 @@
 <section class="panel" id="profile"><div class="panel-head"><div><h2>Driver profile</h2><p>Account and contact information</p></div><button id="logout" class="btn light" type="button">Logout</button></div><div class="panel-body"><div class="profile-line"><span>Account type</span><strong>Independent taxi driver</strong></div><div class="profile-line"><span>Verification</span><strong id="profile-status">—</strong></div><div class="profile-line"><span>Registered email</span><strong id="profile-email">—</strong></div><div class="profile-line"><span>Mobile</span><strong id="profile-phone">—</strong></div><div class="profile-line"><span>City</span><strong id="profile-city">—</strong></div></div></section>
 </div>
 </div>
-<section class="panel driver-hidden" id="vehicle-card"><div class="panel-head"><div><h2>Add a vehicle</h2><p>Submit your vehicle details for TourSetu verification</p></div></div><div class="panel-body"><div class="driver-grid">
+<section class="panel driver-hidden" id="vehicle-card"><div class="panel-head"><div><h2 id="vehicle-form-title">Add a vehicle</h2><p>Save your vehicle details and publish your listing instantly</p></div></div><div class="panel-body"><div class="driver-grid">
 <label>Vehicle type<select id="vehicle-type"><option>Hatchback</option><option>Sedan</option><option>SUV</option><option>Tempo Traveller</option><option>Other</option></select></label>
 <label>Make / model<input id="vehicle-model" placeholder="e.g. Maruti Ertiga"></label><label>Registration number<input id="vehicle-reg" placeholder="UK 00 AB 0000"></label><label>Seats<input id="vehicle-seats" type="number" min="1" max="100"></label><label>Price per km (₹)<input id="vehicle-rate" type="number" min="0" step=".5"></label>
 <label>RC document<input id="vehicle-rc" type="file" accept=".pdf,image/*"></label><label>Permit (if applicable)<input id="vehicle-permit" type="file" accept=".pdf,image/*"></label><label>Insurance<input id="vehicle-insurance" type="file" accept=".pdf,image/*"></label><label>Fitness certificate<input id="vehicle-fitness" type="file" accept=".pdf,image/*"></label><label>PUC<input id="vehicle-puc" type="file" accept=".pdf,image/*"></label><label>Vehicle photo<input id="vehicle-photo" type="file" accept="image/*"></label>
-</div><p><button id="save-vehicle" class="btn" type="button">Submit vehicle for verification</button></p></div></section>
+</div><div id="vehicle-edit-note" class="field-note" aria-live="polite"></div><div id="vehicle-edit-files" class="field-note" aria-live="polite"></div><img id="vehicle-edit-photo" alt="Current vehicle photo" class="driver-hidden" style="max-width:180px;max-height:120px;object-fit:cover;border-radius:10px;"><p><button id="save-vehicle" class="btn" type="button">Save & Publish Vehicle</button></p></div></section>
+
+</div></div>
 </main></div></div>
 <section id="auth-card" class="auth-wrap">
 <a class="back-link" href="signin.html">← Back to TourSetu sign in</a>
@@ -81,5 +83,5 @@
 <div class="auth-actions"><button id="auth-submit" class="btn" type="button">Create driver account</button><button id="switch-auth" class="btn light" type="button">Already registered? Login</button></div><div id="auth-message" class="driver-status" role="status" aria-live="polite"></div>
 </div></section>
 </div>
-<script src="/supabase-config"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script><script src="driver-portal.js?v=2026-11-12-dashboard-v2"></script>
+<script src="/supabase-config"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script><script src="driver-portal.js?v=2026-11-14-taxi-marketplace-v1"></script>
 </body></html>

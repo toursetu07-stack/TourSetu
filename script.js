@@ -1401,6 +1401,10 @@ async function renderCustomerHomepage(user, options = {}) {
                               <input type="radio" name="search-type" value="hotel" onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
                               🏨 Registered Hotels
                           </label>
+                          <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
+                              <input type="radio" name="search-type" value="taxi" onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;">
+                              🚕 Independent Taxis
+                          </label>
                       </div>
                   </div>
 
@@ -1475,7 +1479,16 @@ window.toggleCustomerSearchType = function() {
         if(resultTitle) resultTitle.innerText = "Registered Hotels Inventory";
         if(resultSubtitle) resultSubtitle.innerText = "Live room availability directly from verified hotel partners";
         loadCustomerHotelPackages();
+    } else if (selectedType === 'taxi') {
+        if(filterBox) filterBox.style.display = 'flex';
+        if(resultTitle) resultTitle.innerText = "Independent Taxi Listings";
+        if(resultSubtitle) resultSubtitle.innerText = "Book directly with independent taxi drivers";
+        const button=document.querySelector('#agency-filter-box button[data-action="search-agencies"]');
+        if(button)button.textContent='FIND TAXIS';
+        void loadCustomerTaxiListings(document.getElementById('search-start')?.value||'');
     } else {
+        const button=document.querySelector('#agency-filter-box button[data-action="search-agencies"]');
+        if(button)button.textContent='FIND AGENCIES';
         if(filterBox) filterBox.style.display = 'flex';
         if(resultTitle) resultTitle.innerText = "Popular Packages";
         if(resultSubtitle) resultSubtitle.innerText = "Explore tours from all over India";
@@ -3742,6 +3755,13 @@ window.searchMatchedAgencies = async function() {
     const searchButton = document.querySelector('#agency-filter-box button[data-action="search-agencies"]');
 
     if (!container) return;
+
+    const selectedSearchType=document.querySelector('input[name="search-type"]:checked')?.value||'agency';
+    if(selectedSearchType==='taxi'){
+        if(!start){renderCustomerPackageMessage(container,'Select your pickup city','Choose a city to find independent taxi drivers.');return;}
+        await loadCustomerTaxiListings(start);
+        return;
+    }
 
     if (!state || !start) {
         renderCustomerPackageMessage(container, 'Select your pickup city', 'Choose a state and city first so we can find operators near you.');
@@ -14285,3 +14305,161 @@ window.renderAgencyHotelBookingRequests = async function () {
 };
 
       
+
+/* =========================================================================
+   INDEPENDENT TAXI MARKETPLACE — public safe view + driver/customer sync
+   ========================================================================= */
+window.loadCustomerTaxiListings = async function(cityFilter='') {
+    const container=document.getElementById('customer-pkg-list');
+    if(!container)return;
+    container.dataset.view='taxi-listings';
+    renderCustomerPackageMessage(container,'Loading independent taxis…','Fetching currently published driver vehicles.');
+    try{
+        let query=getClient().from('active_driver_vehicles')
+            .select('id,driver_id,vehicle_type,make_model,seating_capacity,price_per_km,vehicle_photo_path,driver_name,driver_city,created_at')
+            .order('created_at',{ascending:false});
+        const {data,error}=await query;
+        if(error)throw error;
+        let rows=Array.isArray(data)?data:[];
+        const city=String(cityFilter||'').trim();
+        if(city)rows=rows.filter(v=>String(v.driver_city||'').toLowerCase()===city.toLowerCase());
+        container.replaceChildren();
+        if(!rows.length){
+            renderCustomerPackageMessage(container,'No independent taxis found',city?'No published taxi is currently listed in '+city+'.':'No active driver vehicles are available right now.');
+            return;
+        }
+        rows.forEach(v=>{
+            const card=document.createElement('article');
+            card.className='card result-card toursetu-package-card';
+            card.style.cssText='background:white;overflow:hidden;border:1px solid #eee;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,.05);';
+            const media=document.createElement('div');
+            media.style.cssText='height:190px;background:#f4f7f6;display:flex;align-items:center;justify-content:center;overflow:hidden;';
+            if(v.vehicle_photo_path){
+                const {data:photo}=getClient().storage.from('driver-vehicle-photos').getPublicUrl(v.vehicle_photo_path);
+                if(photo?.publicUrl){const img=document.createElement('img');img.src=photo.publicUrl;img.alt=(v.vehicle_type||'Taxi')+' vehicle';img.loading='lazy';img.style.cssText='width:100%;height:100%;object-fit:cover;';media.appendChild(img);}
+            }
+            if(!media.childElementCount){const fallback=document.createElement('div');fallback.textContent='🚕';fallback.style.fontSize='64px';media.appendChild(fallback);}
+            const body=document.createElement('div');body.style.cssText='padding:22px;';
+            const title=document.createElement('h3');title.textContent=(v.vehicle_type||'Taxi')+' · '+(v.make_model||'Vehicle');title.style.cssText='margin:0 0 9px;color:#2d3436;';
+            const badge=document.createElement('span');badge.textContent='TAXI';badge.style.cssText='display:inline-block;background:#fff0df;color:#9a5a1c;border:1px solid #ffd8a8;border-radius:20px;padding:5px 10px;font-size:10px;font-weight:900;letter-spacing:.7px;margin-bottom:12px;';
+            const details=document.createElement('div');details.style.cssText='font-size:13px;color:#636e72;line-height:1.8;';
+            details.textContent='Seats: '+Number(v.seating_capacity||0)+' · ₹'+Number(v.price_per_km||0).toLocaleString('en-IN')+'/km · Driver: '+(v.driver_name||'Independent driver')+' · City: '+(v.driver_city||'Not specified');
+            const action=document.createElement('button');action.type='button';action.textContent='Book Taxi';action.style.cssText='margin-top:17px;width:100%;background:#ff9f43;color:#263238;border:0;border-radius:9px;padding:12px 16px;font-weight:800;cursor:pointer;';
+            action.addEventListener('click',()=>openTaxiBookingForm(v));
+            body.append(badge,title,details,action);card.append(media,body);container.appendChild(card);
+        });
+    }catch(e){
+        console.error('Taxi listings failed:',e);
+        renderCustomerPackageMessage(container,'Unable to load taxi listings','Please refresh and try again.');
+    }
+};
+
+function openTaxiBookingForm(vehicle){
+    const client=getClient();
+    const old=document.getElementById('taxi-booking-modal');if(old)old.remove();
+    const overlay=document.createElement('div');overlay.id='taxi-booking-modal';
+    overlay.style.cssText='position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto;';
+    const panel=document.createElement('form');panel.style.cssText='background:#fff;width:min(560px,100%);padding:25px;border-radius:16px;display:grid;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);';
+    const heading=document.createElement('h2');heading.textContent='Book '+(vehicle.vehicle_type||'Taxi')+' · '+(vehicle.make_model||'Vehicle');heading.style.margin='0';
+    const note=document.createElement('p');note.textContent='Driver: '+(vehicle.driver_name||'Independent driver')+' · '+(vehicle.driver_city||'')+' · '+vehicle.seating_capacity+' seats · ₹'+vehicle.price_per_km+'/km';note.style.cssText='margin:0;color:#64748b;font-size:13px;';
+    const field=(label,type,placeholder)=>{const wrap=document.createElement('label');wrap.textContent=label;wrap.style.cssText='display:grid;gap:6px;font-size:12px;font-weight:700;color:#334155;';const input=document.createElement('input');input.type=type;input.placeholder=placeholder||'';input.required=true;input.style.cssText='width:100%;box-sizing:border-box;min-height:43px;padding:10px 12px;border:1px solid #d7dee4;border-radius:8px;font:inherit;';wrap.appendChild(input);panel.appendChild(wrap);return input;};
+    const pickup=field('Pickup address','text','Enter pickup location');
+    const drop=field('Drop address','text','Enter destination');
+    const date=field('Travel date','date','');date.min=new Date().toISOString().slice(0,10);
+    const distance=field('Estimated distance (km)','number','e.g. 25');distance.min='1';distance.step='1';
+    const fare=document.createElement('div');fare.style.cssText='padding:12px;background:#fff8ef;border-radius:9px;color:#8a4d12;font-weight:800;';fare.textContent='Estimated fare: ₹0';
+    distance.addEventListener('input',()=>{fare.textContent='Estimated fare: ₹'+(Math.max(0,Number(distance.value)||0)*Number(vehicle.price_per_km||0)).toLocaleString('en-IN');});
+    const buttons=document.createElement('div');buttons.style.cssText='display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;';
+    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancel';cancel.style.cssText='padding:11px 16px;border:0;border-radius:8px;background:#eef1f3;cursor:pointer;';
+    cancel.addEventListener('click',()=>overlay.remove());
+    const submit=document.createElement('button');submit.type='submit';submit.textContent='Send Taxi Request';submit.style.cssText='padding:11px 16px;border:0;border-radius:8px;background:#ff9f43;color:#263238;font-weight:800;cursor:pointer;';
+    buttons.append(cancel,submit);
+    panel.prepend(note,heading);panel.append(fare,buttons);overlay.appendChild(panel);document.body.appendChild(overlay);
+    panel.addEventListener('submit',async event=>{
+        event.preventDefault();submit.disabled=true;submit.textContent='Sending…';
+        try{
+            const {data:{user},error:authError}=await client.auth.getUser();
+            if(authError||!user)throw new Error('Please log in again.');
+            const {data:profile}=await client.from('profiles').select('phone').eq('id',user.id).maybeSingle();
+            const fareEstimate=Number((Math.max(0,Number(distance.value)||0)*Number(vehicle.price_per_km||0)).toFixed(2));
+            if(!pickup.value.trim()||!drop.value.trim()||!date.value||!Number(distance.value)||Number(distance.value)<=0)throw new Error('Enter pickup, drop, date and a valid estimated distance.');
+            const {error}=await client.from('driver_service_requests').insert({
+                customer_id:user.id,driver_id:vehicle.driver_id,vehicle_id:vehicle.id,status:'pending',
+                trip_details:{
+                    pickup:pickup.value.trim(),drop:drop.value.trim(),travel_date:date.value,
+                    distance_km:Number(distance.value),fare_estimate:fareEstimate,
+                    customer_name:user.user_metadata?.full_name||user.email||'Customer',
+                    customer_phone:profile?.phone||user.user_metadata?.phone||'',
+                    vehicle_type:vehicle.vehicle_type,vehicle_model:vehicle.make_model,
+                    driver_name:vehicle.driver_name,driver_city:vehicle.driver_city
+                }
+            });
+            if(error)throw error;
+            overlay.remove();
+            alert('Taxi request sent. Status: Waiting for taxi approval.');
+            const taxiRadio=document.querySelector('input[name="search-type"][value="taxi"]');if(taxiRadio)taxiRadio.checked=true;
+            await window.renderCustomerRequests();
+        }catch(e){alert(e.message||'Unable to send taxi request.');submit.disabled=false;submit.textContent='Send Taxi Request';}
+    });
+}
+
+let taxiCustomerRealtimeChannel=null;
+function subscribeTaxiCustomerRequests(customerId){
+    if(taxiCustomerRealtimeChannel)getClient().removeChannel(taxiCustomerRealtimeChannel);
+    taxiCustomerRealtimeChannel=getClient().channel('customer-taxi-requests-'+customerId)
+      .on('postgres_changes',{event:'*',schema:'public',table:'driver_service_requests',filter:'customer_id=eq.'+customerId},()=>{
+        const selected=document.querySelector('input[name="search-type"]:checked')?.value;
+        if(selected==='taxi'&&document.getElementById('customer-pkg-list')?.dataset.view==='taxi-requests')void window.renderCustomerRequests();
+      }).subscribe();
+}
+
+async function renderTaxiCustomerRequests(){
+    const container=document.getElementById('customer-pkg-list');
+    const title=document.getElementById('result-title'),subtitle=document.getElementById('result-subtitle');
+    if(title)title.textContent='My Taxi Requests';
+    if(subtitle)subtitle.textContent='Live status updates from your independent taxi drivers';
+    if(!container)return;
+    container.dataset.view='taxi-requests';
+    renderCustomerPackageMessage(container,'Loading taxi requests…','');
+    const client=getClient();
+    const {data:{user},error:authError}=await client.auth.getUser();
+    if(authError||!user){renderCustomerPackageMessage(container,'Please login first','');return;}
+    subscribeTaxiCustomerRequests(user.id);
+    const {data,error}=await client.from('driver_service_requests')
+      .select('id,vehicle_id,driver_id,trip_details,status,created_at')
+      .eq('customer_id',user.id).order('created_at',{ascending:false});
+    if(error){console.error('Taxi requests load failed',error);renderCustomerPackageMessage(container,'Unable to load taxi requests','Please refresh and try again.');return;}
+    if(!data?.length){renderCustomerPackageMessage(container,'No taxi requests yet','Choose Independent Taxis and book a vehicle to get started.');return;}
+    container.replaceChildren();
+    data.forEach(r=>{
+        const t=r.trip_details||{},status=String(r.status||'pending').toLowerCase();
+        const card=document.createElement('article');card.className='card';card.style.cssText='background:#fff;padding:22px;border-radius:14px;border:1px solid #eee;box-shadow:0 4px 15px rgba(0,0,0,.05);';
+        const h=document.createElement('h3');h.textContent=(t.vehicle_type||'Taxi')+' · '+(t.vehicle_model||'Vehicle');h.style.margin='0 0 8px;';
+        const badge=document.createElement('span');badge.textContent=status==='pending'?'Waiting for taxi approval':status==='approved'?'Taxi Approved':status==='denied'?'Denied':status==='cancelled'?'Cancelled':status.toUpperCase();
+        badge.style.cssText='display:inline-block;padding:6px 11px;border-radius:20px;background:'+(status==='approved'?'#e8f7ee':status==='denied'?'#ffe9e9':status==='cancelled'?'#eef1f3':'#fff4df')+';color:'+(status==='approved'?'#187443':status==='denied'?'#b42318':status==='cancelled'?'#475467':'#9a5a1c')+';font-size:11px;font-weight:900;';
+        const details=document.createElement('p');details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Date: '+(t.travel_date||'—')+' · Driver: '+(t.driver_name||'Driver')+' · City: '+(t.driver_city||'—')+' · Fare estimate: ₹'+Number(t.fare_estimate||0).toLocaleString('en-IN');details.style.cssText='color:#64748b;font-size:13px;line-height:1.7;';
+        card.append(h,badge,details);
+        const actions=document.createElement('div');actions.style.cssText='display:flex;gap:9px;flex-wrap:wrap;';
+        if(status==='pending'||status==='approved'){
+            const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancel';cancel.style.cssText='border:0;border-radius:8px;padding:10px 14px;background:#ef4444;color:#fff;font-weight:800;cursor:pointer;';
+            cancel.addEventListener('click',async()=>{
+                if(!confirm('Are you sure you want to cancel this taxi request?'))return;
+                const {error:cancelError}=await client.from('driver_service_requests').update({status:'cancelled'}).eq('id',r.id).eq('customer_id',user.id);
+                if(cancelError){alert(cancelError.message);return;}await renderTaxiCustomerRequests();
+            });actions.appendChild(cancel);
+        }
+        if(status==='approved'){
+            const pay=document.createElement('button');pay.type='button';pay.textContent='Do Payment / Pay Now';pay.style.cssText='border:0;border-radius:8px;padding:10px 14px;background:#16a34a;color:#fff;font-weight:800;cursor:pointer;';
+            pay.addEventListener('click',()=>alert('Taxi request is approved. Secure taxi checkout is not configured yet; no payment has been taken.'));
+            actions.appendChild(pay);
+        }
+        card.appendChild(actions);container.appendChild(card);
+    });
+}
+
+const originalRenderCustomerRequests=window.renderCustomerRequests;
+window.renderCustomerRequests=async function(){
+    const selected=document.querySelector('input[name="search-type"]:checked')?.value||'agency';
+    if(selected==='taxi')return renderTaxiCustomerRequests();
+    if(typeof originalRenderCustomerRequests==='function')return originalRenderCustomerRequests();
+};
