@@ -1,0 +1,6 @@
+-- Historical migration history marker for publish_driver_vehicles_and_taxi_request_sync.
+-- The migration was already applied to the production Supabase project before
+-- its original SQL was preserved in this repository. The live database schema
+-- remains the source of truth for this historical change. This marker exists
+-- to align the checked-in migration versions with Supabase migration history.
+-- Do not add invented DDL here or reapply this historical migration.
