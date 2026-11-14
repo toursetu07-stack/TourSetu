@@ -1,3 +1,60 @@
+/* Render destination checkboxes independently of Supabase/auth setup. This must run first. */
+(function renderDriverDestinationFallback(){
+  'use strict';
+  const destinations = [
+    'Char Dham Yatra (Uttarakhand)','Kedarnath','Kedarnath Temple','Badrinath','Badrinath Temple',
+    'Gangotri','Gangotri Temple','Yamunotri','Yamunotri Temple','Tungnath Temple','Rudranath Temple',
+    'Madhyamaheshwar Temple','Kalpeshwar Temple','Yogadhyan Badri','Bhavishya Badri','Vridha Badri',
+    'Adi Badri','Devprayag (Panch Prayag)','Rudraprayag (Panch Prayag)','Karnaprayag (Panch Prayag)',
+    'Nandprayag (Panch Prayag)','Vishnuprayag (Panch Prayag)','Neem Karoli Baba Kainchi Dham',
+    'Jageshwar Dham','Kasar Devi Temple','Chitai Golu Devta Temple','Naina Devi Temple (Nainital)',
+    'Purnagiri Temple','Surkanda Devi Temple','Chandrabadni Temple','Dhari Devi Temple',
+    'Kartik Swami Temple','Triyuginarayan Temple','Kalimath Temple','Har Ki Pauri',
+    'Har Ki Pauri (Haridwar)','Mansa Devi Temple (Haridwar)','Chandi Devi Temple (Haridwar)',
+    'Neelkanth Mahadev Temple (Rishikesh)','Haidakhan Babaji Temple','Mahasu Devta Temple',
+    'Baijnath Temple','Bagnath Temple (Bageshwar)','Bhairav Temple (Almora)','Katarmal Sun Temple',
+    'Binsar Mahadev Temple','Golu Devta Temple (Ghorakhal)','Garjiya Devi Temple',
+    'Anusuya Devi Temple','Raghunath Temple (Devprayag)','Lakhamandal Temple',
+    'Tapkeshwar Mahadev Temple','Prakasheshwar Mahadev Temple','Santala Devi Temple',
+    'Kunjapuri Devi Temple','Baleshwar Temple (Champawat)','Nagnath Temple (Pithoragarh)',
+    'Kapileshwar Mahadev Temple','Patal Bhuvaneshwar Cave Temple','Haat Kalika Temple (Gangolihat)',
+    'Thal Kedar Temple','Maya Devi Temple (Haridwar)','Daksha Mahadev Temple (Kankhal)',
+    'Bharat Mandir (Rishikesh)','Raghunath Temple (Joshimath)','Narsingh Temple (Joshimath)'
+  ];
+  const cities = ['Almora','Ranikhet','Bageshwar','Champawat','Gopeshwar','Joshimath','Dehradun',
+    'Rishikesh','Haridwar','Haldwani','Nainital','Pauri','Srinagar','Pithoragarh','Rudraprayag',
+    'Guptkashi','Ukhimath','Uttarkashi','Barkot','Gangotri','Yamunotri','Kedarnath','Badrinath'];
+  function render(){
+    const list=document.getElementById('vehicle-tour-destination-list');
+    if(!list)return;
+    const shared=window.TOURSETU_UK_TEMPLES;
+    const options=Array.isArray(shared)&&shared.length?shared:destinations;
+    list.replaceChildren();
+    options.forEach(value=>{
+      const name=String(value);
+      const label=document.createElement('label');
+      label.className='destination-option';
+      const input=document.createElement('input');
+      input.type='checkbox';
+      input.name='vehicle-tour-destination';
+      input.value=name;
+      const span=document.createElement('span');
+      span.textContent=name;
+      label.append(input,span);
+      list.append(label);
+    });
+    const city=document.getElementById('vehicle-starting-location');
+    if(city && city.options.length<=1){
+      const cityOptions=Array.isArray(window.TOURSETU_UK_CITIES)&&window.TOURSETU_UK_CITIES.length
+        ?window.TOURSETU_UK_CITIES:cities;
+      cityOptions.forEach(value=>city.add(new Option(String(value),String(value))));
+    }
+    list.dataset.renderedCount=String(options.length);
+    list.setAttribute('aria-live','polite');
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});
+  else render();
+})();
 (() => {
 'use strict';
 const cfg=window.__TOURSETU_SUPABASE_CONFIG__||{};
