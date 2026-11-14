@@ -892,7 +892,7 @@ async function showDashboard(user) {
         window.identifyOneSignalUser(user.id);
     }
     if(role==='driver'){
-        window.location.assign('/driver');
+        window.location.replace('/driver');
         return;
     }
     if(role==='agency'){

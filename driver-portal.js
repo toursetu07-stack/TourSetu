@@ -147,5 +147,25 @@ $('save-vehicle').addEventListener('click',async()=>{
 
 $('refresh-requests').addEventListener('click',async()=>{const {data}=await db.auth.getUser();if(data.user){try{await loadRequests(data.user.id);}catch(e){msg('auth-message','Could not refresh requests: '+errorText(e));}}});
 $('logout').addEventListener('click',async()=>{await db.auth.signOut();location.reload();});
-db.auth.getSession().then(({data})=>{if(data.session)loadDashboard(data.session.user).catch(e=>msg('auth-message',e.message));});
+async function initializeDriverPortal(){
+ try{
+  // Wait for Supabase to restore persisted auth before deciding whether to redirect.
+  const {data,error}=await db.auth.getSession();
+  if(error)throw error;
+  const user=data?.session?.user;
+  if(!user){
+   window.location.replace('/signin.html?next=%2Fdriver');
+   return;
+  }
+  await loadDashboard(user);
+  // Keep an authenticated driver on this page; only a real sign-out leaves the portal.
+  db.auth.onAuthStateChange((event)=>{
+   if(event==='SIGNED_OUT')window.location.replace('/signin.html?next=%2Fdriver');
+  });
+ }catch(e){
+  console.error('[TourSetu driver portal] session initialization failed',e);
+  msg('auth-message','Unable to verify your sign-in session: '+errorText(e));
+ }
+}
+void initializeDriverPortal();
 })();
