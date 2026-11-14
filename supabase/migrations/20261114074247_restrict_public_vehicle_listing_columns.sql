@@ -1,0 +1,17 @@
+-- The public view is a security-invoker projection; grant only its safe base columns.
+CREATE OR REPLACE VIEW public.active_driver_vehicles
+WITH (security_invoker=true, security_barrier=true)
+AS
+SELECT id, driver_id, vehicle_type, make_model, seating_capacity,
+       price_per_km, vehicle_photo_path, status, created_at,
+       driver_name, driver_city
+FROM public.driver_vehicles
+WHERE status = 'active';
+
+REVOKE ALL ON public.driver_vehicles FROM PUBLIC, anon, authenticated;
+GRANT SELECT (id, driver_id, vehicle_type, make_model, seating_capacity, price_per_km,
+              vehicle_photo_path, status, created_at, driver_name, driver_city)
+  ON public.driver_vehicles TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.driver_vehicles TO authenticated;
+REVOKE ALL ON public.active_driver_vehicles FROM PUBLIC;
+GRANT SELECT ON public.active_driver_vehicles TO anon, authenticated;
