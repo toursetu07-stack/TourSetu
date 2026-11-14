@@ -1,4 +1,4 @@
--- Keep private RC/permit/insurance/fitness/PUC paths out of the public view.
+-- The public view is a security-invoker projection; grant only its safe base columns.
 CREATE OR REPLACE VIEW public.active_driver_vehicles
 WITH (security_invoker=true, security_barrier=true)
 AS
@@ -8,5 +8,9 @@ SELECT id, driver_id, vehicle_type, make_model, seating_capacity,
 FROM public.driver_vehicles
 WHERE status = 'active';
 
+REVOKE ALL ON public.driver_vehicles FROM anon;
+GRANT SELECT (id, driver_id, vehicle_type, make_model, seating_capacity, price_per_km,
+              vehicle_photo_path, status, created_at, driver_name, driver_city)
+  ON public.driver_vehicles TO anon;
 REVOKE ALL ON public.active_driver_vehicles FROM PUBLIC;
 GRANT SELECT ON public.active_driver_vehicles TO anon, authenticated;
