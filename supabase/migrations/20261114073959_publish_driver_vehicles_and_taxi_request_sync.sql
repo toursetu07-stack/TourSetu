@@ -86,11 +86,11 @@ DROP POLICY IF EXISTS "customer can cancel own pending or approved request" ON p
 CREATE POLICY "customer can cancel own pending or approved request" ON public.driver_service_requests FOR UPDATE TO authenticated
   USING (customer_id = (SELECT auth.uid()) AND status IN ('pending','approved'))
   WITH CHECK (customer_id = (SELECT auth.uid()) AND status = 'cancelled');
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.driver_vehicles TO authenticated;
-REVOKE ALL ON public.driver_vehicles FROM anon;
+REVOKE ALL ON public.driver_vehicles FROM PUBLIC, anon, authenticated;
 GRANT SELECT (id, driver_id, vehicle_type, make_model, seating_capacity, price_per_km,
               vehicle_photo_path, status, created_at, driver_name, driver_city)
-  ON public.driver_vehicles TO anon;
+  ON public.driver_vehicles TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.driver_vehicles TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.driver_service_requests TO authenticated;
 DO $$
 BEGIN
