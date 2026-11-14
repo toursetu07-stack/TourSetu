@@ -10,11 +10,45 @@ let mode='register';
 let editingVehicleId=null;
 let currentDriverProfile=null;
 let driverRealtimeChannel=null;
-const DRIVER_CITY_OPTIONS=window.TOURSETU_UK_CITIES||[];
-const DRIVER_TEMPLE_OPTIONS=window.TOURSETU_UK_TEMPLES||[];
+const DRIVER_CITY_FALLBACK=['Almora','Ranikhet','Bageshwar','Champawat','Gopeshwar','Joshimath','Dehradun','Rishikesh','Haridwar','Haldwani','Nainital','Pauri','Srinagar','Pithoragarh','Rudraprayag','Guptkashi','Ukhimath','Uttarkashi','Barkot','Gangotri','Yamunotri','Kedarnath','Badrinath'];
+const DRIVER_TEMPLE_FALLBACK=[
+'Char Dham Yatra (Uttarakhand)','Kedarnath Temple','Badrinath Temple','Gangotri Temple','Yamunotri Temple',
+'Tungnath Temple','Rudranath Temple','Madhyamaheshwar Temple','Kalpeshwar Temple','Yogadhyan Badri',
+'Bhavishya Badri','Vridha Badri','Adi Badri','Devprayag (Panch Prayag)','Rudraprayag (Panch Prayag)',
+'Karnaprayag (Panch Prayag)','Nandprayag (Panch Prayag)','Vishnuprayag (Panch Prayag)',
+'Neem Karoli Baba Kainchi Dham','Jageshwar Dham','Kasar Devi Temple','Chitai Golu Devta Temple',
+'Naina Devi Temple (Nainital)','Purnagiri Temple','Surkanda Devi Temple','Chandrabadni Temple',
+'Dhari Devi Temple','Kartik Swami Temple','Triyuginarayan Temple','Kalimath Temple','Har Ki Pauri (Haridwar)',
+'Mansa Devi Temple (Haridwar)','Chandi Devi Temple (Haridwar)','Neelkanth Mahadev Temple (Rishikesh)',
+'Haidakhan Babaji Temple','Mahasu Devta Temple','Baijnath Temple','Bagnath Temple (Bageshwar)',
+'Bhairav Temple (Almora)','Katarmal Sun Temple','Binsar Mahadev Temple','Golu Devta Temple (Ghorakhal)',
+'Garjiya Devi Temple','Anusuya Devi Temple','Raghunath Temple (Devprayag)','Lakhamandal Temple',
+'Tapkeshwar Mahadev Temple','Prakasheshwar Mahadev Temple','Santala Devi Temple','Kunjapuri Devi Temple',
+'Baleshwar Temple (Champawat)','Nagnath Temple (Pithoragarh)','Kapileshwar Mahadev Temple',
+'Patal Bhuvaneshwar Cave Temple','Haat Kalika Temple (Gangolihat)','Thal Kedar Temple',
+'Maya Devi Temple (Haridwar)','Daksha Mahadev Temple (Kankhal)','Bharat Mandir (Rishikesh)',
+'Raghunath Temple (Joshimath)','Narsingh Temple (Joshimath)'
+];
+const DRIVER_CITY_OPTIONS=Array.isArray(window.TOURSETU_UK_CITIES)&&window.TOURSETU_UK_CITIES.length?window.TOURSETU_UK_CITIES:DRIVER_CITY_FALLBACK;
+const DRIVER_TEMPLE_OPTIONS=Array.isArray(window.TOURSETU_UK_TEMPLES)&&window.TOURSETU_UK_TEMPLES.length?window.TOURSETU_UK_TEMPLES:DRIVER_TEMPLE_FALLBACK;
 function getSelectedVehicleDestinations(){return Array.from(document.querySelectorAll('#vehicle-tour-destination-list input[name="vehicle-tour-destination"]:checked')).map(input=>input.value);}
-function populateVehicleLocationOptions(){const city=$('vehicle-starting-location'),dest=$('vehicle-tour-destination-list');if(city){city.replaceChildren(new Option('Select Uttarakhand city',''));DRIVER_CITY_OPTIONS.forEach(v=>city.add(new Option(v,v)));}if(dest){dest.replaceChildren();DRIVER_TEMPLE_OPTIONS.forEach(v=>{const label=document.createElement('label');label.className='destination-option';const input=document.createElement('input');input.type='checkbox';input.name='vehicle-tour-destination';input.value=v;const text=document.createElement('span');text.textContent=v;label.append(input,text);dest.append(label);});}}
-populateVehicleLocationOptions();
+function populateVehicleLocationOptions(){
+ const city=$('vehicle-starting-location'),dest=$('vehicle-tour-destination-list');
+ if(city){city.replaceChildren(new Option('Select Uttarakhand city',''));DRIVER_CITY_OPTIONS.forEach(v=>city.add(new Option(v,v)));}
+ if(!dest)return;
+ dest.replaceChildren();
+ DRIVER_TEMPLE_OPTIONS.forEach(v=>{
+  const label=document.createElement('label');label.className='destination-option';
+  const input=document.createElement('input');input.type='checkbox';input.name='vehicle-tour-destination';input.value=v;
+  const text=document.createElement('span');text.textContent=v;
+  label.append(input,text);dest.append(label);
+ });
+ if(!dest.children.length){
+  const empty=document.createElement('p');empty.className='field-note';empty.textContent='Temple destinations could not be loaded. Please refresh this page or contact support.';dest.append(empty);
+ }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',populateVehicleLocationOptions,{once:true});
+else populateVehicleLocationOptions();
 const requiredDocs=['id-doc','pan-doc','lic-front','lic-back','police-doc','bank-doc'];
 function errorText(e){
   if(!e)return 'Unknown error. Please try again.';
