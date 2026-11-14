@@ -14316,7 +14316,7 @@ window.loadCustomerTaxiListings = async function(cityFilter='') {
     renderCustomerPackageMessage(container,'Loading independent taxis…','Fetching currently published driver vehicles.');
     try{
         let query=getClient().from('active_driver_vehicles')
-            .select('id,driver_id,vehicle_type,make_model,seating_capacity,price_per_km,vehicle_photo_path,driver_name,driver_city,created_at')
+            .select('id,driver_id,vehicle_type,make_model,registration_number,seating_capacity,price_per_km,vehicle_photo_path,driver_name,driver_city,created_at,status')
             .order('created_at',{ascending:false});
         const {data,error}=await query;
         if(error)throw error;
@@ -14343,8 +14343,8 @@ window.loadCustomerTaxiListings = async function(cityFilter='') {
             const title=document.createElement('h3');title.textContent=(v.vehicle_type||'Taxi')+' · '+(v.make_model||'Vehicle');title.style.cssText='margin:0 0 9px;color:#2d3436;';
             const badge=document.createElement('span');badge.textContent='TAXI';badge.style.cssText='display:inline-block;background:#fff0df;color:#9a5a1c;border:1px solid #ffd8a8;border-radius:20px;padding:5px 10px;font-size:10px;font-weight:900;letter-spacing:.7px;margin-bottom:12px;';
             const details=document.createElement('div');details.style.cssText='font-size:13px;color:#636e72;line-height:1.8;';
-            details.textContent='Seats: '+Number(v.seating_capacity||0)+' · ₹'+Number(v.price_per_km||0).toLocaleString('en-IN')+'/km · Driver: '+(v.driver_name||'Independent driver')+' · City: '+(v.driver_city||'Not specified');
-            const action=document.createElement('button');action.type='button';action.textContent='Book Taxi';action.style.cssText='margin-top:17px;width:100%;background:#ff9f43;color:#263238;border:0;border-radius:9px;padding:12px 16px;font-weight:800;cursor:pointer;';
+            details.textContent='Registration: '+(v.registration_number||'Not provided')+' · Seats: '+Number(v.seating_capacity||0)+' · ₹'+Number(v.price_per_km||0).toLocaleString('en-IN')+'/km · Driver: '+(v.driver_name||'Independent driver')+' · City: '+(v.driver_city||'Not specified');
+            const action=document.createElement('button');action.type='button';action.textContent='Book Now / Request Taxi';action.style.cssText='margin-top:17px;width:100%;background:#ff9f43;color:#263238;border:0;border-radius:9px;padding:12px 16px;font-weight:800;cursor:pointer;';
             action.addEventListener('click',()=>openTaxiBookingForm(v));
             body.append(badge,title,details,action);card.append(media,body);container.appendChild(card);
         });
