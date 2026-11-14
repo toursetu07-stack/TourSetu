@@ -12,7 +12,8 @@ let currentDriverProfile=null;
 let driverRealtimeChannel=null;
 const DRIVER_CITY_OPTIONS=window.TOURSETU_UK_CITIES||[];
 const DRIVER_TEMPLE_OPTIONS=window.TOURSETU_UK_TEMPLES||[];
-function populateVehicleLocationOptions(){const city=$('vehicle-starting-location'),dest=$('vehicle-tour-destination');if(city){city.replaceChildren(new Option('Select Uttarakhand city',''));DRIVER_CITY_OPTIONS.forEach(v=>city.add(new Option(v,v)));}if(dest){dest.replaceChildren();DRIVER_TEMPLE_OPTIONS.forEach(v=>dest.add(new Option(v,v)));}}
+function getSelectedVehicleDestinations(){return Array.from(document.querySelectorAll('#vehicle-tour-destination-list input[name="vehicle-tour-destination"]:checked')).map(input=>input.value);}
+function populateVehicleLocationOptions(){const city=$('vehicle-starting-location'),dest=$('vehicle-tour-destination-list');if(city){city.replaceChildren(new Option('Select Uttarakhand city',''));DRIVER_CITY_OPTIONS.forEach(v=>city.add(new Option(v,v)));}if(dest){dest.replaceChildren();DRIVER_TEMPLE_OPTIONS.forEach(v=>{const label=document.createElement('label');label.className='destination-option';const input=document.createElement('input');input.type='checkbox';input.name='vehicle-tour-destination';input.value=v;const text=document.createElement('span');text.textContent=v;label.append(input,text);dest.append(label);});}}
 populateVehicleLocationOptions();
 const requiredDocs=['id-doc','pan-doc','lic-front','lic-back','police-doc','bank-doc'];
 function errorText(e){
@@ -61,7 +62,7 @@ function editVehicle(v){
  $('vehicle-rate').value=v.price_per_km||'';
  $('vehicle-starting-location').value=v.starting_location||'';
  const savedDestinations=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);
- Array.from($('vehicle-tour-destination').options).forEach(option=>{option.selected=savedDestinations.includes(option.value);});
+ document.querySelectorAll('#vehicle-tour-destination-list input[name="vehicle-tour-destination"]').forEach(input=>{input.checked=savedDestinations.includes(input.value);});
  ['vehicle-rc','vehicle-permit','vehicle-insurance','vehicle-fitness','vehicle-puc','vehicle-photo'].forEach(id=>{$(id).value='';});
  $('vehicle-edit-note').textContent='Existing uploaded documents/photos will be kept unless you choose replacement files.';
  $('vehicle-edit-files').textContent='Saved vehicle documents remain attached. Upload a replacement only if you want to update a document.';
@@ -129,7 +130,7 @@ $('save-vehicle').addEventListener('click',async()=>{
    if($('vehicle-fitness').files[0])docs.fitness_document_path=await upload($('vehicle-fitness').files[0],user.id,'vehicle-fitness');
    if($('vehicle-puc').files[0])docs.puc_document_path=await upload($('vehicle-puc').files[0],user.id,'vehicle-puc');
    if($('vehicle-photo').files[0])docs.vehicle_photo_path=await uploadVehiclePhoto($('vehicle-photo').files[0],user.id);
-   const payload={driver_id:user.id,driver_name:currentDriverProfile?.full_name||user.user_metadata?.full_name||'Independent Driver',driver_city:currentDriverProfile?.city||user.user_metadata?.city||'',vehicle_type:$('vehicle-type').value,make_model:$('vehicle-model').value.trim(),registration_number:$('vehicle-reg').value.trim(),seating_capacity:Number($('vehicle-seats').value),price_per_km:Number($('vehicle-rate').value),status:'active',starting_location:$('vehicle-starting-location').value,tour_destination:Array.from($('vehicle-tour-destination').selectedOptions).map(option=>option.value),...docs};
+   const payload={driver_id:user.id,driver_name:currentDriverProfile?.full_name||user.user_metadata?.full_name||'Independent Driver',driver_city:currentDriverProfile?.city||user.user_metadata?.city||'',vehicle_type:$('vehicle-type').value,make_model:$('vehicle-model').value.trim(),registration_number:$('vehicle-reg').value.trim(),seating_capacity:Number($('vehicle-seats').value),price_per_km:Number($('vehicle-rate').value),status:'active',starting_location:$('vehicle-starting-location').value,tour_destination:getSelectedVehicleDestinations(),...docs};
    if(!payload.make_model||!payload.registration_number||!payload.seating_capacity||!Number.isFinite(payload.price_per_km)||!payload.starting_location||!payload.tour_destination.length)throw Error('Complete vehicle model, registration, seats, price, starting location and at least one tour destination.');
    const result=editingVehicleId
     ?await db.from('driver_vehicles').update(payload).eq('id',editingVehicleId).eq('driver_id',user.id)
@@ -138,7 +139,7 @@ $('save-vehicle').addEventListener('click',async()=>{
    alert(editingVehicleId?'Vehicle updated and published.':'Vehicle saved and published.');
    editingVehicleId=null;$('vehicle-form-title').textContent='Add a vehicle';$('save-vehicle').textContent='Save & Publish Vehicle';$('vehicle-edit-note').textContent='';$('vehicle-edit-files').textContent='';$('vehicle-edit-photo').classList.add('driver-hidden');$('vehicle-edit-photo').removeAttribute('src');
    $('vehicle-starting-location').value='';
-   Array.from($('vehicle-tour-destination').options).forEach(option=>{option.selected=false;});
+   document.querySelectorAll('#vehicle-tour-destination-list input[name="vehicle-tour-destination"]').forEach(input=>{input.checked=false;});
    ['vehicle-model','vehicle-reg','vehicle-seats','vehicle-rate','vehicle-rc','vehicle-permit','vehicle-insurance','vehicle-fitness','vehicle-puc','vehicle-photo'].forEach(id=>{$(id).value='';});
    await loadVehicles(user.id);
  }catch(e){alert(e.message||'Unable to save vehicle.');}
