@@ -861,11 +861,12 @@ async function initApp() {
 async function resolveTourSetuRole(user) {
     const allowed = new Set(['customer','agency','hotel','driver']);
     const appRole = String(user?.app_metadata?.role || '').toLowerCase();
-    if (allowed.has(appRole)) return appRole;
+    if (allowed.has(appRole) && appRole !== 'customer') return appRole;
+    let profileRole = '';
     try {
         const { data, error } = await getClient().from('profiles').select('role').eq('id', user.id).maybeSingle();
-        const profileRole = String(data?.role || '').toLowerCase();
-        if (!error && allowed.has(profileRole)) return profileRole;
+        if (!error) profileRole = String(data?.role || '').toLowerCase();
+        if (allowed.has(profileRole) && profileRole !== 'customer') return profileRole;
     } catch (error) { console.warn('Profile role lookup unavailable:', error); }
     try {
         const { data, error } = await getClient().from('driver_profiles').select('user_id').eq('user_id', user.id).maybeSingle();
@@ -875,6 +876,11 @@ async function resolveTourSetuRole(user) {
         const { data, error } = await getClient().from('agency_profiles').select('id').eq('id', user.id).maybeSingle();
         if (!error && data) return 'agency';
     } catch (error) { console.warn('Agency role lookup unavailable:', error); }
+    try {
+        const { data, error } = await getClient().from('hotel_verification_requests').select('user_id').eq('user_id', user.id).maybeSingle();
+        if (!error && data) return 'hotel';
+    } catch (error) { console.warn('Hotel role lookup unavailable:', error); }
+    if (profileRole === 'customer') return 'customer';
     const metadataRole = String(user?.user_metadata?.role || '').toLowerCase();
     return allowed.has(metadataRole) ? metadataRole : 'customer';
 }
@@ -886,7 +892,7 @@ async function showDashboard(user) {
         window.identifyOneSignalUser(user.id);
     }
     if(role==='driver'){
-        window.location.assign('driver.html');
+        window.location.assign('/driver');
         return;
     }
     if(role==='agency'){
