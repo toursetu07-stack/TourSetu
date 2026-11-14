@@ -147,24 +147,33 @@ $('save-vehicle').addEventListener('click',async()=>{
 
 $('refresh-requests').addEventListener('click',async()=>{const {data}=await db.auth.getUser();if(data.user){try{await loadRequests(data.user.id);}catch(e){msg('auth-message','Could not refresh requests: '+errorText(e));}}});
 $('logout').addEventListener('click',async()=>{await db.auth.signOut();location.reload();});
+function showDriverLogin(message){
+  $('dashboard').classList.add('driver-hidden');
+  $('vehicle-card').classList.add('driver-hidden');
+  $('auth-card').classList.remove('driver-hidden');
+  setMode('login');
+  if(message)msg('auth-message',message);
+}
 async function initializeDriverPortal(){
  try{
-  // Wait for Supabase to restore persisted auth before deciding whether to redirect.
+  // Restore the Supabase session before rendering. Never bounce between /driver
+  // and /signin: keep unauthenticated visitors on this page and show driver login.
   const {data,error}=await db.auth.getSession();
   if(error)throw error;
   const user=data?.session?.user;
   if(!user){
-   window.location.replace('/signin.html?next=%2Fdriver');
-   return;
+   showDriverLogin('Please log in with your independent driver account.');
+  }else{
+   await loadDashboard(user);
   }
-  await loadDashboard(user);
-  // Keep an authenticated driver on this page; only a real sign-out leaves the portal.
+  // If the session expires or the user signs out elsewhere, return to the local
+  // driver login form instead of navigating to the general sign-in route.
   db.auth.onAuthStateChange((event)=>{
-   if(event==='SIGNED_OUT')window.location.replace('/signin.html?next=%2Fdriver');
+   if(event==='SIGNED_OUT')showDriverLogin('You have been signed out. Please log in again.');
   });
  }catch(e){
   console.error('[TourSetu driver portal] session initialization failed',e);
-  msg('auth-message','Unable to verify your sign-in session: '+errorText(e));
+  showDriverLogin('Unable to verify your sign-in session: '+errorText(e));
  }
 }
 void initializeDriverPortal();
