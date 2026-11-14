@@ -14325,7 +14325,7 @@ window.loadCustomerTaxiListings = async function(cityFilter='') {
         if(city)rows=rows.filter(v=>String(v.driver_city||'').toLowerCase()===city.toLowerCase());
         container.replaceChildren();
         if(!rows.length){
-            renderCustomerPackageMessage(container,'No independent taxis found',city?'No published taxi is currently listed in '+city+'.':'No active driver vehicles are available right now.');
+            renderCustomerPackageMessage(container,'No independent taxis found',city?'No published taxi is currently listed in '+city+'.':'No saved independent taxi vehicles are available right now.');
             return;
         }
         rows.forEach(v=>{
