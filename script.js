@@ -2856,11 +2856,11 @@ async function loadCustomerRequests() {
   // 4. Data ko UI par render karein
   requestsListDiv.innerHTML = bookings.map(booking => `
     <div class="request-card" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
-      <h4>Hotel Name: ${booking.hotel_name || 'N/A'}</h4>
-      <p><strong>Check-in:</strong> ${booking.check_in_date || 'N/A'}</p>
-      <p><strong>Check-out:</strong> ${booking.check_out_date || 'N/A'}</p>
-      <p><strong>Status:</strong> <span class="status-${booking.status}">${booking.status || 'Pending'}</span></p>
-      <p><strong>Price:</strong> ₹${booking.price || '0'}</p>
+      <h4>Hotel Name: ${window.TourSetuDOM.escapeHTML(booking.hotel_name || 'N/A')}</h4>
+      <p><strong>Check-in:</strong> ${window.TourSetuDOM.escapeHTML(booking.check_in_date || 'N/A')}</p>
+      <p><strong>Check-out:</strong> ${window.TourSetuDOM.escapeHTML(booking.check_out_date || 'N/A')}</p>
+      <p><strong>Status:</strong> <span class="status-${['pending','approved','confirmed','denied','cancelled','rejected'].includes(String(booking.status || '').toLowerCase()) ? String(booking.status).toLowerCase() : 'unknown'}">${window.TourSetuDOM.escapeHTML(booking.status || 'Pending')}</span></p>
+      <p><strong>Price:</strong> ₹${window.TourSetuDOM.escapeHTML(booking.price || '0')}</p>
     </div>
   `).join('');
 }
@@ -6182,7 +6182,7 @@ async function uploadHotelImage(file, bucketPath) {
 // Render Property & Inventory Tab Content
 async function renderPropertyAndInventoryTab(container, hotel) {
     const destOptions = FIXED_HOTEL_DESTINATIONS.map(loc => 
-        `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+        `<option value="${window.TourSetuDOM.escapeAttribute(loc)}" ${hotel && hotel.city === loc ? 'selected' : ''}>${window.TourSetuDOM.escapeHTML(loc)}</option>`
     ).join('');
 
     container.innerHTML = `
@@ -6192,13 +6192,13 @@ async function renderPropertyAndInventoryTab(container, hotel) {
                 <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">Setup property photos, room counts, and pricing to make it visible for Agencies and Customers.</p>
             </div>
 
-            <form id="hotel-profile-form" onsubmit="event.preventDefault(); handleSaveHotelProfile('${hotel?.hotel_id || ''}');">
+            <form id="hotel-profile-form" data-hotel-profile-form="true" data-hotel-id="${window.TourSetuDOM.escapeAttribute(hotel?.hotel_id || '')}">
                 <!-- SECTION 1: BASIC & LOCATION INFO -->
                 <h3 style="font-size: 16px; color: #0284c7; margin-bottom: 15px;">1. Basic Info & Nearest Location</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                     <div>
                         <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Hotel Name *</label>
-                        <input type="text" id="h-name" required placeholder="e.g. Hotel Devbhoomi Inn" value="${hotel?.hotel_name || ''}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                        <input type="text" id="h-name" required placeholder="e.g. Hotel Devbhoomi Inn" value="${window.TourSetuDOM.escapeAttribute(hotel?.hotel_name || '')}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
                     </div>
                     <div>
                         <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Nearest Permitted Location *</label>
@@ -6211,7 +6211,7 @@ async function renderPropertyAndInventoryTab(container, hotel) {
 
                 <div style="margin-bottom: 20px;">
                     <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Complete Street Address *</label>
-                    <input type="text" id="h-address" required placeholder="Street, Landmark, City" value="${hotel?.address || ''}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                    <input type="text" id="h-address" required placeholder="Street, Landmark, City" value="${window.TourSetuDOM.escapeAttribute(hotel?.address || '')}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
                 </div>
 
                 <!-- SECTION 2: ROOM & PRICING DETAILS -->
@@ -6435,7 +6435,7 @@ window.showHotelTab = async function(tabName) {
     // TAB 2: PROPERTY / ROOM INVENTORY
     else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
         const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
-            `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+            `<option value="${window.TourSetuDOM.escapeAttribute(loc)}" ${hotel && hotel.city === loc ? 'selected' : ''}>${window.TourSetuDOM.escapeHTML(loc)}</option>`
         ).join('');
 
         container.innerHTML = `
@@ -6443,7 +6443,7 @@ window.showHotelTab = async function(tabName) {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
                     <h3>🏨 Property Profile</h3>
-                    <input type="text" id="h-name" placeholder="Hotel Name" value="${hotel?.hotel_name || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="text" id="h-name" placeholder="Hotel Name" value="${window.TourSetuDOM.escapeAttribute(hotel?.hotel_name || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     
                     <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION</label>
                     <select id="h-city" style="width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
@@ -6451,7 +6451,7 @@ window.showHotelTab = async function(tabName) {
                         ${destSelectOptions}
                     </select>
 
-                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${hotel?.address || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${window.TourSetuDOM.escapeAttribute(hotel?.address || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
                     <button onclick="handleSaveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
@@ -6733,7 +6733,7 @@ window.showHotelTab = async function(tabName) {
     // TAB: PROPERTY / ROOM INVENTORY (Teeno Names Support Karega)
     else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
         const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
-            `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+            `<option value="${window.TourSetuDOM.escapeAttribute(loc)}" ${hotel && hotel.city === loc ? 'selected' : ''}>${window.TourSetuDOM.escapeHTML(loc)}</option>`
         ).join('');
 
         container.innerHTML = `
@@ -6741,7 +6741,7 @@ window.showHotelTab = async function(tabName) {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
                     <h3>🏨 Property Profile</h3>
-                    <input type="text" id="h-name" placeholder="Hotel Name" value="${hotel?.hotel_name || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="text" id="h-name" placeholder="Hotel Name" value="${window.TourSetuDOM.escapeAttribute(hotel?.hotel_name || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     
                     <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION</label>
                     <select id="h-city" style="width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
@@ -6749,7 +6749,7 @@ window.showHotelTab = async function(tabName) {
                         ${destSelectOptions}
                     </select>
 
-                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${hotel?.address || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${window.TourSetuDOM.escapeAttribute(hotel?.address || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
                     <button onclick="saveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
@@ -6961,9 +6961,9 @@ async function loadHotelRequests(hotelId) {
         <div class="card" style="background:white; padding:20px; border-radius:12px; margin-bottom:15px; border-left:5px solid ${statusBadge};">
             <div style="display:flex; justify-content:space-between; align-items:start;">
                 <div>
-                    <h3 style="margin:0;">${req.rooms?.room_type || 'Room Request'}</h3>
-                    <small style="color:#888;">Requester: <b>${req.requester_type.toUpperCase()}</b> (${req.agency_contact || 'Direct Customer'})</small>
-                    <p style="margin:5px 0; font-size:13px;">Dates: ${req.requested_dates || 'Not Specified'}</p>
+                    <h3 style="margin:0;">${window.TourSetuDOM.escapeHTML(req.rooms?.room_type || 'Room Request')}</h3>
+                    <small style="color:#888;">Requester: <b>${window.TourSetuDOM.escapeHTML(String(req.requester_type || 'requester').toUpperCase())}</b> (${window.TourSetuDOM.escapeHTML(req.agency_contact || 'Direct Customer')})</small>
+                    <p style="margin:5px 0; font-size:13px;">Dates: ${window.TourSetuDOM.escapeHTML(req.requested_dates || 'Not Specified')}</p>
                 </div>
                 <div style="text-align:right;">
                     <span style="background:${statusBadge}; color:white; font-size:10px; padding:3px 8px; border-radius:4px; font-weight:bold;">${window.TourSetuDOM.escapeHTML(String(req.status || '').toUpperCase())}</span>
@@ -7304,7 +7304,7 @@ if (!hotel) {
         const { data: rooms } = hotel ? await client.from('rooms').select('*').eq('hotel_id', hotel.hotel_id) : { data: [] };
 
         const optionsHtml = PERMITTED_HOTEL_LOCATIONS.map(loc => 
-            `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+            `<option value="${window.TourSetuDOM.escapeAttribute(loc)}" ${hotel && hotel.city === loc ? 'selected' : ''}>${window.TourSetuDOM.escapeHTML(loc)}</option>`
         ).join('');
 
         content.innerHTML = `
@@ -10205,7 +10205,7 @@ async function renderArrivalsAndPayouts(container, user) {
                                 margin:10px 0 5px;
                                 color:#2d3436;
                             ">
-                                ${req.rooms?.room_type || 'Room Request'}
+                                ${window.TourSetuDOM.escapeHTML(req.rooms?.room_type || 'Room Request')}
                             </h3>
 
                             <div style="
@@ -10526,7 +10526,7 @@ window.showHotelTab = async function(tabName) {
     // TAB: PROPERTY / ROOM INVENTORY
     else if (tabName === 'property' || tabName === 'room-inventory' || tabName === 'inventory') {
         const destSelectOptions = (typeof FIXED_HOTEL_DESTINATIONS !== 'undefined' ? FIXED_HOTEL_DESTINATIONS : []).map(loc => 
-            `<option value="${loc}" ${hotel && hotel.city === loc ? 'selected' : ''}>${loc}</option>`
+            `<option value="${window.TourSetuDOM.escapeAttribute(loc)}" ${hotel && hotel.city === loc ? 'selected' : ''}>${window.TourSetuDOM.escapeHTML(loc)}</option>`
         ).join('');
 
         container.innerHTML = `
@@ -10534,7 +10534,7 @@ window.showHotelTab = async function(tabName) {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
                     <h3>🏨 Property Profile</h3>
-                    <input type="text" id="h-name" placeholder="Hotel Name" value="${hotel?.hotel_name || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="text" id="h-name" placeholder="Hotel Name" value="${window.TourSetuDOM.escapeAttribute(hotel?.hotel_name || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     
                     <label style="font-size:12px; color:#666; font-weight:bold; display:block; margin-top:10px;">DESTINATION</label>
                     <select id="h-city" style="width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:8px;">
@@ -10542,7 +10542,7 @@ window.showHotelTab = async function(tabName) {
                         ${destSelectOptions}
                     </select>
 
-                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${hotel?.address || ''}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
+                    <input type="text" id="h-address" placeholder="Complete Street Address" value="${window.TourSetuDOM.escapeAttribute(hotel?.address || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
                     <button onclick="saveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
@@ -10747,7 +10747,7 @@ async function loadHotelRooms(hotelId) {
     listDiv.innerHTML = rooms.map(room => `
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:15px; margin-top:10px; background:#fff; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
             <div>
-                <h4 style="margin:0;">${room.room_type || room.category_name || ''}</h4>
+                <h4 style="margin:0;">${window.TourSetuDOM.escapeHTML(room.room_type || room.category_name || '')}</h4>
                 <p style="margin:5px 0 0; color:#666;">Price: ₹${room.price_per_night || room.price || 0} / night</p>
             </div>
             
@@ -10757,7 +10757,7 @@ async function loadHotelRooms(hotelId) {
                     <div><strong>${room.available_rooms ?? 0}</strong> / ${room.total_rooms ?? 0}</div>
                 </div>
                 
-                <button onclick="editRoomCategory('${room.id}', '${room.room_type || room.category_name || ''}', '${room.price_per_night || room.price || 0}', '${room.total_rooms || 0}', '${room.available_rooms || 0}')" 
+                <button onclick="editRoomCategory('${room.id}', '${window.TourSetuDOM.escapeHTML(room.room_type || room.category_name || '')}', '${room.price_per_night || room.price || 0}', '${room.total_rooms || 0}', '${room.available_rooms || 0}')" 
                         style="background:#2196F3; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">
                     ✏️ Edit
                 </button>
@@ -12940,7 +12940,7 @@ window.renderHotelBookingRequests =
                                                 font-size:13px;
                                             ">
 
-                                                ${roomType}
+                                                ${window.TourSetuDOM.escapeHTML(roomType)}
 
                                             </div>
 
@@ -14376,7 +14376,7 @@ window.renderAgencyHotelBookingRequests = async function () {
                                 margin:0 0 6px;
                                 color:#2d3436;
                             ">
-                                🏨 ${booking.hotel_name || 'Registered Hotel'}
+                                🏨 ${window.TourSetuDOM.escapeHTML(booking.hotel_name || 'Registered Hotel')}
                             </h3>
 
                             <div style="
@@ -14384,7 +14384,7 @@ window.renderAgencyHotelBookingRequests = async function () {
                                 font-size:13px;
                             ">
                                 Booking ID:
-                                ${booking.id || '-'}
+                                ${window.TourSetuDOM.escapeHTML(booking.id || '-')}
                             </div>
 
                         </div>
@@ -14403,7 +14403,7 @@ window.renderAgencyHotelBookingRequests = async function () {
                                 font-weight:bold;
                                 text-transform:uppercase;
                             ">
-                                ${bookingStatus}
+                                ${window.TourSetuDOM.escapeHTML(bookingStatus)}
                             </div>
 
                         </div>
