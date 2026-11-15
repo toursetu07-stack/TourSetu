@@ -1867,9 +1867,6 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
     const imageUrl = getHotelRoomImageUrl(imagePath);
     const today = new Date();
     const minDateStr = formatDateString(today);
-    const maxDate = new Date(today);
-    maxDate.setDate(today.getDate() + 7);
-    const maxDateStr = formatDateString(maxDate);
     const nextDay = new Date(today);
     nextDay.setDate(today.getDate() + 1);
     const nextDayStr = formatDateString(nextDay);
@@ -1930,17 +1927,28 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
         input.type = 'date';
         input.id = id;
         input.min = min;
-        input.max = max;
         input.value = value;
         input.style.cssText = 'width:100%;padding:8px 10px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:bold;box-sizing:border-box;';
         input.addEventListener('change', () => window.calculateHotelTotalPrice(safePrice, safeMaxRooms));
         wrap.append(label, input);
         return wrap;
     };
-    dateGrid.append(
-        makeDateField('📅 CHECK-IN DATE', 'modal-checkin-date', minDateStr, maxDateStr, minDateStr),
-        makeDateField('📅 CHECK-OUT DATE', 'modal-checkout-date', minDateStr, maxDateStr, nextDayStr)
-    );
+    const checkInField = makeDateField('📅 CHECK-IN DATE', 'modal-checkin-date', minDateStr, '', minDateStr);
+    const checkOutField = makeDateField('📅 CHECK-OUT DATE', 'modal-checkout-date', nextDayStr, '', nextDayStr);
+    const checkInDateInput = checkInField.querySelector('#modal-checkin-date');
+    const checkOutDateInput = checkOutField.querySelector('#modal-checkout-date');
+    checkInDateInput.addEventListener('change', () => {
+        if (!checkInDateInput.value) return;
+        const nextCheckout = new Date(checkInDateInput.value + 'T00:00:00');
+        nextCheckout.setDate(nextCheckout.getDate() + 1);
+        const nextCheckoutStr = formatDateString(nextCheckout);
+        checkOutDateInput.min = nextCheckoutStr;
+        if (!checkOutDateInput.value || checkOutDateInput.value <= checkInDateInput.value) {
+            checkOutDateInput.value = nextCheckoutStr;
+        }
+        window.calculateHotelTotalPrice(safePrice, safeMaxRooms);
+    });
+    dateGrid.append(checkInField, checkOutField);
 
     const formGrid = document.createElement('div');
     formGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:15px;align-items:center;margin-bottom:15px;';
@@ -2152,8 +2160,8 @@ window.submitHotelRoomBooking = async function(hotelName, roomType, location, pr
     const diffTime = d2 - d1;
     const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (nights <= 0) {
-        alert("Check-Out date must be after Check-In date.");
+    if (checkIn < formatDateString(new Date()) || checkOut <= checkIn || checkOut < checkOutInput.min) {
+        alert("Check-Out date must be at least one day after Check-In date. Please choose valid stay dates.");
         return;
     }
 
@@ -4220,9 +4228,6 @@ window.showPackageDetails = function(pEncoded) {
     const tourDays = Math.max(1, Number.parseInt(p.tour_days, 10) || 1);
     const today = new Date();
     const minStr = today.toISOString().split('T')[0];
-    const limitDate = new Date(today);
-    limitDate.setDate(today.getDate() + 7);
-    const limitStr = limitDate.toISOString().split('T')[0];
 
     const wrapper = tourSetuCreateElement('div');
     tourSetuSetStyles(wrapper, 'text-align:left;font-family:Inter,sans-serif;');
@@ -4289,7 +4294,6 @@ window.showPackageDetails = function(pEncoded) {
     dateInput.type = 'date';
     dateInput.id = 'cust-travel-date';
     dateInput.min = minStr;
-    dateInput.max = limitStr;
     dateInput.value = minStr;
     tourSetuSetStyles(dateInput, 'width:100%;padding:12px;border:2px solid #ff9f43;border-radius:9px;background:white;color:#2d3436;font-weight:700;box-sizing:border-box;cursor:pointer;min-height:46px;');
     startWrap.append(startLabel, dateInput);
