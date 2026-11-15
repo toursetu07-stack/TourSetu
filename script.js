@@ -15007,7 +15007,7 @@ window.renderCustomerRequests=async function(){
         }
         const statements = rawSource.split(';').map(x => x.trim()).filter(Boolean);
         for (const statement of statements) {
-            const removeMatch = statement.match(/document\s*\.\s*getElementById\(\s*(['"])([^'"]+)\1\s*\)\s*\.\s*remove\(\)/);
+            const removeMatch = statement.match(/document\s*\.\s*getElementById\(\s*(['"])([^'"]+)\1\s*\)\s*\??\.\s*remove\(\)/);
             if (removeMatch) { document.getElementById(removeMatch[2])?.remove(); continue; }
             const hideMatch = statement.match(/document\s*\.\s*getElementById\(\s*(['"])([^'"]+)\1\s*\)\s*\.\s*style\.display\s*=\s*(['"])([^'"]+)\3/);
             if (hideMatch) { const modal = document.getElementById(hideMatch[2]); if (modal) modal.style.display = hideMatch[4]; continue; }
