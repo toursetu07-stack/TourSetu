@@ -9,9 +9,9 @@ CREATE OR REPLACE VIEW public.active_driver_vehicles
 WITH (security_invoker = true)
 AS
 SELECT id, driver_id, vehicle_type, make_model, seating_capacity,
-       price_per_km, fixed_package_price, vehicle_photo_path, status,
-       created_at, driver_name, driver_city, registration_number,
-       starting_location, tour_destination
+       price_per_km, vehicle_photo_path, status, created_at, driver_name,
+       driver_city, registration_number, starting_location, tour_destination,
+       fixed_package_price
 FROM public.driver_vehicles;
 
 CREATE OR REPLACE FUNCTION public.set_driver_service_request_pricing()
