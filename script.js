@@ -14669,7 +14669,7 @@ window.loadCustomerTaxiListings = async function(cityFilter='', destinationFilte
         const destination=String(destinationFilter||'').trim();
         if(destination)rows=rows.filter(v=>{
             const saved=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);
-            return saved.length===1&&normalizeMatchCity(saved[0])===normalizeMatchCity(destination);
+            return saved.some(item=>normalizeMatchCity(item)===normalizeMatchCity(destination));
         });
         container.replaceChildren();
         if(!rows.length){
@@ -14692,7 +14692,7 @@ window.loadCustomerTaxiListings = async function(cityFilter='', destinationFilte
             const badge=document.createElement('span');badge.textContent='TAXI';badge.style.cssText='display:inline-block;background:#fff0df;color:#9a5a1c;border:1px solid #ffd8a8;border-radius:20px;padding:5px 10px;font-size:10px;font-weight:900;letter-spacing:.7px;margin-bottom:12px;';
             const details=document.createElement('div');details.style.cssText='font-size:13px;color:#636e72;line-height:1.8;';
             const savedDestinations=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);
-            const offeredDestination=savedDestinations.length===1?savedDestinations[0]:'Destination not specified';
+            const offeredDestination=savedDestinations.length?savedDestinations.join(', '):'Destination not specified';
             details.textContent='Destination: '+offeredDestination+' · Registration: '+(v.registration_number||'Not provided')+' · Seats: '+Number(v.seating_capacity||0)+' · '+(Number(v.fixed_package_price||0)>0?'Package ₹'+Number(v.fixed_package_price).toLocaleString('en-IN'):'₹'+Number(v.price_per_km||0).toLocaleString('en-IN')+'/km')+' · Driver: '+(v.driver_name||'Independent driver')+' · City: '+(v.driver_city||'Not specified');
             const action=document.createElement('button');action.type='button';action.textContent='Book Now / Request Taxi';action.style.cssText='margin-top:17px;width:100%;background:#ff9f43;color:#263238;border:0;border-radius:9px;padding:12px 16px;font-weight:800;cursor:pointer;';
             action.addEventListener('click',()=>openTaxiBookingForm(v));
