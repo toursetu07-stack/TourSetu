@@ -752,3 +752,69 @@ button, a, [role="button"], input[type="checkbox"], input[type="radio"], select 
     outline: 3px solid rgba(8,127,91,.28);
     outline-offset: 3px;
 }
+
+
+/* Explicit customer agency-package layout: mirror the compact independent-taxi grid.
+   The view marker is set by renderPackageCards(), preventing other marketplace tabs
+   from inheriting these dimensions. */
+#app #customer-pkg-list[data-view="agency-packages"] {
+    display: grid !important;
+    width: 100% !important;
+    max-width: none !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 20px !important;
+}
+#app #customer-pkg-list[data-view="agency-packages"] > article.toursetu-package-card {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 100% !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+#app #customer-pkg-list[data-view="agency-packages"] > article.toursetu-package-card > .marketplace-card-media {
+    flex: 0 0 158px !important;
+    height: 158px !important;
+    min-height: 158px !important;
+    max-height: 158px !important;
+}
+#app #customer-pkg-list[data-view="agency-packages"] > article.toursetu-package-card > .marketplace-card-content {
+    display: flex;
+    flex: 1 1 auto !important;
+    flex-direction: column;
+    min-width: 0;
+    padding: 16px !important;
+}
+#app #customer-pkg-list[data-view="agency-packages"] > article.toursetu-package-card .marketplace-card-content h3 {
+    font-size: 16px !important;
+    line-height: 1.35 !important;
+    overflow-wrap: anywhere;
+}
+#app #customer-pkg-list[data-view="agency-packages"] > article.toursetu-package-card .marketplace-card-content button {
+    min-height: 40px !important;
+    padding: 9px 12px !important;
+    font-size: 12px !important;
+    letter-spacing: .04em;
+}
+@media (max-width: 760px) {
+    #app #customer-pkg-list[data-view="agency-packages"] {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 16px !important;
+    }
+}
+@media (max-width: 520px) {
+    #app #customer-pkg-list[data-view="agency-packages"] {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 14px !important;
+    }
+    #app #customer-pkg-list[data-view="agency-packages"] > article.toursetu-package-card > .marketplace-card-media {
+        flex-basis: 180px !important;
+        height: 180px !important;
+        min-height: 180px !important;
+        max-height: 180px !important;
+    }
+}
