@@ -14939,7 +14939,7 @@ window.renderCustomerRequests=async function(){
         'openHotelBookingApproval', 'confirmHotelBookingApproval',
         'denyHotelBookingRequest', 'acknowledgeBookingAlert',
         'executeLandslideResolution', 'startCameraScanner', 'verifyCheckinByOtp',
-        'acceptAgencyPartnerTerms', 'toggleAgencyTermsApprovalButton'
+        'acceptAgencyPartnerTerms', 'toggleAgencyTermsApprovalButton', 'updateBookingStatus', 'confirmHotelCancellation', 'showTab'
     ]);
 
     function parseLiteralArgs(source, event, element) {
