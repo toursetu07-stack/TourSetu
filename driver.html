@@ -58,7 +58,7 @@
 </div>
 <div>
 <section class="panel" id="verification"><div class="panel-head"><div><h2>Verification centre</h2><p>Complete documents to activate your profile</p></div></div><div class="panel-body"><div id="kyc-completion" class="driver-hidden"><p class="muted">Upload the missing documents listed below. Your documents remain private.</p><div id="kyc-fields" class="driver-grid"></div><p><button id="submit-kyc" class="btn" type="button">Submit documents</button></p></div><div id="verification-summary" class="muted">Your verification checklist will appear after login.</div></div></section>
-<section class="panel" id="profile"><div class="panel-head"><div><h2>Driver profile</h2><p>Account and contact information</p></div><button id="logout" class="btn light" type="button">Logout</button></div><div class="panel-body"><div class="profile-line"><span>Account type</span><strong>Independent taxi driver</strong></div><div class="profile-line"><span>Verification</span><strong id="profile-status">—</strong></div><div class="profile-line"><span>Registered email</span><strong id="profile-email">—</strong></div><div class="profile-line"><span>Mobile</span><strong id="profile-phone">—</strong></div><div class="profile-line"><span>City</span><strong id="profile-city">—</strong></div></div></section>
+<section class="panel" id="profile"><div class="panel-head"><div><h2>Driver profile</h2><p>Account and contact information</p></div><button id="logout" class="btn light" type="button">Logout</button></div><div class="panel-body"><div class="profile-line"><span>Account type</span><strong>Independent taxi driver</strong></div><div class="profile-line"><span>Verification</span><strong id="profile-status">—</strong></div><div class="profile-line"><span>Registered email</span><strong id="profile-email">—</strong></div><div class="profile-line"><span>Mobile</span><strong id="profile-phone">—</strong></div></div></section>
 </div>
 </div>
 <section class="panel driver-hidden" id="vehicle-card"><div class="panel-head"><div><h2 id="vehicle-form-title">Add a vehicle</h2><p>Save your vehicle details and publish your listing instantly</p></div></div><div class="panel-body"><div class="driver-grid">
@@ -76,7 +76,7 @@
 <div class="auth-card"><div class="eyebrow">TourSetu partner onboarding</div><h1 id="auth-title">Driver registration</h1><p class="muted">Create your independent driver account. Your profile stays hidden from customers until TourSetu verifies your application.</p>
 <div class="driver-grid" id="register-fields">
 <label>Full name<input id="full-name" autocomplete="name" required></label><label>Mobile number<input id="phone" type="tel" autocomplete="tel" required></label>
-<label>City<input id="city" autocomplete="address-level2"></label><label>Email<input id="email" type="email" autocomplete="email" required></label>
+<label>Email<input id="email" type="email" autocomplete="email" required></label>
 <label>Password<input id="password" type="password" minlength="8" autocomplete="new-password" required></label>
 <label class="full">Government ID (Aadhaar / other ID)<input id="id-doc" type="file" accept=".pdf,image/*" required></label>
 <label>PAN card<input id="pan-doc" type="file" accept=".pdf,image/*" required></label><label>Driving licence – front<input id="lic-front" type="file" accept=".pdf,image/*" required></label>
@@ -89,7 +89,7 @@
 </div></section>
 </div>
 <script src="/supabase-config"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script><script src="toursetu-shared-data.js?v=2026-11-14-shared-master-data"></script>
-<script src="driver-legal.js?v=1"></script><script src="driver-portal.js?v=95-single-destination"></script>
+<script src="driver-legal.js?v=1"></script><script src="driver-portal.js?v=96-starting-location-only"></script>
 <script>
 /* Independent destination-list fallback: no imports or Supabase dependency. */
 (function(){
