@@ -126,7 +126,7 @@ async function ensureKyc(profile,user){const missing=kycMap.filter(([col])=>!pro
 async function loadDashboard(user){const {data:profile,error}=await db.from('driver_profiles').select('*').eq('user_id',user.id).maybeSingle();if(error)throw error;if(!profile){msg('auth-message','No driver application was found for this account. Register as an independent driver first.');return;}currentDriverProfile=profile;await ensureKyc(profile,user);
 $('auth-card').classList.add('driver-hidden');$('dashboard').classList.remove('driver-hidden');$('vehicle-card').classList.remove('driver-hidden');$('approval-status').textContent='Application status: '+String(profile.status||'pending').toUpperCase()+(profile.denial_reason?' — '+profile.denial_reason:'')+' • Vehicle listings publish immediately; profile verification is handled separately.';$('driver-name').textContent=profile.full_name||user.user_metadata?.full_name||'Driver';$('driver-avatar').textContent=String(profile.full_name||'D').trim().charAt(0).toUpperCase();$('profile-status').textContent=String(profile.status||'pending').toUpperCase();$('profile-email').textContent=profile.email||user.email||'—';$('profile-phone').textContent=profile.phone||user.user_metadata?.phone||'—';$('profile-city').textContent=profile.city||user.user_metadata?.city||'—';$('verification-summary').textContent=profile.status==='approved'?'Your driver profile has been approved. Keep your documents and vehicle records up to date.':profile.status==='rejected'?'Your application needs attention. Review the rejection reason above and contact TourSetu support.' :'Your application is under review. Your saved vehicle listings can already be discovered by customers.';$('today-label').textContent=new Intl.DateTimeFormat('en-IN',{dateStyle:'full'}).format(new Date());await loadVehicles(user.id);await loadRequests(user.id);subscribeDriverRequests(user.id);}
 async function loadVehicles(uid){
- const {data,error}=await db.from('driver_vehicles').select('id,driver_id,vehicle_type,make_model,registration_number,seating_capacity,price_per_km,vehicle_photo_path,status,created_at,driver_name,driver_city,starting_location,tour_destination').eq('driver_id',uid).order('created_at',{ascending:false});
+ const {data,error}=await db.from('driver_vehicles').select('id,driver_id,vehicle_type,make_model,registration_number,seating_capacity,price_per_km,fixed_package_price,vehicle_photo_path,status,created_at,driver_name,driver_city,starting_location,tour_destination').eq('driver_id',uid).order('created_at',{ascending:false});
  if(error)throw error;
  $('stat-vehicles').textContent=String((data||[]).length);
  $('vehicles').replaceChildren();
@@ -136,7 +136,7 @@ async function loadVehicles(uid){
    const info=document.createElement('div');info.style.flex='1';
    const title=document.createElement('strong');title.textContent=(v.vehicle_type||'Vehicle')+' · '+(v.make_model||'');
    const detail=document.createElement('div');detail.className='muted';const destinations=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);
-   detail.textContent=(v.registration_number||'')+' · '+v.seating_capacity+' seats · ₹'+v.price_per_km+'/km · From '+(v.starting_location||'—')+' · To '+(destinations.join(', ')||'—')+' · Live';
+   detail.textContent=(v.registration_number||'')+' · '+v.seating_capacity+' seats · '+(Number(v.fixed_package_price)>0?'₹'+Number(v.fixed_package_price).toLocaleString('en-IN')+' fixed package':'₹'+Number(v.price_per_km||0).toLocaleString('en-IN')+'/km')+' · From '+(v.starting_location||'—')+' · To '+(destinations.join(', ')||'—')+' · Live';
    info.append(title,detail);d.append(info);
    const actions=document.createElement('div');actions.className='driver-actions';
    const edit=document.createElement('button');edit.className='btn light';edit.type='button';edit.textContent='Edit';edit.addEventListener('click',()=>editVehicle(v));
@@ -151,6 +151,7 @@ function editVehicle(v){
  $('vehicle-reg').value=v.registration_number||'';
  $('vehicle-seats').value=v.seating_capacity||'';
  $('vehicle-rate').value=v.price_per_km||'';
+ $('vehicle-fixed-price').value=v.fixed_package_price||'';
  $('vehicle-starting-location').value=v.starting_location||'';
  const savedDestinations=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);
  document.querySelectorAll('#vehicle-tour-destination-list input[name="vehicle-tour-destination"]').forEach(input=>{input.checked=savedDestinations.includes(input.value);});
@@ -184,7 +185,7 @@ async function loadRequests(uid){
    const info=document.createElement('div');info.style.flex='1';
    const heading=document.createElement('strong');heading.textContent='Taxi request · '+String(r.status||'pending').toUpperCase();
    const details=document.createElement('div');details.className='muted';
-   details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Date: '+(t.travel_date||'—')+' · Fare estimate: ₹'+Number(t.fare_estimate||0).toLocaleString('en-IN')+' · Customer: '+(t.customer_name||'Customer')+' · Contact: '+(t.customer_phone||'Not shared');
+   details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Pickup: '+(t.travel_date||'—')+' at '+(t.pickup_time||'Time not selected')+' · Fare: '+(t.fare_display||('₹'+Number(t.fare_estimate||0).toLocaleString('en-IN')))+' · Requests: '+(t.specific_requests||'None')+' · Customer: '+(t.customer_name||'Customer')+' · Contact: '+(t.customer_phone||'Not shared');
    info.append(heading,details);d.append(info);
    if(r.status==='pending'){const actions=document.createElement('div');actions.className='driver-actions';
      for(const status of ['approved','denied']){const b=document.createElement('button');b.className='btn'+(status==='denied'?' light':'');b.textContent=status==='approved'?'Approve':'Deny';b.addEventListener('click',()=>decide(r.id,status));actions.append(b);}d.append(actions);
@@ -221,8 +222,8 @@ $('save-vehicle').addEventListener('click',async()=>{
    if($('vehicle-fitness').files[0])docs.fitness_document_path=await upload($('vehicle-fitness').files[0],user.id,'vehicle-fitness');
    if($('vehicle-puc').files[0])docs.puc_document_path=await upload($('vehicle-puc').files[0],user.id,'vehicle-puc');
    if($('vehicle-photo').files[0])docs.vehicle_photo_path=await uploadVehiclePhoto($('vehicle-photo').files[0],user.id);
-   const payload={driver_id:user.id,driver_name:currentDriverProfile?.full_name||user.user_metadata?.full_name||'Independent Driver',driver_city:currentDriverProfile?.city||user.user_metadata?.city||'',vehicle_type:$('vehicle-type').value,make_model:$('vehicle-model').value.trim(),registration_number:$('vehicle-reg').value.trim(),seating_capacity:Number($('vehicle-seats').value),price_per_km:Number($('vehicle-rate').value),status:'active',starting_location:$('vehicle-starting-location').value,tour_destination:getSelectedVehicleDestinations(),...docs};
-   if(!payload.make_model||!payload.registration_number||!payload.seating_capacity||!Number.isFinite(payload.price_per_km)||!payload.starting_location||!payload.tour_destination.length)throw Error('Complete vehicle model, registration, seats, price, starting location and at least one tour destination.');
+   const payload={driver_id:user.id,driver_name:currentDriverProfile?.full_name||user.user_metadata?.full_name||'Independent Driver',driver_city:currentDriverProfile?.city||user.user_metadata?.city||'',vehicle_type:$('vehicle-type').value,make_model:$('vehicle-model').value.trim(),registration_number:$('vehicle-reg').value.trim(),seating_capacity:Number($('vehicle-seats').value),price_per_km:Number($('vehicle-rate').value),fixed_package_price:$('vehicle-fixed-price').value.trim()===''?null:Number($('vehicle-fixed-price').value),status:'active',starting_location:$('vehicle-starting-location').value,tour_destination:getSelectedVehicleDestinations(),...docs};
+   if(!payload.make_model||!payload.registration_number||!payload.seating_capacity||!Number.isFinite(payload.price_per_km)||payload.price_per_km<0||(payload.fixed_package_price!==null&&(!Number.isFinite(payload.fixed_package_price)||payload.fixed_package_price<=0))||!payload.starting_location||!payload.tour_destination.length)throw Error('Complete vehicle model, registration, seats, price, starting location and at least one tour destination.');
    const result=editingVehicleId
     ?await db.from('driver_vehicles').update(payload).eq('id',editingVehicleId).eq('driver_id',user.id)
     :await db.from('driver_vehicles').insert(payload);
@@ -231,7 +232,7 @@ $('save-vehicle').addEventListener('click',async()=>{
    editingVehicleId=null;$('vehicle-form-title').textContent='Add a vehicle';$('save-vehicle').textContent='Save & Publish Vehicle';$('vehicle-edit-note').textContent='';$('vehicle-edit-files').textContent='';$('vehicle-edit-photo').classList.add('driver-hidden');$('vehicle-edit-photo').removeAttribute('src');
    $('vehicle-starting-location').value='';
    document.querySelectorAll('#vehicle-tour-destination-list input[name="vehicle-tour-destination"]').forEach(input=>{input.checked=false;});
-   ['vehicle-model','vehicle-reg','vehicle-seats','vehicle-rate','vehicle-rc','vehicle-permit','vehicle-insurance','vehicle-fitness','vehicle-puc','vehicle-photo'].forEach(id=>{$(id).value='';});
+   ['vehicle-model','vehicle-reg','vehicle-seats','vehicle-rate','vehicle-fixed-price','vehicle-rc','vehicle-permit','vehicle-insurance','vehicle-fitness','vehicle-puc','vehicle-photo'].forEach(id=>{$(id).value='';});
    await loadVehicles(user.id);
  }catch(e){alert(e.message||'Unable to save vehicle.');}
  finally{b.disabled=false;}
