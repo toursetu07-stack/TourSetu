@@ -8241,7 +8241,7 @@ window.showPackageForm = function(pEncoded = null) {
 
                 <button
                     id="save-btn"
-                    data-package-action="save"
+                    data-package-action="save" data-package-id="${isEdit ? pkg.id : ''}"
                     style="
                         background:#2ecc71;
                         color:white;
