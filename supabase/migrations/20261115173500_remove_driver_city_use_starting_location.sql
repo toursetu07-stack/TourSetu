@@ -25,7 +25,8 @@ begin
   end if;
   return new;
 end;
-$$;
+$;
+revoke all on function public.create_driver_profile_on_signup() from public, anon, authenticated;
 
 alter table public.driver_profiles drop column if exists city;
 alter table public.driver_vehicles drop column if exists driver_city;
