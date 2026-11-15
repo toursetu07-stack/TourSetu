@@ -10884,6 +10884,14 @@ async function renderArrivalsAndPayouts(container, user) {
                     }
                 );
 
+        const hotelContactResults = await Promise.all(customerHotelBookings.map(async booking => {
+            const { data, error: contactError } = await client.rpc('get_hotel_booking_contacts', { p_booking_id: booking.id });
+            if (contactError) throw contactError;
+            const contact = Array.isArray(data) ? data[0] : data;
+            return [booking.id, contact || { is_shared: false }];
+        }));
+        const hotelContactsByBooking = Object.fromEntries(hotelContactResults);
+
 
         /* ============================================================
            3. AGENCY HOTEL REQUESTS
@@ -11017,6 +11025,7 @@ async function renderArrivalsAndPayouts(container, user) {
         customerHotelBookings.forEach(
             b => {
 
+                const contacts = hotelContactsByBooking[b.id] || { is_shared: false };
                 const status =
                     String(
                         b.booking_status ||
@@ -11222,6 +11231,12 @@ async function renderArrivalsAndPayouts(container, user) {
                                 </span>
                             </div>
 
+                        </div>
+
+                        <div style="margin-top:12px;padding:13px;background:#f8fafc;border:1px solid #dbe5ee;border-radius:10px;font-size:13px;line-height:1.7;">
+                            <b>🔒 Contact exchange</b><br>
+                            Customer: ${contacts.is_shared ? window.TourSetuDOM.escapeHTML(contacts.customer_phone || '') : 'Not shared'}<br>
+                            Hotel: ${contacts.is_shared ? window.TourSetuDOM.escapeHTML(contacts.owner_phone || '') : 'Not shared'}
                         </div>
 
 
