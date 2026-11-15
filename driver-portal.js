@@ -180,7 +180,7 @@ async function deleteVehicle(id){
 async function loadRequests(uid){
  const {data,error}=await db.from('driver_service_requests').select('id,vehicle_id,trip_details,status,created_at').eq('driver_id',uid).order('created_at',{ascending:false});
  if(error)throw error;const rows=data||[];
- const contactResults=await Promise.all(rows.map(async r=>{const {data:contactData,error:contactError}=await db.rpc('get_driver_service_request_contacts',{p_request_id:r.id});if(contactError){console.warn('Taxi contact status unavailable:',contactError);return [r.id,{is_shared:false}];}return [r.id,Array.isArray(contactData)?contactData[0]:(contactData||{is_paid:false})];}));
+ const contactResults=await Promise.all(rows.map(async r=>{const {data:contactData,error:contactError}=await db.rpc('get_driver_service_request_contacts',{p_request_id:r.id});if(contactError){console.warn('Taxi contact status unavailable:',contactError);return [r.id,{is_shared:false}];}return [r.id,Array.isArray(contactData)?contactData[0]:(contactData||{is_shared:false})];}));
  const contactByRequest=new Map(contactResults);
  $('stat-total').textContent=String(rows.length);
  $('stat-pending').textContent=String(rows.filter(r=>r.status==='pending').length);
