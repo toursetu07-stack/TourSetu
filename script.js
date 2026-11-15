@@ -14990,7 +14990,7 @@ window.renderCustomerRequests=async function(){
                 node.removeAttribute(attr);
                 node.dataset.tsCspEvent = eventName;
                 node.dataset.tsCspSource = source;
-                if (eventName === 'click') node.setAttribute('type', node.tagName === 'BUTTON' ? (node.getAttribute('type') || 'button') : '');
+                if (eventName === 'click' && node.tagName === 'BUTTON' && !node.hasAttribute('type')) node.setAttribute('type', 'button');
             });
         });
     }
@@ -15001,7 +15001,7 @@ window.renderCustomerRequests=async function(){
         if (deleteMatch) { if (window.confirm(deleteMatch[2]) && typeof window.deletePackage === 'function') window.deletePackage(deleteMatch[4]); return; }
         if (rawSource === 'clearAuthRecoveryUrl();isLoginMode=true;renderAuthUI();') {
             if (typeof window.clearAuthRecoveryUrl === 'function') window.clearAuthRecoveryUrl();
-            window.isLoginMode = true;
+            isLoginMode = true;
             if (typeof window.renderAuthUI === 'function') window.renderAuthUI();
             return;
         }
