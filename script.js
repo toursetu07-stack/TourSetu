@@ -896,6 +896,7 @@ async function showDashboard(user) {
         return;
     }
     if(role==='agency'){
+        window.startAgencyVerificationRealtime(user);
         const termsAccepted = await ensureAgencyTermsAccepted(user);
         if (!termsAccepted) return;
         const verification=await getAgencyVerification(user.id).catch(()=>null);
@@ -1278,7 +1279,90 @@ async function uploadAgencyDocuments(userId, files) {
     }
     return uploadedPaths;
 }
-async function getAgencyVerification(userId){const {data,error}=await getClient().from('agency_verification_requests').select('id,status,denial_reason,email,gst_no,business_reg_no,phone,created_at,updated_at').eq('user_id',userId).maybeSingle();if(error)throw error;return data;}
+async function getAgencyVerification(userId) {
+    if (!userId) return null;
+    const client = getClient();
+    const [requestResult, profileResult, agencyProfileResult] = await Promise.all([
+        client.from('agency_verification_requests')
+            .select('id,user_id,status,denial_reason,email,gst_no,business_reg_no,phone,created_at,updated_at')
+            .eq('user_id', userId).maybeSingle(),
+        client.from('profiles')
+            .select('approval_status,is_approved')
+            .eq('id', userId).maybeSingle(),
+        client.from('agency_profiles')
+            .select('is_verified')
+            .eq('id', userId).maybeSingle()
+    ]);
+    const error = requestResult.error || profileResult.error || agencyProfileResult.error;
+    if (error) throw error;
+
+    const requestStatus = String(requestResult.data?.status || '').trim().toLowerCase();
+    const profileStatus = String(profileResult.data?.approval_status || '').trim().toLowerCase();
+    const denied = ['denied', 'rejected'].includes(requestStatus) ||
+        ['denied', 'rejected'].includes(profileStatus);
+    const approved = !denied && (
+        requestStatus === 'approved' ||
+        profileStatus === 'approved' ||
+        profileResult.data?.is_approved === true ||
+        agencyProfileResult.data?.is_verified === true
+    );
+    const status = denied ? 'denied' : approved ? 'approved' : 'pending';
+    return {
+        ...(requestResult.data || {}),
+        status,
+        is_verified: agencyProfileResult.data?.is_verified === true,
+        is_approved: profileResult.data?.is_approved === true,
+        approval_status: profileStatus || null
+    };
+}
+
+function applyAgencyVerificationBadge(status) {
+    const badge = document.getElementById('agency-verification-status');
+    if (!badge) return;
+    const normalized = String(status || 'pending').toLowerCase();
+    const config = normalized === 'approved'
+        ? { label: '✅ Approved', background: '#e8f8ef', color: '#18794e' }
+        : normalized === 'denied' || normalized === 'rejected'
+            ? { label: '❌ Denied', background: '#fdecec', color: '#b42318' }
+            : { label: '⏳ Pending Approval', background: '#fff4d6', color: '#946200' };
+    badge.textContent = config.label;
+    badge.style.background = config.background;
+    badge.style.color = config.color;
+    badge.setAttribute('aria-live', 'polite');
+}
+
+window.startAgencyVerificationRealtime = function(user) {
+    if (!user?.id) return;
+    const client = getClient();
+    if (!client) return;
+    if (window.__toursetuAgencyVerificationChannel) {
+        client.removeChannel(window.__toursetuAgencyVerificationChannel);
+    }
+    const refresh = async () => {
+        try {
+            const verification = await getAgencyVerification(user.id);
+            window.currentAgencyVerificationStatus = verification?.status || 'pending';
+            applyAgencyVerificationBadge(window.currentAgencyVerificationStatus);
+        } catch (error) {
+            console.warn('Agency verification status refresh failed:', error);
+        }
+    };
+    window.__toursetuAgencyVerificationChannel = client
+        .channel('agency-verification-status-' + user.id)
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'agency_verification_requests',
+            filter: 'user_id=eq.' + user.id
+        }, refresh)
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'agency_profiles',
+            filter: 'id=eq.' + user.id
+        }, refresh)
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'profiles',
+            filter: 'id=eq.' + user.id
+        }, refresh)
+        .subscribe();
+};
 async function submitAgencyKYC(user){const files=getSelectedAgencyDocuments(),validationError=await validateAgencyDocuments(files);if(validationError)throw new Error(validationError);const client=getClient();const {data:existing,error:existingError}=await client.from('agency_verification_requests').select('id,status').eq('user_id',user.id).maybeSingle();if(existingError)throw existingError;if(!existing)throw new Error('Agency verification request was not created. Please try registration again.');if(existing.status!=='pending')throw new Error('This agency verification request is already '+existing.status+'.');const paths=await uploadAgencyDocuments(user.id,files);const {error:saveError}=await client.rpc('save_agency_verification_documents',{p_gst_document_path:paths.gst_document_path,p_business_reg_document_path:paths.business_reg_document_path,p_utdb_registration_certificate_path:paths.utdb_registration_certificate_path,p_pan_card_path:paths.pan_card_path,p_aadhaar_card_path:paths.aadhaar_card_path,p_cancelled_cheque_or_bank_passbook_path:paths.cancelled_cheque_or_bank_passbook_path,p_commercial_rc_path:paths.commercial_rc_path,p_aitp_commercial_permit_path:paths.aitp_commercial_permit_path,p_vehicle_insurance_path:paths.vehicle_insurance_path,p_fitness_certificate_path:paths.fitness_certificate_path,p_commercial_driving_license_path:paths.commercial_driving_license_path,p_police_verification_id_proof_path:paths.police_verification_id_proof_path});if(saveError)throw saveError;}
 const HOTEL_KYC_BUCKET='hotel-verification-documents';
 const HOTEL_KYC_FILES={uttarakhand_tourism_utbm_registration_path:'hotel-doc-uttarakhand-registration',trade_license_local_authority_license_path:'hotel-doc-trade-license',gst_certificate_msme_udyam_path:'hotel-doc-gst-udyam',fire_safety_noc_path:'hotel-doc-fire-noc',police_noc_path:'hotel-doc-police-noc'};
@@ -5245,7 +5329,7 @@ async function renderAgencyHotelsTab(container) {
     }
 }
 
-function renderAgencyProfileTab(container, user) {
+async function renderAgencyProfileTab(container, user) {
     container.replaceChildren();
     container.appendChild(createAgencySectionTitle('Agency Profile', '👤'));
 
@@ -5257,11 +5341,30 @@ function renderAgencyProfileTab(container, user) {
     );
     card.appendChild(createAgencyBookingInfo('Email', user.email || 'Not Provided'));
     card.appendChild(createAgencyBookingInfo('Phone', meta.phone || 'N/A'));
-    card.appendChild(createAgencyBookingInfo(
-        'Status',
-        meta.is_approved ? '✅ Verified' : '⏳ Pending Approval'
-    ));
+
+    const statusRow = createAgencyDashboardElement(
+        'div', null,
+        'display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid #edf0f2;'
+    );
+    const statusLabel = createAgencyDashboardElement('strong', 'Status', 'color:#344054;');
+    const statusBadge = createAgencyDashboardElement(
+        'span', '⏳ Pending Approval',
+        'display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;font-size:13px;font-weight:800;background:#fff4d6;color:#946200;'
+    );
+    statusBadge.id = 'agency-verification-status';
+    statusBadge.setAttribute('aria-live', 'polite');
+    statusRow.append(statusLabel, statusBadge);
+    card.appendChild(statusRow);
     container.appendChild(card);
+
+    try {
+        const verification = await getAgencyVerification(user.id);
+        window.currentAgencyVerificationStatus = verification?.status || 'pending';
+    } catch (error) {
+        console.warn('Agency profile verification status could not be loaded:', error);
+        window.currentAgencyVerificationStatus = 'pending';
+    }
+    applyAgencyVerificationBadge(window.currentAgencyVerificationStatus);
 }
 
 window.showTab = async function(tabName) {
@@ -5359,7 +5462,7 @@ window.showTab = async function(tabName) {
     } else if (tabName === 'hotels') {
         await renderAgencyHotelsTab(container);
     } else if (tabName === 'profile') {
-        renderAgencyProfileTab(container, user);
+        await renderAgencyProfileTab(container, user);
     }
 };
 
