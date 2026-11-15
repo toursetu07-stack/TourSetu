@@ -1503,15 +1503,15 @@ async function renderCustomerHomepage(user, options = {}) {
                       </label>
                       <div style="display:flex; gap:20px;">
                           <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
-                              <input type="radio" name="search-type" value="agency" checked onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
+                              <input type="radio" name="search-type" value="agency" checked style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
                               🎒 Agency Packages
                           </label>
                           <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
-                              <input type="radio" name="search-type" value="hotel" onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
+                              <input type="radio" name="search-type" value="hotel" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
                               🏨 Registered Hotels
                           </label>
                           <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
-                              <input type="radio" name="search-type" value="taxi" onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;">
+                              <input type="radio" name="search-type" value="taxi" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;">
                               🚕 Independent Taxis
                           </label>
                       </div>
@@ -1521,7 +1521,7 @@ async function renderCustomerHomepage(user, options = {}) {
                   <div id="agency-filter-box" style="display:flex; gap:15px; flex-wrap:wrap;">
                       <div style="flex:1; min-width:200px; text-align:left;">
                           <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
-                          <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
+                          <select id="search-state" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
                              <option value="">Select State</option>
                              ${stateOptions}
                           </select>
@@ -1552,9 +1552,9 @@ async function renderCustomerHomepage(user, options = {}) {
                       <p id="result-subtitle" style="color:#636e72; margin-top:5px;">Explore tours from all over India</p>
                   </div>
                   <div style="display:flex; gap:10px; align-items:center;">
-                    <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
-                    <button onclick="confirmCustomerLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
-                    <button onclick="triggerDeactivateModalPopup()" style="background:#ff7675; color:white; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
+                    <button type="button" data-action="customer-requests" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
+                    <button type="button" data-action="customer-logout" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
+                    <button type="button" data-action="customer-deactivate" style="background:#ff7675; color:white; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
                   </div>
               </div>
                <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap:25px;"></div>
@@ -1567,18 +1567,51 @@ async function renderCustomerHomepage(user, options = {}) {
            </div>
         </div>
     `;
+    // Customer dashboard controls use external-JS listeners only (CSP script-src-attr 'none').
+    const searchTypeRadios = app.querySelectorAll('input[name="search-type"]');
+    searchTypeRadios.forEach(radio => radio.addEventListener('change', () => {
+        window.activeCustomerSearchType = radio.value;
+        window.toggleCustomerSearchType();
+    }));
+    const stateSelect = app.querySelector('#search-state');
+    stateSelect?.addEventListener('change', () => window.updateCityDropdown());
+    app.querySelector('[data-action="customer-requests"]')?.addEventListener('click', async (event) => {
+        event.preventDefault();
+        const selected = app.querySelector('input[name="search-type"]:checked')?.value || 'agency';
+        window.activeCustomerSearchType = selected;
+        const button = app.querySelector('[data-action="customer-requests"]');
+        if (button) { button.disabled = true; button.textContent = 'LOADING REQUESTS...'; }
+        try {
+            if (typeof window.renderCustomerRequests !== 'function') throw new Error('Customer requests view is not available. Please refresh and try again.');
+            await window.renderCustomerRequests();
+        } catch (error) {
+            console.error('Customer requests view failed:', error);
+            const container = document.getElementById('customer-pkg-list');
+            if (container) {
+                container.replaceChildren();
+                const message = document.createElement('p');
+                message.textContent = error?.message || 'Unable to load your requests. Please try again.';
+                message.style.cssText = 'grid-column:1/-1;text-align:center;padding:30px;color:#b42318;';
+                container.appendChild(message);
+            }
+        } finally {
+            if (button) { button.disabled = false; button.textContent = 'My Requests'; }
+        }
+    });
+    app.querySelector('[data-action="customer-logout"]')?.addEventListener('click', () => window.confirmCustomerLogout());
+    app.querySelector('[data-action="customer-deactivate"]')?.addEventListener('click', () => window.triggerDeactivateModalPopup());
+
     // Populate the city list immediately for the fixed Uttarakhand state.
-    if (typeof window.updateCityDropdown === 'function') {
-        window.updateCityDropdown();
-    }
-    loadAllPackages();
+    if (typeof window.updateCityDropdown === 'function') window.updateCityDropdown();
+    window.activeCustomerSearchType = app.querySelector('input[name="search-type"]:checked')?.value || 'agency';
+    window.toggleCustomerSearchType();
 }
 
 /**
  * Dynamic Switch Logic (Agency vs Hotel)
  */
 window.toggleCustomerSearchType = function() {
-    const selectedType = document.querySelector('input[name="search-type"]:checked')?.value || 'agency';
+    const selectedType = window.activeCustomerSearchType || document.querySelector('input[name="search-type"]:checked')?.value || 'agency';
     const filterBox = document.getElementById('agency-filter-box');
     const resultTitle = document.getElementById('result-title');
     const resultSubtitle = document.getElementById('result-subtitle');
@@ -1592,7 +1625,7 @@ window.toggleCustomerSearchType = function() {
 
     if (selectedType === 'hotel') {
         if (button) button.textContent = 'FIND HOTELS';
-        if (resultTitle) resultTitle.innerText = 'Registered Hotels Inventory';
+        if (resultTitle) resultTitle.innerText = 'Registered Hotels';
         if (resultSubtitle) resultSubtitle.innerText = 'Search registered hotel rooms by city; nearby cities appear when the selected city has no inventory.';
         void loadCustomerHotelPackages(city, state, destination);
     } else if (selectedType === 'taxi') {
@@ -2885,13 +2918,15 @@ window.triggerDeactivateModalPopup = function() {
         modal.innerHTML = `
             <div style="background:white; padding:30px; border-radius:16px; text-align:center; max-width:420px; width:90%; box-shadow: 0 10px 30px rgba(0,0,0,0.25); font-family:'Inter',sans-serif;">
                 <h3 style="margin-top:0; color:#d63031; font-size:20px;">⚠️ Deactivate Account?</h3>
-                <p style="color:#636e72; font-size:14px; line-height:1.5; margin:15px 0;">Kya aap sach me apna account deactivate karna chate hai? Isse aapka Google/Gmail account disconnect ho jayega aur aapko fir se sign in karna padega.</p>
+                <p style="color:#636e72; font-size:14px; line-height:1.5; margin:15px 0;">Kya aap sach me apna account deactivate karna chate hai? Isse aapka session sign out ho jayega aur aapko fir se sign in karna padega.</p>
                 <div style="margin-top:25px; display:flex; gap:12px; justify-content:center;">
-                    <button onclick="executeGlobalDisconnect()" style="background:#d63031; color:white; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">Confirm</button>
-                    <button onclick="document.getElementById('deactivate-confirmation-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">Not</button>
+                    <button type="button" data-action="confirm-deactivate" style="background:#d63031; color:white; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">Confirm</button>
+                    <button type="button" data-action="cancel-deactivate" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">Cancel</button>
                 </div>
             </div>
         `;
+        modal.querySelector('[data-action="confirm-deactivate"]')?.addEventListener('click', () => window.executeGlobalDisconnect());
+        modal.querySelector('[data-action="cancel-deactivate"]')?.addEventListener('click', () => { modal.style.display = 'none'; });
         document.body.appendChild(modal);
     }
     modal.style.display = 'flex';
@@ -4104,7 +4139,7 @@ window.searchMatchedAgencies = async function() {
 
     if (!container) return;
 
-    const selectedSearchType=document.querySelector('input[name="search-type"]:checked')?.value||'agency';
+    const selectedSearchType=window.activeCustomerSearchType || document.querySelector('input[name="search-type"]:checked')?.value || 'agency';
     const cityState = start ? getCityState(start) : '';
     if (start && state && cityState && cityState !== state) {
         renderCustomerPackageMessage(container, 'Please reselect your city', 'The selected city does not belong to the selected state.');
