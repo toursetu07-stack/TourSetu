@@ -4078,31 +4078,44 @@ window.searchMatchedAgencies = async function() {
 
     const selectedSearchType=document.querySelector('input[name="search-type"]:checked')?.value||'agency';
     if(selectedSearchType==='hotel'){
-        if(!state || !start){
-            renderCustomerPackageMessage(container,'Select your hotel search city','Choose a state and city to find registered hotels.');
-            return;
-        }
         await loadCustomerHotelPackages(start, state);
         return;
     }
     if(selectedSearchType==='taxi'){
-        if(!start){renderCustomerPackageMessage(container,'Select your pickup city','Choose a city to find independent taxi drivers.');return;}
         await loadCustomerTaxiListings(start, dest);
         return;
     }
 
-    if (!state || !start) {
-        renderCustomerPackageMessage(container, 'Select your pickup city', 'Choose a state and city first so we can find operators near you.');
-        return;
-    }
-
-    const mappedState = getCityState(start);
-    if (mappedState && mappedState !== state) {
+    const mappedState = start ? getCityState(start) : '';
+    if (start && state && mappedState && mappedState !== state) {
         renderCustomerPackageMessage(container, 'Please reselect your city', 'The selected city does not belong to the selected state.');
         return;
     }
 
     const selectedState = mappedState || state;
+    if (!start) {
+        if (searchButton) { searchButton.disabled = true; searchButton.textContent = 'SEARCHING...'; }
+        try {
+            const result = await getClient().from('packages').select('*').limit(12);
+            if (requestId !== customerOperatorSearchRequestId) return;
+            if (result.error) throw result.error;
+            let packages = Array.isArray(result.data) ? result.data : [];
+            if (dest) {
+                const normalizedDestination = normalizeMatchCity(dest);
+                packages = packages.filter(p => {
+                    const destinations = Array.isArray(p?.destination) ? p.destination : [p?.destination];
+                    return destinations.some(value => normalizeMatchCity(value) === normalizedDestination);
+                });
+            }
+            renderPackageCards(packages, false);
+        } catch (error) {
+            console.error('Default agency listings failed:', error);
+            renderCustomerPackageMessage(container, 'Unable to load operators', 'Please try again in a moment.');
+        } finally {
+            if (searchButton) { searchButton.disabled = false; searchButton.textContent = 'FIND AGENCIES'; }
+        }
+        return;
+    }
 
     if (searchButton) {
         searchButton.disabled = true;
@@ -14654,7 +14667,10 @@ window.loadCustomerTaxiListings = async function(cityFilter='', destinationFilte
         const city=String(cityFilter||'').trim();
         if(city)rows=rows.filter(v=>normalizeMatchCity(v.starting_location||'')===normalizeMatchCity(city));
         const destination=String(destinationFilter||'').trim();
-        if(destination)rows=rows.filter(v=>{const saved=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);return saved.some(item=>normalizeMatchCity(item)===normalizeMatchCity(destination));});
+        if(destination)rows=rows.filter(v=>{
+            const saved=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);
+            return saved.length===1&&normalizeMatchCity(saved[0])===normalizeMatchCity(destination);
+        });
         container.replaceChildren();
         if(!rows.length){
             renderCustomerPackageMessage(container,'No independent taxis found',city?'No taxi is listed from '+city+(destination?' for '+destination:'')+'.':'No saved independent taxi vehicles are available right now.');
@@ -14675,7 +14691,9 @@ window.loadCustomerTaxiListings = async function(cityFilter='', destinationFilte
             const title=document.createElement('h3');title.textContent=(v.vehicle_type||'Taxi')+' · '+(v.make_model||'Vehicle');title.style.cssText='margin:0 0 9px;color:#2d3436;';
             const badge=document.createElement('span');badge.textContent='TAXI';badge.style.cssText='display:inline-block;background:#fff0df;color:#9a5a1c;border:1px solid #ffd8a8;border-radius:20px;padding:5px 10px;font-size:10px;font-weight:900;letter-spacing:.7px;margin-bottom:12px;';
             const details=document.createElement('div');details.style.cssText='font-size:13px;color:#636e72;line-height:1.8;';
-            details.textContent='Registration: '+(v.registration_number||'Not provided')+' · Seats: '+Number(v.seating_capacity||0)+' · '+(Number(v.fixed_package_price||0)>0?'Package ₹'+Number(v.fixed_package_price).toLocaleString('en-IN'):'₹'+Number(v.price_per_km||0).toLocaleString('en-IN')+'/km')+' · Driver: '+(v.driver_name||'Independent driver')+' · City: '+(v.driver_city||'Not specified');
+            const savedDestinations=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);
+            const offeredDestination=savedDestinations.length===1?savedDestinations[0]:'Destination not specified';
+            details.textContent='Destination: '+offeredDestination+' · Registration: '+(v.registration_number||'Not provided')+' · Seats: '+Number(v.seating_capacity||0)+' · '+(Number(v.fixed_package_price||0)>0?'Package ₹'+Number(v.fixed_package_price).toLocaleString('en-IN'):'₹'+Number(v.price_per_km||0).toLocaleString('en-IN')+'/km')+' · Driver: '+(v.driver_name||'Independent driver')+' · City: '+(v.driver_city||'Not specified');
             const action=document.createElement('button');action.type='button';action.textContent='Book Now / Request Taxi';action.style.cssText='margin-top:17px;width:100%;background:#ff9f43;color:#263238;border:0;border-radius:9px;padding:12px 16px;font-weight:800;cursor:pointer;';
             action.addEventListener('click',()=>openTaxiBookingForm(v));
             body.append(badge,title,details,action);card.append(media,body);container.appendChild(card);
