@@ -22,7 +22,7 @@ button, a, [role="button"], input[type="checkbox"], input[type="radio"], select 
   html, body { overflow-x:hidden; }
   body { min-width:320px; }
   #app { width:100%; max-width:100%; padding-inline:0; }
-  #app :where(.grid, .cards-grid, .dashboard-grid, .taxi-grid, .listing-grid, .search-grid, .filter-grid, .form-grid, .panel-grid) { grid-template-columns:minmax(0,1fr) !important; }
+  #app :where(.grid, .cards-grid, .dashboard-grid, .taxi-grid, .listing-grid, .search-grid, .filter-grid, .form-grid, .panel-grid), #app [style*="grid-template-columns"] { grid-template-columns:minmax(0,1fr) !important; }
   #app :where(.flex-row, .toolbar, .search-bar, .filter-bar, .form-actions, .dashboard-header, .section-header) { flex-wrap:wrap; min-width:0; }
   #app :where(input, select, textarea, button) { font-size:16px; }
   #app :where(input, select, textarea) { width:100%; min-width:0; }
