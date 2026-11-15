@@ -2,7 +2,7 @@
 ALTER TABLE public.driver_vehicles
   ADD COLUMN IF NOT EXISTS fixed_package_price numeric(12,2);
 
-DO $$
+DO $block$
 BEGIN
   IF NOT EXISTS (
     SELECT 1
@@ -15,7 +15,7 @@ BEGIN
       CHECK (fixed_package_price IS NULL OR fixed_package_price > 0);
   END IF;
 END
-$;
+$block$;
 
 -- The invoker-secured public view needs an explicit column-level grant.
 GRANT SELECT (fixed_package_price) ON public.driver_vehicles TO anon, authenticated;
