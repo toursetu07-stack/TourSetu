@@ -1981,11 +1981,11 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
     const termsWrap = document.createElement('div');
     termsWrap.style.marginBottom = '15px';
     const termsLabel = document.createElement('label');
-    termsLabel.style.cssText = 'display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:11px;color:#4a5568;line-height:1.4;';
+    termsLabel.style.cssText = 'display:flex;align-items:flex-start;gap:12px;cursor:pointer;font-size:12px;color:#4a5568;line-height:1.5;';
     const terms = document.createElement('input');
     terms.type = 'checkbox';
     terms.id = 'modal-agree-terms';
-    terms.style.cssText = 'margin-top:2px;cursor:pointer;';
+    terms.style.cssText = 'width:18px;height:18px;min-width:18px;min-height:18px;flex:0 0 18px;margin:2px 0 0;cursor:pointer;accent-color:#087f5b;';
     const termsText = document.createElement('span');
     termsText.textContent = 'I agree to the Cancellation & Refund Policy. I understand that in case of cancellation, a non-refundable amount of 18% (2% Gateway + GST on transaction fee + 15% Service & Facilitation Fee) will be deducted from my total refund.';
     termsLabel.append(terms, termsText);
@@ -2315,7 +2315,7 @@ window.openHotelCancellationModal = function(bookingId) {
 
                 <label style="
                     display:flex;
-                    gap:10px;
+                    gap:12px;
                     align-items:flex-start;
                     margin-top:18px;
                     cursor:pointer;
@@ -2325,7 +2325,7 @@ window.openHotelCancellationModal = function(bookingId) {
                     <input
                         type="checkbox"
                         id="hotel-cancel-policy-check"
-                        style="margin-top:3px;"
+                        style="width:18px;height:18px;min-width:18px;min-height:18px;flex:0 0 18px;margin:2px 0 0;cursor:pointer;accent-color:#087f5b;"
                     >
 
                     <span>
