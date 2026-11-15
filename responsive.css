@@ -680,3 +680,16 @@ button, a, [role="button"], input[type="checkbox"], input[type="radio"], select 
     #customer-pkg-list .marketplace-card-media { height: 180px; min-height: 180px; }
     .marketplace-confirmation-details > div { align-items: flex-start; }
 }
+
+
+/* Ensure the marketplace's inline base grid stays responsive on narrow screens. */
+#customer-pkg-list {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)) !important;
+    gap: 22px !important;
+}
+@media (max-width: 560px) {
+    #customer-pkg-list {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 16px !important;
+    }
+}
