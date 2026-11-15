@@ -14692,7 +14692,7 @@ window.loadCustomerTaxiListings = async function(cityFilter='', destinationFilte
     renderCustomerPackageMessage(container,'Loading independent taxis…','Fetching currently published driver vehicles.');
     try{
         let query=getClient().from('active_driver_vehicles')
-            .select('id,driver_id,vehicle_type,make_model,registration_number,seating_capacity,price_per_km,fixed_package_price,vehicle_photo_path,driver_name,driver_city,created_at,status,starting_location,tour_destination')
+            .select('id,driver_id,vehicle_type,make_model,registration_number,seating_capacity,price_per_km,fixed_package_price,vehicle_photo_path,driver_name,created_at,status,starting_location,tour_destination')
             .order('created_at',{ascending:false});
         const {data,error}=await query;
         if(error)throw error;
@@ -14763,7 +14763,7 @@ function openTaxiBookingForm(vehicle){
     const heading=document.createElement('h2');heading.textContent='Request this taxi';heading.style.cssText='margin:0;color:#142b3b;font-size:23px;font-weight:850;letter-spacing:-.4px;';
     const summary=document.createElement('section');summary.style.cssText='padding:16px;border:1px solid #e6edf2;border-radius:15px;background:linear-gradient(135deg,#f7fbfa,#f4f7ff);display:grid;gap:7px;';
     const vehicleTitle=document.createElement('strong');vehicleTitle.textContent=(vehicle.vehicle_type||'Taxi')+' · '+(vehicle.make_model||'Vehicle');vehicleTitle.style.cssText='font-size:16px;color:#183548;';
-    const vehicleMeta=document.createElement('div');vehicleMeta.textContent=(vehicle.driver_name||'Independent driver')+' · '+(vehicle.driver_city||'Location not specified')+' · '+Number(vehicle.seating_capacity||0)+' seats';vehicleMeta.style.cssText='font-size:13px;color:#526575;';
+    const vehicleMeta=document.createElement('div');vehicleMeta.textContent=(vehicle.driver_name||'Independent driver')+' · Starting from '+(vehicle.starting_location||'Location not specified')+' · '+Number(vehicle.seating_capacity||0)+' seats';vehicleMeta.style.cssText='font-size:13px;color:#526575;';
     const fixedPackagePrice=Number(vehicle.fixed_package_price||0),perKmRate=Number(vehicle.price_per_km||0);
     const rate=document.createElement('div');rate.style.cssText='font-size:14px;font-weight:800;color:#126b50;';
     rate.textContent=fixedPackagePrice>0?'Fixed package: ₹'+fixedPackagePrice.toLocaleString('en-IN'):(perKmRate>0?'Driver rate: ₹'+perKmRate.toLocaleString('en-IN')+' / km':'Pricing to be confirmed by driver');
@@ -14803,7 +14803,7 @@ function openTaxiBookingForm(vehicle){
             if(!pickupField.input.value.trim()||!dropField.input.value.trim()||!dateField.input.value)throw new Error('Enter pickup, drop and pickup date.');
             if(!/^[+0-9()\s-]{7,20}$/.test(contactField.input.value.trim())||contactField.input.value.replace(/\D/g,'').length<7)throw new Error('Enter a valid contact number for this booking.');
             if(fixedPackagePrice<=0&&perKmRate<=0)throw new Error('This driver has not configured a valid fare yet. Please choose another taxi.');
-            const tripDetails={pickup:pickupField.input.value.trim(),drop:dropField.input.value.trim(),travel_date:dateField.input.value,pickup_time:pickupTime,pickup_time_24h:pickupTime24,pickup_datetime_local:dateField.input.value+'T'+pickupTime24,pricing_model:fixedPackagePrice>0?'fixed_package':'per_km',price_per_km:perKmRate>0?perKmRate:null,fixed_package_price:fixedPackagePrice>0?fixedPackagePrice:null,fare_estimate:fixedPackagePrice>0?fixedPackagePrice:null,customer_name:user.user_metadata?.full_name||user.email||'Customer',customer_phone:contactField.input.value.trim(),vehicle_type:vehicle.vehicle_type,vehicle_model:vehicle.make_model,driver_name:vehicle.driver_name,driver_city:vehicle.driver_city};
+            const tripDetails={pickup:pickupField.input.value.trim(),drop:dropField.input.value.trim(),travel_date:dateField.input.value,pickup_time:pickupTime,pickup_time_24h:pickupTime24,pickup_datetime_local:dateField.input.value+'T'+pickupTime24,pricing_model:fixedPackagePrice>0?'fixed_package':'per_km',price_per_km:perKmRate>0?perKmRate:null,fixed_package_price:fixedPackagePrice>0?fixedPackagePrice:null,fare_estimate:fixedPackagePrice>0?fixedPackagePrice:null,customer_name:user.user_metadata?.full_name||user.email||'Customer',customer_phone:contactField.input.value.trim(),vehicle_type:vehicle.vehicle_type,vehicle_model:vehicle.make_model,driver_name:vehicle.driver_name,starting_location:vehicle.starting_location};
             const {error}=await client.from('driver_service_requests').insert({customer_id:user.id,driver_id:vehicle.driver_id,vehicle_id:vehicle.id,status:'pending',trip_details:tripDetails});
             if(error)throw error;
             overlay.remove();alert('Taxi request sent. Pickup: '+dateField.input.value+' at '+pickupTime+'. Waiting for taxi approval.');
@@ -14848,7 +14848,7 @@ async function renderTaxiCustomerRequests(){
         const h=document.createElement('h3');h.textContent=(t.vehicle_type||'Taxi')+' · '+(t.vehicle_model||'Vehicle');h.style.margin='0 0 8px;';
         const badge=document.createElement('span');badge.textContent=status==='pending'?'Waiting for taxi approval':status==='approved'?'Taxi Approved':status==='denied'?'Denied':status==='cancelled'?'Cancelled':status.toUpperCase();
         badge.style.cssText='display:inline-block;padding:6px 11px;border-radius:20px;background:'+(status==='approved'?'#e8f7ee':status==='denied'?'#ffe9e9':status==='cancelled'?'#eef1f3':'#fff4df')+';color:'+(status==='approved'?'#187443':status==='denied'?'#b42318':status==='cancelled'?'#475467':'#9a5a1c')+';font-size:11px;font-weight:900;';
-        const details=document.createElement('p');details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Date: '+(t.travel_date||'—')+' · Driver: '+(t.driver_name||'Driver')+' · City: '+(t.driver_city||'—')+' · Fare estimate: ₹'+Number(t.fare_estimate||0).toLocaleString('en-IN');details.style.cssText='color:#64748b;font-size:13px;line-height:1.7;';
+        const details=document.createElement('p');details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Date: '+(t.travel_date||'—')+' · Driver: '+(t.driver_name||'Driver')+' · Starting Location: '+(t.starting_location||'—')+' · Fare estimate: ₹'+Number(t.fare_estimate||0).toLocaleString('en-IN');details.style.cssText='color:#64748b;font-size:13px;line-height:1.7;';
         const contactLine=document.createElement('p');contactLine.textContent=contacts.is_shared&&contacts.driver_phone?'Driver Contact: '+contacts.driver_phone:'Contact: Not shared';contactLine.style.cssText='margin:0 0 14px;color:'+(contacts.is_shared&&contacts.driver_phone?'#166534':'#92400e')+';font-size:13px;font-weight:800;';
         card.append(h,badge,details,contactLine);
         const actions=document.createElement('div');actions.style.cssText='display:flex;gap:9px;flex-wrap:wrap;';
