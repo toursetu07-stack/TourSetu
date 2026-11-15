@@ -6730,11 +6730,11 @@ window.showHotelTab = async function(tabName) {
                 </div>
                 <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #3498db;">
                     <small style="color:#888;">PENDING REQUESTS</small>
-                    <h2 style="margin:5px 0;">${pendingCount}</h2>
+                    <h2 style="margin:5px 0;">${Number(pendingCount)||0}</h2>
                 </div>
                 <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #2ecc71;">
                     <small style="color:#888;">CONFIRMED BOOKINGS</small>
-                    <h2 style="margin:5px 0;">${approvedCount}</h2>
+                    <h2 style="margin:5px 0;">${Number(approvedCount)||0}</h2>
                 </div>
             </div>`;
     } 
@@ -7626,7 +7626,7 @@ window.handleHotelRequestAction = function(requestId, action) {
             <p style="font-size:13px; color:#666;">Provide UPI details (PhonePe/GPay) or Bank Transfer details for the requester to complete the payment.</p>
             <textarea id="h-pay-details" placeholder="e.g., GPay / PhonePe UPI ID: hotelpay@upi or Bank Account details..." style="width:100%; height:90px; padding:10px; border:1px solid #ccc; border-radius:8px; margin:15px 0; box-sizing:border-box;"></textarea>
             <div style="display:flex; gap:10px;">
-                <button onclick="executeRequestStatusUpdate('${requestId}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Approval</button>
+                <button type="button" data-request-status="approved" data-request-id="${window.TourSetuDOM.escapeAttribute(requestId)}" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Approval</button>
                 <button onclick="document.getElementById('hotel-action-modal').style.display='none'" style="background:#eee; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Cancel</button>
             </div>
         `;
@@ -7636,11 +7636,12 @@ window.handleHotelRequestAction = function(requestId, action) {
             <p style="font-size:13px; color:#666;">Provide a reason for declining this room booking request.</p>
             <textarea id="h-cancel-reason" placeholder="Reason for decline (e.g. Sold out, Under maintenance)..." style="width:100%; height:90px; padding:10px; border:1px solid #ccc; border-radius:8px; margin:15px 0; box-sizing:border-box;"></textarea>
             <div style="display:flex; gap:10px;">
-                <button onclick="executeRequestStatusUpdate('${requestId}', 'denied')" style="background:#e74c3c; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Decline</button>
+                <button type="button" data-request-status="denied" data-request-id="${window.TourSetuDOM.escapeAttribute(requestId)}" style="background:#e74c3c; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Decline</button>
                 <button onclick="document.getElementById('hotel-action-modal').style.display='none'" style="background:#eee; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Cancel</button>
             </div>
         `;
     }
+    box.querySelectorAll('[data-request-status]').forEach(button => button.addEventListener('click', () => executeRequestStatusUpdate(button.dataset.requestId, button.dataset.requestStatus)));
     modal.style.display = 'flex';
 };
 
@@ -10525,11 +10526,11 @@ window.showHotelTab = async function(tabName) {
                 </div>
                 <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #3498db;">
                     <small style="color:#888;">PENDING REQUESTS</small>
-                    <h2 style="margin:5px 0;">${pendingCount}</h2>
+                    <h2 style="margin:5px 0;">${Number(pendingCount)||0}</h2>
                 </div>
                 <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #2ecc71;">
                     <small style="color:#888;">CONFIRMED BOOKINGS</small>
-                    <h2 style="margin:5px 0;">${approvedCount}</h2>
+                    <h2 style="margin:5px 0;">${Number(approvedCount)||0}</h2>
                 </div>
             </div>`;
     } 
