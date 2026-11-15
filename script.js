@@ -14653,7 +14653,7 @@ function openTaxiBookingForm(vehicle){
     const divider=()=>{const el=document.createElement('div');el.style.cssText='height:1px;background:#e9eef2;margin:1px 0;';return el;};
     const sectionTitle=document.createElement('div');sectionTitle.textContent='Journey details';sectionTitle.style.cssText='font-size:14px;font-weight:850;color:#263b4a;';
     const field=(label,type,placeholder)=>{const wrap=document.createElement('label');wrap.textContent=label;wrap.style.cssText='display:grid;gap:7px;font-size:12px;font-weight:750;color:#34495a;';const input=document.createElement('input');input.type=type;input.placeholder=placeholder||'';input.required=true;input.style.cssText='width:100%;box-sizing:border-box;min-height:46px;padding:11px 13px;border:1px solid #d8e1e8;border-radius:11px;background:#fff;color:#172b3a;font:inherit;font-size:14px;outline-color:#0f8b68;';wrap.appendChild(input);return {wrap,input};};
-    const pickupField=field('Pickup address','text','Enter pickup location'),dropField=field('Drop address','text','Enter destination'),dateField=field('Pickup date','date',''),contactField=field('Contact Number','tel','Enter your mobile number');
+    const pickupField=field('Pickup address','text','Enter pickup location'),dropField=field('Drop address','text','Enter destination'),dateField=field('Pickup date','date',''),contactField=field('Customer Phone Number','tel','Enter your mobile number');
     contactField.input.inputMode='tel';contactField.input.maxLength=20;
     dateField.input.min=new Date().toISOString().slice(0,10);
     const timeWrap=document.createElement('label');timeWrap.textContent='Pickup time';timeWrap.style.cssText='display:grid;gap:7px;font-size:12px;font-weight:750;color:#34495a;';
@@ -14680,7 +14680,7 @@ function openTaxiBookingForm(vehicle){
         try{
             const {data:{user},error:authError}=await client.auth.getUser();if(authError||!user)throw new Error('Please log in again.');
             const {data:profile}=await client.from('profiles').select('phone').eq('id',user.id).maybeSingle();
-            contactField.input.value=String(profile?.phone||user.user_metadata?.phone||'').trim();
+            if(!contactField.input.value.trim())contactField.input.value=String(profile?.phone||user.user_metadata?.phone||'').trim();
             const pickupTime=hours.value+':'+minutes.value+' '+period.value,hour24=(Number(hours.value)%12)+(period.value==='PM'?12:0),pickupTime24=String(hour24).padStart(2,'0')+':'+minutes.value;
             if(!pickupField.input.value.trim()||!dropField.input.value.trim()||!dateField.input.value)throw new Error('Enter pickup, drop and pickup date.');
             if(!/^[+0-9()\s-]{7,20}$/.test(contactField.input.value.trim())||contactField.input.value.replace(/\D/g,'').length<7)throw new Error('Enter a valid contact number for this booking.');
@@ -14721,7 +14721,7 @@ async function renderTaxiCustomerRequests(){
       .eq('customer_id',user.id).order('created_at',{ascending:false});
     if(error){console.error('Taxi requests load failed',error);renderCustomerPackageMessage(container,'Unable to load taxi requests','Please refresh and try again.');return;}
     if(!data?.length){renderCustomerPackageMessage(container,'No taxi requests yet','Choose Independent Taxis and book a vehicle to get started.');return;}
-    const contactResults=await Promise.all(data.map(async r=>{const {data:contactData,error:contactError}=await client.rpc('get_driver_service_request_contacts',{p_request_id:r.id});if(contactError){console.warn('Taxi contact status unavailable:',contactError);return [r.id,{is_paid:false}];}return [r.id,Array.isArray(contactData)?contactData[0]:(contactData||{is_paid:false})];}));
+    const contactResults=await Promise.all(data.map(async r=>{const {data:contactData,error:contactError}=await client.rpc('get_driver_service_request_contacts',{p_request_id:r.id});if(contactError){console.warn('Taxi contact status unavailable:',contactError);return [r.id,{is_shared:false}];}return [r.id,Array.isArray(contactData)?contactData[0]:(contactData||{is_paid:false})];}));
     const contactByRequest=new Map(contactResults);
     container.replaceChildren();
     data.forEach(r=>{
@@ -14731,7 +14731,7 @@ async function renderTaxiCustomerRequests(){
         const badge=document.createElement('span');badge.textContent=status==='pending'?'Waiting for taxi approval':status==='approved'?'Taxi Approved':status==='denied'?'Denied':status==='cancelled'?'Cancelled':status.toUpperCase();
         badge.style.cssText='display:inline-block;padding:6px 11px;border-radius:20px;background:'+(status==='approved'?'#e8f7ee':status==='denied'?'#ffe9e9':status==='cancelled'?'#eef1f3':'#fff4df')+';color:'+(status==='approved'?'#187443':status==='denied'?'#b42318':status==='cancelled'?'#475467':'#9a5a1c')+';font-size:11px;font-weight:900;';
         const details=document.createElement('p');details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Date: '+(t.travel_date||'—')+' · Driver: '+(t.driver_name||'Driver')+' · City: '+(t.driver_city||'—')+' · Fare estimate: ₹'+Number(t.fare_estimate||0).toLocaleString('en-IN');details.style.cssText='color:#64748b;font-size:13px;line-height:1.7;';
-        const contactLine=document.createElement('p');contactLine.textContent=contacts.is_paid&&contacts.driver_phone?'Driver Contact: '+contacts.driver_phone:'Contact: Locked (Visible after Payment)';contactLine.style.cssText='margin:0 0 14px;color:'+(contacts.is_paid&&contacts.driver_phone?'#166534':'#92400e')+';font-size:13px;font-weight:800;';
+        const contactLine=document.createElement('p');contactLine.textContent=contacts.is_shared&&contacts.driver_phone?'Driver Contact: '+contacts.driver_phone:'Contact: Not shared';contactLine.style.cssText='margin:0 0 14px;color:'+(contacts.is_paid&&contacts.driver_phone?'#166534':'#92400e')+';font-size:13px;font-weight:800;';
         card.append(h,badge,details,contactLine);
         const actions=document.createElement('div');actions.style.cssText='display:flex;gap:9px;flex-wrap:wrap;';
         if(status==='pending'||status==='approved'){
