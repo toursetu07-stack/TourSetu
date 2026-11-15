@@ -1673,7 +1673,7 @@ window.loadCustomerHotelPackages = async function(cityFilter='', stateFilter='',
 
         if (normalizedCity) {
             const exactMatches = matchingInventory.filter(item =>
-                normalizeMatchCity(item.city || item.hotels?.city || '') === normalizedCity
+                normalizeMatchCity(item.city || item.hotels?.city || '') === normalizedCity && (!selectedState || getCityState(item.city || item.hotels?.city || '') === selectedState)
             );
             if (exactMatches.length) {
                 matchingInventory = exactMatches;
@@ -4103,6 +4103,11 @@ window.searchMatchedAgencies = async function() {
     if (!container) return;
 
     const selectedSearchType=document.querySelector('input[name="search-type"]:checked')?.value||'agency';
+    const cityState = start ? getCityState(start) : '';
+    if (start && state && cityState && cityState !== state) {
+        renderCustomerPackageMessage(container, 'Please reselect your city', 'The selected city does not belong to the selected state.');
+        return;
+    }
     if(selectedSearchType==='hotel'){
         await loadCustomerHotelPackages(start, state, dest);
         return;
@@ -14700,7 +14705,7 @@ window.loadCustomerTaxiListings = async function(cityFilter='', destinationFilte
         });
         let usedNearbyFallback=false;
         if(city){
-            const exact=rows.filter(v=>normalizeMatchCity(v.starting_location||'')===normalizeMatchCity(city));
+            const exact=rows.filter(v=>normalizeMatchCity(v.starting_location||'')===normalizeMatchCity(city) && (!state || getCityState(v.starting_location||'')===state));
             if(exact.length){
                 rows=exact;
             } else {
