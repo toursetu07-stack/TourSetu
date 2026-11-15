@@ -14355,45 +14355,86 @@ function openTaxiBookingForm(vehicle){
     const client=getClient();
     const old=document.getElementById('taxi-booking-modal');if(old)old.remove();
     const overlay=document.createElement('div');overlay.id='taxi-booking-modal';
-    overlay.style.cssText='position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto;';
-    const panel=document.createElement('form');panel.style.cssText='background:#fff;width:min(560px,100%);padding:25px;border-radius:16px;display:grid;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.25);';
-    const heading=document.createElement('h2');heading.textContent='Book '+(vehicle.vehicle_type||'Taxi')+' · '+(vehicle.make_model||'Vehicle');heading.style.margin='0';
-    const note=document.createElement('p');note.textContent='Driver: '+(vehicle.driver_name||'Independent driver')+' · '+(vehicle.driver_city||'')+' · '+vehicle.seating_capacity+' seats · ₹'+vehicle.price_per_km+'/km';note.style.cssText='margin:0;color:#64748b;font-size:13px;';
-    const field=(label,type,placeholder)=>{const wrap=document.createElement('label');wrap.textContent=label;wrap.style.cssText='display:grid;gap:6px;font-size:12px;font-weight:700;color:#334155;';const input=document.createElement('input');input.type=type;input.placeholder=placeholder||'';input.required=true;input.style.cssText='width:100%;box-sizing:border-box;min-height:43px;padding:10px 12px;border:1px solid #d7dee4;border-radius:8px;font:inherit;';wrap.appendChild(input);panel.appendChild(wrap);return input;};
-    const pickup=field('Pickup address','text','Enter pickup location');
-    const drop=field('Drop address','text','Enter destination');
-    const date=field('Travel date','date','');date.min=new Date().toISOString().slice(0,10);
-    const distance=field('Estimated distance (km)','number','e.g. 25');distance.min='1';distance.step='1';
-    const fare=document.createElement('div');fare.style.cssText='padding:12px;background:#fff8ef;border-radius:9px;color:#8a4d12;font-weight:800;';fare.textContent='Estimated fare: ₹0';
-    distance.addEventListener('input',()=>{fare.textContent='Estimated fare: ₹'+(Math.max(0,Number(distance.value)||0)*Number(vehicle.price_per_km||0)).toLocaleString('en-IN');});
-    const buttons=document.createElement('div');buttons.style.cssText='display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;';
-    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancel';cancel.style.cssText='padding:11px 16px;border:0;border-radius:8px;background:#eef1f3;cursor:pointer;';
+    overlay.style.cssText='position:fixed;inset:0;z-index:100001;background:rgba(15,23,42,.68);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;';
+    const panel=document.createElement('form');panel.style.cssText='background:#fff;width:min(620px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:clamp(20px,4vw,30px);border-radius:22px;display:grid;gap:18px;box-shadow:0 24px 80px rgba(15,23,42,.28);border:1px solid rgba(255,255,255,.7);';
+    const driverName=String(vehicle.driver_name||'Independent driver');
+    const city=String(vehicle.driver_city||vehicle.starting_location||'Location not specified');
+    const rate=Number(vehicle.price_per_km||0);
+    const money=value=>'₹'+Number(value||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+    const heading=document.createElement('div');
+    const eyebrow=document.createElement('div');eyebrow.textContent='INDEPENDENT TAXI · BOOKING REQUEST';eyebrow.style.cssText='font-size:10px;letter-spacing:1.4px;font-weight:900;color:#b45309;margin-bottom:7px;';
+    const title=document.createElement('h2');title.textContent='Request your taxi';title.style.cssText='margin:0;color:#172033;font-size:clamp(21px,4vw,27px);line-height:1.2;';
+    const intro=document.createElement('p');intro.textContent='Share your pickup details and preferred schedule with the driver.';intro.style.cssText='margin:7px 0 0;color:#64748b;font-size:13px;line-height:1.5;';
+    heading.append(eyebrow,title,intro);
+    const summary=document.createElement('section');summary.style.cssText='padding:17px;border:1px solid #f1d8b7;border-radius:16px;background:linear-gradient(135deg,#fff8ed,#fffdf9);';
+    const vehicleTitle=document.createElement('div');vehicleTitle.textContent=(vehicle.vehicle_type||'Taxi')+' · '+(vehicle.make_model||'Vehicle');vehicleTitle.style.cssText='font-size:16px;font-weight:900;color:#172033;margin-bottom:10px;';
+    const meta=document.createElement('div');meta.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;';
+    const metaItem=(label,value)=>{const box=document.createElement('div');const l=document.createElement('div');l.textContent=label;l.style.cssText='font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:#8a6b4b;font-weight:800;margin-bottom:4px;';const v=document.createElement('div');v.textContent=value;v.style.cssText='font-size:13px;color:#263445;font-weight:750;overflow-wrap:anywhere;';box.append(l,v);return box;};
+    meta.append(metaItem('Driver',driverName),metaItem('Location',city),metaItem('Seats',String(vehicle.seating_capacity||'—')+' seats'));
+    const rateCard=document.createElement('div');rateCard.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 14px;border-radius:12px;background:#172033;color:#fff;';
+    const rateLabel=document.createElement('span');rateLabel.textContent='Driver’s listed rate';rateLabel.style.cssText='font-size:12px;color:#dbe3ee;font-weight:700;';
+    const rateValue=document.createElement('strong');rateValue.textContent=money(rate)+'/km';rateValue.style.cssText='font-size:22px;letter-spacing:-.4px;color:#ffd08a;';
+    rateCard.append(rateLabel,rateValue);summary.append(vehicleTitle,meta,rateCard);
+    const divider=()=>{const el=document.createElement('div');el.style.cssText='height:1px;background:#edf0f3;';return el;};
+    const sectionTitle=(text)=>{const el=document.createElement('h3');el.textContent=text;el.style.cssText='margin:0 0 2px;font-size:14px;color:#172033;font-weight:850;';return el;};
+    const field=(label,type,placeholder)=>{const wrap=document.createElement('label');wrap.textContent=label;wrap.style.cssText='display:grid;gap:7px;font-size:12px;font-weight:800;color:#344054;';const input=document.createElement('input');input.type=type;input.placeholder=placeholder||'';input.required=true;input.style.cssText='width:100%;box-sizing:border-box;min-height:46px;padding:11px 13px;border:1px solid #d8dee8;border-radius:11px;background:#fff;color:#172033;font:inherit;font-size:14px;outline-color:#f59e0b;';wrap.appendChild(input);return {wrap,input};};
+    const routeSection=document.createElement('section');routeSection.style.cssText='display:grid;gap:12px;';
+    routeSection.append(sectionTitle('Your journey'));
+    const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;';
+    const pickupField=field('Pickup address','text','Enter full pickup location');
+    const dropField=field('Destination / drop address','text','Where would you like to go?');
+    grid.append(pickupField.wrap,dropField.wrap);routeSection.append(grid);
+    const schedule=document.createElement('section');schedule.style.cssText='display:grid;gap:12px;';
+    schedule.append(sectionTitle('Pickup schedule'));
+    const scheduleGrid=document.createElement('div');scheduleGrid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;';
+    const dateField=field('Travel date','date','');const now=new Date();const localDate=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');dateField.input.min=localDate;
+    const timeWrap=document.createElement('label');timeWrap.textContent='Pickup time';timeWrap.style.cssText='display:grid;gap:7px;font-size:12px;font-weight:800;color:#344054;';
+    const timeControls=document.createElement('div');timeControls.style.cssText='display:grid;grid-template-columns:1fr 1fr .9fr;gap:7px;';
+    const makeSelect=(aria,values,initial)=>{const s=document.createElement('select');s.setAttribute('aria-label',aria);s.required=true;s.style.cssText='width:100%;min-width:0;min-height:46px;padding:10px 8px;border:1px solid #d8dee8;border-radius:11px;background:#fff;color:#172033;font:inherit;font-size:14px;';values.forEach(v=>{const o=document.createElement('option');o.value=v.value;o.textContent=v.label;s.appendChild(o);});s.value=initial;return s;};
+    const hours=Array.from({length:12},(_,i)=>{const v=String(i+1).padStart(2,'0');return {value:v,label:v};});
+    const minutes=Array.from({length:12},(_,i)=>{const v=String(i*5).padStart(2,'0');return {value:v,label:v};});
+    const hour=makeSelect('Pickup hour',hours,'08'),minute=makeSelect('Pickup minutes',minutes,'30'),period=makeSelect('AM or PM',[{value:'AM',label:'AM'},{value:'PM',label:'PM'}],'AM');
+    timeControls.append(hour,minute,period);timeWrap.appendChild(timeControls);scheduleGrid.append(dateField.wrap,timeWrap);schedule.append(scheduleGrid);
+    const fareCard=document.createElement('div');fareCard.style.cssText='padding:15px 16px;border:1px solid #d9e8df;border-radius:14px;background:#f3faf6;display:grid;gap:5px;';
+    const fareTop=document.createElement('div');fareTop.textContent='FARE TRANSPARENCY';fareTop.style.cssText='font-size:10px;letter-spacing:1px;color:#28734b;font-weight:900;';
+    const fareMain=document.createElement('div');fareMain.style.cssText='display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;';
+    const fareAmount=document.createElement('strong');fareAmount.textContent=money(rate);fareAmount.style.cssText='font-size:26px;line-height:1.2;color:#14532d;font-weight:950;';
+    const fareUnit=document.createElement('span');fareUnit.textContent='/ km';fareUnit.style.cssText='font-size:14px;color:#28734b;font-weight:800;';
+    fareMain.append(fareAmount,fareUnit);
+    const fareNote=document.createElement('p');fareNote.textContent='This is the driver’s saved per-kilometre rate. Final trip fare depends on the confirmed route distance and will be confirmed by the driver; no distance or total is being guessed.';fareNote.style.cssText='margin:0;color:#527160;font-size:11px;line-height:1.5;';
+    fareCard.append(fareTop,fareMain,fareNote);
+    const buttons=document.createElement('div');buttons.style.cssText='display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding-top:2px;';
+    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancel';cancel.style.cssText='padding:12px 18px;border:1px solid #e4e7ec;border-radius:11px;background:#f8fafc;color:#344054;font-weight:800;cursor:pointer;';
     cancel.addEventListener('click',()=>overlay.remove());
-    const submit=document.createElement('button');submit.type='submit';submit.textContent='Send Taxi Request';submit.style.cssText='padding:11px 16px;border:0;border-radius:8px;background:#ff9f43;color:#263238;font-weight:800;cursor:pointer;';
+    const submit=document.createElement('button');submit.type='submit';submit.textContent='Send Taxi Request';submit.style.cssText='padding:13px 22px;border:0;border-radius:11px;background:linear-gradient(135deg,#f59e0b,#ea7a18);color:#fff;font-weight:900;font-size:14px;cursor:pointer;box-shadow:0 7px 18px rgba(234,122,24,.24);';
     buttons.append(cancel,submit);
-    panel.prepend(note,heading);panel.append(fare,buttons);overlay.appendChild(panel);document.body.appendChild(overlay);
+    panel.append(heading,summary,divider(),routeSection,schedule,divider(),fareCard,buttons);overlay.appendChild(panel);document.body.appendChild(overlay);
     panel.addEventListener('submit',async event=>{
         event.preventDefault();submit.disabled=true;submit.textContent='Sending…';
         try{
+            const pickupDate=dateField.input.value;
+            const pickupTime=hour.value+':'+minute.value+' '+period.value;
+            if(!pickupField.input.value.trim()||!dropField.input.value.trim()||!pickupDate)throw new Error('Please enter pickup, destination and travel date.');
             const {data:{user},error:authError}=await client.auth.getUser();
             if(authError||!user)throw new Error('Please log in again.');
             const {data:profile}=await client.from('profiles').select('phone').eq('id',user.id).maybeSingle();
-            const fareEstimate=Number((Math.max(0,Number(distance.value)||0)*Number(vehicle.price_per_km||0)).toFixed(2));
-            if(!pickup.value.trim()||!drop.value.trim()||!date.value||!Number(distance.value)||Number(distance.value)<=0)throw new Error('Enter pickup, drop, date and a valid estimated distance.');
             const {error}=await client.from('driver_service_requests').insert({
                 customer_id:user.id,driver_id:vehicle.driver_id,vehicle_id:vehicle.id,status:'pending',
                 trip_details:{
-                    pickup:pickup.value.trim(),drop:drop.value.trim(),travel_date:date.value,
-                    distance_km:Number(distance.value),fare_estimate:fareEstimate,
+                    pickup:pickupField.input.value.trim(),drop:dropField.input.value.trim(),
+                    travel_date:pickupDate,pickup_date:pickupDate,pickup_time:pickupTime,
+                    pickup_time_24h:(()=>{let h=Number(hour.value)%12;if(period.value==='PM')h+=12;return String(h).padStart(2,'0')+':'+minute.value;})(),
+                    pickup_datetime_local:pickupDate+'T'+(()=>{let h=Number(hour.value)%12;if(period.value==='PM')h+=12;return String(h).padStart(2,'0')+':'+minute.value;})(),
+                    driver_rate_per_km:rate,fare_basis:'per_km',fare_estimate:null,
                     customer_name:user.user_metadata?.full_name||user.email||'Customer',
                     customer_phone:profile?.phone||user.user_metadata?.phone||'',
                     vehicle_type:vehicle.vehicle_type,vehicle_model:vehicle.make_model,
-                    driver_name:vehicle.driver_name,driver_city:vehicle.driver_city
+                    driver_name:driverName,driver_city:city,seating_capacity:Number(vehicle.seating_capacity||0)
                 }
             });
             if(error)throw error;
             overlay.remove();
-            alert('Taxi request sent. Status: Waiting for taxi approval.');
+            alert('Taxi request sent with pickup date '+pickupDate+' at '+pickupTime+'. Status: Waiting for taxi approval.');
             const taxiRadio=document.querySelector('input[name="search-type"][value="taxi"]');if(taxiRadio)taxiRadio.checked=true;
             await window.renderCustomerRequests();
         }catch(e){alert(e.message||'Unable to send taxi request.');submit.disabled=false;submit.textContent='Send Taxi Request';}
@@ -14434,7 +14475,7 @@ async function renderTaxiCustomerRequests(){
         const h=document.createElement('h3');h.textContent=(t.vehicle_type||'Taxi')+' · '+(t.vehicle_model||'Vehicle');h.style.margin='0 0 8px;';
         const badge=document.createElement('span');badge.textContent=status==='pending'?'Waiting for taxi approval':status==='approved'?'Taxi Approved':status==='denied'?'Denied':status==='cancelled'?'Cancelled':status.toUpperCase();
         badge.style.cssText='display:inline-block;padding:6px 11px;border-radius:20px;background:'+(status==='approved'?'#e8f7ee':status==='denied'?'#ffe9e9':status==='cancelled'?'#eef1f3':'#fff4df')+';color:'+(status==='approved'?'#187443':status==='denied'?'#b42318':status==='cancelled'?'#475467':'#9a5a1c')+';font-size:11px;font-weight:900;';
-        const details=document.createElement('p');details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Date: '+(t.travel_date||'—')+' · Driver: '+(t.driver_name||'Driver')+' · City: '+(t.driver_city||'—')+' · Fare estimate: ₹'+Number(t.fare_estimate||0).toLocaleString('en-IN');details.style.cssText='color:#64748b;font-size:13px;line-height:1.7;';
+        const details=document.createElement('p');details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Pickup: '+(t.pickup_date||t.travel_date||'—')+' at '+(t.pickup_time||'Time not set')+' · Driver: '+(t.driver_name||'Driver')+' · City: '+(t.driver_city||'—')+' · Driver rate: ₹'+Number(t.driver_rate_per_km||0).toLocaleString('en-IN')+'/km · Final fare: confirmed by driver';details.style.cssText='color:#64748b;font-size:13px;line-height:1.7;';
         card.append(h,badge,details);
         const actions=document.createElement('div');actions.style.cssText='display:flex;gap:9px;flex-wrap:wrap;';
         if(status==='pending'||status==='approved'){
