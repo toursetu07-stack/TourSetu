@@ -6259,6 +6259,14 @@ async function renderPropertyAndInventoryTab(container, hotel) {
             </form>
         </div>
     `;
+
+    const profileForm = container.querySelector('[data-hotel-profile-form="true"]');
+    if (profileForm) {
+        profileForm.addEventListener('submit', event => {
+            event.preventDefault();
+            handleSaveHotelProfile(profileForm.dataset.hotelId || '');
+        });
+    }
 }
 
 // Form Submit Handler (Database Upload Logic)
