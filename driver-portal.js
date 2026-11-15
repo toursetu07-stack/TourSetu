@@ -35,7 +35,7 @@
       const label=document.createElement('label');
       label.className='destination-option';
       const input=document.createElement('input');
-      input.type='checkbox';
+      input.type='radio';
       input.name='vehicle-tour-destination';
       input.value=name;
       const span=document.createElement('span');
@@ -88,7 +88,7 @@ const DRIVER_TEMPLE_FALLBACK=[
 ];
 const DRIVER_CITY_OPTIONS=Array.isArray(window.TOURSETU_UK_CITIES)&&window.TOURSETU_UK_CITIES.length?window.TOURSETU_UK_CITIES:DRIVER_CITY_FALLBACK;
 const DRIVER_TEMPLE_OPTIONS=Array.isArray(window.TOURSETU_UK_TEMPLES)&&window.TOURSETU_UK_TEMPLES.length?window.TOURSETU_UK_TEMPLES:DRIVER_TEMPLE_FALLBACK;
-function getSelectedVehicleDestinations(){return Array.from(document.querySelectorAll('#vehicle-tour-destination-list input[name="vehicle-tour-destination"]:checked')).map(input=>input.value);}
+function getSelectedVehicleDestinations(){const selected=document.querySelector('#vehicle-tour-destination-list input[name="vehicle-tour-destination"]:checked');return selected?[selected.value]:[];}
 function populateVehicleLocationOptions(){
  const city=$('vehicle-starting-location'),dest=$('vehicle-tour-destination-list');
  if(city){city.replaceChildren(new Option('Select Uttarakhand city',''));DRIVER_CITY_OPTIONS.forEach(v=>city.add(new Option(v,v)));}
@@ -96,7 +96,7 @@ function populateVehicleLocationOptions(){
  dest.replaceChildren();
  DRIVER_TEMPLE_OPTIONS.forEach(v=>{
   const label=document.createElement('label');label.className='destination-option';
-  const input=document.createElement('input');input.type='checkbox';input.name='vehicle-tour-destination';input.value=v;
+  const input=document.createElement('input');input.type='radio';input.name='vehicle-tour-destination';input.value=v;
   const text=document.createElement('span');text.textContent=v;
   label.append(input,text);dest.append(label);
  });
@@ -235,7 +235,7 @@ $('save-vehicle').addEventListener('click',async()=>{
    if($('vehicle-puc').files[0])docs.puc_document_path=await upload($('vehicle-puc').files[0],user.id,'vehicle-puc');
    if($('vehicle-photo').files[0])docs.vehicle_photo_path=await uploadVehiclePhoto($('vehicle-photo').files[0],user.id);
    const payload={driver_id:user.id,driver_name:currentDriverProfile?.full_name||user.user_metadata?.full_name||'Independent Driver',driver_city:currentDriverProfile?.city||user.user_metadata?.city||'',vehicle_type:$('vehicle-type').value,make_model:$('vehicle-model').value.trim(),registration_number:$('vehicle-reg').value.trim(),seating_capacity:Number($('vehicle-seats').value),price_per_km:Number($('vehicle-rate').value||0),fixed_package_price:$('vehicle-fixed-package-price').value===''?null:Number($('vehicle-fixed-package-price').value),status:'active',starting_location:$('vehicle-starting-location').value,tour_destination:getSelectedVehicleDestinations(),...docs};
-   if(!payload.make_model||!payload.registration_number||!payload.seating_capacity||(!Number.isFinite(payload.price_per_km)||payload.price_per_km<0)||(!payload.price_per_km&&!(payload.fixed_package_price>0))||!payload.starting_location||!payload.tour_destination.length)throw Error('Complete vehicle model, registration, seats, either a per-km rate or fixed package price, starting location and at least one tour destination.');
+   if(!payload.make_model||!payload.registration_number||!payload.seating_capacity||(!Number.isFinite(payload.price_per_km)||payload.price_per_km<0)||(!payload.price_per_km&&!(payload.fixed_package_price>0))||!payload.starting_location||payload.tour_destination.length!==1)throw Error('Complete vehicle model, registration, seats, either a per-km rate or fixed package price, starting location and exactly one tour destination.');
    const result=editingVehicleId
     ?await db.from('driver_vehicles').update(payload).eq('id',editingVehicleId).eq('driver_id',user.id)
     :await db.from('driver_vehicles').insert(payload);
