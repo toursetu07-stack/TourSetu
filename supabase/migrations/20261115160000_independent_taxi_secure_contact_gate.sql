@@ -83,7 +83,7 @@ begin
   if auth.uid() is null then
     raise exception 'Authentication required';
   end if;
-  if p_status not in ('approved','denied') then
+  if p_status is null or p_status not in ('approved','denied') then
     raise exception 'Unsupported driver response';
   end if;
   if p_status = 'approved' and (
