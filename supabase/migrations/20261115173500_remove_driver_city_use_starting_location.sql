@@ -31,6 +31,11 @@ revoke all on function public.create_driver_profile_on_signup() from public, ano
 alter table public.driver_profiles drop column if exists city;
 alter table public.driver_vehicles drop column if exists driver_city;
 
+alter table public.driver_vehicles alter column starting_location set not null;
+alter table public.driver_vehicles
+  add constraint driver_vehicles_starting_location_nonempty
+  check (length(btrim(starting_location)) > 0);
+
 -- Remove the obsolete city snapshot from historical taxi request JSON.
 update public.driver_service_requests
 set trip_details = trip_details - 'driver_city'
