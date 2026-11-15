@@ -2913,9 +2913,16 @@ window.renderCustomerRequests = async () => {
     const container = document.getElementById('customer-pkg-list');
     const resultTitle = document.getElementById('result-title');
     const resultSubtitle = document.getElementById('result-subtitle');
-    
-    resultTitle.innerText = "My Trip Requests";
-    resultSubtitle.innerText = "Track your inquiries and booking status";
+
+    // This renderer is also reached by shared booking flows outside the
+    // customer dashboard. Treat its dashboard container and headings as
+    // optional so a successful hotel insert cannot fail during UI refresh.
+    if (!container) {
+        console.warn('Customer requests view is not mounted; skipping request-list refresh.');
+        return;
+    }
+    if (resultTitle) resultTitle.textContent = "My Trip Requests";
+    if (resultSubtitle) resultSubtitle.textContent = "Track your inquiries and booking status";
     container.innerHTML = `<div style="grid-column:1/-1; text-align:center;"><h3>Loading your requests...</h3></div>`;
     
     const client = getClient();
@@ -2949,8 +2956,8 @@ window.renderCustomerRequests = async () => {
 
 if (selectedType === 'hotel') {
 
-    resultTitle.innerText = "My Hotel Booking Requests";
-    resultSubtitle.innerText = "Track your Registered Hotel booking status";
+    if (resultTitle) resultTitle.textContent = "My Hotel Booking Requests";
+    if (resultSubtitle) resultSubtitle.textContent = "Track your Registered Hotel booking status";
 
     const setHotelRequestMessage = (title, message, color = '#2d3436') => {
         container.replaceChildren();
@@ -3229,8 +3236,8 @@ if (selectedType === 'hotel') {
        🎒 AGENCY PACKAGES - MY REQUESTS
        XSS-safe DOM renderer
        ============================================================ */
-    resultTitle.textContent='My Trip Requests';
-    resultSubtitle.textContent='Track your inquiries and booking status';
+    if (resultTitle) resultTitle.textContent = 'My Trip Requests';
+    if (resultSubtitle) resultSubtitle.textContent = 'Track your inquiries and booking status';
 
     const setAgencyRequestMessage=(title,message,action)=>{
         container.replaceChildren();
