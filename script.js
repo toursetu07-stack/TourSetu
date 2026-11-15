@@ -1611,9 +1611,10 @@ window.toggleCustomerSearchType = function() {
 /* =========================================
    Fetch & Render Registered Hotels Stock (Same Detailed View as Agency Dashboard)
    ========================================= */
-window.loadCustomerHotelPackages = async function(cityFilter='', stateFilter='', destinationFilter='') {
-    const selectedCity = String(cityFilter || '').trim();
-    const selectedState = String(stateFilter || '').trim();
+window.loadCustomerHotelPackages = async function() {
+    const selectedCity = String(arguments[0] || '').trim();
+    const selectedState = String(arguments[1] || '').trim();
+    const destinationFilter = String(arguments[2] || '').trim();
     const container = document.getElementById('customer-pkg-list');
     if (!container) return;
 
