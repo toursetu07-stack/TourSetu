@@ -15018,7 +15018,7 @@ window.renderCustomerRequests=async function(){
         }
     }
 
-    document.addEventListener('click', event => {
+    document.addEventListener('click', async event => {
         const target = event.target instanceof Element ? event.target : null;
         if (!target) return;
 
