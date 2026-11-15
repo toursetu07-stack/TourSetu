@@ -960,12 +960,12 @@ window.confirmHotelLogout = async function() {
 
     document.body.appendChild(overlay);
 
-    overlay.querySelector('#hotel-logout-deny').data-ts-csp-click = () => overlay.remove();
+    overlay.querySelector('#hotel-logout-deny').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', e => {
         if (e.target === overlay) overlay.remove();
     });
 
-    overlay.querySelector('#hotel-logout-confirm').data-ts-csp-click = async () => {
+    overlay.querySelector('#hotel-logout-confirm').addEventListener('click', async () => {
         const btn = overlay.querySelector('#hotel-logout-confirm');
         btn.disabled = true;
         btn.textContent = 'LOGGING OUT...';
@@ -977,7 +977,7 @@ window.confirmHotelLogout = async function() {
         } finally {
             window.location.reload();
         }
-    };
+    });
 };
 
 /* =========================================
@@ -6614,7 +6614,7 @@ async function loadHotelRooms(hotelId) {
 
     listDiv.appendChild(fragment);
 
-    listDiv.data-ts-csp-click = (event) => {
+    listDiv.addEventListener('click', (event) => {
         const target = event.target;
         if (!(target instanceof Element)) return;
         const edit = target.closest('.hotel-room-edit-btn');
@@ -6626,7 +6626,7 @@ async function loadHotelRooms(hotelId) {
             edit.dataset.total || '0',
             edit.dataset.available || '0'
         );
-    };
+    });
 }
 
 // Edit Button Click Action
