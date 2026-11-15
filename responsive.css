@@ -468,3 +468,78 @@ button, a, [role="button"], input[type="checkbox"], input[type="radio"], select 
     grid-template-columns:repeat(2,minmax(0,1fr));
   }
 }
+
+
+/* Global modal ergonomics: keep long forms scrollable on every portal/device. */
+#app :where(
+  .modal-content,
+  .modal-dialog,
+  .modal-card,
+  .custom-modal-card,
+  .modal-container,
+  [role="dialog"],
+  dialog[open]
+) {
+  box-sizing: border-box;
+  max-height: 90vh !important;
+  max-height: 90dvh !important;
+  min-height: 0;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+}
+
+/* Keep action rows visible while the modal's form content scrolls. */
+#app :where(
+  .modal-footer,
+  .modal-actions,
+  .modal-buttons,
+  .modal__footer,
+  [data-modal-footer]
+) {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0 max(20px, env(safe-area-inset-bottom));
+  margin-top: 16px;
+  background: inherit;
+}
+
+/* Full-screen backdrops must not clip the scrollable dialog at short heights. */
+#app :where(.modal-overlay, .modal-backdrop, .custom-modal-overlay) {
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  #app :where(
+    .modal-content,
+    .modal-dialog,
+    .modal-card,
+    .custom-modal-card,
+    .modal-container,
+    [role="dialog"],
+    dialog[open]
+  ) {
+    width: min(100% - 16px, 620px);
+    max-width: 100%;
+    max-height: 90vh !important;
+    max-height: 90dvh !important;
+    margin-inline: auto;
+    padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+  }
+
+  #app :where(.modal-footer, .modal-actions, .modal-buttons, .modal__footer, [data-modal-footer]) {
+    gap: 8px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
