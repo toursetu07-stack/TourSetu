@@ -1976,6 +1976,24 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
     qtyWrap.append(qtyLabel, qtyInput);
     formGrid.append(priceWrap, qtyWrap);
 
+    const customerPhoneWrap = document.createElement('div');
+    customerPhoneWrap.style.cssText = 'display:grid;gap:6px;margin:0 0 15px;';
+    const customerPhoneLabel = document.createElement('label');
+    customerPhoneLabel.htmlFor = 'modal-customer-phone';
+    customerPhoneLabel.textContent = 'CUSTOMER PHONE NUMBER';
+    customerPhoneLabel.style.cssText = 'font-size:11px;font-weight:bold;color:#636e72;';
+    const customerPhoneInput = document.createElement('input');
+    customerPhoneInput.type = 'tel';
+    customerPhoneInput.id = 'modal-customer-phone';
+    customerPhoneInput.name = 'customer_phone';
+    customerPhoneInput.inputMode = 'tel';
+    customerPhoneInput.autocomplete = 'tel';
+    customerPhoneInput.maxLength = 20;
+    customerPhoneInput.required = true;
+    customerPhoneInput.placeholder = 'Enter mobile number';
+    customerPhoneInput.style.cssText = 'width:100%;box-sizing:border-box;padding:11px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;';
+    customerPhoneWrap.append(customerPhoneLabel, customerPhoneInput);
+
     const totalBox = document.createElement('div');
     totalBox.style.cssText = 'margin:15px 0;padding:12px 15px;background:#eef2f7;border-radius:10px;display:flex;justify-content:space-between;align-items:center;';
     const totalLabel = document.createElement('span');
@@ -2015,7 +2033,7 @@ window.openHotelBookingModal = function(hotelName, city, address, roomType, pric
         );
     });
 
-    body.append(title, locationEl, categoryBox, dateGrid, formGrid, totalBox, termsWrap, confirmBtn);
+    body.append(title, locationEl, categoryBox, dateGrid, formGrid, customerPhoneWrap, totalBox, termsWrap, confirmBtn);
     if (imageWrap) card.append(closeBtn, imageWrap, body);
     else card.append(closeBtn, body);
     overlay.appendChild(card);
@@ -2135,6 +2153,15 @@ window.submitHotelRoomBooking = async function(hotelName, roomType, location, pr
     const qtyInput = document.getElementById('modal-room-qty');
     const checkInInput = document.getElementById('modal-checkin-date');
     const checkOutInput = document.getElementById('modal-checkout-date');
+    const customerPhoneInput = document.getElementById('modal-customer-phone');
+    const customerPhone = String(customerPhoneInput?.value || '').trim();
+    const customerPhoneDigits = customerPhone.replace(/\D/g, '');
+
+    if (!customerPhoneInput || customerPhoneDigits.length < 8 || customerPhoneDigits.length > 15) {
+        alert('Please enter a valid customer phone number (8–15 digits).');
+        customerPhoneInput?.focus();
+        return;
+    }
 
     const qty = Math.min(parseInt(qtyInput.value, 10) || 0, safeMaxAvailableRooms);
     const checkIn = checkInInput.value;
@@ -2183,7 +2210,7 @@ window.submitHotelRoomBooking = async function(hotelName, roomType, location, pr
         const bookingPayload = {
             customer_id: user.id,
             customer_email: user.email || null,
-            customer_phone: null,
+            customer_phone: customerPhone,
 
             room_category_id: parseInt(safeRoomCategoryId, 10),
 
@@ -3011,7 +3038,7 @@ if (selectedType === 'hotel') {
         return box;
     };
 
-    const renderHotelBookingCard = (booking) => {
+    const renderHotelBookingCard = (booking, contacts) => {
         const b = booking || {};
         const bookingStatus = String(b.booking_status || 'pending').toLowerCase();
         const paymentStatus = String(b.payment_status || 'unpaid').toLowerCase();
@@ -3088,6 +3115,17 @@ if (selectedType === 'hotel') {
         appendField(paymentStatusBox, 'PAYMENT STATUS', paymentStatus.toUpperCase(), paymentStatusColor);
         statuses.append(bookingStatusBox, paymentStatusBox);
         card.appendChild(statuses);
+
+        const contactBox = document.createElement('div');
+        contactBox.style.cssText = 'margin-top:15px;padding:14px;border:1px solid #dbe5ee;border-radius:10px;background:#f8fafc;display:grid;gap:7px;font-size:13px;';
+        const contactHeading = document.createElement('b');
+        contactHeading.textContent = '🔒 Contact exchange';
+        const customerContact = document.createElement('div');
+        customerContact.textContent = 'Customer: ' + (contacts?.is_shared ? contacts.customer_phone : 'Not shared');
+        const hotelContact = document.createElement('div');
+        hotelContact.textContent = 'Hotel: ' + (contacts?.is_shared ? contacts.owner_phone : 'Not shared');
+        contactBox.append(contactHeading, customerContact, hotelContact);
+        card.appendChild(contactBox);
 
         if (b.owner_message) {
             appendInfoBox(card, '🏨 Hotel Update', b.owner_message, {
@@ -3221,7 +3259,14 @@ if (selectedType === 'hotel') {
             return;
         }
 
-        container.replaceChildren(...hotelBookings.map(renderHotelBookingCard));
+        const contactResults = await Promise.all(hotelBookings.map(async booking => {
+            const { data, error: contactError } = await client.rpc('get_hotel_booking_contacts', { p_booking_id: booking.id });
+            if (contactError) throw contactError;
+            const contact = Array.isArray(data) ? data[0] : data;
+            return [booking.id, contact || { is_shared: false }];
+        }));
+        const contactsByBooking = Object.fromEntries(contactResults);
+        container.replaceChildren(...hotelBookings.map(booking => renderHotelBookingCard(booking, contactsByBooking[booking.id])));
         return;
 
     } catch (e) {
@@ -8794,29 +8839,26 @@ window.approveCustomerHotelBooking = async function(bookingId) {
             return;
         }
 
-        const { error } = await client
-            .from('hotel_bookings')
-            .update({
-                booking_status: 'approved',
-                payment_status: 'unpaid',
+        const { data: ownerProfile, error: profileError } = await client
+            .from('profiles').select('phone').eq('id', user.id).maybeSingle();
+        if (profileError) throw profileError;
+        const ownerPhone = window.prompt(
+            'Enter your hotel contact number. This will be shared with the customer only after approval:',
+            ownerProfile?.phone || ''
+        );
+        if (ownerPhone === null) return;
+        const ownerPhoneDigits = String(ownerPhone).replace(/\\D/g, '');
+        if (ownerPhoneDigits.length < 8 || ownerPhoneDigits.length > 15) {
+            alert('Please enter a valid hotel contact number (8–15 digits).');
+            return;
+        }
 
-                payment_contact_number:
-                    paymentNumber.trim(),
-
-                payment_instructions:
-                    paymentInstructions.trim(),
-
-                owner_message:
-                    "Request accepted. Now you can do payment. " +
-                    "After payment your room booking will be confirmed.",
-
-                approved_at:
-                    new Date().toISOString(),
-
-                denied_at: null,
-                cancellation_reason: null
-            })
-            .eq('id', bookingId);
+        const { error } = await client.rpc('approve_hotel_booking_with_contact', {
+            p_booking_id: bookingId,
+            p_owner_phone: String(ownerPhone).trim(),
+            p_payment_contact_number: paymentNumber.trim(),
+            p_payment_instructions: paymentInstructions.trim()
+        });
 
         if (error) throw error;
 
@@ -9697,6 +9739,13 @@ async function renderArrivalsAndPayouts(container, user) {
                     String(category.hotel_id) === String(hotelId);
             });
 
+        const hotelContactResults = await Promise.all(customerHotelBookings.map(async booking => {
+            const { data, error: contactError } = await client.rpc('get_hotel_booking_contacts', { p_booking_id: booking.id });
+            if (contactError) throw contactError;
+            const contact = Array.isArray(data) ? data[0] : data;
+            return [booking.id, contact || { is_shared: false }];
+        }));
+        const hotelContactsByBooking = Object.fromEntries(hotelContactResults);
 
         /* ============================================================
            3. AGENCY / EXISTING HOTEL REQUESTS
@@ -9726,6 +9775,7 @@ async function renderArrivalsAndPayouts(container, user) {
 
         customerHotelBookings.forEach(b => {
 
+            const contacts = hotelContactsByBooking[b.id] || { is_shared: false };
             const status =
                 String(b.booking_status || 'pending')
                     .toLowerCase();
@@ -9867,6 +9917,12 @@ async function renderArrivalsAndPayouts(container, user) {
 
                     </div>
 
+
+                    <div style="margin-top:12px;padding:13px;background:#f8fafc;border:1px solid #dbe5ee;border-radius:10px;font-size:13px;line-height:1.7;">
+                        <b>🔒 Contact exchange</b><br>
+                        Customer: ${contacts.is_shared ? window.TourSetuDOM.escapeHTML(contacts.customer_phone || '') : 'Not shared'}<br>
+                        Hotel: ${contacts.is_shared ? window.TourSetuDOM.escapeHTML(contacts.owner_phone || '') : 'Not shared'}
+                    </div>
 
                     ${
                         b.customer_email
