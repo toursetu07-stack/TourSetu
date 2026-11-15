@@ -80,30 +80,6 @@
     </section>
   </main>
   <footer class="footer"><div class="wrap"><div class="footer-top"><div><a class="brand" href="#home" aria-label="TourSetu home"><img class="brand-logo" src="assets/toursetu-brand.svg" alt="TourSetu — Your Uttarakhand Travel Companion"></a><p>Connecting travellers with travel and stay options for journeys across Uttarakhand.</p><p><a href="mailto:toursetu07@gmail.com">toursetu07@gmail.com</a><br><a href="tel:+919286166994">+91 9286166994</a></p></div><nav class="footer-links" aria-label="Footer navigation"><a href="#home">Home</a><a href="#about">About Us</a><a href="#services">Services</a><a href="#contact">Contact Us</a><a href="https://toursetu.pages.dev/" target="_blank" rel="noopener noreferrer">Open web app ↗</a></nav></div><div class="footer-bottom"><span>© <span id="year"></span> TourSetu. All rights reserved.</span><span>Travel and accommodation services are provided by their respective partners.</span></div></div></footer>
-  <script>
-    (() => {
-      const toggle = document.querySelector('.menu-toggle');
-      const nav = document.querySelector('#navlinks');
-      toggle.addEventListener('click', () => {
-        const open = nav.classList.toggle('open');
-        toggle.setAttribute('aria-expanded', String(open));
-        toggle.textContent = open ? 'Close ✕' : 'Menu ☰';
-      });
-      nav.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
-        nav.classList.remove('open');
-        toggle.setAttribute('aria-expanded', 'false');
-        toggle.textContent = 'Menu ☰';
-      }));
-      document.querySelector('#year').textContent = new Date().getFullYear();
-      document.querySelector('#contact-form').addEventListener('submit', event => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        if (!form.reportValidity()) return;
-        const notice = document.querySelector('#form-notice');
-        notice.textContent = 'Thanks! The page design is ready, but this demo form does not send or store messages yet. Connect an approved email service or secure backend before publishing.';
-        notice.style.display = 'block';
-      });
-    })();
-  </script>
+  <script src="/public-site-nav.js?v=2026-11-15" defer></script>
 </body>
 </html>
