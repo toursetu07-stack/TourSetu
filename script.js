@@ -1503,15 +1503,15 @@ async function renderCustomerHomepage(user, options = {}) {
                       </label>
                       <div style="display:flex; gap:20px;">
                           <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
-                              <input type="radio" name="search-type" value="agency" checked onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
+                              <input type="radio" name="search-type" value="agency" checked style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
                               🎒 Agency Packages
                           </label>
                           <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
-                              <input type="radio" name="search-type" value="hotel" onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
+                              <input type="radio" name="search-type" value="hotel" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;"> 
                               🏨 Registered Hotels
                           </label>
                           <label style="cursor:pointer; font-weight:bold; color:#2d3436; font-size:15px; display:flex; align-items:center; gap:6px;">
-                              <input type="radio" name="search-type" value="taxi" onchange="toggleCustomerSearchType()" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;">
+                              <input type="radio" name="search-type" value="taxi" style="accent-color:#ff9f43; width:18px; height:18px; cursor:pointer;">
                               🚕 Independent Taxis
                           </label>
                       </div>
@@ -1521,7 +1521,7 @@ async function renderCustomerHomepage(user, options = {}) {
                   <div id="agency-filter-box" style="display:flex; gap:15px; flex-wrap:wrap;">
                       <div style="flex:1; min-width:200px; text-align:left;">
                           <label style="color:#636e72; font-weight:bold; font-size:12px; letter-spacing:1px;">SELECT STATE</label>
-                          <select id="search-state" onchange="updateCityDropdown()" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
+                          <select id="search-state" data-action="customer-search-state" style="border: 2px solid #eee; margin-top:8px; width:100%; height:45px; border-radius:8px; padding:0 10px;">
                              <option value="">Select State</option>
                              ${stateOptions}
                           </select>
@@ -1552,9 +1552,9 @@ async function renderCustomerHomepage(user, options = {}) {
                       <p id="result-subtitle" style="color:#636e72; margin-top:5px;">Explore tours from all over India</p>
                   </div>
                   <div style="display:flex; gap:10px; align-items:center;">
-                    <button onclick="renderCustomerRequests()" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
-                    <button onclick="confirmCustomerLogout()" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
-                    <button onclick="triggerDeactivateModalPopup()" style="background:#ff7675; color:white; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
+                    <button type="button" data-action="customer-my-requests" style="background:#3498db; color:white; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">My Requests</button>
+                    <button type="button" data-action="customer-logout" style="background:#f1f2f6; color:#ff7675; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Logout</button>
+                    <button type="button" data-action="customer-deactivate" style="background:#ff7675; color:white; width:auto; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer; border:none;">Deactivate</button>
                   </div>
               </div>
                <div id="customer-pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap:25px;"></div>
@@ -1571,7 +1571,7 @@ async function renderCustomerHomepage(user, options = {}) {
     if (typeof window.updateCityDropdown === 'function') {
         window.updateCityDropdown();
     }
-    loadAllPackages();
+    window.toggleCustomerSearchType();
 }
 
 /**
@@ -1579,6 +1579,7 @@ async function renderCustomerHomepage(user, options = {}) {
  */
 window.toggleCustomerSearchType = function() {
     const selectedType = document.querySelector('input[name="search-type"]:checked')?.value || 'agency';
+    document.body.dataset.customerSearchType = selectedType;
     const filterBox = document.getElementById('agency-filter-box');
     const resultTitle = document.getElementById('result-title');
     const resultSubtitle = document.getElementById('result-subtitle');
@@ -3915,12 +3916,38 @@ Total: ₹${Number(totalPrice).toLocaleString('en-IN')}`);
 // execution sink is required in the dashboard markup.
 if (!window.__toursetuCustomerAgencySearchDelegated) {
     window.__toursetuCustomerAgencySearchDelegated = true;
+
+    // Marketplace controls are delegated from external JS to remain CSP-safe.
+    document.addEventListener('change', function(event) {
+        const target = event.target;
+        if (target.matches('input[name="search-type"]')) {
+            window.toggleCustomerSearchType();
+            return;
+        }
+        if (target.matches('[data-action="customer-search-state"]')) {
+            if (typeof window.updateCityDropdown === 'function') window.updateCityDropdown();
+        }
+    });
+
     document.addEventListener('click', function(event) {
-        const button = event.target.closest('#agency-filter-box button[data-action="search-agencies"]');
-        if (!button) return;
-        event.preventDefault();
-        if (typeof window.searchMatchedAgencies === 'function') {
-            void window.searchMatchedAgencies();
+        const target = event.target;
+        const button = target.closest('#agency-filter-box button[data-action="search-agencies"]');
+        if (button) {
+            event.preventDefault();
+            if (typeof window.searchMatchedAgencies === 'function') void window.searchMatchedAgencies();
+            return;
+        }
+
+        const action = target.closest('[data-action]')?.dataset.action;
+        if (action === 'customer-my-requests') {
+            event.preventDefault();
+            if (typeof window.renderCustomerRequests === 'function') void window.renderCustomerRequests();
+        } else if (action === 'customer-logout') {
+            event.preventDefault();
+            if (typeof window.confirmCustomerLogout === 'function') window.confirmCustomerLogout();
+        } else if (action === 'customer-deactivate') {
+            event.preventDefault();
+            if (typeof window.triggerDeactivateModalPopup === 'function') window.triggerDeactivateModalPopup();
         }
     });
 }
@@ -4105,6 +4132,10 @@ window.searchMatchedAgencies = async function() {
     if (!container) return;
 
     const selectedSearchType=document.querySelector('input[name="search-type"]:checked')?.value||'agency';
+    document.body.dataset.customerSearchType = selectedSearchType;
+    const labels = { agency: 'FIND AGENCIES', hotel: 'FIND HOTELS', taxi: 'FIND TAXIS' };
+    const searchLabel = labels[selectedSearchType] || labels.agency;
+    if (searchButton) searchButton.textContent = searchLabel;
     const cityState = start ? getCityState(start) : '';
     if (start && state && cityState && cityState !== state) {
         renderCustomerPackageMessage(container, 'Please reselect your city', 'The selected city does not belong to the selected state.');
@@ -4145,7 +4176,7 @@ window.searchMatchedAgencies = async function() {
             console.error('Default agency listings failed:', error);
             renderCustomerPackageMessage(container, 'Unable to load operators', 'Please try again in a moment.');
         } finally {
-            if (searchButton) { searchButton.disabled = false; searchButton.textContent = 'FIND AGENCIES'; }
+            if (searchButton) { searchButton.disabled = false; searchButton.textContent = searchLabel; }
         }
         return;
     }
@@ -4236,7 +4267,7 @@ window.searchMatchedAgencies = async function() {
     } finally {
         if (searchButton) {
             searchButton.disabled = false;
-            searchButton.textContent = 'FIND AGENCIES';
+            searchButton.textContent = searchLabel;
             searchButton.style.opacity = '1';
             searchButton.style.cursor = 'pointer';
         }
