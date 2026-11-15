@@ -14923,3 +14923,165 @@ window.renderCustomerRequests=async function(){
     if(selected==='taxi')return renderTaxiCustomerRequests();
     if(typeof originalRenderCustomerRequests==='function')return originalRenderCustomerRequests();
 };
+
+
+/* Hotel dashboard CSP compatibility layer.
+ * Inline handlers are never executed. Legacy handler attributes are removed
+ * from the live hotel UI and translated to a strict allow-listed dispatcher.
+ */
+(function installHotelDashboardCspBindings() {
+    const hotelRoots = '.hotel-dashboard-shell, #hotel-main-content, #hotel-modal';
+    const allowedCalls = new Set([
+        'showHotelTab', 'switchHotelTab', 'openHotelBookingRequestSection', 'toggleStopSell',
+        'confirmAndExecuteLogout', 'executeHotelLogout', 'saveHotelProfile', 'handleSaveHotelProfile', 'saveOrUpdateRoomCategory', 'saveRoomCategory', 'showRoomForm', 'updateRoomStockOptimistic', 'handleHotelRequestAction', 'promptHotelAction',
+        'approveCustomerHotelBooking', 'denyCustomerHotelBooking',
+        'processAgencyHotelRequestFromArrivals', 'editRoomCategory',
+        'openHotelBookingApproval', 'confirmHotelBookingApproval',
+        'denyHotelBookingRequest', 'acknowledgeBookingAlert',
+        'executeLandslideResolution', 'startCameraScanner', 'verifyCheckinByOtp',
+        'acceptAgencyPartnerTerms', 'toggleAgencyTermsApprovalButton', 'updateBookingStatus', 'confirmHotelCancellation', 'showTab'
+    ]);
+
+    function parseLiteralArgs(source, event, element) {
+        const parts = [];
+        let current = '', quote = '', escaped = false, depth = 0;
+        for (const ch of source) {
+            if (escaped) { current += ch; escaped = false; continue; }
+            if (ch === '\\' && quote) { current += ch; escaped = true; continue; }
+            if (quote) {
+                current += ch;
+                if (ch === quote) quote = '';
+                continue;
+            }
+            if (ch === "'" || ch === '"') { quote = ch; current += ch; continue; }
+            if (ch === '(' || ch === '[' || ch === '{') depth++;
+            if (ch === ')' || ch === ']' || ch === '}') depth--;
+            if (ch === ',' && depth === 0) { parts.push(current.trim()); current = ''; }
+            else current += ch;
+        }
+        if (current.trim()) parts.push(current.trim());
+        return parts.map(value => {
+            if (/^(['"]).*\1$/s.test(value)) {
+                const q = value[0];
+                return value.slice(1, -1).replace(/\\(['"\\])/g, '$1');
+            }
+            if (/^-?\d+(?:\.\d+)?$/.test(value)) return Number(value);
+            if (value === 'true') return true;
+            if (value === 'false') return false;
+            if (value === 'null') return null;
+            if (value === 'event') return event;
+            if (value === 'this.value') return element?.value;
+            return undefined;
+        });
+    }
+
+    function captureInlineHandlers(root) {
+        if (!(root instanceof Element) && root !== document) return;
+        const nodes = [];
+        if (root instanceof Element && root.matches('[onclick],[onchange],[onsubmit]')) nodes.push(root);
+        root.querySelectorAll?.('[onclick],[onchange],[onsubmit]').forEach(node => nodes.push(node));
+        nodes.forEach(node => {
+            if (!node.closest(hotelRoots)) return;
+            ['click', 'change', 'submit'].forEach(eventName => {
+                const attr = 'on' + eventName;
+                const source = node.getAttribute(attr);
+                if (!source) return;
+                node.removeAttribute(attr);
+                node.dataset.hotelCspEvent = eventName;
+                node.dataset.hotelCspSource = source;
+                if (eventName === 'click') node.setAttribute('type', node.tagName === 'BUTTON' ? (node.getAttribute('type') || 'button') : '');
+            });
+        });
+    }
+
+    function invokeSource(source, event, element) {
+        const statements = String(source || '').split(';').map(x => x.trim()).filter(Boolean);
+        for (const statement of statements) {
+            const removeMatch = statement.match(/document\s*\.\s*getElementById\(\s*(['"])([^'"]+)\1\s*\)\s*\.\s*remove\(\)/);
+            if (removeMatch) { document.getElementById(removeMatch[2])?.remove(); continue; }
+            const hideMatch = statement.match(/document\s*\.\s*getElementById\(\s*(['"])([^'"]+)\1\s*\)\s*\.\s*style\.display\s*=\s*(['"])([^'"]+)\3/);
+            if (hideMatch) { const modal = document.getElementById(hideMatch[2]); if (modal) modal.style.display = hideMatch[4]; continue; }
+            if (/^(?:return\s+)?(?:window\.)?location\.reload\(\)$/.test(statement)) {
+                window.location.reload();
+                return;
+            }
+            const match = statement.match(/^(?:return\s+)?(?:window\.)?([A-Za-z_$][\w$]*)\s*\(([\s\S]*)\)\s*$/);
+            if (!match || !allowedCalls.has(match[1])) continue;
+            const args = parseLiteralArgs(match[2], event, element);
+            if (args.some(value => value === undefined)) continue;
+            const fn = window[match[1]];
+            if (typeof fn === 'function') {
+                const result = fn.apply(window, args);
+                if (result && typeof result.catch === 'function') {
+                    result.catch(error => console.error('Hotel dashboard action failed:', error));
+                }
+            }
+        }
+    }
+
+    document.addEventListener('click', event => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
+        const tabButton = target.closest('[data-hotel-tab], .hotel-nav-btn');
+        if (tabButton && tabButton.closest('.hotel-dashboard-shell')) {
+            event.preventDefault();
+            const tab = tabButton.dataset.hotelTab || (tabButton.id || '').replace(/^nav-/, '');
+            if (tab === 'booking-request' && typeof window.openHotelBookingRequestSection === 'function') {
+                window.openHotelBookingRequestSection().catch(error => console.error('Hotel booking requests failed:', error));
+            } else if (tab && typeof window.showHotelTab === 'function') {
+                window.showHotelTab(tab).catch(error => console.error('Hotel tab switch failed:', error));
+            }
+            return;
+        }
+        const actionButton = target.closest('[data-hotel-action]');
+        if (actionButton && actionButton.closest('.hotel-dashboard-shell')) {
+            event.preventDefault();
+            const action = actionButton.dataset.hotelAction;
+            const userId = actionButton.dataset.hotelUser || window.currentHotelDashboardUser?.id;
+            const hotelId = actionButton.dataset.hotelId || userId;
+            const actions = {
+                'toggle-stop-sell': () => window.toggleStopSell?.(userId),
+                'logout': () => window.confirmAndExecuteLogout?.(),
+                'open-booking-requests': () => window.openHotelBookingRequestSection?.(),
+                'save-profile': () => window.saveHotelProfile?.(hotelId),
+                'save-room': () => window.saveOrUpdateRoomCategory?.(hotelId),
+                'reload': () => window.location.reload()
+            };
+            try {
+                const result = actions[action]?.();
+                if (result && typeof result.catch === 'function') result.catch(error => console.error(error));
+            } catch (error) { console.error('Hotel dashboard action failed:', error); }
+            return;
+        }
+        const legacy = target.closest('[data-hotel-csp-event="click"]');
+        if (legacy && legacy.closest(hotelRoots)) {
+            event.preventDefault();
+            invokeSource(legacy.dataset.hotelCspSource, event, legacy);
+        }
+    });
+
+    document.addEventListener('change', event => {
+        const node = event.target instanceof Element ? event.target.closest('[data-hotel-csp-event="change"]') : null;
+        if (node && node.closest(hotelRoots)) invokeSource(node.dataset.hotelCspSource, event, node);
+    });
+
+    document.addEventListener('submit', event => {
+        const node = event.target instanceof Element ? event.target.closest('[data-hotel-csp-event="submit"]') : null;
+        if (node && node.closest(hotelRoots)) {
+            event.preventDefault();
+            invokeSource(node.dataset.hotelCspSource, event, node);
+        }
+    });
+
+    const observer = new MutationObserver(records => {
+        records.forEach(record => record.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) captureInlineHandlers(node);
+        }));
+    });
+    const start = () => {
+        captureInlineHandlers(document);
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+    else start();
+})();
