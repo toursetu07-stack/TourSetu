@@ -60,6 +60,11 @@ create trigger capture_driver_service_request_customer_phone
 after insert on public.driver_service_requests
 for each row execute function public.capture_driver_service_request_customer_phone();
 
+-- Prevent a browser client from asserting payment success while creating a request.
+revoke insert on public.driver_service_requests from authenticated;
+grant insert (customer_id, driver_id, vehicle_id, status, trip_details)
+  on public.driver_service_requests to authenticated;
+
 -- The browser may cancel its own request via the existing RLS policy, but cannot directly alter
 -- payment_status or approve a request without using the validated driver RPC below.
 drop policy if exists "driver can approve or deny own pending request" on public.driver_service_requests;
