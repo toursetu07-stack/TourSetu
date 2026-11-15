@@ -1703,8 +1703,28 @@ window.loadCustomerHotelPackages = async function() {
             card.className = 'card result-card';
             card.style.cssText = 'background:white;overflow:hidden;border:1px solid #eee;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,0.05);display:flex;flex-direction:column;justify-content:space-between;';
 
+            const media = document.createElement('div');
+            media.className = 'marketplace-card-media marketplace-hotel-media';
+            const roomImageUrl = getHotelRoomImageUrl(item.room_image || hotelObj.room_image || '');
+            if (roomImageUrl) {
+                const image = document.createElement('img');
+                image.src = roomImageUrl;
+                image.alt = hotelName + ' ' + roomType;
+                image.loading = 'lazy';
+                image.decoding = 'async';
+                image.referrerPolicy = 'no-referrer';
+                image.addEventListener('error', () => image.remove(), { once: true });
+                media.appendChild(image);
+            } else {
+                const fallback = document.createElement('span');
+                fallback.textContent = '🏨';
+                fallback.setAttribute('aria-hidden', 'true');
+                media.appendChild(fallback);
+            }
+
             const body = document.createElement('div');
-            body.style.padding = '25px';
+            body.className = 'marketplace-card-content';
+            body.style.padding = '22px';
 
             const top = document.createElement('div');
             top.style.cssText = 'display:flex;justify-content:space-between;align-items:start;';
@@ -1771,7 +1791,7 @@ window.loadCustomerHotelPackages = async function() {
             ].join(';');
             footer.appendChild(bookBtn);
 
-            card.append(body, footer);
+            card.append(media, body, footer);
             container.appendChild(card);
         });
 
@@ -2028,6 +2048,66 @@ window.calculateHotelTotalPrice = function(pricePerNight, maxAvailableRooms) {
     display.textContent = `₹${pricePerNight} x ${qty} Room(s) x ${nights} Night(s) = ₹${total}`;
 };
 
+/* Customer-facing hotel request confirmation: shown only after the insert is verified. */
+function showHotelBookingSuccessModal(bookingId, grandTotal, checkIn, checkOut, qty) {
+    document.getElementById('hotel-booking-success-modal')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'hotel-booking-success-modal';
+    overlay.className = 'marketplace-confirmation-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'hotel-booking-success-title');
+
+    const panel = document.createElement('section');
+    panel.className = 'marketplace-confirmation-card';
+    const icon = document.createElement('div');
+    icon.className = 'marketplace-confirmation-icon';
+    icon.textContent = '✓';
+    const title = document.createElement('h2');
+    title.id = 'hotel-booking-success-title';
+    title.textContent = 'Hotel request sent successfully';
+    const message = document.createElement('p');
+    message.textContent = 'Your request has been saved. The hotel owner will review it and update the booking status.';
+    const details = document.createElement('dl');
+    details.className = 'marketplace-confirmation-details';
+    [
+        ['Booking ID', String(bookingId || '').slice(0, 8).toUpperCase()],
+        ['Stay dates', String(checkIn) + ' to ' + String(checkOut)],
+        ['Rooms requested', String(qty)],
+        ['Estimated total', '₹' + Number(grandTotal || 0).toLocaleString('en-IN')],
+        ['Current status', 'Pending hotel approval']
+    ].forEach(([label, value]) => {
+        const row = document.createElement('div');
+        const dt = document.createElement('dt');
+        dt.textContent = label;
+        const dd = document.createElement('dd');
+        dd.textContent = value;
+        row.append(dt, dd);
+        details.appendChild(row);
+    });
+    const actions = document.createElement('div');
+    actions.className = 'marketplace-confirmation-actions';
+    const view = document.createElement('button');
+    view.type = 'button';
+    view.textContent = 'View My Requests';
+    view.addEventListener('click', () => {
+        overlay.remove();
+        if (typeof window.renderCustomerRequests === 'function') void window.renderCustomerRequests();
+    });
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'secondary';
+    close.textContent = 'Continue browsing';
+    close.addEventListener('click', () => overlay.remove());
+    actions.append(view, close);
+    panel.append(icon, title, message, details, actions);
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', event => { if (event.target === overlay) overlay.remove(); });
+    overlay.addEventListener('keydown', event => { if (event.key === 'Escape') overlay.remove(); });
+    document.body.appendChild(overlay);
+    view.focus();
+}
+
 // 4. Booking Submission Handler (Saves direct to Supabase SQL Table)
 window.submitHotelRoomBooking = async function(hotelName, roomType, location, pricePerNight, maxAvailableRooms, roomCategoryId) {
     const safeRoomCategoryId = /^\d+$/.test(String(roomCategoryId || '').trim())
@@ -2144,18 +2224,14 @@ window.submitHotelRoomBooking = async function(hotelName, roomType, location, pr
             void window.sendTourSetuBookingNotification(createdHotelBookingId, 'hotel');
         }
 
-        alert(
-            `🎉 Booking Request Sent Successfully!\n\n` +
-            `Booking ID: ${data[0].id.slice(0, 8)}\n` +
-            `Total Amount: ₹${grandTotal.toLocaleString('en-IN')}\n\n` +
-            `The hotel owner will review your request.`
-        );
+        document.getElementById('hotel-booking-modal')?.remove();
 
-        document.getElementById('hotel-booking-modal').remove();
-
+        // Show the customer's saved request list behind an immediate,
+        // accessible confirmation dialog with the new booking reference.
         if (typeof window.renderCustomerRequests === 'function') {
-            window.renderCustomerRequests();
+            await window.renderCustomerRequests();
         }
+        showHotelBookingSuccessModal(data[0].id, grandTotal, checkIn, checkOut, qty);
 
     } catch (err) {
         console.error("Database Insert Error:", err);
@@ -3849,8 +3925,19 @@ function renderPackageCards(data, isFiltered) {
         card.setAttribute('aria-label', 'View package details');
         card.style.cssText = 'background:white;overflow:hidden;border:1px solid #eee;cursor:pointer;';
 
+        const media = document.createElement('div');
+        media.className = 'marketplace-card-media marketplace-package-media';
+        media.setAttribute('aria-hidden', 'true');
+        const mediaIcon = document.createElement('span');
+        mediaIcon.textContent = '⛰️';
+        media.appendChild(mediaIcon);
+        const mediaCaption = document.createElement('span');
+        mediaCaption.textContent = String(destinations || packageData.starting_location || 'Uttarakhand journey');
+        media.appendChild(mediaCaption);
+
         const content = document.createElement('div');
-        content.style.cssText = 'padding:25px;';
+        content.className = 'marketplace-card-content';
+        content.style.cssText = 'padding:22px;';
 
         const title = document.createElement('h3');
         title.textContent = packageData.title || 'Untitled package';
@@ -3901,7 +3988,7 @@ function renderPackageCards(data, isFiltered) {
         action.style.cssText = 'background:#ff9f43;color:white;width:100%;padding:12px;border:0;border-radius:8px;font-weight:800;';
         content.appendChild(action);
 
-        card.appendChild(content);
+        card.append(media, content);
         container.appendChild(card);
     });
 }
