@@ -1483,30 +1483,33 @@ async function renderCustomerHomepage(user, options = {}) {
  * Dynamic Switch Logic (Agency vs Hotel)
  */
 window.toggleCustomerSearchType = function() {
-    const selectedType = document.querySelector('input[name="search-type"]:checked')?.value;
+    const selectedType = document.querySelector('input[name="search-type"]:checked')?.value || 'agency';
     const filterBox = document.getElementById('agency-filter-box');
     const resultTitle = document.getElementById('result-title');
     const resultSubtitle = document.getElementById('result-subtitle');
+    const button = document.querySelector('#agency-filter-box button[data-action="search-agencies"]');
+    const city = document.getElementById('search-start')?.value || '';
+    const state = document.getElementById('search-state')?.value || '';
+    const destination = document.getElementById('search-dest')?.value || '';
+
+    // One persistent search engine serves every marketplace tab.
+    if (filterBox) filterBox.style.display = 'flex';
 
     if (selectedType === 'hotel') {
-        if(filterBox) filterBox.style.display = 'none';
-        if(resultTitle) resultTitle.innerText = "Registered Hotels Inventory";
-        if(resultSubtitle) resultSubtitle.innerText = "Live room availability directly from verified hotel partners";
-        loadCustomerHotelPackages();
+        if (button) button.textContent = 'FIND HOTELS';
+        if (resultTitle) resultTitle.innerText = 'Registered Hotels Inventory';
+        if (resultSubtitle) resultSubtitle.innerText = 'Search registered hotel rooms by city; nearby cities appear when the selected city has no inventory.';
+        void loadCustomerHotelPackages(city, state);
     } else if (selectedType === 'taxi') {
-        if(filterBox) filterBox.style.display = 'flex';
-        if(resultTitle) resultTitle.innerText = "Independent Taxi Listings";
-        if(resultSubtitle) resultSubtitle.innerText = "Book directly with independent taxi drivers";
-        const button=document.querySelector('#agency-filter-box button[data-action="search-agencies"]');
-        if(button)button.textContent='FIND TAXIS';
-        void loadCustomerTaxiListings(document.getElementById('search-start')?.value||'',document.getElementById('search-dest')?.value||'');
+        if (button) button.textContent = 'FIND TAXIS';
+        if (resultTitle) resultTitle.innerText = 'Independent Taxi Listings';
+        if (resultSubtitle) resultSubtitle.innerText = 'Book directly with independent taxi drivers';
+        void loadCustomerTaxiListings(city, destination);
     } else {
-        const button=document.querySelector('#agency-filter-box button[data-action="search-agencies"]');
-        if(button)button.textContent='FIND AGENCIES';
-        if(filterBox) filterBox.style.display = 'flex';
-        if(resultTitle) resultTitle.innerText = "Popular Packages";
-        if(resultSubtitle) resultSubtitle.innerText = "Explore tours from all over India";
-        loadAllPackages();
+        if (button) button.textContent = 'FIND AGENCIES';
+        if (resultTitle) resultTitle.innerText = 'Popular Packages';
+        if (resultSubtitle) resultSubtitle.innerText = 'Explore tours from all over India';
+        void loadAllPackages();
     }
 };
 
@@ -1514,7 +1517,7 @@ window.toggleCustomerSearchType = function() {
 /* =========================================
    Fetch & Render Registered Hotels Stock (Same Detailed View as Agency Dashboard)
    ========================================= */
-window.loadCustomerHotelPackages = async function() {
+window.loadCustomerHotelPackages = async function(selectedCity = '', selectedState = '') {
     const container = document.getElementById('customer-pkg-list');
     if (!container) return;
 
@@ -1546,19 +1549,61 @@ window.loadCustomerHotelPackages = async function() {
 
         if (error) throw error;
 
-        if (!data || data.length === 0) {
-            setMessage('🏨 No Registered Hotel Packages Available',
-                'Abhi kisi hotel partner dwara live inventory stock publish nahi kiya gaya hai.');
+        const inventory = Array.isArray(data) ? data : [];
+        let matchingInventory = inventory;
+        let usedNearbyFallback = false;
+        const normalizedCity = normalizeMatchCity(selectedCity);
+
+        if (normalizedCity) {
+            const exactMatches = inventory.filter(item =>
+                normalizeMatchCity(item.city || item.hotels?.city || '') === normalizedCity
+            );
+
+            if (exactMatches.length) {
+                matchingInventory = exactMatches;
+            } else {
+                const resolvedState = selectedState || getCityState(selectedCity);
+                const nearbyMatches = inventory
+                    .filter(item => {
+                        const hotelCity = String(item.city || item.hotels?.city || '').trim();
+                        return hotelCity && resolvedState && getCityState(hotelCity) === resolvedState;
+                    })
+                    .map(item => {
+                        const hotelCity = String(item.city || item.hotels?.city || '').trim();
+                        return {
+                            item,
+                            score: getCityProximityScore(
+                                resolvedState,
+                                selectedCity,
+                                hotelCity
+                            )
+                        };
+                    })
+                    .filter(entry => Number.isFinite(entry.score))
+                    .sort((a, b) => a.score - b.score);
+
+                matchingInventory = nearbyMatches.map(entry => entry.item);
+                usedNearbyFallback = matchingInventory.length > 0;
+            }
+        }
+
+        if (!matchingInventory.length) {
+            setMessage(
+                '🏨 No Registered Hotels Found',
+                normalizedCity
+                    ? 'No hotel inventory is available in ' + selectedCity + ' or nearby cities in the selected state yet.'
+                    : 'Abhi kisi hotel partner dwara live inventory stock publish nahi kiya gaya hai.'
+            );
             return;
         }
 
         window.__tourSetuHotelBookingItems = new Map(
-            data.map(item => [String(item.id || ''), item])
+            matchingInventory.map(item => [String(item.id || ''), item])
         );
 
         container.replaceChildren();
 
-        data.forEach(item => {
+        matchingInventory.forEach(item => {
             const price = Number(item.price_per_night || item.price || 0);
             const availableRooms = Number(item.available_rooms || item.total_rooms || 0);
             const hotelObj = item.hotels || {};
@@ -1578,7 +1623,10 @@ window.loadCustomerHotelPackages = async function() {
             const top = document.createElement('div');
             top.style.cssText = 'display:flex;justify-content:space-between;align-items:start;';
             const badge = document.createElement('span');
-            badge.textContent = 'REGISTERED HOTEL';
+            const itemCity = String(item.city || item.hotels?.city || '').trim();
+            const isNearbyResult = usedNearbyFallback &&
+                normalizeMatchCity(itemCity) !== normalizedCity;
+            badge.textContent = isNearbyResult ? 'NEARBY REGISTERED HOTEL' : 'REGISTERED HOTEL';
             badge.style.cssText = 'background:#e8f5e9;color:#2e7d32;font-size:11px;padding:4px 10px;border-radius:12px;font-weight:bold;';
             const priceEl = document.createElement('span');
             priceEl.textContent = `₹${price}`;
@@ -2656,27 +2704,39 @@ window.confirmAndExecuteLogout = async function() {
 };
 
 window.updateCityDropdown = () => {
-    const state = document.getElementById('search-state').value;
+    const stateSelect = document.getElementById('search-state');
     const citySelect = document.getElementById('search-start');
-    if (!state) {
-        citySelect.innerHTML = '<option value="">Select City First</option>';
-        return;
-    }
+    if (!stateSelect || !citySelect) return;
 
-    // Customer search must use the same complete Uttarakhand pickup-city
-    // master list that is used by the booking modal. This keeps SELECT CITY
-    // consistent with CUSTOMER PICKUP CITY and prevents cities from being
-    // missing from the initial customer search.
+    const state = stateSelect.value;
+    const previousCity = citySelect.value;
+    citySelect.replaceChildren();
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '-- Select City --';
+    placeholder.selected = true;
+    citySelect.appendChild(placeholder);
+
+    if (!state) return;
+
+    // Reuse the complete Uttarakhand pickup-city master list.
     const sourceCities = state === 'Uttarakhand' && Array.isArray(UTTARAKHAND_PICKUP_CITIES)
         ? UTTARAKHAND_PICKUP_CITIES
         : (locationData[state] || []);
+    [...new Set(sourceCities)].forEach(city => {
+        const option = document.createElement('option');
+        option.value = String(city);
+        option.textContent = String(city);
+        citySelect.appendChild(option);
+    });
 
-    // De-duplicate without mutating the shared source arrays.
-    const cities = [...new Set(sourceCities)];
-    citySelect.innerHTML = cities.map(c => {
-        const safe = window.TourSetuDOM.escapeAttribute(c);
-        return `<option value="${safe}">${window.TourSetuDOM.escapeHTML(c)}</option>`;
-    }).join('');
+    // Preserve a deliberate user selection only when it still belongs to this state.
+    if (previousCity && [...citySelect.options].some(option => option.value === previousCity)) {
+        citySelect.value = previousCity;
+    } else {
+        citySelect.value = '';
+    }
 };
 
 window.renderCustomerRequests = async () => {
@@ -3771,6 +3831,14 @@ window.searchMatchedAgencies = async function() {
     if (!container) return;
 
     const selectedSearchType=document.querySelector('input[name="search-type"]:checked')?.value||'agency';
+    if(selectedSearchType==='hotel'){
+        if(!state || !start){
+            renderCustomerPackageMessage(container,'Select your hotel search city','Choose a state and city to find registered hotels.');
+            return;
+        }
+        await loadCustomerHotelPackages(start, state);
+        return;
+    }
     if(selectedSearchType==='taxi'){
         if(!start){renderCustomerPackageMessage(container,'Select your pickup city','Choose a city to find independent taxi drivers.');return;}
         await loadCustomerTaxiListings(start, dest);
