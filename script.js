@@ -15019,9 +15019,10 @@ window.renderCustomerRequests=async function(){
         const tabButton = target.closest('[data-hotel-tab], .hotel-nav-btn');
         if (tabButton && tabButton.closest('.hotel-dashboard-shell')) {
             event.preventDefault();
-            const tab = tabButton.dataset.hotelTab ||
-                (tabButton.id || '').replace(/^nav-/, '');
-            if (tab && typeof window.showHotelTab === 'function') {
+            const tab = tabButton.dataset.hotelTab || (tabButton.id || '').replace(/^nav-/, '');
+            if (tab === 'booking-request' && typeof window.openHotelBookingRequestSection === 'function') {
+                window.openHotelBookingRequestSection().catch(error => console.error('Hotel booking requests failed:', error));
+            } else if (tab && typeof window.showHotelTab === 'function') {
                 window.showHotelTab(tab).catch(error => console.error('Hotel tab switch failed:', error));
             }
             return;
