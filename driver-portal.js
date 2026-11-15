@@ -180,6 +180,8 @@ async function deleteVehicle(id){
 async function loadRequests(uid){
  const {data,error}=await db.from('driver_service_requests').select('id,vehicle_id,trip_details,status,created_at').eq('driver_id',uid).order('created_at',{ascending:false});
  if(error)throw error;const rows=data||[];
+ const contactResults=await Promise.all(rows.map(async r=>{const {data:contactData,error:contactError}=await db.rpc('get_driver_service_request_contacts',{p_request_id:r.id});if(contactError){console.warn('Taxi contact status unavailable:',contactError);return [r.id,{is_paid:false}];}return [r.id,Array.isArray(contactData)?contactData[0]:(contactData||{is_paid:false})];}));
+ const contactByRequest=new Map(contactResults);
  $('stat-total').textContent=String(rows.length);
  $('stat-pending').textContent=String(rows.filter(r=>r.status==='pending').length);
  $('stat-confirmed').textContent=String(rows.filter(r=>r.status==='approved').length);
@@ -190,16 +192,21 @@ async function loadRequests(uid){
    const info=document.createElement('div');info.style.flex='1';
    const heading=document.createElement('strong');heading.textContent='Taxi request · '+String(r.status||'pending').toUpperCase();
    const details=document.createElement('div');details.className='muted';
-   details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Scheduled pickup: '+(t.travel_date||'—')+(t.pickup_time?' at '+t.pickup_time:'')+' · '+(Number(t.fixed_package_price||0)>0?'Total tour fare: ₹'+Number(t.fixed_package_price).toLocaleString('en-IN'):'Driver rate: ₹'+Number(t.price_per_km||0).toLocaleString('en-IN')+'/km (final total to be confirmed)')+' · Customer: '+(t.customer_name||'Customer')+' · Contact: '+(t.customer_phone||'Not shared');
+   const contact=contactByRequest.get(r.id)||{};
+   details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Scheduled pickup: '+(t.travel_date||'—')+(t.pickup_time?' at '+t.pickup_time:'')+' · '+(Number(t.fixed_package_price||0)>0?'Total tour fare: ₹'+Number(t.fixed_package_price).toLocaleString('en-IN'):'Driver rate: ₹'+Number(t.price_per_km||0).toLocaleString('en-IN')+'/km (final total to be confirmed)')+' · Customer: '+(t.customer_name||'Customer')+' · '+(contact.is_paid&&contact.customer_phone?'Customer Contact: '+contact.customer_phone:'Contact: Locked (Visible after Payment)');
    info.append(heading,details);d.append(info);
-   if(r.status==='pending'){const actions=document.createElement('div');actions.className='driver-actions';
-     for(const status of ['approved','denied']){const b=document.createElement('button');b.className='btn'+(status==='denied'?' light':'');b.textContent=status==='approved'?'Approve':'Deny';b.addEventListener('click',()=>decide(r.id,status));actions.append(b);}d.append(actions);
+   if(r.status==='pending'){const actions=document.createElement('div');actions.className='driver-actions';actions.style.cssText='display:grid;gap:8px;min-width:min(220px,100%);';
+     const phoneLabel=document.createElement('label');phoneLabel.className='muted';phoneLabel.textContent='Your Contact Number (shared only after payment)';phoneLabel.style.cssText='display:grid;gap:5px;font-size:12px;';
+     const phoneInput=document.createElement('input');phoneInput.type='tel';phoneInput.inputMode='tel';phoneInput.maxLength=20;phoneInput.autocomplete='tel';phoneInput.placeholder='Enter driver contact number';phoneInput.value=String(currentDriverProfile?.phone||'');phoneInput.required=true;phoneInput.style.cssText='width:100%;box-sizing:border-box;min-height:42px;padding:9px 11px;border:1px solid #d8e1e8;border-radius:9px;font:inherit;';phoneLabel.append(phoneInput);actions.append(phoneLabel);
+     const approve=document.createElement('button');approve.className='btn';approve.textContent='Approve';approve.addEventListener('click',()=>{if(!/^[+0-9()\\s-]{7,20}$/.test(phoneInput.value.trim())||phoneInput.value.replace(/\\D/g,'').length<7){alert('Enter a valid driver contact number before approving.');phoneInput.focus();return;}void decide(r.id,'approved',phoneInput.value.trim());});
+     const deny=document.createElement('button');deny.className='btn light';deny.textContent='Deny';deny.addEventListener('click',()=>void decide(r.id,'denied',''));
+     actions.append(approve,deny);d.append(actions);
    }
    $('requests').append(d);
  });
 }
-async function decide(id,status){
- const {error}=await db.from('driver_service_requests').update({status,driver_response_at:new Date().toISOString()}).eq('id',id).eq('status','pending');
+async function decide(id,status,driverPhone){
+ const {error}=await db.rpc('respond_to_driver_service_request',{p_request_id:id,p_status:status,p_driver_phone:driverPhone||null});
  if(error){alert(error.message);return;}
  const {data}=await db.auth.getUser();await loadRequests(data.user.id);
 }
