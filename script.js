@@ -7993,7 +7993,7 @@ window.showPackageForm = function(pEncoded = null) {
 
                     <select
                         id="p-state"
-                        data-ts-csp-change="window.updateCities()"
+                        data-package-change="state"
                         style="
                             width:100%;
                             padding:10px;
@@ -8241,7 +8241,7 @@ window.showPackageForm = function(pEncoded = null) {
 
                 <button
                     id="save-btn"
-                    data-ts-csp-click="window.processSave('${isEdit ? pkg.id : ''}')"
+                    data-package-action="save"
                     style="
                         background:#2ecc71;
                         color:white;
@@ -8261,7 +8261,7 @@ window.showPackageForm = function(pEncoded = null) {
                     isEdit
                     ? `
                     <button
-                        data-ts-csp-click="if(confirm('Are you sure you want to delete this package?')) window.deletePackage('${pkg.id}')"
+                        data-package-action="delete" data-package-id="${pkg.id}"
                         style="
                             background:#e74c3c;
                             color:white;
@@ -8280,7 +8280,7 @@ window.showPackageForm = function(pEncoded = null) {
 
 
                 <button
-                    data-ts-csp-click="window.showTab('packages')"
+                    data-package-action="cancel"
                     style="
                         background:#eee;
                         flex:1;
