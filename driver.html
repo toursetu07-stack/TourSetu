@@ -65,7 +65,7 @@
 <label>Vehicle type<select id="vehicle-type"><option>Hatchback</option><option>Sedan</option><option>SUV</option><option>Tempo Traveller</option><option>Other</option></select></label>
 <label>Make / model<input id="vehicle-model" placeholder="e.g. Maruti Ertiga"></label><label>Registration number<input id="vehicle-reg" placeholder="UK 00 AB 0000"></label><label>Seats<input id="vehicle-seats" type="number" min="1" max="100"></label><label>Price per km (₹)<input id="vehicle-rate" type="number" min="0" step=".5" placeholder="e.g. 15"></label><label>Fixed package price (₹, optional)<input id="vehicle-fixed-package-price" type="number" min="0" step="1" placeholder="e.g. 3000"></label>
 <label>Starting Location<select id="vehicle-starting-location" required><option value="">Select Uttarakhand city</option></select></label>
-<label class="full">Tour Destination (select one or more)<div id="vehicle-tour-destination-list" class="destination-list" role="group" aria-describedby="vehicle-destination-help"></div><span id="vehicle-destination-help" class="field-note">Select one or more Uttarakhand temple destinations.</span></label>
+<label class="full">Tour Destination (select exactly one)<div id="vehicle-tour-destination-list" class="destination-list" role="radiogroup" aria-describedby="vehicle-destination-help"></div><span id="vehicle-destination-help" class="field-note">Choose one Uttarakhand temple destination for this package.</span></label>
 <label>RC document<input id="vehicle-rc" type="file" accept=".pdf,image/*"></label><label>Permit (if applicable)<input id="vehicle-permit" type="file" accept=".pdf,image/*"></label><label>Insurance<input id="vehicle-insurance" type="file" accept=".pdf,image/*"></label><label>Fitness certificate<input id="vehicle-fitness" type="file" accept=".pdf,image/*"></label><label>PUC<input id="vehicle-puc" type="file" accept=".pdf,image/*"></label><label>Vehicle photo<input id="vehicle-photo" type="file" accept="image/*"></label>
 </div><div id="vehicle-edit-note" class="field-note" aria-live="polite"></div><div id="vehicle-edit-files" class="field-note" aria-live="polite"></div><img id="vehicle-edit-photo" alt="Current vehicle photo" class="driver-hidden" style="max-width:180px;max-height:120px;object-fit:cover;border-radius:10px;"><label class="driver-legal-consent"><input id="vehicle-legal-agree" type="checkbox" required><span>I have read and agree to the <button type="button" class="subtle-link" data-driver-legal="terms">Driver Terms &amp; Conditions</button> and <button type="button" class="subtle-link" data-driver-legal="privacy">Privacy Policy</button>. Required before publishing or updating a vehicle.</span></label><p><button id="save-vehicle" class="btn" type="button">Save & Publish Vehicle</button></p></div></section>
 
@@ -103,7 +103,7 @@
       var label=document.createElement('label');
       label.className='destination-option';
       var input=document.createElement('input');
-      input.type='checkbox';input.name='vehicle-tour-destination';input.value=name;
+      input.type='radio';input.name='vehicle-tour-destination';input.value=name;
       var span=document.createElement('span');span.textContent=name;
       label.append(input,span);list.append(label);
     });
