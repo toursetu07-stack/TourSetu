@@ -14932,8 +14932,8 @@ window.renderCustomerRequests=async function(){
 (function installHotelDashboardCspBindings() {
     const hotelRoots = '.hotel-dashboard-shell, #hotel-main-content, #hotel-modal';
     const allowedCalls = new Set([
-        'showHotelTab', 'openHotelBookingRequestSection', 'toggleStopSell',
-        'confirmAndExecuteLogout', 'saveHotelProfile', 'saveOrUpdateRoomCategory',
+        'showHotelTab', 'switchHotelTab', 'openHotelBookingRequestSection', 'toggleStopSell',
+        'confirmAndExecuteLogout', 'executeHotelLogout', 'saveHotelProfile', 'handleSaveHotelProfile', 'saveOrUpdateRoomCategory', 'saveRoomCategory', 'showRoomForm', 'updateRoomStockOptimistic', 'handleHotelRequestAction', 'promptHotelAction',
         'approveCustomerHotelBooking', 'denyCustomerHotelBooking',
         'processAgencyHotelRequestFromArrivals', 'editRoomCategory',
         'openHotelBookingApproval', 'confirmHotelBookingApproval',
@@ -14942,7 +14942,7 @@ window.renderCustomerRequests=async function(){
         'acceptAgencyPartnerTerms', 'toggleAgencyTermsApprovalButton'
     ]);
 
-    function parseLiteralArgs(source) {
+    function parseLiteralArgs(source, event, element) {
         const parts = [];
         let current = '', quote = '', escaped = false, depth = 0;
         for (const ch of source) {
@@ -14969,6 +14969,8 @@ window.renderCustomerRequests=async function(){
             if (value === 'true') return true;
             if (value === 'false') return false;
             if (value === 'null') return null;
+            if (value === 'event') return event;
+            if (value === 'this.value') return element?.value;
             return undefined;
         });
     }
@@ -15001,7 +15003,7 @@ window.renderCustomerRequests=async function(){
             }
             const match = statement.match(/^(?:return\s+)?(?:window\.)?([A-Za-z_$][\w$]*)\s*\(([\s\S]*)\)\s*$/);
             if (!match || !allowedCalls.has(match[1])) continue;
-            const args = parseLiteralArgs(match[2]);
+            const args = parseLiteralArgs(match[2], event, element);
             if (args.some(value => value === undefined)) continue;
             const fn = window[match[1]];
             if (typeof fn === 'function') {
