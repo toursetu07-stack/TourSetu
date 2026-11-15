@@ -252,14 +252,14 @@ async function ensureAgencyTermsAccepted(user) {
     const { data, error } = await client.from('agency_terms_acceptances').select('user_id, terms_version, accepted_at').eq('user_id', user.id).eq('terms_version', AGENCY_TERMS_VERSION).maybeSingle();
     if (error) {
         console.error('Agency terms acceptance check failed:', error);
-        app.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f7f6;padding:20px;box-sizing:border-box;font-family:Inter,sans-serif;"><div style="background:#fff;max-width:560px;width:100%;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center;"><h2 style="margin-top:0;color:#2d3436;">Unable to load Partner Terms & Conditions</h2><p style="color:#636e72;line-height:1.6;">Please try again. Your Agency Dashboard will remain locked until the current Partner Terms & Conditions are successfully recorded.</p><button onclick="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">TRY AGAIN</button><button onclick="handleLogout()" style="margin-left:8px;background:#2d3436;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">LOGOUT</button></div></div>';
+        app.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f7f6;padding:20px;box-sizing:border-box;font-family:Inter,sans-serif;"><div style="background:#fff;max-width:560px;width:100%;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center;"><h2 style="margin-top:0;color:#2d3436;">Unable to load Partner Terms & Conditions</h2><p style="color:#636e72;line-height:1.6;">Please try again. Your Agency Dashboard will remain locked until the current Partner Terms & Conditions are successfully recorded.</p><button data-ts-csp-click="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">TRY AGAIN</button><button data-ts-csp-click="handleLogout()" style="margin-left:8px;background:#2d3436;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">LOGOUT</button></div></div>';
         return false;
     }
     if (data) return true;
     const existingMenu = document.getElementById('toursetu-utility-menu-root');
     if (existingMenu) existingMenu.remove();
     app.style.maxWidth = '100%';
-    app.innerHTML = '<div style="min-height:100vh;background:#f4f7f6;padding:28px 18px;box-sizing:border-box;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;"><div style="background:#fff;max-width:780px;width:100%;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.15);padding:30px;box-sizing:border-box;"><div style="text-align:center;margin-bottom:20px;"><div style="font-size:38px;">📄</div><h2 style="margin:5px 0;color:#2d3436;">TourSetu Partner Terms & Conditions</h2><p style="margin:0;color:#777;font-size:13px;">Please read and accept these Partner Terms & Conditions before entering your Agency Dashboard.</p></div><div style="max-height:55vh;overflow-y:auto;padding:20px;background:#fafafa;border:1px solid #e5e7eb;border-radius:12px;color:#444;line-height:1.65;font-size:14px;">' + agencyPartnerTermsHtml() + '</div><label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;"><input type="checkbox" id="agency-partner-terms-checkbox" onchange="toggleAgencyTermsApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;"><span style="font-weight:800;color:#2d3436;line-height:1.5;">I confirm that I am an Asset-Owned Integrated Tour Operator and agree to TourSetu\'s Partner Terms & Conditions.</span></label><button id="agency-partner-terms-approved-btn" onclick="acceptAgencyPartnerTerms()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">APPROVED</button><p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Agency Dashboard will remain locked until you tick the checkbox and click APPROVED.</p></div></div>';
+    app.innerHTML = '<div style="min-height:100vh;background:#f4f7f6;padding:28px 18px;box-sizing:border-box;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;"><div style="background:#fff;max-width:780px;width:100%;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.15);padding:30px;box-sizing:border-box;"><div style="text-align:center;margin-bottom:20px;"><div style="font-size:38px;">📄</div><h2 style="margin:5px 0;color:#2d3436;">TourSetu Partner Terms & Conditions</h2><p style="margin:0;color:#777;font-size:13px;">Please read and accept these Partner Terms & Conditions before entering your Agency Dashboard.</p></div><div style="max-height:55vh;overflow-y:auto;padding:20px;background:#fafafa;border:1px solid #e5e7eb;border-radius:12px;color:#444;line-height:1.65;font-size:14px;">' + agencyPartnerTermsHtml() + '</div><label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;"><input type="checkbox" id="agency-partner-terms-checkbox" data-ts-csp-change="toggleAgencyTermsApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;"><span style="font-weight:800;color:#2d3436;line-height:1.5;">I confirm that I am an Asset-Owned Integrated Tour Operator and agree to TourSetu\'s Partner Terms & Conditions.</span></label><button id="agency-partner-terms-approved-btn" data-ts-csp-click="acceptAgencyPartnerTerms()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">APPROVED</button><p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Agency Dashboard will remain locked until you tick the checkbox and click APPROVED.</p></div></div>';
     return false;
 }
 
@@ -359,8 +359,8 @@ async function ensureCustomerPrivacyAccepted(user) {
                 <div style="background:#fff;max-width:560px;width:100%;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center;">
                     <h2 style="margin-top:0;color:#2d3436;">Unable to load Privacy Policy</h2>
                     <p style="color:#636e72;line-height:1.6;">Please try again. Your Customer Dashboard will remain locked until the current Privacy Policy acceptance is successfully recorded.</p>
-                    <button onclick="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">TRY AGAIN</button>
-                    <button onclick="handleLogout()" style="margin-left:8px;background:#2d3436;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">LOGOUT</button>
+                    <button data-ts-csp-click="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">TRY AGAIN</button>
+                    <button data-ts-csp-click="handleLogout()" style="margin-left:8px;background:#2d3436;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">LOGOUT</button>
                 </div>
             </div>`;
         return false;
@@ -384,10 +384,10 @@ async function ensureCustomerPrivacyAccepted(user) {
                     ${customerPrivacyPolicyHtml()}
                 </div>
                 <label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;">
-                    <input type="checkbox" id="customer-privacy-policy-checkbox" onchange="toggleCustomerPrivacyApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">
+                    <input type="checkbox" id="customer-privacy-policy-checkbox" data-ts-csp-change="toggleCustomerPrivacyApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">
                     <span style="font-weight:800;color:#2d3436;line-height:1.5;">I agree to TourSetu's Privacy Policy regarding data collection, live location tracking, and trip processing.</span>
                 </label>
-                <button id="customer-privacy-policy-approved-btn" onclick="acceptCustomerPrivacyPolicy()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">
+                <button id="customer-privacy-policy-approved-btn" data-ts-csp-click="acceptCustomerPrivacyPolicy()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">
                     ACCEPT & CONTINUE
                 </button>
                 <p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Customer Dashboard will remain locked until you tick the checkbox and click ACCEPT & CONTINUE.</p>
@@ -562,8 +562,8 @@ async function ensureCustomerTermsAccepted(user) {
                 <div style="background:#fff;max-width:520px;width:100%;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center;">
                     <h2 style="margin-top:0;color:#2d3436;">Unable to load Terms & Conditions</h2>
                     <p style="color:#636e72;line-height:1.6;">Please try again. Your Customer Dashboard will remain locked until the current Terms & Conditions are successfully recorded.</p>
-                    <button onclick="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">TRY AGAIN</button>
-                    <button onclick="handleLogout()" style="margin-left:8px;background:#2d3436;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">LOGOUT</button>
+                    <button data-ts-csp-click="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">TRY AGAIN</button>
+                    <button data-ts-csp-click="handleLogout()" style="margin-left:8px;background:#2d3436;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">LOGOUT</button>
                 </div>
             </div>
         `;
@@ -588,10 +588,10 @@ async function ensureCustomerTermsAccepted(user) {
                     ${customerMarketplaceTermsHtml()}
                 </div>
                 <label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;">
-                    <input type="checkbox" id="customer-marketplace-terms-checkbox" onchange="toggleCustomerTermsApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">
+                    <input type="checkbox" id="customer-marketplace-terms-checkbox" data-ts-csp-change="toggleCustomerTermsApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">
                     <span style="font-weight:800;color:#2d3436;line-height:1.5;">I agree all terms and conditions</span>
                 </label>
-                <button id="customer-marketplace-terms-approved-btn" onclick="acceptCustomerMarketplaceTerms()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">
+                <button id="customer-marketplace-terms-approved-btn" data-ts-csp-click="acceptCustomerMarketplaceTerms()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">
                     APPROVED
                 </button>
                 <p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Customer Dashboard will remain locked until you tick the checkbox and click APPROVED.</p>
@@ -752,14 +752,14 @@ window.mountDashboardUtilityMenu = function(role) {
     const root = document.createElement('div');
     root.id = 'toursetu-utility-menu-root';
     const accountLabel = role === 'hotel' ? 'Hotel Owner' : role === 'agency' ? 'Agency' : 'Customer';
-    root.innerHTML = '<button onclick="toggleDashboardUtilityMenu()" aria-label="Open menu" style="position:fixed;left:14px;top:14px;z-index:1000000;width:42px;height:42px;border-radius:50%;border:2px solid #ff9f43;background:#2d3436;color:white;font-size:15px;font-weight:900;letter-spacing:2px;box-shadow:0 5px 18px rgba(0,0,0,.25);cursor:pointer;">••</button>' +
+    root.innerHTML = '<button data-ts-csp-click="toggleDashboardUtilityMenu()" aria-label="Open menu" style="position:fixed;left:14px;top:14px;z-index:1000000;width:42px;height:42px;border-radius:50%;border:2px solid #ff9f43;background:#2d3436;color:white;font-size:15px;font-weight:900;letter-spacing:2px;box-shadow:0 5px 18px rgba(0,0,0,.25);cursor:pointer;">••</button>' +
         '<div id="toursetu-utility-drawer" style="display:none;position:fixed;left:0;top:0;bottom:0;width:min(360px,92vw);z-index:999999;background:#fff;box-shadow:12px 0 35px rgba(0,0,0,.22);padding:26px 20px;box-sizing:border-box;overflow-y:auto;font-family:Inter,sans-serif;">' +
-        '<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:18px;"><button onclick="toggleDashboardUtilityMenu(false)" aria-label="Close menu" style="width:36px;height:36px;border-radius:50%;background:#f1f2f6;color:#2d3436;font-size:20px;border:0;cursor:pointer;">×</button></div>' +
-        '<div style="padding:16px;background:#fff8ef;border:1px solid #ffd39b;border-radius:12px;margin-bottom:16px;"><div style="font-weight:900;color:#e67e22;">🔗 Your Specific Referral Link</div><p style="font-size:12px;color:#666;line-height:1.5;margin:8px 0;">Is link ko share karne par referral attribution save hoga. Eligible paid booking par platform commission ka 10% referral earning mein record hoga.</p><input id="toursetu-referral-link" readonly value="Generating..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;font-size:11px;background:white;"><div style="display:flex;gap:8px;margin-top:9px;"><button onclick="copyMyReferralLink()" style="flex:1;background:#ff9f43;color:white;padding:10px;">COPY LINK</button><button onclick="shareMyReferralLink()" style="flex:1;background:#2d3436;color:white;padding:10px;">SHARE</button></div><div id="toursetu-referral-stats" style="margin-top:12px;padding-top:10px;border-top:1px solid #f0d9b5;font-size:12px;color:#555;">Loading referral analytics...</div></div>' +
+        '<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:18px;"><button data-ts-csp-click="toggleDashboardUtilityMenu(false)" aria-label="Close menu" style="width:36px;height:36px;border-radius:50%;background:#f1f2f6;color:#2d3436;font-size:20px;border:0;cursor:pointer;">×</button></div>' +
+        '<div style="padding:16px;background:#fff8ef;border:1px solid #ffd39b;border-radius:12px;margin-bottom:16px;"><div style="font-weight:900;color:#e67e22;">🔗 Your Specific Referral Link</div><p style="font-size:12px;color:#666;line-height:1.5;margin:8px 0;">Is link ko share karne par referral attribution save hoga. Eligible paid booking par platform commission ka 10% referral earning mein record hoga.</p><input id="toursetu-referral-link" readonly value="Generating..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;font-size:11px;background:white;"><div style="display:flex;gap:8px;margin-top:9px;"><button data-ts-csp-click="copyMyReferralLink()" style="flex:1;background:#ff9f43;color:white;padding:10px;">COPY LINK</button><button data-ts-csp-click="shareMyReferralLink()" style="flex:1;background:#2d3436;color:white;padding:10px;">SHARE</button></div><div id="toursetu-referral-stats" style="margin-top:12px;padding-top:10px;border-top:1px solid #f0d9b5;font-size:12px;color:#555;">Loading referral analytics...</div></div>' +
         '<div style="display:flex;flex-direction:column;gap:10px;width:100%;">' +
-        '<button onclick="openTourSetuLegalPanel(\'referral\')" style="width:100%;text-align:left;padding:14px;background:#fff3e0;border:1px solid #ffd39b;font-weight:800;box-sizing:border-box;cursor:pointer;">🔗 Referral Program & Commission Flow</button>' +
-        '<button onclick="openTourSetuLegalPanel(\'terms\')" style="width:100%;text-align:left;padding:14px;background:#f8f9fa;border:1px solid #e5e5e5;font-weight:700;box-sizing:border-box;cursor:pointer;">📄 Terms & Conditions</button>' +
-        '<button onclick="openTourSetuLegalPanel(\'privacy\')" style="width:100%;text-align:left;padding:14px;background:#f8f9fa;border:1px solid #e5e5e5;font-weight:700;box-sizing:border-box;cursor:pointer;">🔒 Privacy Policy</button>' +
+        '<button data-ts-csp-click="openTourSetuLegalPanel(\'referral\')" style="width:100%;text-align:left;padding:14px;background:#fff3e0;border:1px solid #ffd39b;font-weight:800;box-sizing:border-box;cursor:pointer;">🔗 Referral Program & Commission Flow</button>' +
+        '<button data-ts-csp-click="openTourSetuLegalPanel(\'terms\')" style="width:100%;text-align:left;padding:14px;background:#f8f9fa;border:1px solid #e5e5e5;font-weight:700;box-sizing:border-box;cursor:pointer;">📄 Terms & Conditions</button>' +
+        '<button data-ts-csp-click="openTourSetuLegalPanel(\'privacy\')" style="width:100%;text-align:left;padding:14px;background:#f8f9fa;border:1px solid #e5e5e5;font-weight:700;box-sizing:border-box;cursor:pointer;">🔒 Privacy Policy</button>' +
         '</div></div>';
     document.body.appendChild(root);
 };
@@ -791,7 +791,7 @@ window.openTourSetuLegalPanel = function(type) {
     const modal=document.createElement('div');
     modal.id='toursetu-legal-modal';
     modal.style.cssText='position:fixed;inset:0;z-index:1000001;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px;';
-    modal.innerHTML='<div style="background:white;max-width:650px;width:100%;max-height:85vh;overflow:auto;border-radius:16px;padding:28px;line-height:1.65;color:#444;">'+(content[type]||content.privacy)+'<button onclick="document.getElementById(\'toursetu-legal-modal\').remove()" style="display:block;margin:20px auto 0;background:#ff9f43;color:white;padding:11px 25px;">CLOSE</button></div>';
+    modal.innerHTML='<div style="background:white;max-width:650px;width:100%;max-height:85vh;overflow:auto;border-radius:16px;padding:28px;line-height:1.65;color:#444;">'+(content[type]||content.privacy)+'<button data-ts-csp-click="document.getElementById(\'toursetu-legal-modal\').remove()" style="display:block;margin:20px auto 0;background:#ff9f43;color:white;padding:11px 25px;">CLOSE</button></div>';
     document.body.appendChild(modal);
 };
 
@@ -913,7 +913,7 @@ async function showDashboard(user) {
         const verification=await getAgencyVerification(user.id).catch(()=>null);
         window.currentAgencyVerificationStatus=verification?.status||'pending';
         if(typeof renderAgencyDashboard==="function")renderAgencyDashboard(user);
-        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button onclick="handleLogout()">Logout</button></div>';
+        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Agency Dashboard</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button data-ts-csp-click="handleLogout()">Logout</button></div>';
         return;
     }
     if(role==='hotel'){
@@ -921,10 +921,10 @@ async function showDashboard(user) {
         window.currentHotelVerificationStatus=hotelVerification?.status||'pending';
         if(typeof initHotelDashboard==="function")await initHotelDashboard(user);
         else if(typeof renderHotelDashboard==="function")renderHotelDashboard(user);
-        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button onclick="handleLogout()">Logout</button></div>';
+        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button data-ts-csp-click="handleLogout()">Logout</button></div>';
     }else{
         if(typeof renderCustomerHomepage==="function")renderCustomerHomepage(user);
-        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button onclick="handleLogout()">Logout</button></div>';
+        else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button data-ts-csp-click="handleLogout()">Logout</button></div>';
     }
 }
 
@@ -960,24 +960,13 @@ window.confirmHotelLogout = async function() {
 
     document.body.appendChild(overlay);
 
-    overlay.querySelector('#hotel-logout-deny').onclick = () => overlay.remove();
+    // The modal buttons are handled by the document-level CSP-safe click
+    // delegate below. This also covers dynamically inserted modal markup.
+    overlay.querySelector('#hotel-logout-deny').setAttribute('data-hotel-logout-action', 'deny');
+    overlay.querySelector('#hotel-logout-confirm').setAttribute('data-hotel-logout-action', 'confirm');
     overlay.addEventListener('click', e => {
         if (e.target === overlay) overlay.remove();
     });
-
-    overlay.querySelector('#hotel-logout-confirm').onclick = async () => {
-        const btn = overlay.querySelector('#hotel-logout-confirm');
-        btn.disabled = true;
-        btn.textContent = 'LOGGING OUT...';
-        btn.style.opacity = '.7';
-
-        try {
-            const client = getClient();
-            if (client) await client.auth.signOut();
-        } finally {
-            window.location.reload();
-        }
-    };
 };
 
 /* =========================================
@@ -992,8 +981,8 @@ function renderAuthUI() {
         <h2 id="form-title" style="margin-bottom:18px;">${isLoginMode?"Welcome Back":"Create Account"}</h2>
         <input type="email" id="email" placeholder="Email Address" autocomplete="email" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         <input type="password" id="password" placeholder="Password" autocomplete="${isLoginMode?"current-password":"new-password"}" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-        ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" onclick="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
-        ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" onchange="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select></div>'}
+        ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" data-ts-csp-click="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
+        ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" data-ts-csp-change="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select></div>'}
         <div id="business-fields" style="display:none;text-align:left;margin-top:12px;border-top:1px solid #eee;padding-top:12px;">
           <div id="agency-basic-fields">
             <label>Email Address</label><input type="email" id="agency-email" readonly placeholder="Email Address" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;background:#f8f9fa;">
@@ -1028,7 +1017,7 @@ function renderAuthUI() {
               <label>Aadhaar Card<input type="file" id="doc-aadhaar" accept="image/*,.pdf"></label>
               <label>Cancelled Cheque / Bank Passbook<input type="file" id="doc-cancelled-cheque" accept="image/*,.pdf"></label>
             </div>
-            <button type="button" onclick="goToAgencyDocumentStep2()" style="background:#ff9f43;color:white;width:100%;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;margin-top:14px;">NEXT</button>
+            <button type="button" data-ts-csp-click="goToAgencyDocumentStep2()" style="background:#ff9f43;color:white;width:100%;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;margin-top:14px;">NEXT</button>
           </div>
           <div id="agency-step-2" style="display:none;margin-top:14px;">
             <h3 style="margin:8px 0;color:#2d3436;font-size:16px;">Step 2 — Commercial Vehicle Documents</h3>
@@ -1041,13 +1030,13 @@ function renderAuthUI() {
               <label>Police Verification Certificate / ID Proof<input type="file" id="doc-police-id" accept="image/*,.pdf"></label>
             </div>
             <div style="display:flex;gap:10px;margin-top:14px;">
-              <button type="button" onclick="backToAgencyDocumentStep1()" style="background:#636e72;color:white;flex:1;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;">BACK</button>
-              <button type="button" id="agency-register-btn" onclick="handleAuth()" style="background:#ff9f43;color:white;flex:1;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;">REGISTER</button>
+              <button type="button" data-ts-csp-click="backToAgencyDocumentStep1()" style="background:#636e72;color:white;flex:1;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;">BACK</button>
+              <button type="button" id="agency-register-btn" data-ts-csp-click="handleAuth()" style="background:#ff9f43;color:white;flex:1;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;">REGISTER</button>
             </div>
           </div>
         </div>
-        <button id="auth-btn" onclick="handleAuth()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:18px;font-size:16px;">${isLoginMode?"Login":"Register"}</button>
-        <p style="margin-top:18px;font-size:14px;color:#636e72;">${isLoginMode?"Don't have an account?":"Already have account?"} <span onclick="toggleMode()" style="color:#ff9f43;cursor:pointer;font-weight:bold;">${isLoginMode?"Create Account":"Login"}</span></p>
+        <button id="auth-btn" data-ts-csp-click="handleAuth()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:18px;font-size:16px;">${isLoginMode?"Login":"Register"}</button>
+        <p style="margin-top:18px;font-size:14px;color:#636e72;">${isLoginMode?"Don't have an account?":"Already have account?"} <span data-ts-csp-click="toggleMode()" style="color:#ff9f43;cursor:pointer;font-weight:bold;">${isLoginMode?"Create Account":"Login"}</span></p>
         <div id="status" style="margin-top:15px;font-size:13px;font-weight:bold;"></div>
       </div>`;
     const emailInput=document.getElementById('email'),agencyEmail=document.getElementById('agency-email');
@@ -1132,8 +1121,8 @@ function renderPasswordResetUI() {
         <p style="color:#636e72;font-size:13px;line-height:1.5;">Enter your new password below. This will become the password for this TourSetu account.</p>
         <input type="password" id="new-password" placeholder="New Password" autocomplete="new-password" minlength="8" required aria-label="New Password" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         <input type="password" id="confirm-new-password" placeholder="Confirm New Password" autocomplete="new-password" minlength="8" required aria-label="Confirm New Password" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-        <button type="button" onclick="handlePasswordUpdate()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:12px;font-size:16px;">Set New Password</button>
-        <button type="button" onclick="clearAuthRecoveryUrl();isLoginMode=true;renderAuthUI();" style="background:#f1f2f6;color:#2d3436;width:100%;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;border:none;margin-top:10px;">Back to Login</button>
+        <button type="button" data-ts-csp-click="handlePasswordUpdate()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:12px;font-size:16px;">Set New Password</button>
+        <button type="button" data-ts-csp-click="clearAuthRecoveryUrl();isLoginMode=true;renderAuthUI();" style="background:#f1f2f6;color:#2d3436;width:100%;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;border:none;margin-top:10px;">Back to Login</button>
         <div id="status" style="margin-top:15px;font-size:13px;font-weight:bold;"></div>
       </div>`;
 }
@@ -1147,7 +1136,7 @@ async function handlePasswordUpdate() {
 
     const client = getClient();
     if (!client) { if (status) status.innerText = '❌ Supabase not initialized'; return; }
-    const button = document.querySelector('button[onclick="handlePasswordUpdate()"]');
+    const button = document.querySelector('button[data-ts-csp-click="handlePasswordUpdate()"]');
     if (button) button.disabled = true;
     if (status) status.innerText = '⏳ Updating password...';
 
@@ -1430,7 +1419,7 @@ async function handleAuth(){
             if(error){
                 const msg=String(error.message||'');
                 if(/email not confirmed/i.test(msg)||/email.*confirm/i.test(msg)){
-                    if(status)status.innerHTML='<div style="background:#fff4e6;padding:14px;border-radius:10px;border:1px solid #ffd8a8;color:#b45309;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Please confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b> using the link sent by TourSetu, then login again.<br><button type="button" onclick="resendConfirmationFromLogin()" style="margin-top:10px;background:#ff9f43;color:white;border:0;border-radius:7px;padding:9px 12px;font-weight:700;cursor:pointer;">Resend Confirmation Email</button></div>';
+                    if(status)status.innerHTML='<div style="background:#fff4e6;padding:14px;border-radius:10px;border:1px solid #ffd8a8;color:#b45309;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Please confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b> using the link sent by TourSetu, then login again.<br><button type="button" data-ts-csp-click="resendConfirmationFromLogin()" style="margin-top:10px;background:#ff9f43;color:white;border:0;border-radius:7px;padding:9px 12px;font-weight:700;cursor:pointer;">Resend Confirmation Email</button></div>';
                     return;
                 }
                 throw error;
@@ -2437,7 +2426,7 @@ window.openHotelCancellationModal = function(bookingId) {
                 ">
 
                     <button
-                        onclick="confirmHotelCancellation('${bookingId}')"
+                        data-ts-csp-click="confirmHotelCancellation('${bookingId}')"
                         style="
                             flex:1;
                             background:#ff7675;
@@ -2453,7 +2442,7 @@ window.openHotelCancellationModal = function(bookingId) {
                     </button>
 
                     <button
-                        onclick="document.getElementById('hotel-cancel-confirm-modal').remove()"
+                        data-ts-csp-click="document.getElementById('hotel-cancel-confirm-modal').remove()"
                         style="
                             flex:1;
                             background:#eee;
@@ -6288,7 +6277,7 @@ async function renderPropertyAndInventoryTab(container, hotel) {
 
                 <!-- ACTION BUTTONS -->
                 <div style="display: flex; gap: 15px; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                    <button type="button" onclick="showHotelTab('overview')" style="padding: 10px 24px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Cancel</button>
+                    <button type="button" data-ts-csp-click="showHotelTab('overview')" style="padding: 10px 24px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Cancel</button>
                     <button type="submit" id="btn-save-hotel" style="padding: 10px 24px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Upload & Save Profile</button>
                 </div>
             </form>
@@ -6403,10 +6392,10 @@ async function renderHotelDashboard(user, hotelData = null) {
                     <h2 style="color:#ff9f43; margin:0;">TourSetu <small style="font-size:12px; color:#aaa; display:block;">Hotel Partner</small></h2>
                 </div>
                 <nav>
-                    <div onclick="showHotelTab('overview')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
-                    <div onclick="showHotelTab('property')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🏨 Property & Rooms</div>
-                    <div onclick="showHotelTab('requests')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📥 Booking Inbox</div>
-                    <div onclick="confirmAndExecuteLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
+                    <div data-ts-csp-click="showHotelTab('overview')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📊 Dashboard</div>
+                    <div data-ts-csp-click="showHotelTab('property')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">🏨 Property & Rooms</div>
+                    <div data-ts-csp-click="showHotelTab('requests')" class="nav-item" style="padding:12px; cursor:pointer; border-radius:8px; margin-bottom:5px;">📥 Booking Inbox</div>
+                    <div data-ts-csp-click="confirmAndExecuteLogout()" style="padding:15px; cursor:pointer; color:#ff7675; margin-top:50px; font-weight:bold; border-top:1px solid #444;">🚪 Logout</div>
                 </nav>
             </div>
             
@@ -6449,7 +6438,7 @@ window.showHotelTab = async function(tabName) {
                 <div class="card" style="background:white; padding:40px; border-radius:15px; text-align:center;">
                     <h2>Welcome Partner! 🏨</h2>
                     <p style="color:#666;">Please setup your property details to begin taking room requests.</p>
-                    <button onclick="showHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:10px;">Setup Property Now</button>
+                    <button data-ts-csp-click="showHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:10px;">Setup Property Now</button>
                 </div>`;
             return;
         }
@@ -6497,7 +6486,7 @@ window.showHotelTab = async function(tabName) {
                     <input type="text" id="h-address" placeholder="Complete Street Address" value="${window.TourSetuDOM.escapeAttribute(hotel?.address || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
-                    <button onclick="handleSaveHotelProfile('${String(hotel?.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                    <button data-ts-csp-click="handleSaveHotelProfile('${String(hotel?.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
                 </div>
 
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
@@ -6509,7 +6498,7 @@ window.showHotelTab = async function(tabName) {
                         <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                         <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
 
-                        <button id="btn-save-room" onclick="saveRoomCategory('${String(hotel.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
+                        <button id="btn-save-room" data-ts-csp-click="saveRoomCategory('${String(hotel.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
                     `}
                 </div>
             </div>
@@ -6614,7 +6603,7 @@ async function loadHotelRooms(hotelId) {
 
     listDiv.appendChild(fragment);
 
-    listDiv.onclick = (event) => {
+    listDiv.addEventListener('click', (event) => {
         const target = event.target;
         if (!(target instanceof Element)) return;
         const edit = target.closest('.hotel-room-edit-btn');
@@ -6626,7 +6615,7 @@ async function loadHotelRooms(hotelId) {
             edit.dataset.total || '0',
             edit.dataset.available || '0'
         );
-    };
+    });
 }
 
 // Edit Button Click Action
@@ -6747,7 +6736,7 @@ window.showHotelTab = async function(tabName) {
                 <div class="card" style="background:white; padding:40px; border-radius:15px; text-align:center;">
                     <h2>Welcome Partner! 🏨</h2>
                     <p style="color:#666;">Please setup your property details to begin taking room requests.</p>
-                    <button onclick="showHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:10px;">Setup Property Now</button>
+                    <button data-ts-csp-click="showHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:10px;">Setup Property Now</button>
                 </div>`;
             return;
         }
@@ -6795,7 +6784,7 @@ window.showHotelTab = async function(tabName) {
                     <input type="text" id="h-address" placeholder="Complete Street Address" value="${window.TourSetuDOM.escapeAttribute(hotel?.address || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
-                    <button onclick="saveHotelProfile('${String(hotel?.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                    <button data-ts-csp-click="saveHotelProfile('${String(hotel?.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
                 </div>
 
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
@@ -6807,7 +6796,7 @@ window.showHotelTab = async function(tabName) {
                         <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                         <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
 
-                        <button onclick="saveRoomCategory('${String(hotel.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
+                        <button data-ts-csp-click="saveRoomCategory('${String(hotel.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
                     `}
                 </div>
             </div>
@@ -7016,8 +7005,8 @@ async function loadHotelRequests(hotelId) {
 
             ${req.status === 'pending' ? `
                 <div style="margin-top:15px; display:flex; gap:10px;">
-                    <button onclick="promptHotelAction('${req.request_id}', 'approve')" style="background:#2ecc71; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">Accept</button>
-                    <button onclick="promptHotelAction('${req.request_id}', 'deny')" style="background:#e74c3c; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny</button>
+                    <button data-ts-csp-click="promptHotelAction('${req.request_id}', 'approve')" style="background:#2ecc71; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">Accept</button>
+                    <button data-ts-csp-click="promptHotelAction('${req.request_id}', 'deny')" style="background:#e74c3c; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">Deny</button>
                 </div>
             ` : ''}
         </div>`;
@@ -7153,11 +7142,11 @@ async function renderHotelDashboard(user) {
                <small style="font-size:12px; color:#aaa; display:block; margin-bottom:30px;">Hotel Partner Panel</small>
                
                <nav style="display:flex; flex-direction:column; gap:8px;">
-                    <button onclick="switchHotelTab('overview')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:#2c3e50; border:1px solid rgba(255,255,255,.06); color:white; font-weight:800; cursor:pointer; border-radius:10px;">📊 Overview</button>
-                    <button onclick="switchHotelTab('property')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:transparent; border:1px solid transparent; color:#dfe6e9; font-weight:700; cursor:pointer; border-radius:10px;">🏨 Property & Rooms</button>
-                    <button onclick="switchHotelTab('inbox')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:transparent; border:1px solid transparent; color:#dfe6e9; font-weight:700; cursor:pointer; border-radius:10px;">📥 Booking Inbox</button>
-                    <button onclick="switchHotelTab('arrivals-payouts')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:transparent; border:1px solid transparent; color:#dfe6e9; font-weight:700; cursor:pointer; border-radius:10px;">📋 Arrivals & Payouts</button>
-                    <button onclick="confirmAndExecuteLogout()" style="text-align:left; padding:13px 14px; background:rgba(231,76,60,.08); border:1px solid rgba(231,76,60,.18); color:#ff7675; font-weight:800; cursor:pointer; margin-top:32px; border-radius:10px;">🚪 Logout</button>
+                    <button data-ts-csp-click="switchHotelTab('overview')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:#2c3e50; border:1px solid rgba(255,255,255,.06); color:white; font-weight:800; cursor:pointer; border-radius:10px;">📊 Overview</button>
+                    <button data-ts-csp-click="switchHotelTab('property')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:transparent; border:1px solid transparent; color:#dfe6e9; font-weight:700; cursor:pointer; border-radius:10px;">🏨 Property & Rooms</button>
+                    <button data-ts-csp-click="switchHotelTab('inbox')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:transparent; border:1px solid transparent; color:#dfe6e9; font-weight:700; cursor:pointer; border-radius:10px;">📥 Booking Inbox</button>
+                    <button data-ts-csp-click="switchHotelTab('arrivals-payouts')" class="hotel-nav-btn" style="text-align:left; padding:13px 14px; background:transparent; border:1px solid transparent; color:#dfe6e9; font-weight:700; cursor:pointer; border-radius:10px;">📋 Arrivals & Payouts</button>
+                    <button data-ts-csp-click="confirmAndExecuteLogout()" style="text-align:left; padding:13px 14px; background:rgba(231,76,60,.08); border:1px solid rgba(231,76,60,.18); color:#ff7675; font-weight:800; cursor:pointer; margin-top:32px; border-radius:10px;">🚪 Logout</button>
                </nav>
             </div>
 
@@ -7225,8 +7214,8 @@ window.confirmAndExecuteLogout = function() {
             <h2 style="margin:0 0 8px;color:#1e293b;font-size:22px;">Logout from Hotel Dashboard?</h2>
             <p style="margin:0 0 24px;color:#64748b;line-height:1.55;font-size:14px;">Are you sure you want to logout? Your current dashboard session will be ended.</p>
             <div style="display:flex;gap:12px;">
-                <button type="button" onclick="document.getElementById('hotel-logout-confirmation')?.remove()" style="flex:1;padding:13px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer;">DENY</button>
-                <button type="button" onclick="executeHotelLogout()" style="flex:1;padding:13px 16px;border-radius:10px;border:0;background:#e74c3c;color:#fff;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(231,76,60,.25);">CONFIRM</button>
+                <button type="button" data-hotel-logout-action="deny" style="flex:1;padding:13px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer;">DENY</button>
+                <button type="button" data-hotel-logout-action="confirm" style="flex:1;padding:13px 16px;border-radius:10px;border:0;background:#e74c3c;color:#fff;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(231,76,60,.25);">CONFIRM</button>
             </div>
         </div>
     `;
@@ -7238,7 +7227,7 @@ window.confirmAndExecuteLogout = function() {
 };
 
 window.executeHotelLogout = async function() {
-    const button = document.querySelector('#hotel-logout-confirmation button[onclick="executeHotelLogout()"]');
+    const button = document.querySelector('#hotel-logout-confirmation button[data-ts-csp-click="executeHotelLogout()"]');
     if (button) {
         button.disabled = true;
         button.innerText = 'LOGGING OUT...';
@@ -7282,7 +7271,7 @@ if (!hotel) {
         <div style="background:white; padding:30px; border-radius:12px; text-align:center;">
             <h3>🏨 Welcome to TourSetu Hotel Dashboard</h3>
             <p style="color:#666;">Aapki hotel property abhi registered nahi hai. Pehle property details bharein.</p>
-            <button onclick="switchHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">Create Property Profile</button>
+            <button data-ts-csp-click="switchHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">Create Property Profile</button>
         </div>
     `;
     return;
@@ -7293,7 +7282,7 @@ if (!hotel) {
             <div style="background:white; padding:40px; border-radius:12px; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                 <h3 style="color:#e67e22; margin-bottom:10px;">⚠️ Complete Property Registration Required</h3>
                 <p style="color:#666; margin-bottom:20px;">You must setup your hotel profile and location details before managing inventory.</p>
-                <button onclick="switchHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold;">Create Property Profile</button>
+                <button data-ts-csp-click="switchHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold;">Create Property Profile</button>
             </div>`;
         return;
     }
@@ -7315,7 +7304,7 @@ if (!hotel) {
                     <h2 style="margin:5px 0 4px;color:#1e293b;font-size:28px;">Welcome back, ${window.TourSetuDOM.escapeHTML(hotel.hotel_name || 'Hotel Partner')} 👋</h2>
                     <p style="margin:0;color:#64748b;font-size:14px;">Manage your rooms, booking requests, arrivals and customer payments from one place.</p>
                 </div>
-                <button onclick="switchHotelTab('arrivals-payouts')" style="border:0;background:#ff9f43;color:#fff;padding:12px 17px;border-radius:11px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(255,159,67,.22);">📋 View Arrivals & Payouts</button>
+                <button data-ts-csp-click="switchHotelTab('arrivals-payouts')" style="border:0;background:#ff9f43;color:#fff;padding:12px 17px;border-radius:11px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(255,159,67,.22);">📋 View Arrivals & Payouts</button>
             </div>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
                 <div style="background:linear-gradient(135deg,#ffffff,#f0fff7); padding:22px; border-radius:16px; border:1px solid #d7f3e4; box-shadow:0 8px 24px rgba(15,23,42,.06);">
@@ -7328,7 +7317,7 @@ if (!hotel) {
                 <div style="background:linear-gradient(135deg,#ffffff,#fff7ed); padding:22px; border-radius:16px; border:1px solid #fed7aa; box-shadow:0 8px 24px rgba(15,23,42,.06);">
                     <small style="color:#64748b; font-weight:900;">PENDING REQUESTS</small>
                     <h3 style="margin:9px 0 5px;color:#1e293b;font-size:23px;">${pendingCount}</h3>
-                    <small style="color:#2563eb;cursor:pointer;font-weight:800;" onclick="switchHotelTab('inbox')">Open Booking Inbox →</small>
+                    <small style="color:#2563eb;cursor:pointer;font-weight:800;" data-ts-csp-click="switchHotelTab('inbox')">Open Booking Inbox →</small>
                 </div>
                 <div style="background:linear-gradient(135deg,#ffffff,#eff6ff); padding:22px; border-radius:16px; border:1px solid #dbeafe; box-shadow:0 8px 24px rgba(15,23,42,.06);">
                     <small style="color:#64748b; font-weight:900;">CONFIRMED BOOKINGS</small>
@@ -7356,7 +7345,7 @@ if (!hotel) {
             <h2>Property & Room Inventory Setup</h2>
             <div style="background:white; padding:25px; border-radius:15px; margin-top:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
                 <h3>Hotel Details</h3>
-                <form id="hotel-profile-form" onsubmit="saveHotelProfile(event, '${String(hotel ? hotel.hotel_id : '').replace(/[^0-9a-f-]/gi, '')}')" style="display:grid; gap:15px; margin-top:15px;">
+                <form id="hotel-profile-form" data-ts-csp-submit="saveHotelProfile(event, '${String(hotel ? hotel.hotel_id : '').replace(/[^0-9a-f-]/gi, '')}')" style="display:grid; gap:15px; margin-top:15px;">
                     <div>
                         <label style="font-size:13px; font-weight:bold;">Hotel Name</label>
                         <input type="text" id="h-name" value="${window.TourSetuDOM.escapeAttribute(hotel ? hotel.hotel_name : '')}" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:5px;">
@@ -7386,7 +7375,7 @@ if (!hotel) {
                         <h3 style="margin:0;">Room Categories & Inventory Counter</h3>
                         <p style="font-size:12px; color:#666; margin-top:40px;">Real-time stock edits reflect instantly across all customer devices.</p>
                     </div>
-                    <button onclick="showRoomForm('${String(hotel.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="background:#ff9f43; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">+ Add Room Category</button>
+                    <button data-ts-csp-click="showRoomForm('${String(hotel.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="background:#ff9f43; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">+ Add Room Category</button>
                 </div>
                 <div id="room-list" style="display:grid; gap:15px; margin-top:20px;">
                     ${rooms.map(r => `
@@ -7399,7 +7388,7 @@ if (!hotel) {
                                 <div style="text-align:right;">
                                     <small style="display:block; font-weight:bold; color:#555;">Available Stock</small>
                                     <input type="number" value="${r.available_rooms}" min="0" max="${r.total_rooms}" 
-                                           onchange="updateRoomStockOptimistic('${r.room_id}', this.value)" 
+                                           data-ts-csp-change="updateRoomStockOptimistic('${r.room_id}', this.value)" 
                                            style="width:70px; padding:6px; border:2px solid #3498db; border-radius:6px; font-weight:bold; text-align:center;">
                                     <span style="font-size:12px; color:#888;">/ ${r.total_rooms}</span>
                                 </div>
@@ -7444,8 +7433,8 @@ if (!hotel) {
                             </div>
                             ${req.status === 'pending' ? `
                                 <div style="display:flex; gap:10px; margin-top:15px;">
-                                    <button onclick="handleHotelRequestAction('${a(req.request_id)}', 'approve')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Accept Request</button>
-                                    <button onclick="handleHotelRequestAction('${a(req.request_id)}', 'deny')" style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Deny Request</button>
+                                    <button data-ts-csp-click="handleHotelRequestAction('${a(req.request_id)}', 'approve')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Accept Request</button>
+                                    <button data-ts-csp-click="handleHotelRequestAction('${a(req.request_id)}', 'deny')" style="background:#e74c3c; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Deny Request</button>
                                 </div>
                             ` : ''}
                             ${req.status === 'approved' ? `
@@ -7494,7 +7483,7 @@ if (!hotel) {
                     <h2 style="margin:5px 0;color:#1e293b;font-size:28px;">📋 Arrivals & Payouts</h2>
                     <p style="margin:0;color:#64748b;font-size:14px;">Customer se successfully received <b>paid</b> hotel bookings yahan show honge.</p>
                 </div>
-                <button onclick="switchHotelTab('arrivals-payouts')" style="border:1px solid #e2e8f0;background:#fff;color:#334155;padding:10px 15px;border-radius:10px;font-weight:800;cursor:pointer;">↻ Refresh</button>
+                <button data-ts-csp-click="switchHotelTab('arrivals-payouts')" style="border:1px solid #e2e8f0;background:#fff;color:#334155;padding:10px 15px;border-radius:10px;font-weight:800;cursor:pointer;">↻ Refresh</button>
             </div>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:22px;">
@@ -7662,7 +7651,7 @@ window.handleHotelRequestAction = function(requestId, action) {
             <textarea id="h-pay-details" placeholder="e.g., GPay / PhonePe UPI ID: hotelpay@upi or Bank Account details..." style="width:100%; height:90px; padding:10px; border:1px solid #ccc; border-radius:8px; margin:15px 0; box-sizing:border-box;"></textarea>
             <div style="display:flex; gap:10px;">
                 <button type="button" data-request-status="approved" data-request-id="${window.TourSetuDOM.escapeAttribute(requestId)}" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Approval</button>
-                <button onclick="document.getElementById('hotel-action-modal').style.display='none'" style="background:#eee; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Cancel</button>
+                <button data-ts-csp-click="document.getElementById('hotel-action-modal').style.display='none'" style="background:#eee; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Cancel</button>
             </div>
         `;
     } else {
@@ -7672,7 +7661,7 @@ window.handleHotelRequestAction = function(requestId, action) {
             <textarea id="h-cancel-reason" placeholder="Reason for decline (e.g. Sold out, Under maintenance)..." style="width:100%; height:90px; padding:10px; border:1px solid #ccc; border-radius:8px; margin:15px 0; box-sizing:border-box;"></textarea>
             <div style="display:flex; gap:10px;">
                 <button type="button" data-request-status="denied" data-request-id="${window.TourSetuDOM.escapeAttribute(requestId)}" style="background:#e74c3c; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Decline</button>
-                <button onclick="document.getElementById('hotel-action-modal').style.display='none'" style="background:#eee; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Cancel</button>
+                <button data-ts-csp-click="document.getElementById('hotel-action-modal').style.display='none'" style="background:#eee; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Cancel</button>
             </div>
         `;
     }
@@ -8004,7 +7993,7 @@ window.showPackageForm = function(pEncoded = null) {
 
                     <select
                         id="p-state"
-                        onchange="window.updateCities()"
+                        data-ts-csp-change="window.updateCities()"
                         style="
                             width:100%;
                             padding:10px;
@@ -8252,7 +8241,7 @@ window.showPackageForm = function(pEncoded = null) {
 
                 <button
                     id="save-btn"
-                    onclick="window.processSave('${isEdit ? pkg.id : ''}')"
+                    data-ts-csp-click="window.processSave('${isEdit ? pkg.id : ''}')"
                     style="
                         background:#2ecc71;
                         color:white;
@@ -8272,7 +8261,7 @@ window.showPackageForm = function(pEncoded = null) {
                     isEdit
                     ? `
                     <button
-                        onclick="if(confirm('Are you sure you want to delete this package?')) window.deletePackage('${pkg.id}')"
+                        data-ts-csp-click="if(confirm('Are you sure you want to delete this package?')) window.deletePackage('${pkg.id}')"
                         style="
                             background:#e74c3c;
                             color:white;
@@ -8291,7 +8280,7 @@ window.showPackageForm = function(pEncoded = null) {
 
 
                 <button
-                    onclick="window.showTab('packages')"
+                    data-ts-csp-click="window.showTab('packages')"
                     style="
                         background:#eee;
                         flex:1;
@@ -8611,8 +8600,8 @@ window.renderAgencyBookings = function(bookings) {
                 </div>
             ` : `
                 <div style="margin-top:15px; display:flex; gap:10px;">
-                    <button onclick="window.updateBookingStatus('${a(b.id)}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
-                    <button onclick="window.updateBookingStatus('${a(b.id)}', 'rejected')" style="background:#f4f4f4; color:#666; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Decline</button>
+                    <button data-ts-csp-click="window.updateBookingStatus('${a(b.id)}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Accept Request</button>
+                    <button data-ts-csp-click="window.updateBookingStatus('${a(b.id)}', 'rejected')" style="background:#f4f4f4; color:#666; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; flex:1;">Decline</button>
                 </div>
             `)}
         </div>`;
@@ -8678,14 +8667,14 @@ async function renderHotelDashboard(user) {
                     </div>
                     
                     <nav style="display:flex; flex-direction:column; gap:8px;">
-                        <div onclick="window.showHotelTab('overview')" class="hotel-nav-btn" id="nav-overview" style="padding:14px; cursor:pointer; border-radius:10px; background:#2c3e50; font-weight:600; display:flex; align-items:center; gap:10px;">
+                        <div data-ts-csp-click="window.showHotelTab('overview')" class="hotel-nav-btn" id="nav-overview" style="padding:14px; cursor:pointer; border-radius:10px; background:#2c3e50; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>📊</span> Dashboard
                         </div>
-                        <div onclick="showHotelTab('inventory')" class="hotel-nav-btn" id="nav-inventory" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
+                        <div data-ts-csp-click="showHotelTab('inventory')" class="hotel-nav-btn" id="nav-inventory" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>🏨</span> Room Inventory & Lock
                         </div>
                        <div
-    onclick="openHotelBookingRequestSection()"
+    data-ts-csp-click="openHotelBookingRequestSection()"
     class="hotel-nav-btn"
     id="nav-booking-request"
     style="
@@ -8700,10 +8689,10 @@ async function renderHotelDashboard(user) {
 >
     <span>📋</span> Booking Request
 </div>
-                        <div onclick="window.showHotelTab('bookings')" class="hotel-nav-btn" id="nav-bookings" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
+                        <div data-ts-csp-click="window.showHotelTab('bookings')" class="hotel-nav-btn" id="nav-bookings" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; gap:10px;">
                             <span>📋</span> Arrivals & Payouts
                         </div>
-                        <div onclick="showHotelTab('landslide')" class="hotel-nav-btn" id="nav-landslide" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; color:#ff7675; gap:10px;">
+                        <div data-ts-csp-click="showHotelTab('landslide')" class="hotel-nav-btn" id="nav-landslide" style="padding:14px; cursor:pointer; border-radius:10px; font-weight:600; display:flex; align-items:center; color:#ff7675; gap:10px;">
                             <span>⚠️</span> Landslide / Weather Policy
                         </div>
                     </nav>
@@ -8711,10 +8700,10 @@ async function renderHotelDashboard(user) {
 
                 <div style="border-top:1px solid #485460; padding-top:20px;">
                     <div style="font-size:12px; color:#a4b0be; margin-bottom:10px;">Property Status:</div>
-                    <button id="stop-sell-btn" onclick="toggleStopSell('${user.id}')" style="width:100%; padding:10px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; background:#2ecc71; color:white; margin-bottom:15px;">
+                    <button id="stop-sell-btn" data-ts-csp-click="toggleStopSell('${user.id}')" style="width:100%; padding:10px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; background:#2ecc71; color:white; margin-bottom:15px;">
                         🟢 Normal Selling Mode
                     </button>
-                    <button onclick="window.confirmAndExecuteLogout()" style="width:100%; padding:11px; border-radius:10px; border:1px solid rgba(255,118,117,.55); background:rgba(255,118,117,.08); color:#ff7675; font-weight:900; cursor:pointer;">
+                    <button data-ts-csp-click="window.confirmAndExecuteLogout()" style="width:100%; padding:11px; border-radius:10px; border:1px solid rgba(255,118,117,.55); background:rgba(255,118,117,.08); color:#ff7675; font-weight:900; cursor:pointer;">
                         🚪 Logout Desk
                     </button>
                 </div>
@@ -8777,7 +8766,7 @@ async function renderHotelDashboard(user) {
                     <div style="font-size:30px;margin-bottom:8px;">🏨</div>
                     <h2 style="margin:0 0 8px;color:#1f2937;">Hotel Dashboard is ready</h2>
                     <p style="margin:0 0 18px;color:#64748b;line-height:1.6;">Your login is successful, but the overview could not be loaded immediately. Your hotel data was not changed.</p>
-                    <button type="button" onclick="window.showHotelTab('overview')" style="border:0;border-radius:9px;padding:10px 16px;background:#ff9f43;color:#fff;font-weight:800;cursor:pointer;">↻ Open Dashboard</button>
+                    <button type="button" data-ts-csp-click="window.showHotelTab('overview')" style="border:0;border-radius:9px;padding:10px 16px;background:#ff9f43;color:#fff;font-weight:800;cursor:pointer;">↻ Open Dashboard</button>
                 </div>`;
         }
     }
@@ -9161,7 +9150,7 @@ function renderCheckinDesk(container, user) {
                         <span>📷</span> Scan Dynamic QR Pass
                     </h3>
                     <div id="qr-reader-box" style="width:100%; height:260px; background:#000; border-radius:12px; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; color:white;">
-                        <button id="start-cam-btn" onclick="startCameraScanner()" style="background:#ff9f43; color:white; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                        <button id="start-cam-btn" data-ts-csp-click="startCameraScanner()" style="background:#ff9f43; color:white; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer;">
                             Activate Camera
                         </button>
                     </div>
@@ -9182,7 +9171,7 @@ function renderCheckinDesk(container, user) {
                         </div>
                     </div>
 
-                    <button onclick="verifyCheckinByOtp()" style="background:#2ecc71; color:white; border:none; width:100%; padding:16px; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; transition:0.3s;">
+                    <button data-ts-csp-click="verifyCheckinByOtp()" style="background:#2ecc71; color:white; border:none; width:100%; padding:16px; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; transition:0.3s;">
                         VERIFY & CHECK-IN GUEST
                     </button>
                 </div>
@@ -9274,7 +9263,7 @@ async function executeCheckInVerification(bookingId, checkinOtp) {
                     <div style="font-size:50px; color:#e74c3c;">❌</div>
                     <h2 style="color:#e74c3c; margin-top:10px;">Verification Failed</h2>
                     <p style="color:#636e72;">No active booking found matching this QR code or 4-digit OTP for your hotel property.</p>
-                    <button onclick="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close & Retry</button>
+                    <button data-ts-csp-click="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close & Retry</button>
                 </div>
             `;
             return;
@@ -9289,7 +9278,7 @@ async function executeCheckInVerification(bookingId, checkinOtp) {
                     <div style="font-size:50px; color:#f39c12;">⚠️</div>
                     <h2 style="color:#f39c12; margin-top:10px;">Already Checked-In</h2>
                     <p style="color:#636e72;">Guest <b>${window.TourSetuDOM.escapeHTML(booking.customer_email || 'Traveler')}</b> checked in on ${new Date(booking.updated_at).toLocaleString()}.</p>
-                    <button onclick="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close</button>
+                    <button data-ts-csp-click="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close</button>
                 </div>
             `;
             return;
@@ -9301,7 +9290,7 @@ async function executeCheckInVerification(bookingId, checkinOtp) {
                     <div style="font-size:50px; color:#e74c3c;">⛔</div>
                     <h2 style="color:#e74c3c; margin-top:10px;">Unpaid / Held Booking</h2>
                     <p style="color:#636e72;">Booking Status is <b>${window.TourSetuDOM.escapeHTML(String(booking.status || '').toUpperCase())}</b>. Check-in cannot be verified until booking status is PAID.</p>
-                    <button onclick="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close</button>
+                    <button data-ts-csp-click="document.getElementById('hotel-modal').style.display='none'" style="background:#dfe6e9; color:#2d3436; padding:12px 25px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:15px;">Close</button>
                 </div>
             `;
             return;
@@ -9335,7 +9324,7 @@ async function executeCheckInVerification(bookingId, checkinOtp) {
                     <div>💰 <b>Commission Payout:</b> <span style="color:#2ecc71; font-weight:bold;">₹${payoutAmount.toLocaleString('en-IN')} (Released)</span></div>
                 </div>
 
-                <button onclick="document.getElementById('hotel-modal').style.display='none'; showHotelTab('checkin');" style="background:#2ecc71; color:white; padding:12px 30px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px;">
+                <button data-ts-csp-click="document.getElementById('hotel-modal').style.display='none'; showHotelTab('checkin');" style="background:#2ecc71; color:white; padding:12px 30px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px;">
                     DONE & CONTINUE
                 </button>
             </div>
@@ -9358,7 +9347,7 @@ function renderInventoryManager(container, user) {
                     <h1 style="margin:0; color:#1e272e;">🏨 Dynamic Room Inventory & Holds</h1>
                     <p style="color:#7f8c8d; margin-top:5px;">Manage total available rooms and view active 15-minute temporary inventory holds.</p>
                 </div>
-                <button onclick="showHotelTab('inventory')" style="background:#3498db; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                <button data-ts-csp-click="showHotelTab('inventory')" style="background:#3498db; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer;">
                     🔄 Refresh Inventory
                 </button>
             </div>
@@ -9553,7 +9542,7 @@ function handleNewPaidBookingNotification(booking) {
             <div style="background:#e8f8f5; border:2px solid #2ecc71; padding:20px; border-radius:12px; color:#27ae60;">
                 <h3 style="margin:0 0 10px 0;">🔔 NEW PAID BOOKING RECEIVED!</h3>
                 <p style="margin:0;">Booking ID: <b>${window.TourSetuDOM.escapeHTML(booking.booking_id)}</b> | Guest OTP: <b>${window.TourSetuDOM.escapeHTML(booking.checkin_otp)}</b></p>
-                <button onclick="acknowledgeBookingAlert('${window.TourSetuDOM.escapeHTML(booking.booking_id)}')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:12px;">
+                <button data-ts-csp-click="acknowledgeBookingAlert('${window.TourSetuDOM.escapeHTML(booking.booking_id)}')" style="background:#2ecc71; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:12px;">
                     ACKNOWLEDGE RECEIPT (Stop Fallback SMS)
                 </button>
             </div>
@@ -9626,10 +9615,10 @@ function renderLandslideDisputeDesk(container, user) {
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:25px;">
-                    <button onclick="executeLandslideResolution('split_50_50')" style="background:#e67e22; color:white; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                    <button data-ts-csp-click="executeLandslideResolution('split_50_50')" style="background:#e67e22; color:white; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">
                         🤝 Execute 50/50 Risk Split (50% Refund / 50% Hotel Payout)
                     </button>
-                    <button onclick="executeLandslideResolution('reschedule')" style="background:#0984e3; color:white; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">
+                    <button data-ts-csp-click="executeLandslideResolution('reschedule')" style="background:#0984e3; color:white; border:none; padding:15px; border-radius:8px; font-weight:bold; cursor:pointer;">
                         📅 1-Tap Free Season Date Reschedule
                     </button>
                 </div>
@@ -10138,7 +10127,7 @@ async function renderArrivalsAndPayouts(container, user) {
                         ">
 
                             <button
-                                onclick="approveCustomerHotelBooking('${b.id}')"
+                                data-ts-csp-click="approveCustomerHotelBooking('${b.id}')"
                                 style="
                                     flex:1;
                                     background:#2ecc71;
@@ -10154,7 +10143,7 @@ async function renderArrivalsAndPayouts(container, user) {
                             </button>
 
                             <button
-                                onclick="denyCustomerHotelBooking('${b.id}')"
+                                data-ts-csp-click="denyCustomerHotelBooking('${b.id}')"
                                 style="
                                     flex:1;
                                     background:#e74c3c;
@@ -10363,7 +10352,7 @@ async function renderArrivalsAndPayouts(container, user) {
                         ">
 
                             <button
-                                onclick="processAgencyHotelRequestFromArrivals('${req.request_id}','approve')"
+                                data-ts-csp-click="processAgencyHotelRequestFromArrivals('${req.request_id}','approve')"
                                 style="
                                     flex:1;
                                     background:#2ecc71;
@@ -10379,7 +10368,7 @@ async function renderArrivalsAndPayouts(container, user) {
                             </button>
 
                             <button
-                                onclick="processAgencyHotelRequestFromArrivals('${req.request_id}','deny')"
+                                data-ts-csp-click="processAgencyHotelRequestFromArrivals('${req.request_id}','deny')"
                                 style="
                                     flex:1;
                                     background:#e74c3c;
@@ -10535,7 +10524,7 @@ window.showHotelTab = async function(tabName) {
                 <div class="card" style="background:white; padding:40px; border-radius:15px; text-align:center;">
                     <h2>Welcome Partner! 🏨</h2>
                     <p style="color:#666;">Please setup your property details to begin taking room requests.</p>
-                    <button onclick="showHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:10px;">Setup Property Now</button>
+                    <button data-ts-csp-click="showHotelTab('property')" style="background:#ff9f43; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:10px;">Setup Property Now</button>
                 </div>`;
             return;
         }
@@ -10591,7 +10580,7 @@ window.showHotelTab = async function(tabName) {
                     <input type="text" id="h-address" placeholder="Complete Street Address" value="${window.TourSetuDOM.escapeAttribute(hotel?.address || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
-                    <button onclick="saveHotelProfile('${String(hotel?.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                    <button data-ts-csp-click="saveHotelProfile('${String(hotel?.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
                 </div>
 
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
@@ -10603,7 +10592,7 @@ window.showHotelTab = async function(tabName) {
                         <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                         <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
 
-                        <button id="btn-save-room" onclick="saveOrUpdateRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
+                        <button id="btn-save-room" data-ts-csp-click="saveOrUpdateRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
                     `}
                 </div>
             </div>
@@ -10630,7 +10619,7 @@ window.showHotelTab = async function(tabName) {
                 <h2 style="margin:0 0 8px;color:#1f2937;">Hotel Dashboard couldn't load</h2>
                 <p style="margin:0 0 8px;color:#64748b;line-height:1.6;">We couldn't securely load your hotel workspace. Your data has not been changed.</p>
                 <p style="margin:0 0 18px;color:#94a3b8;font-size:12px;">${window.TourSetuDOM.escapeHTML(String(err?.message || 'Temporary loading error.'))}</p>
-                <button type="button" onclick="window.location.reload()" style="border:0;border-radius:9px;padding:10px 16px;background:#ff9f43;color:#fff;font-weight:800;cursor:pointer;">↻ Reload Dashboard</button>
+                <button type="button" data-ts-csp-click="window.location.reload()" style="border:0;border-radius:9px;padding:10px 16px;background:#ff9f43;color:#fff;font-weight:800;cursor:pointer;">↻ Reload Dashboard</button>
             </div>`;
     }
 };
@@ -10803,7 +10792,7 @@ async function loadHotelRooms(hotelId) {
                     <div><strong>${room.available_rooms ?? 0}</strong> / ${room.total_rooms ?? 0}</div>
                 </div>
                 
-                <button onclick="editRoomCategory('${room.id}', '${window.TourSetuDOM.escapeHTML(room.room_type || room.category_name || '')}', '${room.price_per_night || room.price || 0}', '${room.total_rooms || 0}', '${room.available_rooms || 0}')" 
+                <button data-ts-csp-click="editRoomCategory('${room.id}', '${window.TourSetuDOM.escapeHTML(room.room_type || room.category_name || '')}', '${room.price_per_night || room.price || 0}', '${room.total_rooms || 0}', '${room.available_rooms || 0}')" 
                         style="background:#2196F3; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">
                     ✏️ Edit
                 </button>
@@ -11579,7 +11568,7 @@ async function renderArrivalsAndPayouts(container, user) {
                             ">
 
                                 <button
-                                    onclick="
+                                    data-ts-csp-click="
                                         approveCustomerHotelBooking(
                                             '${b.id}'
                                         )
@@ -11600,7 +11589,7 @@ async function renderArrivalsAndPayouts(container, user) {
 
 
                                 <button
-                                    onclick="
+                                    data-ts-csp-click="
                                         denyCustomerHotelBooking(
                                             '${b.id}'
                                         )
@@ -12006,7 +11995,7 @@ async function renderArrivalsAndPayouts(container, user) {
                                 ">
 
                                     <button
-                                        onclick="
+                                        data-ts-csp-click="
                                             processAgencyHotelRequestFromArrivals(
                                                 '${req.request_id}',
                                                 'approve'
@@ -12028,7 +12017,7 @@ async function renderArrivalsAndPayouts(container, user) {
 
 
                                     <button
-                                        onclick="
+                                        data-ts-csp-click="
                                             processAgencyHotelRequestFromArrivals(
                                                 '${req.request_id}',
                                                 'deny'
@@ -12369,7 +12358,7 @@ window.openHotelBookingRequestSection = async function () {
 window.hotelBookingRequestItemHTML = `
 
     <div
-        onclick="openHotelBookingRequestSection()"
+        data-ts-csp-click="openHotelBookingRequestSection()"
         style="
             cursor:pointer;
             background:white;
@@ -13385,11 +13374,9 @@ window.renderHotelBookingRequests =
 
 
                                                 <button
-                                                    onclick="
-                                                        openHotelBookingApproval(
-                                                            '${booking.id}'
-                                                        )
-                                                    "
+                                                    type="button"
+                                                    data-hotel-booking-action="accept"
+                                                    data-booking-id="${window.TourSetuDOM.escapeHTML(String(booking.id))}"
                                                     style="
                                                         flex:1;
                                                         background:#2ecc71;
@@ -13408,11 +13395,9 @@ window.renderHotelBookingRequests =
 
 
                                                 <button
-                                                    onclick="
-                                                        denyHotelBookingRequest(
-                                                            '${booking.id}'
-                                                        )
-                                                    "
+                                                    type="button"
+                                                    data-hotel-booking-action="deny"
+                                                    data-booking-id="${window.TourSetuDOM.escapeHTML(String(booking.id))}"
                                                     style="
                                                         flex:1;
                                                         background:#e74c3c;
@@ -13793,7 +13778,7 @@ window.openHotelBookingApproval =
                 ">
 
                     <button
-                        onclick="
+                        data-ts-csp-click="
                             confirmHotelBookingApproval(
                                 '${bookingId}'
                             )
@@ -13814,7 +13799,7 @@ window.openHotelBookingApproval =
 
 
                     <button
-                        onclick="
+                        data-ts-csp-click="
                             document
                                 .getElementById(
                                     'hotel-booking-approval-modal'
@@ -14298,7 +14283,7 @@ window.renderAgencyHotelBookingRequests = async function () {
                 </div>
 
                 <button
-                    onclick="showTab('hotels')"
+                    data-ts-csp-click="showTab('hotels')"
                     style="
                         background:#f1f2f6;
                         color:#2d3436;
@@ -14930,8 +14915,9 @@ window.renderCustomerRequests=async function(){
  * from the live hotel UI and translated to a strict allow-listed dispatcher.
  */
 (function installHotelDashboardCspBindings() {
-    const hotelRoots = '.hotel-dashboard-shell, #hotel-main-content, #hotel-modal';
+    const hotelRoots = 'body';
     const allowedCalls = new Set([
+        'handleLogout', 'toggleAgencyTermsApprovalButton', 'acceptAgencyPartnerTerms', 'toggleCustomerPrivacyApprovalButton', 'acceptCustomerPrivacyPolicy', 'toggleCustomerTermsApprovalButton', 'acceptCustomerMarketplaceTerms', 'toggleDashboardUtilityMenu', 'copyMyReferralLink', 'shareMyReferralLink', 'openTourSetuLegalPanel', 'handleForgotPassword', 'handleRegisterRoleChange', 'goToAgencyDocumentStep2', 'backToAgencyDocumentStep1', 'handleAuth', 'toggleMode', 'handlePasswordUpdate', 'clearAuthRecoveryUrl', 'renderAuthUI', 'resendConfirmationFromLogin', 'confirmHotelCancellation', 'updateCities', 'processSave', 'deletePackage', 'showTab',
         'showHotelTab', 'switchHotelTab', 'openHotelBookingRequestSection', 'toggleStopSell',
         'confirmAndExecuteLogout', 'executeHotelLogout', 'saveHotelProfile', 'handleSaveHotelProfile', 'saveOrUpdateRoomCategory', 'saveRoomCategory', 'showRoomForm', 'updateRoomStockOptimistic', 'handleHotelRequestAction', 'promptHotelAction',
         'approveCustomerHotelBooking', 'denyCustomerHotelBooking',
@@ -14978,26 +14964,35 @@ window.renderCustomerRequests=async function(){
     function captureInlineHandlers(root) {
         if (!(root instanceof Element) && root !== document) return;
         const nodes = [];
-        if (root instanceof Element && root.matches('[onclick],[onchange],[onsubmit]')) nodes.push(root);
-        root.querySelectorAll?.('[onclick],[onchange],[onsubmit]').forEach(node => nodes.push(node));
+        if (root instanceof Element && root.matches('[data-ts-csp-click],[data-ts-csp-change],[data-ts-csp-submit]')) nodes.push(root);
+        root.querySelectorAll?.('[data-ts-csp-click],[data-ts-csp-change],[data-ts-csp-submit]').forEach(node => nodes.push(node));
         nodes.forEach(node => {
-            if (!node.closest(hotelRoots)) return;
+            
             ['click', 'change', 'submit'].forEach(eventName => {
-                const attr = 'on' + eventName;
+                const attr = 'data-ts-csp-' + eventName;
                 const source = node.getAttribute(attr);
                 if (!source) return;
                 node.removeAttribute(attr);
-                node.dataset.hotelCspEvent = eventName;
-                node.dataset.hotelCspSource = source;
-                if (eventName === 'click') node.setAttribute('type', node.tagName === 'BUTTON' ? (node.getAttribute('type') || 'button') : '');
+                node.dataset.tsCspEvent = eventName;
+                node.dataset.tsCspSource = source;
+                if (eventName === 'click' && node.tagName === 'BUTTON' && !node.hasAttribute('type')) node.setAttribute('type', 'button');
             });
         });
     }
 
     function invokeSource(source, event, element) {
-        const statements = String(source || '').split(';').map(x => x.trim()).filter(Boolean);
+        const rawSource = String(source || '').trim();
+        const deleteMatch = rawSource.match(/^if\s*\(\s*confirm\((['"])([\s\S]*?)\1\)\s*\)\s*(?:window\.)?deletePackage\((['"])([\s\S]*?)\3\)\s*;?$/);
+        if (deleteMatch) { if (window.confirm(deleteMatch[2]) && typeof window.deletePackage === 'function') window.deletePackage(deleteMatch[4]); return; }
+        if (rawSource === 'clearAuthRecoveryUrl();isLoginMode=true;renderAuthUI();') {
+            if (typeof window.clearAuthRecoveryUrl === 'function') window.clearAuthRecoveryUrl();
+            isLoginMode = true;
+            if (typeof window.renderAuthUI === 'function') window.renderAuthUI();
+            return;
+        }
+        const statements = rawSource.split(';').map(x => x.trim()).filter(Boolean);
         for (const statement of statements) {
-            const removeMatch = statement.match(/document\s*\.\s*getElementById\(\s*(['"])([^'"]+)\1\s*\)\s*\.\s*remove\(\)/);
+            const removeMatch = statement.match(/document\s*\.\s*getElementById\(\s*(['"])([^'"]+)\1\s*\)\s*\??\.\s*remove\(\)/);
             if (removeMatch) { document.getElementById(removeMatch[2])?.remove(); continue; }
             const hideMatch = statement.match(/document\s*\.\s*getElementById\(\s*(['"])([^'"]+)\1\s*\)\s*\.\s*style\.display\s*=\s*(['"])([^'"]+)\3/);
             if (hideMatch) { const modal = document.getElementById(hideMatch[2]); if (modal) modal.style.display = hideMatch[4]; continue; }
@@ -15019,9 +15014,77 @@ window.renderCustomerRequests=async function(){
         }
     }
 
-    document.addEventListener('click', event => {
+    document.addEventListener('click', async event => {
         const target = event.target instanceof Element ? event.target : null;
         if (!target) return;
+
+        // Explicit CSP-safe handling for the Hotel Logout confirmation modal.
+        // Buttons are created dynamically, so delegate from document rather than
+        // relying on inline attributes or listeners attached during template parse.
+        const hotelLogoutAction = target.closest('[data-hotel-logout-action]');
+        if (hotelLogoutAction) {
+            event.preventDefault();
+            const overlay = hotelLogoutAction.closest('#hotel-logout-confirmation, #hotel-logout-confirm-modal');
+            if (hotelLogoutAction.dataset.hotelLogoutAction === 'deny') {
+                overlay?.remove();
+                return;
+            }
+            if (hotelLogoutAction.dataset.hotelLogoutAction === 'confirm') {
+                if (hotelLogoutAction.disabled) return;
+                hotelLogoutAction.disabled = true;
+                hotelLogoutAction.textContent = 'LOGGING OUT...';
+                hotelLogoutAction.style.opacity = '.7';
+                try {
+                    if (typeof window.executeHotelLogout === 'function') {
+                        await window.executeHotelLogout();
+                    } else {
+                        const client = getClient();
+                        if (!client) throw new Error('Authentication service is unavailable.');
+                        const { error } = await client.auth.signOut();
+                        if (error) throw error;
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    console.error('Hotel dashboard logout failed:', error);
+                    hotelLogoutAction.disabled = false;
+                    hotelLogoutAction.textContent = 'CONFIRM';
+                    hotelLogoutAction.style.opacity = '1';
+                    alert('Logout failed. Please try again.');
+                }
+                return;
+            }
+        }
+
+        // Hotel booking request cards are rendered asynchronously. Use a
+        // semantic data-action + booking-id contract rather than the generic
+        // legacy attribute parser, so strict CSP cannot swallow these actions.
+        const hotelBookingAction = target.closest('[data-hotel-booking-action][data-booking-id]');
+        if (hotelBookingAction) {
+            event.preventDefault();
+            if (hotelBookingAction.disabled) return;
+            const bookingId = hotelBookingAction.dataset.bookingId;
+            const action = hotelBookingAction.dataset.hotelBookingAction;
+            const handler = action === 'accept'
+                ? window.openHotelBookingApproval
+                : action === 'deny'
+                    ? window.denyHotelBookingRequest
+                    : null;
+            if (!bookingId || typeof handler !== 'function') {
+                console.error('Hotel booking action is unavailable:', action);
+                return;
+            }
+            hotelBookingAction.disabled = true;
+            try {
+                await handler(bookingId);
+            } catch (error) {
+                console.error('Hotel booking action failed:', error);
+                alert('Booking action failed. Please try again.');
+            } finally {
+                if (hotelBookingAction.isConnected) hotelBookingAction.disabled = false;
+            }
+            return;
+        }
+
         const tabButton = target.closest('[data-hotel-tab], .hotel-nav-btn');
         if (tabButton && tabButton.closest('.hotel-dashboard-shell')) {
             event.preventDefault();
@@ -15053,23 +15116,23 @@ window.renderCustomerRequests=async function(){
             } catch (error) { console.error('Hotel dashboard action failed:', error); }
             return;
         }
-        const legacy = target.closest('[data-hotel-csp-event="click"]');
-        if (legacy && legacy.closest(hotelRoots)) {
+        const legacy = target.closest('[data-ts-csp-event="click"]');
+        if (legacy) {
             event.preventDefault();
-            invokeSource(legacy.dataset.hotelCspSource, event, legacy);
+            invokeSource(legacy.dataset.tsCspSource, event, legacy);
         }
     });
 
     document.addEventListener('change', event => {
-        const node = event.target instanceof Element ? event.target.closest('[data-hotel-csp-event="change"]') : null;
-        if (node && node.closest(hotelRoots)) invokeSource(node.dataset.hotelCspSource, event, node);
+        const node = event.target instanceof Element ? event.target.closest('[data-ts-csp-event="change"]') : null;
+        if (node) invokeSource(node.dataset.tsCspSource, event, node);
     });
 
     document.addEventListener('submit', event => {
-        const node = event.target instanceof Element ? event.target.closest('[data-hotel-csp-event="submit"]') : null;
-        if (node && node.closest(hotelRoots)) {
+        const node = event.target instanceof Element ? event.target.closest('[data-ts-csp-event="submit"]') : null;
+        if (node) {
             event.preventDefault();
-            invokeSource(node.dataset.hotelCspSource, event, node);
+            invokeSource(node.dataset.tsCspSource, event, node);
         }
     });
 
