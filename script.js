@@ -1603,7 +1603,7 @@ window.toggleCustomerSearchType = function() {
 
     if (selectedType === 'hotel') {
         if (button) button.textContent = 'FIND HOTELS';
-        if (resultTitle) resultTitle.innerText = 'Registered Hotels Inventory';
+        if (resultTitle) resultTitle.innerText = 'Registered Hotels';
         if (resultSubtitle) resultSubtitle.innerText = 'Search registered hotel rooms by city; nearby cities appear when the selected city has no inventory.';
         void loadCustomerHotelPackages(city, state, destination);
     } else if (selectedType === 'taxi') {
