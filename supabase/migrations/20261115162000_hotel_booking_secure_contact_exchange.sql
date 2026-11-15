@@ -36,7 +36,11 @@ as $function$
 declare
     phone_digits text;
 begin
-    phone_digits := regexp_replace(coalesce(new.customer_phone, ''), '[^0-9]', '', 'g');
+    if nullif(btrim(new.customer_phone), '') is null then
+        return new;
+    end if;
+
+    phone_digits := regexp_replace(new.customer_phone, '[^0-9]', '', 'g');
     if length(phone_digits) < 8 or length(phone_digits) > 15 then
         raise exception 'A valid customer phone number (8–15 digits) is required';
     end if;
