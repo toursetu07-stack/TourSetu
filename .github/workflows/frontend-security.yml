@@ -171,7 +171,7 @@ jobs:
               "X-Frame-Options: DENY",
               "X-Content-Type-Options: nosniff",
               "Referrer-Policy: strict-origin-when-cross-origin",
-              "Content-Security-Policy-Report-Only:",
+              "Content-Security-Policy:",
               "script-src-attr 'none'",
               "object-src 'none'",
               "frame-ancestors 'none'",
@@ -194,7 +194,7 @@ jobs:
           if missing:
               raise SystemExit("Security regression: upload hardening missing: " + ", ".join(missing))
 
-          print("OK: security headers, CSP report-only controls, and upload validation are present.")
+          print("OK: security headers, enforced CSP controls, and upload validation are present.")
 
       - name: Check externalized OneSignal bootstrap
         shell: python

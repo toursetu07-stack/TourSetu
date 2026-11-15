@@ -90,26 +90,5 @@
 </div>
 <script src="/supabase-config"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script><script src="toursetu-shared-data.js?v=2026-11-14-shared-master-data"></script>
 <script src="driver-legal.js?v=1"></script><script src="driver-portal.js?v=97-auth-email-recovery"></script>
-<script>
-/* Independent destination-list fallback: no imports or Supabase dependency. */
-(function(){
-  var destinations=["Kedarnath Temple","Badrinath Temple","Gangotri Temple","Yamunotri Temple","Tungnath Temple","Rudranath Temple","Madhyamaheshwar Temple","Kalpeshwar Temple","Hemkund Sahib","Jageshwar Dham","Patal Bhuvaneshwar","Neelkanth Mahadev Temple","Dhari Devi Temple","Surkanda Devi Temple","Chitai Golu Devta Temple","Mansa Devi Temple (Haridwar)","Chandi Devi Temple (Haridwar)","Kainchi Dham","Baijnath Temple (Bageshwar)","Katarmal Sun Temple","Narsingh Temple (Joshimath)"];
-  function renderTourSetuDestinations(){
-    var list=document.getElementById('vehicle-tour-destination-list');
-    if(!list)return;
-    if(list.querySelector('input[name="vehicle-tour-destination"]'))return;
-    list.replaceChildren();
-    destinations.forEach(function(name){
-      var label=document.createElement('label');
-      label.className='destination-option';
-      var input=document.createElement('input');
-      input.type='radio';input.name='vehicle-tour-destination';input.value=name;
-      var span=document.createElement('span');span.textContent=name;
-      label.append(input,span);list.append(label);
-    });
-    list.dataset.renderedCount=String(destinations.length);
-  }
-  renderTourSetuDestinations();
-})();
-</script>
+<script src="/driver-destinations-fallback-radio.js?v=2026-11-15" defer></script>
 </body></html>
