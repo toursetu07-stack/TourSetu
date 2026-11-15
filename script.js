@@ -14721,7 +14721,7 @@ async function renderTaxiCustomerRequests(){
       .eq('customer_id',user.id).order('created_at',{ascending:false});
     if(error){console.error('Taxi requests load failed',error);renderCustomerPackageMessage(container,'Unable to load taxi requests','Please refresh and try again.');return;}
     if(!data?.length){renderCustomerPackageMessage(container,'No taxi requests yet','Choose Independent Taxis and book a vehicle to get started.');return;}
-    const contactResults=await Promise.all(data.map(async r=>{const {data:contactData,error:contactError}=await client.rpc('get_driver_service_request_contacts',{p_request_id:r.id});if(contactError){console.warn('Taxi contact status unavailable:',contactError);return [r.id,{is_shared:false}];}return [r.id,Array.isArray(contactData)?contactData[0]:(contactData||{is_paid:false})];}));
+    const contactResults=await Promise.all(data.map(async r=>{const {data:contactData,error:contactError}=await client.rpc('get_driver_service_request_contacts',{p_request_id:r.id});if(contactError){console.warn('Taxi contact status unavailable:',contactError);return [r.id,{is_shared:false}];}return [r.id,Array.isArray(contactData)?contactData[0]:(contactData||{is_shared:false})];}));
     const contactByRequest=new Map(contactResults);
     container.replaceChildren();
     data.forEach(r=>{
@@ -14731,7 +14731,7 @@ async function renderTaxiCustomerRequests(){
         const badge=document.createElement('span');badge.textContent=status==='pending'?'Waiting for taxi approval':status==='approved'?'Taxi Approved':status==='denied'?'Denied':status==='cancelled'?'Cancelled':status.toUpperCase();
         badge.style.cssText='display:inline-block;padding:6px 11px;border-radius:20px;background:'+(status==='approved'?'#e8f7ee':status==='denied'?'#ffe9e9':status==='cancelled'?'#eef1f3':'#fff4df')+';color:'+(status==='approved'?'#187443':status==='denied'?'#b42318':status==='cancelled'?'#475467':'#9a5a1c')+';font-size:11px;font-weight:900;';
         const details=document.createElement('p');details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Date: '+(t.travel_date||'—')+' · Driver: '+(t.driver_name||'Driver')+' · City: '+(t.driver_city||'—')+' · Fare estimate: ₹'+Number(t.fare_estimate||0).toLocaleString('en-IN');details.style.cssText='color:#64748b;font-size:13px;line-height:1.7;';
-        const contactLine=document.createElement('p');contactLine.textContent=contacts.is_shared&&contacts.driver_phone?'Driver Contact: '+contacts.driver_phone:'Contact: Not shared';contactLine.style.cssText='margin:0 0 14px;color:'+(contacts.is_paid&&contacts.driver_phone?'#166534':'#92400e')+';font-size:13px;font-weight:800;';
+        const contactLine=document.createElement('p');contactLine.textContent=contacts.is_shared&&contacts.driver_phone?'Driver Contact: '+contacts.driver_phone:'Contact: Not shared';contactLine.style.cssText='margin:0 0 14px;color:'+(contacts.is_shared&&contacts.driver_phone?'#166534':'#92400e')+';font-size:13px;font-weight:800;';
         card.append(h,badge,details,contactLine);
         const actions=document.createElement('div');actions.style.cssText='display:flex;gap:9px;flex-wrap:wrap;';
         if(status==='pending'||status==='approved'){
