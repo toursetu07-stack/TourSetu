@@ -830,6 +830,7 @@ function toggleBusinessFields() {
    3. AUTH & DASHBOARD LOGIC
    ========================================= */
 
+const TOURSETU_AUTH_REDIRECT_URL = 'https://toursetu.in/signin';
 let authStateListenerStarted = false;
 
 function isPasswordRecoveryUrl() {
@@ -1111,10 +1112,10 @@ async function handleForgotPassword() {
     if (!client) { if (status) status.innerText = '❌ Supabase not initialized'; return; }
     if (status) status.innerText = '⏳ Sending password reset email...';
     try {
-        const redirectTo = window.location.origin + window.location.pathname;
+        const redirectTo = TOURSETU_AUTH_REDIRECT_URL;
         const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
         if (error) throw error;
-        if (status) status.innerHTML = '<div style="background:#eafaf1;padding:14px;border-radius:10px;border:1px solid #b7ebc6;color:#1e7e34;text-align:left;"><strong>📩 Password reset email sent</strong><br>Please check <b>'+window.TourSetuDOM.escapeHTML(email)+'</b> and open the reset link.</div>';
+        if (status) status.innerHTML = '<div style="background:#eafaf1;padding:14px;border-radius:10px;border:1px solid #b7ebc6;color:#1e7e34;text-align:left;"><strong>📩 Password reset email sent</strong><br>If an account exists for <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>, a password reset link has been sent. Please check your inbox.</div>';
     } catch (err) {
         console.error('Password reset request error:', err);
         if (status) status.innerText = '❌ ' + (err?.message || 'Could not send password reset email.');
@@ -1127,10 +1128,10 @@ function renderPasswordResetUI() {
     app.innerHTML = `
       <div class="card" style="max-width:520px;margin:50px auto;padding:32px;background:white;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.1);border-radius:15px;font-family:Inter,sans-serif;">
         <h1 style="color:#ff9f43;margin-bottom:8px;">TourSetu</h1>
-        <h2 style="margin-bottom:8px;">Reset Password</h2>
+        <h2 style="margin-bottom:8px;">Update New Password</h2>
         <p style="color:#636e72;font-size:13px;line-height:1.5;">Enter your new password below. This will become the password for this TourSetu account.</p>
-        <input type="password" id="new-password" placeholder="New Password" autocomplete="new-password" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-        <input type="password" id="confirm-new-password" placeholder="Confirm New Password" autocomplete="new-password" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <input type="password" id="new-password" placeholder="New Password" autocomplete="new-password" minlength="8" required aria-label="New Password" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <input type="password" id="confirm-new-password" placeholder="Confirm New Password" autocomplete="new-password" minlength="8" required aria-label="Confirm New Password" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         <button type="button" onclick="handlePasswordUpdate()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:12px;font-size:16px;">Set New Password</button>
         <button type="button" onclick="clearAuthRecoveryUrl();isLoginMode=true;renderAuthUI();" style="background:#f1f2f6;color:#2d3436;width:100%;padding:12px;border-radius:8px;font-weight:700;cursor:pointer;border:none;margin-top:10px;">Back to Login</button>
         <div id="status" style="margin-top:15px;font-size:13px;font-weight:bold;"></div>
@@ -1141,7 +1142,7 @@ async function handlePasswordUpdate() {
     const status = document.getElementById('status');
     const newPassword = document.getElementById('new-password')?.value || '';
     const confirmPassword = document.getElementById('confirm-new-password')?.value || '';
-    if (newPassword.length < 6) { if (status) status.innerText = '⚠️ Password must be at least 6 characters.'; return; }
+    if (newPassword.length < 8) { if (status) status.innerText = '⚠️ Password must be at least 8 characters.'; return; }
     if (newPassword !== confirmPassword) { if (status) status.innerText = '⚠️ New password and confirm password do not match.'; return; }
 
     const client = getClient();
@@ -1169,7 +1170,7 @@ async function handlePasswordUpdate() {
 async function resendConfirmationEmail(email) {
     const client = getClient();
     if (!client || !email) throw new Error('Please enter your email address.');
-    const redirectTo = window.location.origin + window.location.pathname;
+    const redirectTo = TOURSETU_AUTH_REDIRECT_URL;
     const { error } = await client.auth.resend({
         type: 'signup',
         email,
@@ -1440,15 +1441,15 @@ async function handleAuth(){
         const metadata={role,is_approved:role==='customer'};
         if(role==='agency'){metadata.gst=document.getElementById('gst-no')?.value.trim()||'';metadata.reg_no=document.getElementById('biz-reg')?.value.trim()||'';metadata.phone=document.getElementById('biz-phone')?.value.trim()||'';metadata.license='';}
         else if(role==='hotel'){metadata.phone=document.getElementById('hotel-phone')?.value.trim()||'';metadata.business_name='';metadata.gst='';metadata.reg_no='';metadata.license='';}
-        const redirectUrl=window.location.origin+window.location.pathname;
+        const redirectUrl=TOURSETU_AUTH_REDIRECT_URL;
         const {data,error}=await client.auth.signUp({email,password,options:{data:metadata,emailRedirectTo:redirectUrl}});if(error)throw error;if(!data?.user)throw new Error('Account could not be created.');
         if(role==='agency'){
-            if(!data.session){if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Supabase has email confirmation enabled, so documents can only be uploaded after the account is signed in. Please confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>, then login once to complete the KYC upload.<br><br><small>The agency request is already created in Supabase with <b>pending</b> status.</small></div>';return;}
+            if(!data.session){if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Verification link aapke email par bhej diya gaya hai. Kripya email check karke account verify karein. Please confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>, then login once to complete the KYC upload.<br><br><small>The agency request is already created in Supabase with <b>pending</b> status.</small></div>';return;}
             await submitAgencyKYC(data.user);if(status)status.innerText='✅ Registration submitted. Opening your Agency Dashboard...';await showDashboard(data.user);return;
         }
         if(role==='hotel'){
             if(!data.session){
-                if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Supabase email confirmation is enabled, so the Hotel Dashboard will open after you confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b> and login.<br><br><small>Your hotel verification request is already saved as <b>pending</b>. The documents are optional.</small></div>';
+                if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Verification link aapke email par bhej diya gaya hai. Kripya email check karke account verify karein. The Hotel Dashboard will open after you confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b> and login.<br><br><small>Your hotel verification request is already saved as <b>pending</b>. The documents are optional.</small></div>';
                 return;
             }
             await submitHotelKYC(data.user);
@@ -1456,7 +1457,7 @@ async function handleAuth(){
             await showDashboard(data.user);
             return;
         }
-        if(data?.session)await showDashboard(data.user);else if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>We sent a confirmation link to <b>'+email+'</b>. Please open that email, click the confirmation link, and then login with your email and password.<br><br><small>This applies to Traveler, Travel Agency and Hotel Partner accounts.</small></div>';
+        if(data?.session)await showDashboard(data.user);else if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Verification link aapke email par bhej diya gaya hai. Kripya email check karke account verify karein.<br><br><small>We sent the link to <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>. After verification, return here and log in.</small></div>';
     }catch(err){console.error('Auth/KYC error:',err);if(status)status.innerText='❌ '+(err?.message||err);}
     finally{if(btn)btn.disabled=false;}
 }
@@ -7062,7 +7063,8 @@ async function registerHotelUser(email, password, phone, businessName) {
                     role: 'hotel',
                     phone: phone,
                     business_name: businessName
-                }
+                },
+                emailRedirectTo: TOURSETU_AUTH_REDIRECT_URL
             }
         });
 
