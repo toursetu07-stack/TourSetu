@@ -3928,11 +3928,22 @@ function renderPackageCards(data, isFiltered) {
         const media = document.createElement('div');
         media.className = 'marketplace-card-media marketplace-package-media';
         media.setAttribute('aria-hidden', 'true');
-        const mediaIcon = document.createElement('span');
-        mediaIcon.textContent = '⛰️';
-        media.appendChild(mediaIcon);
+        const packageImage = document.createElement('img');
+        packageImage.src = 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1200&q=80';
+        packageImage.alt = 'Scenic travel destination for ' + String(packageData.title || 'tour package');
+        packageImage.loading = 'lazy';
+        packageImage.decoding = 'async';
+        packageImage.referrerPolicy = 'no-referrer';
+        packageImage.addEventListener('error', () => {
+            packageImage.remove();
+            const fallback = document.createElement('span');
+            fallback.textContent = '⛰️';
+            fallback.setAttribute('aria-hidden', 'true');
+            media.appendChild(fallback);
+        }, { once: true });
+        media.appendChild(packageImage);
         const mediaCaption = document.createElement('span');
-        mediaCaption.textContent = String(destinations || packageData.starting_location || 'Uttarakhand journey');
+        mediaCaption.textContent = String(destinations !== 'N/A' ? destinations : (packageData.starting_location || 'Uttarakhand journey'));
         media.appendChild(mediaCaption);
 
         const content = document.createElement('div');
