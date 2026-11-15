@@ -3890,6 +3890,8 @@ function renderPackageCards(data, isFiltered) {
     const container = document.getElementById('customer-pkg-list');
     if (!container) return;
 
+    // Explicitly identify the agency-package view so its layout cannot inherit taxi/tab styles.
+    container.dataset.view = 'agency-packages';
     ensureCustomerPackageCardDelegation(container);
 
     if (!Array.isArray(data) || data.length === 0) {
