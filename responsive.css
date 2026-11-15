@@ -543,3 +543,140 @@ button, a, [role="button"], input[type="checkbox"], input[type="radio"], select 
     padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 }
+
+
+/* Customer marketplace: consistent image-led cards across Packages, Hotels and Taxis. */
+#customer-pkg-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    align-items: stretch;
+    gap: 22px;
+}
+#customer-pkg-list > .marketplace-card,
+#customer-pkg-list > .result-card {
+    min-width: 0;
+    height: 100%;
+}
+#customer-pkg-list .marketplace-card-media {
+    height: 190px;
+    min-height: 190px;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: linear-gradient(135deg, #dbeafe 0%, #e7f7ef 52%, #fff0df 100%);
+    color: #176b58;
+}
+#customer-pkg-list .marketplace-card-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+#customer-pkg-list .marketplace-package-media {
+    flex-direction: column;
+    gap: 8px;
+    background:
+        radial-gradient(circle at 82% 18%, rgba(255,255,255,.8) 0 7%, transparent 7.5%),
+        linear-gradient(145deg, #dceef5 0%, #e9f5e9 48%, #ffe7c9 100%);
+}
+#customer-pkg-list .marketplace-package-media span:first-child {
+    font-size: 54px;
+    filter: drop-shadow(0 8px 10px rgba(32,76,69,.15));
+}
+#customer-pkg-list .marketplace-package-media span:last-child {
+    max-width: 90%;
+    color: #244d49;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: center;
+    text-shadow: 0 1px 0 rgba(255,255,255,.7);
+}
+#customer-pkg-list .marketplace-card-content {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+#customer-pkg-list .result-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #e7edf0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 24px rgba(20,45,60,.07) !important;
+}
+#customer-pkg-list .result-card > .marketplace-card-content,
+#customer-pkg-list .result-card > div:not(.marketplace-card-media) {
+    min-width: 0;
+}
+#customer-pkg-list .result-card button {
+    min-height: 46px;
+}
+.marketplace-confirmation-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100020;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 20px;
+    box-sizing: border-box;
+    background: rgba(15, 23, 42, .72);
+    backdrop-filter: blur(5px);
+}
+.marketplace-confirmation-card {
+    width: min(520px, 100%);
+    max-height: min(90vh, 760px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: clamp(22px, 4vw, 32px);
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 24px 80px rgba(15,23,42,.28);
+    color: #183548;
+}
+.marketplace-confirmation-icon {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #e8f7ee;
+    color: #16834a;
+    font-size: 30px;
+    font-weight: 900;
+}
+.marketplace-confirmation-card h2 { margin: 18px 0 8px; font-size: 22px; }
+.marketplace-confirmation-card > p { color: #64748b; line-height: 1.6; }
+.marketplace-confirmation-details { margin: 20px 0; display: grid; gap: 0; }
+.marketplace-confirmation-details > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 11px 0;
+    border-bottom: 1px solid #edf1f4;
+}
+.marketplace-confirmation-details dt { color: #64748b; font-size: 13px; }
+.marketplace-confirmation-details dd { margin: 0; text-align: right; font-size: 13px; font-weight: 800; overflow-wrap: anywhere; }
+.marketplace-confirmation-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.marketplace-confirmation-actions button {
+    flex: 1 1 160px;
+    min-height: 46px;
+    padding: 11px 16px;
+    border: 0;
+    border-radius: 11px;
+    background: #087f5b;
+    color: #fff;
+    font-weight: 800;
+}
+.marketplace-confirmation-actions button.secondary {
+    background: #f1f5f9;
+    color: #34495a;
+}
+@media (max-width: 560px) {
+    #customer-pkg-list { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    #customer-pkg-list .marketplace-card-media { height: 180px; min-height: 180px; }
+    .marketplace-confirmation-details > div { align-items: flex-start; }
+}
