@@ -108,6 +108,16 @@ function getCityState(city) {
     return '';
 }
 
+function renderNearbyFallbackNotice(container, selectedCity) {
+    if (!container || !selectedCity) return;
+    const notice = document.createElement('div');
+    notice.className = 'toursetu-nearby-fallback-notice';
+    notice.setAttribute('role', 'status');
+    notice.style.cssText = 'grid-column:1/-1;padding:13px 16px;margin:0 0 14px;background:#eef6ff;border:1px solid #cfe2ff;border-radius:12px;color:#24476b;font-size:13px;line-height:1.5;';
+    notice.textContent = 'No direct listings found in ' + String(selectedCity) + '. Showing nearest available options from nearby cities.';
+    container.prepend(notice);
+}
+
 function getCityProximityScore(state, selectedCity, operatorCity) {
     const selected = normalizeMatchCity(selectedCity);
     const operator = normalizeMatchCity(operatorCity);
@@ -1583,12 +1593,12 @@ window.toggleCustomerSearchType = function() {
         if (button) button.textContent = 'FIND HOTELS';
         if (resultTitle) resultTitle.innerText = 'Registered Hotels Inventory';
         if (resultSubtitle) resultSubtitle.innerText = 'Search registered hotel rooms by city; nearby cities appear when the selected city has no inventory.';
-        void loadCustomerHotelPackages(city, state);
+        void loadCustomerHotelPackages(city, state, destination);
     } else if (selectedType === 'taxi') {
         if (button) button.textContent = 'FIND TAXIS';
         if (resultTitle) resultTitle.innerText = 'Independent Taxi Listings';
         if (resultSubtitle) resultSubtitle.innerText = 'Book directly with independent taxi drivers';
-        void loadCustomerTaxiListings(city, destination);
+        void loadCustomerTaxiListings(city, destination, state);
     } else {
         if (button) button.textContent = 'FIND AGENCIES';
         if (resultTitle) resultTitle.innerText = 'Popular Packages';
@@ -1601,9 +1611,9 @@ window.toggleCustomerSearchType = function() {
 /* =========================================
    Fetch & Render Registered Hotels Stock (Same Detailed View as Agency Dashboard)
    ========================================= */
-window.loadCustomerHotelPackages = async function() {
-    const selectedCity = String(arguments[0] || '').trim();
-    const selectedState = String(arguments[1] || '').trim();
+window.loadCustomerHotelPackages = async function(cityFilter='', stateFilter='', destinationFilter='') {
+    const selectedCity = String(cityFilter || '').trim();
+    const selectedState = String(stateFilter || '').trim();
     const container = document.getElementById('customer-pkg-list');
     if (!container) return;
 
@@ -1636,41 +1646,56 @@ window.loadCustomerHotelPackages = async function() {
         if (error) throw error;
 
         const inventory = Array.isArray(data) ? data : [];
-        let matchingInventory = inventory;
-        let usedNearbyFallback = false;
+        const hotelIds = [...new Set(inventory.map(item => item.hotel_id).filter(Boolean))];
+        let hotelMetaById = new Map();
+        if (hotelIds.length) {
+            const { data: hotelMeta, error: hotelMetaError } = await client
+                .from('hotels')
+                .select('hotel_id,city,nearest_temple')
+                .in('hotel_id', hotelIds);
+            if (hotelMetaError) throw hotelMetaError;
+            hotelMetaById = new Map((hotelMeta || []).map(hotel => [String(hotel.hotel_id), hotel]));
+        }
+        const enrichedInventory = inventory.map(item => ({
+            ...item,
+            hotels: hotelMetaById.get(String(item.hotel_id || '')) || item.hotels || {}
+        }));
         const normalizedCity = normalizeMatchCity(selectedCity);
+        const normalizedDestination = normalizeMatchCity(destinationFilter || '');
+        const resolvedState = selectedState || getCityState(selectedCity);
+        const destinationMatches = item => {
+            if (!normalizedDestination) return true;
+            const temple = item.hotels?.nearest_temple || item.nearest_temple || '';
+            return normalizeMatchCity(temple) === normalizedDestination;
+        };
+        let matchingInventory = enrichedInventory.filter(destinationMatches);
+        let usedNearbyFallback = false;
 
         if (normalizedCity) {
-            const exactMatches = inventory.filter(item =>
+            const exactMatches = matchingInventory.filter(item =>
                 normalizeMatchCity(item.city || item.hotels?.city || '') === normalizedCity
             );
-
             if (exactMatches.length) {
                 matchingInventory = exactMatches;
             } else {
-                const resolvedState = selectedState || getCityState(selectedCity);
-                const nearbyMatches = inventory
+                const nearbyMatches = matchingInventory
                     .filter(item => {
                         const hotelCity = String(item.city || item.hotels?.city || '').trim();
                         return hotelCity && resolvedState && getCityState(hotelCity) === resolvedState;
                     })
                     .map(item => {
                         const hotelCity = String(item.city || item.hotels?.city || '').trim();
-                        return {
-                            item,
-                            score: getCityProximityScore(
-                                resolvedState,
-                                selectedCity,
-                                hotelCity
-                            )
-                        };
+                        return { item, score: getCityProximityScore(resolvedState, selectedCity, hotelCity) };
                     })
                     .filter(entry => Number.isFinite(entry.score))
                     .sort((a, b) => a.score - b.score);
-
                 matchingInventory = nearbyMatches.map(entry => entry.item);
                 usedNearbyFallback = matchingInventory.length > 0;
             }
+        } else if (selectedState) {
+            matchingInventory = matchingInventory.filter(item =>
+                getCityState(item.city || item.hotels?.city || '') === selectedState
+            );
         }
 
         if (!matchingInventory.length) {
@@ -1688,6 +1713,7 @@ window.loadCustomerHotelPackages = async function() {
         );
 
         container.replaceChildren();
+        if (usedNearbyFallback) renderNearbyFallbackNotice(container, selectedCity);
 
         matchingInventory.forEach(item => {
             const price = Number(item.price_per_night || item.price || 0);
@@ -4078,11 +4104,11 @@ window.searchMatchedAgencies = async function() {
 
     const selectedSearchType=document.querySelector('input[name="search-type"]:checked')?.value||'agency';
     if(selectedSearchType==='hotel'){
-        await loadCustomerHotelPackages(start, state);
+        await loadCustomerHotelPackages(start, state, dest);
         return;
     }
     if(selectedSearchType==='taxi'){
-        await loadCustomerTaxiListings(start, dest);
+        await loadCustomerTaxiListings(start, dest, state);
         return;
     }
 
@@ -4194,6 +4220,7 @@ window.searchMatchedAgencies = async function() {
             });
 
         renderPackageCards(ranked, true);
+        renderNearbyFallbackNotice(container, start);
     } catch (error) {
         console.error('Operator search failed:', error);
         if (requestId === customerOperatorSearchRequestId) {
@@ -14652,7 +14679,7 @@ window.renderAgencyHotelBookingRequests = async function () {
 /* =========================================================================
    INDEPENDENT TAXI MARKETPLACE — public safe view + driver/customer sync
    ========================================================================= */
-window.loadCustomerTaxiListings = async function(cityFilter='', destinationFilter='') {
+window.loadCustomerTaxiListings = async function(cityFilter='', destinationFilter='', stateFilter='') {
     const container=document.getElementById('customer-pkg-list');
     if(!container)return;
     container.dataset.view='taxi-listings';
@@ -14665,17 +14692,33 @@ window.loadCustomerTaxiListings = async function(cityFilter='', destinationFilte
         if(error)throw error;
         let rows=Array.isArray(data)?data:[];
         const city=String(cityFilter||'').trim();
-        if(city)rows=rows.filter(v=>normalizeMatchCity(v.starting_location||'')===normalizeMatchCity(city));
+        const state=String(stateFilter||'').trim() || getCityState(city);
         const destination=String(destinationFilter||'').trim();
         if(destination)rows=rows.filter(v=>{
             const saved=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);
             return saved.some(item=>normalizeMatchCity(item)===normalizeMatchCity(destination));
         });
+        let usedNearbyFallback=false;
+        if(city){
+            const exact=rows.filter(v=>normalizeMatchCity(v.starting_location||'')===normalizeMatchCity(city));
+            if(exact.length){
+                rows=exact;
+            } else {
+                rows=rows.filter(v=>state && getCityState(v.starting_location||'')===state)
+                    .map(v=>({...v,_nearbyScore:getCityProximityScore(state,city,v.starting_location||'')}))
+                    .filter(v=>Number.isFinite(v._nearbyScore))
+                    .sort((a,b)=>a._nearbyScore-b._nearbyScore);
+                usedNearbyFallback=rows.length>0;
+            }
+        } else if(state) {
+            rows=rows.filter(v=>getCityState(v.starting_location||'')===state);
+        }
         container.replaceChildren();
         if(!rows.length){
-            renderCustomerPackageMessage(container,'No independent taxis found',city?'No taxi is listed from '+city+(destination?' for '+destination:'')+'.':'No saved independent taxi vehicles are available right now.');
+            renderCustomerPackageMessage(container,'No independent taxis found',city?'No taxi is listed from '+city+(destination?' for '+destination:'')+' or nearby cities.':'No saved independent taxi vehicles are available right now.');
             return;
         }
+        if(usedNearbyFallback)renderNearbyFallbackNotice(container,city);
         rows.forEach(v=>{
             const card=document.createElement('article');
             card.className='card result-card toursetu-package-card';
