@@ -7214,8 +7214,8 @@ window.confirmAndExecuteLogout = function() {
             <h2 style="margin:0 0 8px;color:#1e293b;font-size:22px;">Logout from Hotel Dashboard?</h2>
             <p style="margin:0 0 24px;color:#64748b;line-height:1.55;font-size:14px;">Are you sure you want to logout? Your current dashboard session will be ended.</p>
             <div style="display:flex;gap:12px;">
-                <button type="button" data-ts-csp-click="document.getElementById('hotel-logout-confirmation')?.remove()" style="flex:1;padding:13px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer;">DENY</button>
-                <button type="button" data-ts-csp-click="executeHotelLogout()" style="flex:1;padding:13px 16px;border-radius:10px;border:0;background:#e74c3c;color:#fff;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(231,76,60,.25);">CONFIRM</button>
+                <button type="button" data-hotel-logout-action="deny" style="flex:1;padding:13px 16px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-weight:800;cursor:pointer;">DENY</button>
+                <button type="button" data-hotel-logout-action="confirm" style="flex:1;padding:13px 16px;border-radius:10px;border:0;background:#e74c3c;color:#fff;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(231,76,60,.25);">CONFIRM</button>
             </div>
         </div>
     `;
@@ -13374,11 +13374,9 @@ window.renderHotelBookingRequests =
 
 
                                                 <button
-                                                    data-ts-csp-click="
-                                                        openHotelBookingApproval(
-                                                            '${booking.id}'
-                                                        )
-                                                    "
+                                                    type="button"
+                                                    data-hotel-booking-action="accept"
+                                                    data-booking-id="${window.TourSetuDOM.escapeHTML(String(booking.id))}"
                                                     style="
                                                         flex:1;
                                                         background:#2ecc71;
@@ -13397,11 +13395,9 @@ window.renderHotelBookingRequests =
 
 
                                                 <button
-                                                    data-ts-csp-click="
-                                                        denyHotelBookingRequest(
-                                                            '${booking.id}'
-                                                        )
-                                                    "
+                                                    type="button"
+                                                    data-hotel-booking-action="deny"
+                                                    data-booking-id="${window.TourSetuDOM.escapeHTML(String(booking.id))}"
                                                     style="
                                                         flex:1;
                                                         background:#e74c3c;
@@ -15028,7 +15024,7 @@ window.renderCustomerRequests=async function(){
         const hotelLogoutAction = target.closest('[data-hotel-logout-action]');
         if (hotelLogoutAction) {
             event.preventDefault();
-            const overlay = hotelLogoutAction.closest('#hotel-logout-confirm-modal');
+            const overlay = hotelLogoutAction.closest('#hotel-logout-confirmation, #hotel-logout-confirm-modal');
             if (hotelLogoutAction.dataset.hotelLogoutAction === 'deny') {
                 overlay?.remove();
                 return;
@@ -15039,11 +15035,15 @@ window.renderCustomerRequests=async function(){
                 hotelLogoutAction.textContent = 'LOGGING OUT...';
                 hotelLogoutAction.style.opacity = '.7';
                 try {
-                    const client = getClient();
-                    if (!client) throw new Error('Authentication service is unavailable.');
-                    const { error } = await client.auth.signOut();
-                    if (error) throw error;
-                    window.location.reload();
+                    if (typeof window.executeHotelLogout === 'function') {
+                        await window.executeHotelLogout();
+                    } else {
+                        const client = getClient();
+                        if (!client) throw new Error('Authentication service is unavailable.');
+                        const { error } = await client.auth.signOut();
+                        if (error) throw error;
+                        window.location.reload();
+                    }
                 } catch (error) {
                     console.error('Hotel dashboard logout failed:', error);
                     hotelLogoutAction.disabled = false;
@@ -15053,6 +15053,36 @@ window.renderCustomerRequests=async function(){
                 }
                 return;
             }
+        }
+
+        // Hotel booking request cards are rendered asynchronously. Use a
+        // semantic data-action + booking-id contract rather than the generic
+        // legacy attribute parser, so strict CSP cannot swallow these actions.
+        const hotelBookingAction = target.closest('[data-hotel-booking-action][data-booking-id]');
+        if (hotelBookingAction) {
+            event.preventDefault();
+            if (hotelBookingAction.disabled) return;
+            const bookingId = hotelBookingAction.dataset.bookingId;
+            const action = hotelBookingAction.dataset.hotelBookingAction;
+            const handler = action === 'accept'
+                ? window.openHotelBookingApproval
+                : action === 'deny'
+                    ? window.denyHotelBookingRequest
+                    : null;
+            if (!bookingId || typeof handler !== 'function') {
+                console.error('Hotel booking action is unavailable:', action);
+                return;
+            }
+            hotelBookingAction.disabled = true;
+            try {
+                await handler(bookingId);
+            } catch (error) {
+                console.error('Hotel booking action failed:', error);
+                alert('Booking action failed. Please try again.');
+            } finally {
+                if (hotelBookingAction.isConnected) hotelBookingAction.disabled = false;
+            }
+            return;
         }
 
         const tabButton = target.closest('[data-hotel-tab], .hotel-nav-btn');
