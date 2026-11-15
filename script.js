@@ -8808,24 +8808,14 @@ window.renderArrivalsAndPayouts = renderArrivalsAndPayouts;
 window.approveCustomerHotelBooking = async function(bookingId) {
 
     const paymentNumber = prompt(
-        "Enter the payment collection number / UPI number:\n\n" +
-        "Example: 9876543210"
+        "Optional: Enter a payment collection / UPI number. Leave blank if not applicable."
     );
-
-    if (!paymentNumber || !paymentNumber.trim()) {
-        alert("Payment number is required.");
-        return;
-    }
+    if (paymentNumber === null) return;
 
     const paymentInstructions = prompt(
-        "Enter payment instructions:\n\n" +
-        "Example: Pay via GPay / PhonePe to this number."
+        "Optional: Enter manual payment instructions. Leave blank if not applicable."
     );
-
-    if (!paymentInstructions || !paymentInstructions.trim()) {
-        alert("Payment instructions are required.");
-        return;
-    }
+    if (paymentInstructions === null) return;
 
     const client = getClient();
 
@@ -13587,7 +13577,7 @@ window.denyHotelBookingRequest =
    ========================================================================= */
 
 window.openHotelBookingApproval =
-    function (
+    async function (
         bookingId
     ) {
 
@@ -13669,7 +13659,7 @@ window.openHotelBookingApproval =
                 <input
                     id="hotel-booking-payment-contact"
                     type="tel"
-                    placeholder="Enter payment contact number"
+                    placeholder="Enter payment contact number (optional)"
                     style="
                         width:100%;
                         box-sizing:border-box;
@@ -13682,6 +13672,10 @@ window.openHotelBookingApproval =
                     "
                 >
 
+                <label style="display:block;margin-top:16px;font-size:12px;font-weight:bold;color:#555;">
+                    HOTEL CONTACT NUMBER (SHARED AFTER APPROVAL)
+                    <input id="hotel-booking-owner-contact" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="Enter your hotel contact number" style="width:100%;box-sizing:border-box;margin-top:7px;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+                </label>
 
                 <div style="
                     display:flex;
@@ -13789,18 +13783,13 @@ window.confirmHotelBookingApproval =
         }
 
 
-        const paymentContact =
-            input.value.trim();
-
-
-        if (!paymentContact) {
-
-            alert(
-                "Please enter the payment contact number."
-            );
-
-            input.focus();
-
+        const paymentContact = input.value.trim();
+        const ownerContactInput = document.getElementById("hotel-booking-owner-contact");
+        const ownerContact = String(ownerContactInput?.value || "").trim();
+        const ownerContactDigits = ownerContact.replace(/\\D/g, "");
+        if (ownerContactDigits.length < 8 || ownerContactDigits.length > 15) {
+            alert("Please enter a valid hotel contact number (8–15 digits).");
+            ownerContactInput?.focus();
             return;
         }
 
@@ -13808,8 +13797,11 @@ window.confirmHotelBookingApproval =
         const finalConfirm =
             confirm(
                 "Approve this hotel booking request?\n\n" +
-                "Payment Contact Number:\n" +
-                paymentContact +
+                "Hotel Contact Number:\n" +
+                ownerContact +
+                "\n\n" +
+                "Payment Contact Number (optional):\n" +
+                (paymentContact || "Not provided") +
                 "\n\n" +
                 "Click OK to approve."
             );
@@ -13844,24 +13836,12 @@ window.confirmHotelBookingApproval =
             }
 
 
-            const {
-                error
-            } =
-                await client
-                    .from('hotel_bookings')
-                    .update({
-
-                        booking_status:
-                            'approved',
-
-                        payment_contact_number:
-                            paymentContact
-
-                    })
-                    .eq(
-                        'id',
-                        bookingId
-                    );
+            const { error } = await client.rpc('approve_hotel_booking_with_contact', {
+                p_booking_id: bookingId,
+                p_owner_phone: ownerContact,
+                p_payment_contact_number: paymentContact || null,
+                p_payment_instructions: null
+            });
 
 
             if (error) {
