@@ -14375,7 +14375,7 @@ function openTaxiBookingForm(vehicle){
     const timeControls=document.createElement('div');timeControls.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;';
     const makeSelect=(aria,values,selected)=>{const el=document.createElement('select');el.setAttribute('aria-label',aria);el.required=true;el.style.cssText='width:100%;min-height:46px;padding:10px 12px;border:1px solid #d8e1e8;border-radius:11px;background:#fff;color:#172b3a;font:inherit;font-size:14px;';values.forEach(v=>{const o=document.createElement('option');o.value=v.value;o.textContent=v.label;el.appendChild(o);});if(selected)el.value=selected;return el;};
     const hours=makeSelect('Pickup hour',Array.from({length:12},(_,i)=>({value:String(i+1).padStart(2,'0'),label:String(i+1).padStart(2,'0')})),'08');
-    const minutes=makeSelect('Pickup minutes',Array.from({length:12},(_,i)=>({value:String(i*5).padStart(2,'0'),label:String(i*5).padStart(2,'0')})),'00');
+    const minutes=makeSelect('Pickup minutes',Array.from({length:60},(_,i)=>({value:String(i).padStart(2,'0'),label:String(i).padStart(2,'0')})),'00');
     const period=makeSelect('AM or PM',[{value:'AM',label:'AM'},{value:'PM',label:'PM'}],'AM');
     timeControls.append(hours,minutes,period);timeWrap.appendChild(timeControls);
     const fare=document.createElement('section');fare.style.cssText='padding:16px 18px;border:1px solid #cce9dc;border-radius:15px;background:#f0fbf5;display:grid;gap:5px;';
