@@ -184,7 +184,7 @@ async function loadRequests(uid){
    const info=document.createElement('div');info.style.flex='1';
    const heading=document.createElement('strong');heading.textContent='Taxi request · '+String(r.status||'pending').toUpperCase();
    const details=document.createElement('div');details.className='muted';
-   details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Date: '+(t.travel_date||'—')+' · Fare estimate: ₹'+Number(t.fare_estimate||0).toLocaleString('en-IN')+' · Customer: '+(t.customer_name||'Customer')+' · Contact: '+(t.customer_phone||'Not shared');
+   details.textContent='Pickup: '+(t.pickup||'—')+' · Drop: '+(t.drop||'—')+' · Pickup date & time: '+(t.pickup_date||t.travel_date||'—')+' at '+(t.pickup_time||'Not specified')+' · Listed rate: ₹'+Number(t.driver_rate_per_km||0).toLocaleString('en-IN')+'/km · Final fare: confirm after route review · Customer: '+(t.customer_name||'Customer')+' · Contact: '+(t.customer_phone||'Not shared');
    info.append(heading,details);d.append(info);
    if(r.status==='pending'){const actions=document.createElement('div');actions.className='driver-actions';
      for(const status of ['approved','denied']){const b=document.createElement('button');b.className='btn'+(status==='denied'?' light':'');b.textContent=status==='approved'?'Approve':'Deny';b.addEventListener('click',()=>decide(r.id,status));actions.append(b);}d.append(actions);
