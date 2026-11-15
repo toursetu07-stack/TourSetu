@@ -15,12 +15,15 @@ BEGIN
       CHECK (fixed_package_price IS NULL OR fixed_package_price > 0);
   END IF;
 END
-$$;
+$;
+
+-- The invoker-secured public view needs an explicit column-level grant.
+GRANT SELECT (fixed_package_price) ON public.driver_vehicles TO anon, authenticated;
 
 -- Keep the existing public listing view invoker-secured and expose only the
 -- explicitly approved vehicle fields plus the optional package price.
 CREATE OR REPLACE VIEW public.active_driver_vehicles
-WITH (security_invoker = true)
+WITH (security_invoker = true, security_barrier = true)
 AS
 SELECT
   id,
