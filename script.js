@@ -960,23 +960,12 @@ window.confirmHotelLogout = async function() {
 
     document.body.appendChild(overlay);
 
-    overlay.querySelector('#hotel-logout-deny').addEventListener('click', () => overlay.remove());
+    // The modal buttons are handled by the document-level CSP-safe click
+    // delegate below. This also covers dynamically inserted modal markup.
+    overlay.querySelector('#hotel-logout-deny').setAttribute('data-hotel-logout-action', 'deny');
+    overlay.querySelector('#hotel-logout-confirm').setAttribute('data-hotel-logout-action', 'confirm');
     overlay.addEventListener('click', e => {
         if (e.target === overlay) overlay.remove();
-    });
-
-    overlay.querySelector('#hotel-logout-confirm').addEventListener('click', async () => {
-        const btn = overlay.querySelector('#hotel-logout-confirm');
-        btn.disabled = true;
-        btn.textContent = 'LOGGING OUT...';
-        btn.style.opacity = '.7';
-
-        try {
-            const client = getClient();
-            if (client) await client.auth.signOut();
-        } finally {
-            window.location.reload();
-        }
     });
 };
 
@@ -15032,6 +15021,40 @@ window.renderCustomerRequests=async function(){
     document.addEventListener('click', event => {
         const target = event.target instanceof Element ? event.target : null;
         if (!target) return;
+
+        // Explicit CSP-safe handling for the Hotel Logout confirmation modal.
+        // Buttons are created dynamically, so delegate from document rather than
+        // relying on inline attributes or listeners attached during template parse.
+        const hotelLogoutAction = target.closest('[data-hotel-logout-action]');
+        if (hotelLogoutAction) {
+            event.preventDefault();
+            const overlay = hotelLogoutAction.closest('#hotel-logout-confirm-modal');
+            if (hotelLogoutAction.dataset.hotelLogoutAction === 'deny') {
+                overlay?.remove();
+                return;
+            }
+            if (hotelLogoutAction.dataset.hotelLogoutAction === 'confirm') {
+                if (hotelLogoutAction.disabled) return;
+                hotelLogoutAction.disabled = true;
+                hotelLogoutAction.textContent = 'LOGGING OUT...';
+                hotelLogoutAction.style.opacity = '.7';
+                try {
+                    const client = getClient();
+                    if (!client) throw new Error('Authentication service is unavailable.');
+                    const { error } = await client.auth.signOut();
+                    if (error) throw error;
+                    window.location.reload();
+                } catch (error) {
+                    console.error('Hotel dashboard logout failed:', error);
+                    hotelLogoutAction.disabled = false;
+                    hotelLogoutAction.textContent = 'CONFIRM';
+                    hotelLogoutAction.style.opacity = '1';
+                    alert('Logout failed. Please try again.');
+                }
+                return;
+            }
+        }
+
         const tabButton = target.closest('[data-hotel-tab], .hotel-nav-btn');
         if (tabButton && tabButton.closest('.hotel-dashboard-shell')) {
             event.preventDefault();
