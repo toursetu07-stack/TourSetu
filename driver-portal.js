@@ -96,7 +96,7 @@ function populateVehicleLocationOptions(){
  dest.replaceChildren();
  DRIVER_TEMPLE_OPTIONS.forEach(v=>{
   const label=document.createElement('label');label.className='destination-option';
-  const input=document.createElement('input');input.type='radio';input.name='vehicle-tour-destination';input.value=v;
+  const input=document.createElement('input');input.type='radio';input.name='vehicle-tour-destination';input.value=v;input.required=true;
   const text=document.createElement('span');text.textContent=v;
   label.append(input,text);dest.append(label);
  });
@@ -159,7 +159,8 @@ function editVehicle(v){
  $('vehicle-fixed-package-price').value=v.fixed_package_price||'';
  $('vehicle-starting-location').value=v.starting_location||'';
  const savedDestinations=Array.isArray(v.tour_destination)?v.tour_destination:[v.tour_destination].filter(Boolean);
- document.querySelectorAll('#vehicle-tour-destination-list input[name="vehicle-tour-destination"]').forEach(input=>{input.checked=savedDestinations.includes(input.value);});
+ const savedDestination=String(savedDestinations.find(Boolean)||'');
+ document.querySelectorAll('#vehicle-tour-destination-list input[name="vehicle-tour-destination"]').forEach(input=>{input.checked=input.value===savedDestination;});
  ['vehicle-rc','vehicle-permit','vehicle-insurance','vehicle-fitness','vehicle-puc','vehicle-photo'].forEach(id=>{$(id).value='';});
  $('vehicle-edit-note').textContent='Existing uploaded documents/photos will be kept unless you choose replacement files.';
  $('vehicle-edit-files').textContent='Saved vehicle documents remain attached. Upload a replacement only if you want to update a document.';
