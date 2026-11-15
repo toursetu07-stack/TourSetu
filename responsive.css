@@ -136,3 +136,127 @@ button, a, [role="button"], input[type="checkbox"], input[type="radio"], select 
   #app :where(.drawer,.slide-out-drawer,.sidebar,[class*="slide-drawer"],[class*="side-drawer"],
     .drawer-backdrop,.drawer-overlay,[class*="drawer-backdrop"],[class*="drawer-overlay"]) { transition:none !important; }
 }
+
+
+/* Desktop-wide layout refinement — isolated from tablet/mobile geometry. */
+@media (min-width: 1024px) {
+  html, body { width: 100%; max-width: 100%; }
+  body {
+    display: block !important;
+    padding: clamp(20px, 2vw, 32px) !important;
+    margin: 0 !important;
+  }
+  #app {
+    width: min(95vw, 1600px) !important;
+    max-width: 1600px !important;
+    margin-inline: auto !important;
+  }
+  #app > .container,
+  #app .container,
+  #app .dashboard-container,
+  #app .main-content,
+  #app .search-container,
+  #app .search-panel,
+  #app .page-content,
+  #app .dashboard-content,
+  #app .content,
+  #app .section-container {
+    width: 100%;
+    max-width: 1600px;
+    margin-inline: auto;
+  }
+  #app > .toursetu-agency-dashboard,
+  #app > .hotel-dashboard-shell,
+  #app > div[style*="background:#f4f7f6"] {
+    width: 100% !important;
+    max-width: none !important;
+    margin-inline: 0 !important;
+  }
+  #app > div[style*="background:#f4f7f6"] > div[style*="max-width:1200px"] {
+    width: 100% !important;
+    max-width: 1540px !important;
+  }
+  #app #owner-dashboard-section {
+    width: 100% !important;
+    max-width: 1600px !important;
+  }
+  #app :where(.grid, .cards-grid, .dashboard-grid, .taxi-grid, .listing-grid,
+    .search-grid, .filter-grid, .panel-grid, .stats, #customer-pkg-list) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    align-items: stretch;
+  }
+  #app :where(.dashboard-header, .section-header, .toolbar, .action-bar,
+    .dashboard-actions, .header-actions, .action-buttons, .top-actions,
+    .form-actions, .hotel-room-card-controls) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    min-width: 0;
+  }
+  #app :where(.dashboard-actions, .header-actions, .action-buttons,
+    .form-actions, .top-actions) > button,
+  #app :where(.dashboard-actions, .header-actions, .action-buttons,
+    .form-actions, .top-actions) > a {
+    width: auto !important;
+    min-width: max-content;
+    flex: 0 1 auto;
+  }
+  #app :where(table) {
+    width: 100%;
+    max-width: 100%;
+  }
+  .toursetu-agency-dashboard,
+  .hotel-dashboard-shell {
+    width: 100% !important;
+    max-width: 1600px !important;
+  }
+  .toursetu-agency-dashboard .agency-main-content,
+  #hotel-main-content {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none !important;
+  }
+  .driver-app .main { width: 100%; min-width: 0; }
+  .driver-app .content {
+    width: min(100%, 1600px);
+    max-width: 1600px;
+    padding-inline: clamp(28px, 3vw, 56px);
+  }
+  .driver-app .panel-grid {
+    grid-template-columns: minmax(0, 1.6fr) minmax(320px, .9fr);
+    gap: clamp(18px, 2vw, 30px);
+  }
+  .driver-app .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Consistent drawer motion on desktop and mobile; state remains controlled by app JS. */
+#app :where(.drawer, .slide-out-drawer, .sidebar,
+  [class*="slide-drawer"], [class*="side-drawer"],
+  .drawer-backdrop, .drawer-overlay,
+  [class*="drawer-backdrop"], [class*="drawer-overlay"]) {
+  transition: transform .28s cubic-bezier(.2,.75,.25,1),
+    opacity .22s ease, visibility .22s ease, box-shadow .22s ease;
+  will-change: transform;
+}
+#app :where(.drawer a, .drawer button, .slide-out-drawer a,
+  .slide-out-drawer button, [class*="slide-drawer"] a,
+  [class*="slide-drawer"] button) {
+  transition: background-color .18s ease, color .18s ease,
+    transform .18s ease, opacity .18s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  #app :where(.drawer, .slide-out-drawer, .sidebar,
+    [class*="slide-drawer"], [class*="side-drawer"],
+    .drawer-backdrop, .drawer-overlay,
+    [class*="drawer-backdrop"], [class*="drawer-overlay"]),
+  #app :where(.drawer a, .drawer button, .slide-out-drawer a,
+    .slide-out-drawer button, [class*="slide-drawer"] a,
+    [class*="slide-drawer"] button) {
+    transition: none !important;
+    will-change: auto;
+  }
+}
