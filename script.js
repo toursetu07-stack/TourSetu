@@ -8837,7 +8837,7 @@ window.approveCustomerHotelBooking = async function(bookingId) {
             ownerProfile?.phone || ''
         );
         if (ownerPhone === null) return;
-        const ownerPhoneDigits = String(ownerPhone).replace(/\\D/g, '');
+        const ownerPhoneDigits = String(ownerPhone).replace(/\D/g, '');
         if (ownerPhoneDigits.length < 8 || ownerPhoneDigits.length > 15) {
             alert('Please enter a valid hotel contact number (8–15 digits).');
             return;
@@ -13801,7 +13801,7 @@ window.confirmHotelBookingApproval =
         const paymentContact = input.value.trim();
         const ownerContactInput = document.getElementById("hotel-booking-owner-contact");
         const ownerContact = String(ownerContactInput?.value || "").trim();
-        const ownerContactDigits = ownerContact.replace(/\\D/g, "");
+        const ownerContactDigits = ownerContact.replace(/\D/g, "");
         if (ownerContactDigits.length < 8 || ownerContactDigits.length > 15) {
             alert("Please enter a valid hotel contact number (8–15 digits).");
             ownerContactInput?.focus();
