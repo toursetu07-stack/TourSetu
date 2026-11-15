@@ -62,6 +62,7 @@ for each row execute function public.capture_driver_service_request_customer_pho
 
 -- The browser may cancel its own request via the existing RLS policy, but cannot directly alter
 -- payment_status or approve a request without using the validated driver RPC below.
+drop policy if exists "driver can approve or deny own pending request" on public.driver_service_requests;
 revoke update on public.driver_service_requests from authenticated;
 grant update (status) on public.driver_service_requests to authenticated;
 grant select on public.driver_service_requests to authenticated;
