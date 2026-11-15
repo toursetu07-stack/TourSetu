@@ -1,6 +1,5 @@
 -- Enforce exactly one non-empty destination for every new or updated driver vehicle.
--- Existing legacy rows are left intact; editing one in the workspace selects its first
--- saved destination and the next save normalizes that row to a single destination.
+-- Existing legacy rows are normalized in production to their first saved destination.
 create or replace function public.enforce_driver_vehicle_single_destination()
 returns trigger
 language plpgsql
