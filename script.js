@@ -6432,11 +6432,11 @@ window.showHotelTab = async function(tabName) {
                 </div>
                 <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #3498db;">
                     <small style="color:#888;">PENDING REQUESTS</small>
-                    <h2 style="margin:5px 0;">${pendingCount}</h2>
+                    <h2 style="margin:5px 0;">${Number(pendingCount)||0}</h2>
                 </div>
                 <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #2ecc71;">
                     <small style="color:#888;">CONFIRMED BOOKINGS</small>
-                    <h2 style="margin:5px 0;">${approvedCount}</h2>
+                    <h2 style="margin:5px 0;">${Number(approvedCount)||0}</h2>
                 </div>
             </div>`;
     } 
@@ -6462,7 +6462,7 @@ window.showHotelTab = async function(tabName) {
                     <input type="text" id="h-address" placeholder="Complete Street Address" value="${window.TourSetuDOM.escapeAttribute(hotel?.address || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
-                    <button onclick="handleSaveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                    <button onclick="handleSaveHotelProfile('${String(hotel?.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
                 </div>
 
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
@@ -6474,7 +6474,7 @@ window.showHotelTab = async function(tabName) {
                         <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                         <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
 
-                        <button id="btn-save-room" onclick="saveRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
+                        <button id="btn-save-room" onclick="saveRoomCategory('${String(hotel.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
                     `}
                 </div>
             </div>
@@ -6730,11 +6730,11 @@ window.showHotelTab = async function(tabName) {
                 </div>
                 <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #3498db;">
                     <small style="color:#888;">PENDING REQUESTS</small>
-                    <h2 style="margin:5px 0;">${pendingCount}</h2>
+                    <h2 style="margin:5px 0;">${Number(pendingCount)||0}</h2>
                 </div>
                 <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #2ecc71;">
                     <small style="color:#888;">CONFIRMED BOOKINGS</small>
-                    <h2 style="margin:5px 0;">${approvedCount}</h2>
+                    <h2 style="margin:5px 0;">${Number(approvedCount)||0}</h2>
                 </div>
             </div>`;
     } 
@@ -6760,7 +6760,7 @@ window.showHotelTab = async function(tabName) {
                     <input type="text" id="h-address" placeholder="Complete Street Address" value="${window.TourSetuDOM.escapeAttribute(hotel?.address || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
-                    <button onclick="saveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                    <button onclick="saveHotelProfile('${String(hotel?.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
                 </div>
 
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
@@ -6772,7 +6772,7 @@ window.showHotelTab = async function(tabName) {
                         <input type="number" id="r-available" placeholder="Current Available Rooms" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                         <input type="file" id="r-photos" multiple accept="image/*" style="margin:8px 0;">
 
-                        <button onclick="saveRoomCategory('${hotel.hotel_id}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
+                        <button onclick="saveRoomCategory('${String(hotel.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">+ Add Room Type</button>
                     `}
                 </div>
             </div>
@@ -6919,17 +6919,18 @@ async function loadHotelRooms(hotelId) {
     container.innerHTML = rooms.map(r => `
         <div class="card" style="background:white; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
             <div>
-                <h4 style="margin:0;">${r.room_type}</h4>
-                <small style="color:#666;">Price: ₹${r.specific_price} / night</small>
+                <h4 style="margin:0;">${window.TourSetuDOM.escapeHTML(r.room_type)}</h4>
+                <small style="color:#666;">Price: ₹${Number(r.specific_price)||0} / night</small>
             </div>
             <div style="display:flex; align-items:center; gap:15px;">
                 <div>
                     <small style="display:block; font-size:10px; color:#888;">AVAILABLE / TOTAL</small>
-                    <input type="number" value="${r.available_rooms}" min="0" max="${r.total_rooms}" onchange="updateRoomStock('${r.room_id}', '${r.hotel_id}', this.value)" style="width:60px; padding:5px; border:1px solid #ccc; border-radius:5px; font-weight:bold;"> / ${r.total_rooms}
+                    <input type="number" value="${Number(r.available_rooms)||0}" min="0" max="${Number(r.total_rooms)||0}" data-room-stock data-room-id="${window.TourSetuDOM.escapeAttribute(r.room_id)}" data-hotel-id="${window.TourSetuDOM.escapeAttribute(r.hotel_id)}" style="width:60px; padding:5px; border:1px solid #ccc; border-radius:5px; font-weight:bold;"> / ${r.total_rooms}
                 </div>
             </div>
         </div>
     `).join('');
+    container.querySelectorAll('[data-room-stock]').forEach(input => input.addEventListener('change', () => updateRoomStock(input.dataset.roomId, input.dataset.hotelId, input.value)));
 }
 
 window.updateRoomStock = async function(roomId, hotelId, newAvailable) {
@@ -6997,16 +6998,17 @@ window.promptHotelAction = function(requestId, action) {
             <h3 style="margin-top:0;">Accept Booking & Set Payment Info</h3>
             <p style="font-size:12px; color:#666;">Enter payment collection instructions (GPay / UPI / Bank Details) for the buyer:</p>
             <textarea id="h-pay-details" placeholder="e.g. GPay UPI ID: 9876543210@upi or Bank transfer details..." style="width:100%; height:80px; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box;"></textarea>
-            <button onclick="executeHotelRequestAction('${requestId}', 'approved')" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">Confirm Acceptance</button>
+            <button type="button" data-request-action="approved" data-request-id="${window.TourSetuDOM.escapeAttribute(requestId)}" style="width:100%; background:#2ecc71; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">Confirm Acceptance</button>
         `;
     } else {
         body.innerHTML = `
             <h3 style="margin-top:0; color:#e74c3c;">Deny Booking Request</h3>
             <p style="font-size:12px; color:#666;">State cancellation reason for client:</p>
             <textarea id="h-deny-reason" placeholder="Reason for declining inquiry..." style="width:100%; height:80px; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:8px; box-sizing:border-box;"></textarea>
-            <button onclick="executeHotelRequestAction('${requestId}', 'denied')" style="width:100%; background:#e74c3c; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">Confirm Decline</button>
+            <button type="button" data-request-action="denied" data-request-id="${window.TourSetuDOM.escapeAttribute(requestId)}" style="width:100%; background:#e74c3c; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">Confirm Decline</button>
         `;
     }
+    body.querySelectorAll('[data-request-action]').forEach(button => button.addEventListener('click', () => executeHotelRequestAction(button.dataset.requestId, button.dataset.requestAction)));
     modal.style.display = 'flex';
 };
 
@@ -7275,7 +7277,7 @@ if (!hotel) {
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:24px;">
                 <div>
                     <div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#ff9f43;text-transform:uppercase;">HOTEL PARTNER PANEL</div>
-                    <h2 style="margin:5px 0 4px;color:#1e293b;font-size:28px;">Welcome back, ${hotel.hotel_name || 'Hotel Partner'} 👋</h2>
+                    <h2 style="margin:5px 0 4px;color:#1e293b;font-size:28px;">Welcome back, ${window.TourSetuDOM.escapeHTML(hotel.hotel_name || 'Hotel Partner')} 👋</h2>
                     <p style="margin:0;color:#64748b;font-size:14px;">Manage your rooms, booking requests, arrivals and customer payments from one place.</p>
                 </div>
                 <button onclick="switchHotelTab('arrivals-payouts')" style="border:0;background:#ff9f43;color:#fff;padding:12px 17px;border-radius:11px;font-weight:900;cursor:pointer;box-shadow:0 7px 18px rgba(255,159,67,.22);">📋 View Arrivals & Payouts</button>
@@ -7319,10 +7321,10 @@ if (!hotel) {
             <h2>Property & Room Inventory Setup</h2>
             <div style="background:white; padding:25px; border-radius:15px; margin-top:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
                 <h3>Hotel Details</h3>
-                <form id="hotel-profile-form" onsubmit="saveHotelProfile(event, '${hotel ? hotel.hotel_id : ''}')" style="display:grid; gap:15px; margin-top:15px;">
+                <form id="hotel-profile-form" onsubmit="saveHotelProfile(event, '${String(hotel ? hotel.hotel_id : '').replace(/[^0-9a-f-]/gi, '')}')" style="display:grid; gap:15px; margin-top:15px;">
                     <div>
                         <label style="font-size:13px; font-weight:bold;">Hotel Name</label>
-                        <input type="text" id="h-name" value="${hotel ? hotel.hotel_name : ''}" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:5px;">
+                        <input type="text" id="h-name" value="${window.TourSetuDOM.escapeAttribute(hotel ? hotel.hotel_name : '')}" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:5px;">
                     </div>
                     <div>
                         <label style="font-size:13px; font-weight:bold;">Location City (Restricted to Permitted 11 Cities)</label>
@@ -7332,7 +7334,7 @@ if (!hotel) {
                     </div>
                     <div>
                         <label style="font-size:13px; font-weight:bold;">Property Street Address</label>
-                        <input type="text" id="h-address" value="${hotel ? hotel.address : ''}" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:5px;">
+                        <input type="text" id="h-address" value="${window.TourSetuDOM.escapeAttribute(hotel ? hotel.address : '')}" required style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-top:5px;">
                     </div>
                     <div>
                         <label style="font-size:13px; font-weight:bold;">Upload Front Cover Pictures (Supabase Storage: hotel-media)</label>
@@ -7349,7 +7351,7 @@ if (!hotel) {
                         <h3 style="margin:0;">Room Categories & Inventory Counter</h3>
                         <p style="font-size:12px; color:#666; margin-top:40px;">Real-time stock edits reflect instantly across all customer devices.</p>
                     </div>
-                    <button onclick="showRoomForm('${hotel.hotel_id}')" style="background:#ff9f43; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">+ Add Room Category</button>
+                    <button onclick="showRoomForm('${String(hotel.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="background:#ff9f43; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">+ Add Room Category</button>
                 </div>
                 <div id="room-list" style="display:grid; gap:15px; margin-top:20px;">
                     ${rooms.map(r => `
@@ -7435,7 +7437,7 @@ if (!hotel) {
             content.innerHTML = `
                 <div style="background:#fff1f2;border:1px solid #fecdd3;padding:22px;border-radius:15px;color:#9f1239;">
                     <h3 style="margin-top:0;">Unable to load Arrivals & Payouts</h3>
-                    <p style="margin-bottom:0;">${paidError.message}</p>
+                    <p style="margin-bottom:0;">${window.TourSetuDOM.escapeHTML(paidError.message)}</p>
                 </div>`;
             return;
         }
@@ -7624,7 +7626,7 @@ window.handleHotelRequestAction = function(requestId, action) {
             <p style="font-size:13px; color:#666;">Provide UPI details (PhonePe/GPay) or Bank Transfer details for the requester to complete the payment.</p>
             <textarea id="h-pay-details" placeholder="e.g., GPay / PhonePe UPI ID: hotelpay@upi or Bank Account details..." style="width:100%; height:90px; padding:10px; border:1px solid #ccc; border-radius:8px; margin:15px 0; box-sizing:border-box;"></textarea>
             <div style="display:flex; gap:10px;">
-                <button onclick="executeRequestStatusUpdate('${requestId}', 'approved')" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Approval</button>
+                <button type="button" data-request-status="approved" data-request-id="${window.TourSetuDOM.escapeAttribute(requestId)}" style="background:#2ecc71; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Approval</button>
                 <button onclick="document.getElementById('hotel-action-modal').style.display='none'" style="background:#eee; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Cancel</button>
             </div>
         `;
@@ -7634,11 +7636,12 @@ window.handleHotelRequestAction = function(requestId, action) {
             <p style="font-size:13px; color:#666;">Provide a reason for declining this room booking request.</p>
             <textarea id="h-cancel-reason" placeholder="Reason for decline (e.g. Sold out, Under maintenance)..." style="width:100%; height:90px; padding:10px; border:1px solid #ccc; border-radius:8px; margin:15px 0; box-sizing:border-box;"></textarea>
             <div style="display:flex; gap:10px;">
-                <button onclick="executeRequestStatusUpdate('${requestId}', 'denied')" style="background:#e74c3c; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Decline</button>
+                <button type="button" data-request-status="denied" data-request-id="${window.TourSetuDOM.escapeAttribute(requestId)}" style="background:#e74c3c; color:white; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Confirm Decline</button>
                 <button onclick="document.getElementById('hotel-action-modal').style.display='none'" style="background:#eee; border:none; padding:10px; border-radius:8px; flex:1; font-weight:bold; cursor:pointer;">Cancel</button>
             </div>
         `;
     }
+    box.querySelectorAll('[data-request-status]').forEach(button => button.addEventListener('click', () => executeRequestStatusUpdate(button.dataset.requestId, button.dataset.requestStatus)));
     modal.style.display = 'flex';
 };
 
@@ -9352,15 +9355,15 @@ async function fetchAndRenderHotelInventory(hotelId) {
         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-bottom:30px;">
             <div style="background:white; padding:20px; border-radius:12px; border-left:5px solid #2ecc71; box-shadow:0 4px 10px rgba(0,0,0,0.03);">
                 <small style="color:#7f8c8d; font-weight:bold;">AVAILABLE ROOMS</small>
-                <h2 style="margin:10px 0 0 0; font-size:32px; color:#2ecc71;">${availableRooms}</h2>
+                <h2 style="margin:10px 0 0 0; font-size:32px; color:#2ecc71;">${Number(availableRooms)||0}</h2>
             </div>
             <div style="background:white; padding:20px; border-radius:12px; border-left:5px solid #e67e22; box-shadow:0 4px 10px rgba(0,0,0,0.03);">
                 <small style="color:#7f8c8d; font-weight:bold;">TEMPORARY HOLDS (15-MIN)</small>
-                <h2 style="margin:10px 0 0 0; font-size:32px; color:#e67e22;">${holdCount}</h2>
+                <h2 style="margin:10px 0 0 0; font-size:32px; color:#e67e22;">${Number(holdCount)||0}</h2>
             </div>
             <div style="background:white; padding:20px; border-radius:12px; border-left:5px solid #3498db; box-shadow:0 4px 10px rgba(0,0,0,0.03);">
                 <small style="color:#7f8c8d; font-weight:bold;">TOTAL PROPERTY CAPACITY</small>
-                <h2 style="margin:10px 0 0 0; font-size:32px; color:#3498db;">${totalRooms}</h2>
+                <h2 style="margin:10px 0 0 0; font-size:32px; color:#3498db;">${Number(totalRooms)||0}</h2>
             </div>
         </div>
 
@@ -9385,8 +9388,8 @@ async function fetchAndRenderHotelInventory(hotelId) {
                             const diffMins = Math.max(0, Math.ceil((expiresAt - now) / 60000));
                             return `
                                 <tr style="border-bottom:1px solid #f0f0f0;">
-                                    <td style="padding:12px; font-weight:bold;">${h.booking_id}</td>
-                                    <td style="padding:12px;">${h.agency_id || 'Travel Agency'}</td>
+                                    <td style="padding:12px; font-weight:bold;">${window.TourSetuDOM.escapeHTML(h.booking_id)}</td>
+                                    <td style="padding:12px;">${window.TourSetuDOM.escapeHTML(h.agency_id || 'Travel Agency')}</td>
                                     <td style="padding:12px; color:#e67e22; font-weight:bold;">⏳ ${diffMins} Minutes</td>
                                     <td style="padding:12px;"><span style="background:#fff4e6; color:#d35400; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:11px;">HELD</span></td>
                                 </tr>
@@ -10523,11 +10526,11 @@ window.showHotelTab = async function(tabName) {
                 </div>
                 <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #3498db;">
                     <small style="color:#888;">PENDING REQUESTS</small>
-                    <h2 style="margin:5px 0;">${pendingCount}</h2>
+                    <h2 style="margin:5px 0;">${Number(pendingCount)||0}</h2>
                 </div>
                 <div class="card" style="background:white; padding:25px; border-radius:12px; border-left:5px solid #2ecc71;">
                     <small style="color:#888;">CONFIRMED BOOKINGS</small>
-                    <h2 style="margin:5px 0;">${approvedCount}</h2>
+                    <h2 style="margin:5px 0;">${Number(approvedCount)||0}</h2>
                 </div>
             </div>`;
     } 
@@ -10553,7 +10556,7 @@ window.showHotelTab = async function(tabName) {
                     <input type="text" id="h-address" placeholder="Complete Street Address" value="${window.TourSetuDOM.escapeAttribute(hotel?.address || '')}" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
                     <input type="file" id="h-front-pic" accept="image/*" style="margin:8px 0;">
 
-                    <button onclick="saveHotelProfile('${hotel?.hotel_id || ''}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
+                    <button onclick="saveHotelProfile('${String(hotel?.hotel_id || '').replace(/[^0-9a-f-]/gi, '')}')" style="width:100%; background:#ff9f43; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Save Property Profile</button>
                 </div>
 
                 <div class="card" style="background:white; padding:25px; border-radius:15px;">
