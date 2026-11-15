@@ -10,7 +10,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $function$
 begin
   if coalesce(new.raw_user_meta_data->>'role', '') = 'driver' then
     insert into public.driver_profiles(user_id, full_name, phone, email, status)
@@ -25,7 +25,7 @@ begin
   end if;
   return new;
 end;
-$;
+$function$;
 revoke all on function public.create_driver_profile_on_signup() from public, anon, authenticated;
 
 alter table public.driver_profiles drop column if exists city;
