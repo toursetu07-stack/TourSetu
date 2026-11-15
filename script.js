@@ -14997,7 +14997,7 @@ window.renderCustomerRequests=async function(){
 
     function invokeSource(source, event, element) {
         const rawSource = String(source || '').trim();
-        const deleteMatch = rawSource.match(/^if\\s*\\(\\s*confirm\\((['"])([\\s\\S]*?)\\1\\)\\s*\\)\\s*(?:window\\.)?deletePackage\\((['"])([\\s\\S]*?)\\3\\)\\s*;?$/);
+        const deleteMatch = rawSource.match(/^if\s*\(\s*confirm\((['"])([\s\S]*?)\1\)\s*\)\s*(?:window\.)?deletePackage\((['"])([\s\S]*?)\3\)\s*;?$/);
         if (deleteMatch) { if (window.confirm(deleteMatch[2]) && typeof window.deletePackage === 'function') window.deletePackage(deleteMatch[4]); return; }
         if (rawSource === 'clearAuthRecoveryUrl();isLoginMode=true;renderAuthUI();') {
             if (typeof window.clearAuthRecoveryUrl === 'function') window.clearAuthRecoveryUrl();
@@ -15079,7 +15079,7 @@ window.renderCustomerRequests=async function(){
         const node = event.target instanceof Element ? event.target.closest('[data-ts-csp-event="submit"]') : null;
         if (node) {
             event.preventDefault();
-            invokeSource(node.dataset.hotelCspSource, event, node);
+            invokeSource(node.dataset.tsCspSource, event, node);
         }
     });
 
