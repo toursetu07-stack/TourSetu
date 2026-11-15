@@ -8462,9 +8462,9 @@ window.processSave = async function(packageId = '') {
         let resultError = null;
 
         if (packageId) {
-            const { error } = await _supabase
+            const { data, error } = await client
                 .from('packages')
-                 .update(payload)
+                .update(payload)
                 .eq('id', packageId)
                 .eq('agency_id', user.id)
                 .select('id')
