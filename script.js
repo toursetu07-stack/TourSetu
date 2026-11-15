@@ -7738,22 +7738,39 @@ async function sendPushNotification(targetUserId, messageTitle, messageBody) {
    10. PACKAGE FORM & HELPER LOGIC
    ========================================= */
 
-// Populates the City dropdown based on selected State
+// Populate agency package cities from the same master list used by the
+// customer pickup-city selector. Keep a state-data fallback for other states.
 window.updateCities = function() {
     const stateSelect = document.getElementById('p-state');
     const citySelect = document.getElementById('p-city');
-    if (!stateSelect || citySelect === null) return;
+    if (!stateSelect || !citySelect) return;
 
     const selectedState = stateSelect.value;
-    citySelect.innerHTML = '<option value="">Select City</option>';
+    const previousCity = citySelect.value;
+    citySelect.replaceChildren();
 
-    if (selectedState && locationData[selectedState]) {
-        locationData[selectedState].forEach(city => {
-            const opt = document.createElement('option');
-            opt.value = city;
-            opt.innerText = city;
-            citySelect.appendChild(opt);
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select City';
+    citySelect.appendChild(placeholder);
+    if (!selectedState) return;
+
+    const sourceCities = selectedState === 'Uttarakhand' &&
+        Array.isArray(UTTARAKHAND_PICKUP_CITIES)
+        ? UTTARAKHAND_PICKUP_CITIES
+        : (Array.isArray(locationData[selectedState]) ? locationData[selectedState] : []);
+
+    [...new Set(sourceCities.filter(city => city != null && String(city).trim()))]
+        .forEach(city => {
+            const value = String(city);
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            citySelect.appendChild(option);
         });
+
+    if (previousCity && [...citySelect.options].some(option => option.value === previousCity)) {
+        citySelect.value = previousCity;
     }
 };
 
@@ -8131,20 +8148,7 @@ window.showPackageForm = function(pEncoded = null) {
                     box-sizing:border-box;
                 "
             >
-                ${
-                    isEdit && selectedState
-                        ? locationData[selectedState]
-                            .map(c =>
-                                `<option
-                                    value="${c}"
-                                    ${pkg.starting_location === c ? 'selected' : ''}
-                                >
-                                    ${c}
-                                </option>`
-                            )
-                            .join('')
-                        : '<option value="">Select City</option>'
-                }
+                <option value="">Select City</option>
             </select>
 
 
@@ -8296,6 +8300,15 @@ window.showPackageForm = function(pEncoded = null) {
 
         </div>
     `;
+
+    // Populate after rendering so Create and Edit share the customer city list.
+    window.updateCities();
+    const startingCitySelect = document.getElementById('p-city');
+    const savedStartingCity = isEdit ? String(pkg.starting_location || '') : '';
+    if (startingCitySelect && savedStartingCity &&
+        [...startingCitySelect.options].some(option => option.value === savedStartingCity)) {
+        startingCitySelect.value = savedStartingCity;
+    }
 };
 
 
