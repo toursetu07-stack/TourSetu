@@ -836,8 +836,51 @@ async function initApp() {
     if (referralCode && referralCode.trim()) isLoginMode = false;
 
     const { data: { user }, error } = await client.auth.getUser();
-    if (user && !error) await showDashboard(user);
-    else renderAuthUI();
+    if (user && !error) {
+        await applyPendingGoogleSignupRole(user);
+        await showDashboard(user);
+    } else renderAuthUI();
+}
+
+async function applyPendingGoogleSignupRole(user) {
+    const storageKey='toursetu_google_signup_role';
+    const startedKey='toursetu_google_signup_started_at';
+    let selectedRole='';
+    try {
+        const startedAt=Number(localStorage.getItem(startedKey)||0);
+        // Ignore stale intent left behind if the user later signs in normally.
+        if(startedAt && Date.now()-startedAt <= 30*60*1000) {
+            selectedRole=String(localStorage.getItem(storageKey)||'').toLowerCase();
+        }
+        localStorage.removeItem(storageKey);
+        localStorage.removeItem(startedKey);
+    } catch(error) {
+        console.warn('Unable to read saved Google signup role:',error);
+    }
+    const allowedRoles=new Set(['customer','agency','hotel','driver']);
+    if(!user?.id || !allowedRoles.has(selectedRole)) return;
+    const client=getClient();
+    if(!client) return;
+    // Store the selected role in Supabase Auth metadata so it survives future sessions.
+    const {error:metadataError}=await client.auth.updateUser({data:{role:selectedRole}});
+    if(metadataError) throw metadataError;
+    // Keep the app's profile role in sync. This writes only the authenticated user's row.
+    const isCustomer=selectedRole==='customer';
+    const {error:profileError}=await client.from('profiles').upsert(
+        {
+            id:user.id,
+            email:user.email||null,
+            role:selectedRole,
+            is_approved:isCustomer,
+            approval_status:isCustomer?'approved':'pending'
+        },
+        {onConflict:'id'}
+    );
+    if(profileError) {
+        console.error('Google signup profile role save failed:',profileError);
+        throw new Error('Google account was created, but saving your selected account type failed. Please contact TourSetu support before continuing.');
+    }
+    user.user_metadata={...(user.user_metadata||{}),role:selectedRole};
 }
 
 async function resolveTourSetuRole(user) {
@@ -958,7 +1001,7 @@ function renderAuthUI() {
         </div>
         ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" data-ts-csp-click="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
         ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" data-ts-csp-change="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select></div>'}
-        <button type="button" id="selectEmailBtn" class="select-email-btn" style="display:block;width:100%;margin:10px 0 0;padding:11px 14px;border:1px solid #ff9f43;border-radius:8px;background:#fff7ed;color:#b85b00;font-weight:700;cursor:pointer;">Select Email</button>
+        ${isLoginMode?'': '<button type="button" id="selectEmailBtn" class="select-email-btn" style="display:block;width:100%;margin:10px 0 0;padding:11px 14px;border:1px solid #ff9f43;border-radius:8px;background:#fff7ed;color:#b85b00;font-weight:700;cursor:pointer;">Continue with Google</button>'}
         <div id="business-fields" style="display:none;text-align:left;margin-top:12px;border-top:1px solid #eee;padding-top:12px;">
           <div id="agency-basic-fields">
             <label>Email Address</label><input type="email" id="agency-email" readonly placeholder="Email Address" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;background:#f8f9fa;">
@@ -1018,6 +1061,9 @@ function renderAuthUI() {
       </div>`;
     const emailInput=document.getElementById('email'),agencyEmail=document.getElementById('agency-email');
     bindAuthFormControls();
+    if(!isLoginMode && document.getElementById('role')) {
+        try { localStorage.setItem('toursetu_google_signup_role',document.getElementById('role').value||'customer'); } catch(error) {}
+    }
 function bindAuthFormControls() {
     [['toggleLoginPassword','loginPassword'],['toggleRegisterPassword','registerPassword']].forEach(([buttonId,inputId]) => {
         const button=document.getElementById(buttonId), input=document.getElementById(inputId);
@@ -1035,24 +1081,39 @@ function bindAuthFormControls() {
         });
     });
     const selectButton=document.getElementById('selectEmailBtn');
-    if(selectButton&&selectButton.dataset.authSelectBound!=='true'){
-        selectButton.dataset.authSelectBound='true';
+    if(selectButton && !isLoginMode && selectButton.dataset.googleOAuthBound!=='true'){
+        selectButton.dataset.googleOAuthBound='true';
         selectButton.addEventListener('click',async event=>{
             event.preventDefault();
             event.stopPropagation();
-            const emailInput=document.getElementById('email');
-            const passwordInput=document.getElementById(isLoginMode?'loginPassword':'registerPassword');
-            if(emailInput){emailInput.focus();emailInput.click();}
+            if(isLoginMode) return;
+            const status=document.getElementById('status');
+            const role=String(document.getElementById('role')?.value||'customer').toLowerCase();
+            const allowedRoles=new Set(['customer','agency','hotel','driver']);
+            if(!allowedRoles.has(role)){if(status)status.textContent='Please select a valid account type.';return;}
             try{
-                if(navigator.credentials&&typeof navigator.credentials.get==='function'){
-                    const credential=await navigator.credentials.get({password:true,mediation:'optional'});
-                    if(credential){
-                        if(emailInput&&credential.id){emailInput.value=credential.id;emailInput.dispatchEvent(new Event('input',{bubbles:true}));emailInput.dispatchEvent(new Event('change',{bubbles:true}));}
-                        if(passwordInput&&typeof credential.password==='string'){passwordInput.value=credential.password;passwordInput.dispatchEvent(new Event('input',{bubbles:true}));passwordInput.dispatchEvent(new Event('change',{bubbles:true}));}
-                    }
-                }
-            }catch(error){console.debug('Saved credential chooser unavailable:',error);}
-            finally{if(emailInput){emailInput.focus();emailInput.click();}}
+                // Persist role before leaving the page for Google's OAuth flow.
+                localStorage.setItem('toursetu_google_signup_role',role);
+                localStorage.setItem('toursetu_google_signup_started_at',String(Date.now()));
+                selectButton.disabled=true;
+                selectButton.textContent='Connecting to Google…';
+                if(status)status.textContent='⏳ Redirecting to Google…';
+                const client=getClient();
+                if(!client)throw new Error('Supabase is not initialized. Please refresh and try again.');
+                const {error}=await client.auth.signInWithOAuth({
+                    provider:'google',
+                    options:{redirectTo:window.location.origin}
+                });
+                if(error)throw error;
+                // Supabase normally navigates away. Restore the control if it does not.
+                selectButton.disabled=false;
+                selectButton.textContent='Continue with Google';
+            }catch(error){
+                console.error('Google sign-in failed:',error);
+                if(status)status.textContent='❌ '+getReadableAuthError(error,'Google sign-in could not be started. Please try again.');
+                selectButton.disabled=false;
+                selectButton.textContent='Continue with Google';
+            }
         });
     }
 }
@@ -1069,7 +1130,7 @@ window.goToAgencyDocumentStep2=function(){
     document.getElementById('agency-step-1').style.display='none';document.getElementById('agency-step-2').style.display='block';document.getElementById('status').innerText='';
 };
 window.backToAgencyDocumentStep1=function(){document.getElementById('agency-step-2').style.display='none';document.getElementById('agency-step-1').style.display='block';document.getElementById('status').innerText='';};
-window.handleRegisterRoleChange=function(){const role=document.getElementById('role')?.value;if(role==='driver'&&!isLoginMode){window.location.href='driver.html';return;}window.toggleBusinessFields();};
+window.handleRegisterRoleChange=function(){const role=document.getElementById('role')?.value||'customer';try{localStorage.setItem('toursetu_google_signup_role',role);}catch(error){console.warn('Unable to persist selected signup role:',error);}if(role==='driver'&&!isLoginMode){window.location.href='driver.html';return;}window.toggleBusinessFields();};
 window.toggleBusinessFields=function(){
     const role=document.getElementById('role')?.value;
     const businessFields=document.getElementById('business-fields');
