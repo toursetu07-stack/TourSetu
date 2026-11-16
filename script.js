@@ -1447,9 +1447,11 @@ async function renderCustomerHomepage(user, options = {}) {
     app.style.maxWidth = "100%";
     window.mountDashboardUtilityMenu('customer');
     
-    // Customer search is intentionally limited to Uttarakhand.
-    // Keep locationData as the single source for its city list.
-    const stateOptions = '<option value="Uttarakhand" selected>Uttarakhand</option>';
+    // Customer search and agency package forms share the complete state/city master.
+    const stateOptions = [...new Set([...Object.keys(locationData), 'Uttarakhand'])]
+        .sort((a, b) => a.localeCompare(b))
+        .map(state => '<option value="' + window.TourSetuDOM.escapeHTML(state) + '"' + (state === 'Uttarakhand' ? ' selected' : '') + '>' + window.TourSetuDOM.escapeHTML(state) + '</option>')
+        .join('');
 
     const destOptions = tourDestinations.map(d => 
         `<option value="${d}">${d}</option>`
