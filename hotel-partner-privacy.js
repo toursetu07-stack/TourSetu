@@ -42,8 +42,8 @@
                     <div style="background:#fff;max-width:560px;width:100%;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center;">
                         <h2 style="margin-top:0;color:#2d3436;">Unable to load Hotel Partner Privacy Policy</h2>
                         <p style="color:#636e72;line-height:1.6;">Please try again. Your Hotel Dashboard will remain locked until the current Hotel Partner Privacy Policy acceptance is successfully recorded.</p>
-                        <button onclick="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">TRY AGAIN</button>
-                        <button onclick="handleLogout()" style="margin-left:8px;background:#2d3436;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">LOGOUT</button>
+                        <button data-ts-csp-click="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">TRY AGAIN</button>
+                        <button data-ts-csp-click="handleLogout()" style="margin-left:8px;background:#2d3436;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;cursor:pointer;">LOGOUT</button>
                     </div>
                 </div>`;
             return false;
@@ -67,10 +67,10 @@
                         ${hotelPartnerPrivacyPolicyHtml()}
                     </div>
                     <label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;">
-                        <input type="checkbox" id="hotel-partner-privacy-checkbox" onchange="window.toggleHotelPrivacyApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">
+                        <input type="checkbox" id="hotel-partner-privacy-checkbox" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">
                         <span style="font-weight:800;color:#2d3436;line-height:1.5;">I agree to TourSetu's Hotel Partner Privacy Policy regarding property verification and inventory data.</span>
                     </label>
-                    <button id="hotel-partner-privacy-approved-btn" onclick="window.acceptHotelPartnerPrivacy()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">
+                    <button id="hotel-partner-privacy-approved-btn" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">
                         ACCEPT & CONTINUE
                     </button>
                     <p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Hotel Dashboard will remain locked until you tick the checkbox and click ACCEPT & CONTINUE.</p>
@@ -90,6 +90,7 @@
     };
 
     window.acceptHotelPartnerPrivacy = async function () {
+        try {
         const checkbox = document.getElementById('hotel-partner-privacy-checkbox');
         const button = document.getElementById('hotel-partner-privacy-approved-btn');
         if (!checkbox?.checked) {
@@ -118,7 +119,7 @@
 
         const { error } = await client
             .from('hotel_privacy_acceptances')
-            .insert({ user_id: user.id, policy_version: HOTEL_PRIVACY_VERSION });
+            .upsert({ user_id: user.id, policy_version: HOTEL_PRIVACY_VERSION, accepted_at: new Date().toISOString() }, { onConflict: 'user_id' });
 
         if (error) {
             console.error('Hotel privacy policy acceptance save failed:', error);
@@ -138,6 +139,23 @@
             await window.__toursetuOriginalHotelPrivacyDashboard(user);
         } else if (typeof window.renderHotelDashboard === 'function') {
             await window.renderHotelDashboard(user);
+        }
+        } catch (error) {
+            console.error("Hotel Partner Privacy acceptance", error);
+            const retryButton = document.getElementById("hotel-partner-privacy-approved-btn");
+            if (retryButton) { retryButton.disabled = false; retryButton.textContent = "ACCEPT & CONTINUE"; retryButton.style.opacity = '1'; retryButton.style.cursor = 'pointer'; }
+            alert("Hotel Partner Privacy acceptance failed: " + (error?.message || String(error || 'Unknown error')));
+        }
+    };
+
+    const originalAcceptHotelPartnerPrivacy = window.acceptHotelPartnerPrivacy;
+    window.acceptHotelPartnerPrivacy = async function (...args) {
+        try { return await originalAcceptHotelPartnerPrivacy.apply(this, args); }
+        catch (error) {
+            console.error('Hotel privacy acceptance failed:', error);
+            const button = document.getElementById('hotel-partner-privacy-approved-btn');
+            if (button) { button.disabled = false; button.textContent = 'ACCEPT & CONTINUE'; button.style.cursor = 'pointer'; }
+            alert('Hotel Partner Privacy Policy save nahi ho saka. ' + (error?.message || 'Please check your connection and try again.'));
         }
     };
 
@@ -225,4 +243,16 @@
 
     installHotelPrivacyGuard();
     installHotelPrivacyLegalPanel();
+
+    // CSP-safe delegated bindings for this dynamically rendered acceptance gate.
+    document.addEventListener('change', function (event) {
+        if (event.target?.id === 'hotel-partner-privacy-checkbox') window.toggleHotelPrivacyApprovalButton?.();
+    });
+    document.addEventListener('click', function (event) {
+        if (event.target?.closest?.('#hotel-partner-privacy-approved-btn')) {
+            event.preventDefault();
+            window.acceptHotelPartnerPrivacy?.();
+        }
+    });
+
 })();

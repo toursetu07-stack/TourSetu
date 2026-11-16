@@ -238,7 +238,11 @@ async function ensureAgencyTermsAccepted(user) {
     const existingMenu = document.getElementById('toursetu-utility-menu-root');
     if (existingMenu) existingMenu.remove();
     app.style.maxWidth = '100%';
-    app.innerHTML = '<div style="min-height:100vh;background:#f4f7f6;padding:28px 18px;box-sizing:border-box;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;"><div style="background:#fff;max-width:780px;width:100%;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.15);padding:30px;box-sizing:border-box;"><div style="text-align:center;margin-bottom:20px;"><div style="font-size:38px;">📄</div><h2 style="margin:5px 0;color:#2d3436;">TourSetu Partner Terms & Conditions</h2><p style="margin:0;color:#777;font-size:13px;">Please read and accept these Partner Terms & Conditions before entering your Agency Dashboard.</p></div><div style="max-height:55vh;overflow-y:auto;padding:20px;background:#fafafa;border:1px solid #e5e7eb;border-radius:12px;color:#444;line-height:1.65;font-size:14px;">' + agencyPartnerTermsHtml() + '</div><label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;"><input type="checkbox" id="agency-partner-terms-checkbox" data-ts-csp-change="toggleAgencyTermsApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;"><span style="font-weight:800;color:#2d3436;line-height:1.5;">I confirm that I am an Asset-Owned Integrated Tour Operator and agree to TourSetu\'s Partner Terms & Conditions.</span></label><button id="agency-partner-terms-approved-btn" data-ts-csp-click="acceptAgencyPartnerTerms()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">APPROVED</button><p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Agency Dashboard will remain locked until you tick the checkbox and click APPROVED.</p></div></div>';
+    app.innerHTML = '<div style="min-height:100vh;background:#f4f7f6;padding:28px 18px;box-sizing:border-box;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;"><div style="background:#fff;max-width:780px;width:100%;border-radius:18px;box-shadow:0 12px 40px rgba(0,0,0,.15);padding:30px;box-sizing:border-box;"><div style="text-align:center;margin-bottom:20px;"><div style="font-size:38px;">📄</div><h2 style="margin:5px 0;color:#2d3436;">TourSetu Partner Terms & Conditions</h2><p style="margin:0;color:#777;font-size:13px;">Please read and accept these Partner Terms & Conditions before entering your Agency Dashboard.</p></div><div style="max-height:55vh;overflow-y:auto;padding:20px;background:#fafafa;border:1px solid #e5e7eb;border-radius:12px;color:#444;line-height:1.65;font-size:14px;">' + agencyPartnerTermsHtml() + '</div><label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;"><input type="checkbox" id="agency-partner-terms-checkbox" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;"><span style="font-weight:800;color:#2d3436;line-height:1.5;">I confirm that I am an Asset-Owned Integrated Tour Operator and agree to TourSetu\'s Partner Terms & Conditions.</span></label><button id="agency-partner-terms-approved-btn" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">APPROVED</button><p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Agency Dashboard will remain locked until you tick the checkbox and click APPROVED.</p></div></div>';
+    const termsCheckbox = document.getElementById('agency-partner-terms-checkbox');
+    const termsButton = document.getElementById('agency-partner-terms-approved-btn');
+    termsCheckbox?.addEventListener('change', window.toggleAgencyTermsApprovalButton);
+    termsButton?.addEventListener('click', window.acceptAgencyPartnerTerms);
     return false;
 }
 
@@ -252,6 +256,7 @@ window.toggleAgencyTermsApprovalButton = function() {
 };
 
 window.acceptAgencyPartnerTerms = async function() {
+    try {
     const checkbox = document.getElementById('agency-partner-terms-checkbox');
     const button = document.getElementById('agency-partner-terms-approved-btn');
     if (!checkbox?.checked) { alert('Please tick the confirmation checkbox before clicking APPROVED.'); return; }
@@ -300,8 +305,24 @@ window.acceptAgencyPartnerTerms = async function() {
     const verification = await getAgencyVerification(user.id).catch(() => null);
     window.currentAgencyVerificationStatus = verification?.status || 'pending';
     await renderAgencyDashboard(user);
+    } catch (error) {
+        console.error("Agency Partner Terms acceptance", error);
+        const retryButton = document.getElementById("agency-partner-terms-approved-btn");
+        if (retryButton) { retryButton.disabled = false; retryButton.textContent = "APPROVED"; retryButton.style.opacity = '1'; retryButton.style.cursor = 'pointer'; }
+        alert("Agency Partner Terms acceptance failed: " + (error?.message || String(error || 'Unknown error')));
+    }
 };
 
+const originalAcceptAgencyPartnerTerms = window.acceptAgencyPartnerTerms;
+window.acceptAgencyPartnerTerms = async function (...args) {
+    try { return await originalAcceptAgencyPartnerTerms.apply(this, args); }
+    catch (error) {
+        console.error('Agency terms acceptance failed:', error);
+        const button = document.getElementById('agency-partner-terms-approved-btn');
+        if (button) { button.disabled = false; button.textContent = 'APPROVED'; button.style.cursor = 'pointer'; }
+        alert('Partner Terms save nahi ho saka. ' + (error?.message || 'Please check your connection and try again.'));
+    }
+};
 
 function customerPrivacyPolicyHtml() {
     return `
@@ -15041,7 +15062,7 @@ window.renderCustomerRequests=async function(){
         'denyHotelBookingRequest', 'acknowledgeBookingAlert',
         'executeLandslideResolution', 'startCameraScanner', 'verifyCheckinByOtp',
         'acceptAgencyPartnerTerms', 'toggleAgencyTermsApprovalButton', 'updateBookingStatus', 'confirmHotelCancellation', 'showTab'
-    ]);
+    , 'toggleHotelPartnerTermsButton', 'acceptHotelPartnerTerms', 'toggleHotelPrivacyApprovalButton', 'acceptHotelPartnerPrivacy', 'toggleAgencyPrivacyApprovalButton', 'acceptAgencyPartnerPrivacy']);
 
     function parseLiteralArgs(source, event, element) {
         const parts = [];
@@ -15262,4 +15283,16 @@ window.renderCustomerRequests=async function(){
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
     else start();
+
+/* CSP-safe Agency Terms gate bindings: delegated because the gate is rendered dynamically. */
+document.addEventListener('change', function (event) {
+    if (event.target?.id === 'agency-partner-terms-checkbox') window.toggleAgencyTermsApprovalButton?.();
+});
+document.addEventListener('click', function (event) {
+    if (event.target?.closest?.('#agency-partner-terms-approved-btn')) {
+        event.preventDefault();
+        window.acceptAgencyPartnerTerms?.();
+    }
+});
+
 })();

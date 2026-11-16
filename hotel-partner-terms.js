@@ -39,10 +39,10 @@
                         hotelPartnerTermsHtml() +
                     '</div>' +
                     '<label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;">' +
-                        '<input type="checkbox" id="hotel-partner-terms-checkbox" onchange="window.toggleHotelPartnerTermsButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">' +
+                        '<input type="checkbox" id="hotel-partner-terms-checkbox" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">' +
                         '<span style="font-weight:800;color:#2d3436;line-height:1.5;">I confirm that I am the authorized owner/manager of this property and agree to TourSetu\'s Hotel Partner Terms & Conditions.</span>' +
                     '</label>' +
-                    '<button id="hotel-partner-terms-approved-btn" onclick="window.acceptHotelPartnerTerms()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">APPROVED</button>' +
+                    '<button id="hotel-partner-terms-approved-btn" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">APPROVED</button>' +
                     '<p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Hotel Dashboard will remain locked until you tick the checkbox and click APPROVED.</p>' +
                 '</div>' +
             '</div>';
@@ -60,6 +60,7 @@
     };
 
     window.acceptHotelPartnerTerms = async function () {
+        try {
         const checkbox = document.getElementById('hotel-partner-terms-checkbox');
         const button = document.getElementById('hotel-partner-terms-approved-btn');
         if (!checkbox || !checkbox.checked) {
@@ -153,6 +154,23 @@
                 await originalDashboard(user);
             }
         }
+        } catch (error) {
+            console.error("Hotel Partner Terms acceptance", error);
+            const retryButton = document.getElementById("hotel-partner-terms-approved-btn");
+            if (retryButton) { retryButton.disabled = false; retryButton.textContent = "APPROVED"; retryButton.style.opacity = '1'; retryButton.style.cursor = 'pointer'; }
+            alert("Hotel Partner Terms acceptance failed: " + (error?.message || String(error || 'Unknown error')));
+        }
+    };
+
+    const originalAcceptHotelPartnerTerms = window.acceptHotelPartnerTerms;
+    window.acceptHotelPartnerTerms = async function (...args) {
+        try { return await originalAcceptHotelPartnerTerms.apply(this, args); }
+        catch (error) {
+            console.error('Hotel terms acceptance failed:', error);
+            const button = document.getElementById('hotel-partner-terms-approved-btn');
+            if (button) { button.disabled = false; button.textContent = 'APPROVED'; button.style.cursor = 'pointer'; }
+            alert('Hotel Partner Terms save nahi ho saka. ' + (error?.message || 'Please check your connection and try again.'));
+        }
     };
 
     async function hotelTermsGuard(user) {
@@ -171,7 +189,7 @@
             console.error('Hotel terms acceptance check failed:', error);
             const app = document.getElementById('app');
             if (app) {
-                app.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Inter,sans-serif;"><div style="background:#fff;max-width:560px;width:100%;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center;"><h2>Unable to load Hotel Partner Terms & Conditions</h2><p>Please try again. Your Hotel Dashboard will remain locked until the current terms are recorded.</p><button onclick="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;">TRY AGAIN</button></div></div>';
+                app.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Inter,sans-serif;"><div style="background:#fff;max-width:560px;width:100%;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center;"><h2>Unable to load Hotel Partner Terms & Conditions</h2><p>Please try again. Your Hotel Dashboard will remain locked until the current terms are recorded.</p><button data-ts-csp-click="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;">TRY AGAIN</button></div></div>';
             }
             return false;
         }
@@ -236,4 +254,16 @@
 
     installHotelLegalTermsPanel();
     installHotelDashboardGuard();
+
+    // CSP-safe delegated bindings for this dynamically rendered acceptance gate.
+    document.addEventListener('change', function (event) {
+        if (event.target?.id === 'hotel-partner-terms-checkbox') window.toggleHotelPartnerTermsButton?.();
+    });
+    document.addEventListener('click', function (event) {
+        if (event.target?.closest?.('#hotel-partner-terms-approved-btn')) {
+            event.preventDefault();
+            window.acceptHotelPartnerTerms?.();
+        }
+    });
+
 })();
