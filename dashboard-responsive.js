@@ -2,9 +2,9 @@
 (function () {
   'use strict';
   const configs = [
-    { root: '.toursetu-agency-dashboard > .agency-sidebar', nav: '.agency-sidebar nav', label: 'Dashboard menu' },
-    { root: '.hotel-dashboard-shell > div:first-child', nav: '.hotel-dashboard-shell nav', label: 'Hotel menu' },
-    { root: '.driver-app .sidebar', nav: '.driver-app .side-nav', label: 'Driver menu' }
+    { root: '.toursetu-agency-dashboard > .agency-sidebar', nav: 'nav', label: 'Dashboard menu' },
+    { root: '.hotel-dashboard-shell > div:first-child', nav: 'nav', label: 'Hotel menu' },
+    { root: '.driver-app .sidebar', nav: '.side-nav', label: 'Driver menu' }
   ];
   function install(rootSelector, navSelector, label) {
     document.querySelectorAll(rootSelector).forEach((sidebar) => {
