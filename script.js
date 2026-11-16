@@ -813,12 +813,15 @@ const TOURSETU_AUTH_REDIRECT_URL = 'https://toursetu.in/signin';
 let authStateListenerStarted = false;
 
 function isPasswordRecoveryUrl() {
-    const hash = window.location.hash || '';
-    const search = window.location.search || '';
-    return /(?:^|[&#?])type=recovery(?:&|#|$)/i.test(hash + search);
+    // Supabase can return recovery metadata in either the query string
+    // (PKCE/OTP) or the URL fragment (implicit flow).
+    const queryParams = new URLSearchParams(window.location.search || '');
+    const hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+    return queryParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
 }
 
 function clearAuthRecoveryUrl() {
+    // Remove one-time recovery tokens from the address bar after the flow ends.
     try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
 }
 
@@ -1155,7 +1158,12 @@ async function handlePasswordUpdate() {
         if (loginStatus) loginStatus.innerHTML = '<div style="background:#eafaf1;padding:14px;border-radius:10px;border:1px solid #b7ebc6;color:#1e7e34;text-align:left;"><strong>✅ Password updated successfully.</strong><br>Your account password is now the new password you just set. Please login with it.</div>';
     } catch (err) {
         console.error('Password update error:', err);
-        if (status) status.innerText = '❌ ' + (err?.message || 'Could not update password.');
+        const message = String(err?.message || '');
+        if (status) {
+            status.innerText = /session|token|expired|invalid/i.test(message)
+                ? '❌ This password-reset link is invalid or has expired. Please return to Login and request a new reset email.'
+                : '❌ ' + (message || 'Could not update password.');
+        }
         if (button) button.disabled = false;
     }
 }
