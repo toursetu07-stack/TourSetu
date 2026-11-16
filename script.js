@@ -1451,7 +1451,7 @@ function getReadableAuthError(error, fallback = 'Something went wrong. Please tr
 }
 
 async function handleAuth(){
-    const status=document.getElementById('status'),role=document.getElementById('role')?.value||'customer',btn=document.getElementById('agency-register-btn')||document.getElementById('auth-btn'),email=document.getElementById('email')?.value.trim(),password=document.getElementById('password')?.value||'';
+    const status=document.getElementById('status'),role=document.getElementById('role')?.value||'customer',btn=document.getElementById('agency-register-btn')||document.getElementById('auth-btn'),email=document.getElementById('email')?.value.trim(),password=document.getElementById(isLoginMode?'loginPassword':'registerPassword')?.value||'';
     if(!email||!password){if(status)status.innerText='⚠️ Please enter email and password';return;}
     const client=getClient();if(!client){if(status)status.innerText='❌ Supabase not initialized';return;}
     if(!isLoginMode&&role==='agency'){
