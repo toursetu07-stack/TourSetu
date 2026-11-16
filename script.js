@@ -1006,7 +1006,7 @@ function renderAuthUI() {
             </div>
             <div style="display:flex;gap:10px;margin-top:14px;">
               <button type="button" data-ts-csp-click="backToAgencyDocumentStep1()" style="background:#636e72;color:white;flex:1;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;">BACK</button>
-              <button type="button" id="agency-register-btn" type="submit" style="background:#ff9f43;color:white;flex:1;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;">REGISTER</button>
+              <button type="submit" id="agency-register-btn" style="background:#ff9f43;color:white;flex:1;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;">REGISTER</button>
             </div>
           </div>
         </div>
