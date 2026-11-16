@@ -32,7 +32,13 @@
             var role = allowedRoles.has(pendingRole) ? pendingRole :
                 (allowedRoles.has(profileRole) ? profileRole : (allowedRoles.has(metadataRole) ? metadataRole : 'customer'));
             var profileWrite = await client.from('profiles').upsert({
-                id: user.id, email: user.email || null, role: role
+                id: user.id,
+                email: user.email || null,
+                role: role,
+                ...(!profileResult.data ? {
+                    is_approved: role === 'customer',
+                    approval_status: role === 'customer' ? 'approved' : 'pending'
+                } : {})
             }, { onConflict: 'id' });
             if (profileWrite.error) {
                 console.error('TourSetu landing auth profile sync failed:', profileWrite.error);
@@ -40,7 +46,7 @@
             }
             try { localStorage.setItem('toursetu_authenticated_role', role); } catch (storageError) {}
             handledUserId = user.id;
-            window.location.replace('/signin.html?auth=complete');
+            window.location.replace('/signin?auth=complete');
         } catch (error) {
             console.error('TourSetu landing auth redirect failed:', error);
         } finally { handling = false; }
