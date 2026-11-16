@@ -1427,7 +1427,7 @@ function getReadableAuthError(error, fallback = 'Something went wrong. Please tr
         const statusCode = Number.isFinite(error.status) ? String(error.status) : '';
         const contextMessage = error.context?.message || error.cause?.message;
         if (typeof contextMessage === 'string' && contextMessage.trim()) return contextMessage.trim();
-        if (code || statusCode) return [code, statusCode].filter(Boolean).join(' (HTTP ') + (statusCode ? ')' : '');
+        if (code || statusCode) return code && statusCode ? code + ' (HTTP ' + statusCode + ')' : (code || 'HTTP ' + statusCode);
         try {
             const serialized = JSON.stringify(error);
             if (serialized && serialized !== '{}' && serialized !== '[]') return serialized;
