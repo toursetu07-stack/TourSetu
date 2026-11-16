@@ -47,10 +47,6 @@
                 '</div>' +
             '</div>';
 
-        const termsCheckbox = document.getElementById('hotel-partner-terms-checkbox');
-        const termsButton = document.getElementById('hotel-partner-terms-approved-btn');
-        termsCheckbox?.addEventListener('change', window.toggleHotelPartnerTermsButton);
-        termsButton?.addEventListener('click', window.acceptHotelPartnerTerms);
         window.__tourSetuOriginalHotelDashboard = originalDashboard;
     }
 
