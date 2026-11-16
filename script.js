@@ -819,6 +819,32 @@ function startAuthStateListener() {
     });
 }
 
+async function completeGoogleSignupRole(user){
+    const storageKey='toursetu_google_signup_role';
+    let selectedRole='';
+    try{selectedRole=String(localStorage.getItem(storageKey)||'').toLowerCase();}catch(error){}
+    if(!user?.id||!['customer','agency','hotel','driver'].includes(selectedRole))return;
+    const client=getClient();
+    if(!client)return;
+    try{
+        // Save the chosen registration role to the user's profile metadata.
+        const {data,error}=await client.auth.updateUser({data:{role:selectedRole,is_approved:selectedRole==='customer'}});
+        if(error)throw error;
+        const signedInUser=data?.user||user;
+        // Keep the existing profile role lookup in sync; RLS must permit users to update only their own profile.
+        const {error:profileError}=await client.from('profiles').upsert({
+            id:signedInUser.id,
+            email:signedInUser.email||user.email||null,
+            role:selectedRole
+        },{onConflict:'id'});
+        if(profileError)console.warn('Google signup profile role sync deferred:',profileError.message);
+        localStorage.removeItem(storageKey);
+    }catch(error){
+        console.error('Could not persist Google signup role:',error);
+        // Do not discard the pending role on a transient failure; a later signin page load can retry.
+    }
+}
+
 async function initApp() {
     console.log("TourSetu Booting Up...");
     const client = getClient();
@@ -836,7 +862,10 @@ async function initApp() {
     if (referralCode && referralCode.trim()) isLoginMode = false;
 
     const { data: { user }, error } = await client.auth.getUser();
-    if (user && !error) await showDashboard(user);
+    if (user && !error) {
+        await completeGoogleSignupRole(user);
+        await showDashboard(user);
+    }
     else renderAuthUI();
 }
 
@@ -958,7 +987,7 @@ function renderAuthUI() {
         </div>
         ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" data-ts-csp-click="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
         ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" data-ts-csp-change="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select></div>'}
-        <button type="button" id="selectEmailBtn" class="select-email-btn" style="display:block;width:100%;margin:10px 0 0;padding:11px 14px;border:1px solid #ff9f43;border-radius:8px;background:#fff7ed;color:#b85b00;font-weight:700;cursor:pointer;">Select Email</button>
+        ${isLoginMode?'': '<button type="button" id="selectEmailBtn" class="select-email-btn" style="display:block;width:100%;margin:10px 0 0;padding:11px 14px;border:1px solid #ff9f43;border-radius:8px;background:#fff7ed;color:#b85b00;font-weight:700;cursor:pointer;">Continue with Google</button>'}
         <div id="business-fields" style="display:none;text-align:left;margin-top:12px;border-top:1px solid #eee;padding-top:12px;">
           <div id="agency-basic-fields">
             <label>Email Address</label><input type="email" id="agency-email" readonly placeholder="Email Address" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;background:#f8f9fa;">
@@ -1035,24 +1064,34 @@ function bindAuthFormControls() {
         });
     });
     const selectButton=document.getElementById('selectEmailBtn');
-    if(selectButton&&selectButton.dataset.authSelectBound!=='true'){
-        selectButton.dataset.authSelectBound='true';
+    if(selectButton&&!isLoginMode&&selectButton.dataset.googleOAuthBound!=='true'){
+        selectButton.dataset.googleOAuthBound='true';
+        selectButton.type='button';
         selectButton.addEventListener('click',async event=>{
             event.preventDefault();
             event.stopPropagation();
-            const emailInput=document.getElementById('email');
-            const passwordInput=document.getElementById(isLoginMode?'loginPassword':'registerPassword');
-            if(emailInput){emailInput.focus();emailInput.click();}
+            if(isLoginMode)return;
+            const status=document.getElementById('status');
+            const client=getClient();
+            if(!client){if(status)status.textContent='❌ Supabase not initialized';return;}
+            const allowedRoles=new Set(['customer','agency','hotel','driver']);
+            const selectedRole=String(document.getElementById('role')?.value||'customer').toLowerCase();
+            const role=allowedRoles.has(selectedRole)?selectedRole:'customer';
             try{
-                if(navigator.credentials&&typeof navigator.credentials.get==='function'){
-                    const credential=await navigator.credentials.get({password:true,mediation:'optional'});
-                    if(credential){
-                        if(emailInput&&credential.id){emailInput.value=credential.id;emailInput.dispatchEvent(new Event('input',{bubbles:true}));emailInput.dispatchEvent(new Event('change',{bubbles:true}));}
-                        if(passwordInput&&typeof credential.password==='string'){passwordInput.value=credential.password;passwordInput.dispatchEvent(new Event('input',{bubbles:true}));passwordInput.dispatchEvent(new Event('change',{bubbles:true}));}
-                    }
-                }
-            }catch(error){console.debug('Saved credential chooser unavailable:',error);}
-            finally{if(emailInput){emailInput.focus();emailInput.click();}}
+                // Persist the signup choice before Supabase redirects to Google.
+                localStorage.setItem('toursetu_google_signup_role',role);
+                selectButton.disabled=true;
+                if(status)status.textContent='⏳ Connecting to Google...';
+                const {error}=await client.auth.signInWithOAuth({
+                    provider:'google',
+                    options:{redirectTo:window.location.origin}
+                });
+                if(error)throw error;
+            }catch(error){
+                console.error('Google OAuth start failed:',error);
+                if(status)status.textContent='❌ '+getReadableAuthError(error,'Google sign-in could not be started. Please try again.');
+                selectButton.disabled=false;
+            }
         });
     }
 }
