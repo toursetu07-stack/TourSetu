@@ -75,10 +75,6 @@
                 </div>
             </div>
         `;
-        const privacyCheckbox = document.getElementById('agency-partner-privacy-checkbox');
-        const privacyButton = document.getElementById('agency-partner-privacy-approved-btn');
-        privacyCheckbox?.addEventListener('change', window.toggleAgencyPrivacyApprovalButton);
-        privacyButton?.addEventListener('click', window.acceptAgencyPartnerPrivacy);
         return false;
     }
 
