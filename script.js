@@ -1447,9 +1447,11 @@ async function renderCustomerHomepage(user, options = {}) {
     app.style.maxWidth = "100%";
     window.mountDashboardUtilityMenu('customer');
     
-    // Customer search is intentionally limited to Uttarakhand.
-    // Keep locationData as the single source for its city list.
-    const stateOptions = '<option value="Uttarakhand" selected>Uttarakhand</option>';
+    // Customer search and agency package forms share the complete state/city master.
+    const stateOptions = [...new Set([...Object.keys(locationData), 'Uttarakhand'])]
+        .sort((a, b) => a.localeCompare(b))
+        .map(state => '<option value="' + window.TourSetuDOM.escapeHTML(state) + '"' + (state === 'Uttarakhand' ? ' selected' : '') + '>' + window.TourSetuDOM.escapeHTML(state) + '</option>')
+        .join('');
 
     const destOptions = tourDestinations.map(d => 
         `<option value="${d}">${d}</option>`
@@ -3769,6 +3771,35 @@ window.toggleQtyInput = (id) => {
    Uses Nominatim geocoding + OSRM road distance.
    ============================================================ */
 const UTTARAKHAND_PICKUP_CITIES = window.TOURSETU_UK_CITIES || ["Almora","Ranikhet","Dwarahat","Chaukhutia","Bhikiyasen","Bageshwar","Kapkot","Garur","Champawat","Banbasa","Tanakpur","Lohaghat","Pati","Gopeshwar","Joshimath","Gauchar","Karnaprayag","Nandprayag","Badrinath","Pokhari","Tharali","Gairsain","Pipalkoti","Nandanagar","Dehradun","Rishikesh","Vikasnagar","Mussoorie","Herbertpur","Selaqui","Doiwala","Haridwar","Roorkee","Adampur-Sultanpur","Dhandera","Imlikhera","Padligurjar","Rampur","Manglaur","Jhabreda","Laksar","Landhaura","Shivalik Nagar","Bhagwanpur","Piran Kaliyer","Haldwani","Ramnagar","Bhowali","Kaladhungi","Lalkuan","Nainital","Bhimtal","Pauri","Srinagar","Swargashram-Jaunk","Satpuli","Dogadda","Kotdwar","Thalisain","Pithoragarh","Dharchula","Didihat","Gangolihat","Berinag","Munsyari","Rudraprayag","Kedarnath","Augustmuni","Tilwara","Ukhimath","Guptkashi","Tehri","Narendranagar","Chamba","Muni-ki-Reti","Kirtinagar","Devprayag","Gaja","Ghansali","Lambgaon","Chamiyala","Tapovan","Gadarpur","Jaspur","Kichha","Sitarganj","Bazpur","Khatima","Mahuakheraganj","Mahuwadawara","Sultanpur","Kelakheda","Dineshpur","Shaktigarh","Nanakmatta","Gularbhoj","Kashipur","Rudrapur","Nagla","Lalpur","Garhinegi","Seroli Kalan","Uttarkashi","Barkot","Chinyalisaur","Gangotri","Purola","Naugaon"];
+
+/* One canonical city dataset shared by customer search and agency packages. */
+window.TOURSETU_COMPLETE_CITY_DATA = Object.freeze({
+    ...locationData,
+    Uttarakhand: UTTARAKHAND_PICKUP_CITIES
+});
+window.getTourSetuCitiesForState = function(state) {
+    const source = window.TOURSETU_COMPLETE_CITY_DATA?.[state];
+    return Array.isArray(source) ? [...new Set(source.filter(city => city != null && String(city).trim()).map(city => String(city).trim()))] : [];
+};
+window.updateCityDropdown = function() {
+    const stateSelect = document.getElementById('search-state');
+    const citySelect = document.getElementById('search-start');
+    if (!stateSelect || !citySelect) return;
+    const selectedState = stateSelect.value;
+    const previousCity = citySelect.value;
+    citySelect.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = selectedState ? 'Select City' : 'Select State First';
+    citySelect.appendChild(placeholder);
+    window.getTourSetuCitiesForState(selectedState).forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        option.textContent = city;
+        citySelect.appendChild(option);
+    });
+    if (previousCity && [...citySelect.options].some(option => option.value === previousCity)) citySelect.value = previousCity;
+};
 window.currentPickupDistanceCharge = 0;
 window.currentPickupDistanceKm = 0;
 window.pickupDistanceRequestId = 0;
@@ -7723,30 +7754,19 @@ window.updateCities = function() {
     const stateSelect = document.getElementById('p-state');
     const citySelect = document.getElementById('p-city');
     if (!stateSelect || !citySelect) return;
-
     const selectedState = stateSelect.value;
     const previousCity = citySelect.value;
     citySelect.replaceChildren();
-
     const placeholder = document.createElement('option');
     placeholder.value = '';
     placeholder.textContent = 'Select City';
     citySelect.appendChild(placeholder);
-    if (!selectedState) return;
-
-    const sourceCities = selectedState === 'Uttarakhand'
-        ? UTTARAKHAND_PICKUP_CITIES
-        : (Array.isArray(locationData[selectedState]) ? locationData[selectedState] : []);
-
-    [...new Set(sourceCities.filter(city => city != null && String(city).trim()))]
-        .forEach(city => {
-            const value = String(city);
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = value;
-            citySelect.appendChild(option);
-        });
-
+    window.getTourSetuCitiesForState(selectedState).forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        option.textContent = city;
+        citySelect.appendChild(option);
+    });
     if (previousCity && [...citySelect.options].some(option => option.value === previousCity)) {
         citySelect.value = previousCity;
     } else {
@@ -7814,7 +7834,7 @@ window.showPackageForm = function(pEncoded = null) {
         : (derivedStartingState && locationData[derivedStartingState]
             ? derivedStartingState
             : 'Uttarakhand');
-    const stateOptions = Object.keys(locationData)
+    const stateOptions = [...new Set([...Object.keys(locationData), 'Uttarakhand'])]
         .sort((a, b) => a.localeCompare(b))
         .map(state => `<option value="${state}" ${state === selectedState ? 'selected' : ''}>${state}</option>`)
         .join('');
@@ -8306,6 +8326,10 @@ window.showPackageForm = function(pEncoded = null) {
     }
 
     window.updateCities();
+    // Reconcile after the modal's injected DOM has completed the current render frame.
+    requestAnimationFrame(() => {
+        if (document.getElementById('p-state') && document.getElementById('p-city')) window.updateCities();
+    });
     const startingCitySelect = document.getElementById('p-city');
     if (startingCitySelect && savedStartingCity) {
         const savedCityOption = [...startingCitySelect.options].find(option =>
