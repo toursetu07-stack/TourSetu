@@ -937,7 +937,10 @@ async function applyPendingGoogleSignupRole(user) {
 
     const { data: existingProfile, error: lookupError } = await client
         .from('profiles').select('role,is_approved,approval_status').eq('id', user.id).maybeSingle();
-    if (lookupError) console.warn('OAuth profile role lookup failed:', lookupError);
+    if (lookupError) {
+        console.error('OAuth profile role lookup failed:', lookupError);
+        throw new Error('TourSetu could not verify your existing account status. Please refresh and try again.');
+    }
     const existingRole = String(existingProfile?.role || '').toLowerCase();
     if (!allowedRoles.has(selectedRole)) {
         const metadataRole = String(user.user_metadata?.role || '').toLowerCase();
