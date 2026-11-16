@@ -15283,4 +15283,16 @@ window.renderCustomerRequests=async function(){
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
     else start();
+
+/* CSP-safe Agency Terms gate bindings: delegated because the gate is rendered dynamically. */
+document.addEventListener('change', function (event) {
+    if (event.target?.id === 'agency-partner-terms-checkbox') window.toggleAgencyTermsApprovalButton?.();
+});
+document.addEventListener('click', function (event) {
+    if (event.target?.closest?.('#agency-partner-terms-approved-btn')) {
+        event.preventDefault();
+        window.acceptAgencyPartnerTerms?.();
+    }
+});
+
 })();
