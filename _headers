@@ -8,3 +8,29 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin-allow-popups
   X-Permitted-Cross-Domain-Policies: none
+
+# HTML must always be revalidated so phones and in-app browsers receive
+# the newest asset-version references after each deployment.
+/*.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+
+# Revalidate scripts and styles on every navigation. Versioned URLs remain
+# compatible with CDNs while avoiding stale mobile WebView bundles.
+/*.js
+  Cache-Control: no-cache, must-revalidate, max-age=0
+
+/*.css
+  Cache-Control: no-cache, must-revalidate, max-age=0
+
+# Keep the configuration endpoint and service worker fresh as well.
+/supabase-config
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+
+/service-worker.js
+  Cache-Control: no-cache, must-revalidate, max-age=0
+
+/OneSignalSDKWorker.js
+  Cache-Control: no-cache, must-revalidate, max-age=0
+
