@@ -76,6 +76,7 @@
             cursor: pointer;
         }
 
+        .select-email-btn[hidden] { display:none !important; }
         .select-email-btn { display:block; width:100%; margin:12px 0 0; padding:11px 14px; border:1px solid #ff9f43; border-radius:8px; background:#fff7ed; color:#b85b00; font:600 14px 'Inter',sans-serif; cursor:pointer; }
         .select-email-btn:hover { background:#ffedd5; }
         .password-toggle-btn { touch-action: manipulation; }
@@ -124,7 +125,7 @@
                 </p>
             </div>
 
-            <button type="button" id="selectEmailBtn" class="select-email-btn">Select Email</button>
+            <button type="button" id="selectEmailBtn" class="select-email-btn" hidden>Continue with Google</button>
             <button id="auth-btn" type="submit">Create Account</button>
             </form>
             
@@ -172,7 +173,7 @@
 <script src="/supabase-config?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 <script src="toursetu-shared-data.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
-<script src="script.js?v=2026-11-16-auth-select-email-eye-fix-v1"></script>
+<script src="script.js?v=2026-11-16-google-oauth-signup-v1"></script>
 <script src="onesignal-auth-fix.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="about-us.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="hotel-partner-terms.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
