@@ -18,45 +18,8 @@ const vehicleTypes = [
     { id: 'bus', name: 'Luxury Bus (55 Seaters)', icon: '🚍' }
 ];
 
-const locationData = {
-  "Andaman & Nicobar": ["Port Blair", "Havelock Island", "Neil Island"],
-  "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Tirupati", "Guntur", "Nellore"],
-  "Arunachal Pradesh": ["Itanagar", "Tawang", "Ziro", "Pasighat"],
-  "Assam": ["Guwahati", "Dibrugarh", "Silchar", "Jorhat", "Tezpur"],
-  "Bihar": ["Patna", "Gaya", "Bhagalpur", "Muzaffarpur", "Purnia"],
-  "Chandigarh": ["Mohali", "Kharar", "Zirakpur"],
-  "Chhattisgarh": ["Raipur", "Bhilai", "Bilaspur", "Korba"],
-  "Dadra & Nagar Haveli": ["Silvassa"],
-  "Daman & Diu": ["Daman", "Diu"],
-  "Delhi": ["New Delhi", "Old Delhi", "Saket", "Dwarka", "Rohini", "Connaught Place"],
-  "Goa": ["Panaji", "Margao", "Vasco da Gama", "Calangute"],
-  "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar", "Somnath"],
-  "Haryana": ["Gurugram", "Faridabad", "Panipat", "Ambala", "Karnal"],
-  "Himachal Pradesh": ["Shimla", "Manali", "Dharamshala", "Kullu", "Solan"],
-  "Jammu & Kashmir": ["Srinagar", "Jammu", "Katra", "Gulmarg", "Pahalgam"],
-  "Jharkhand": ["Ranchi", "Jamshedpur", "Dhanbad", "Bokaro"],
-  "Karnataka": ["Bengaluru", "Mysuru", "Hubballi", "Mangaluru", "Belagavi"],
-  "Kerala": ["Thiruvananthapuram", "Kochi", "Kozhikode", "Munnar", "Wayand"],
-  "Ladakh": ["Leh", "Kargil"],
-  "Lakshadweep": ["Kavaratti"],
-  "Madhya Pradesh": ["Bhopal", "Indore", "Gwalior", "Jabalpur", "Ujjain"],
-  "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad", "Thane"],
-  "Manipur": ["Imphal"],
-  "Meghalaya": ["Shillong", "Cherrapunji", "Tura"],
-  "Mizoram": ["Aizawl"],
-  "Nagaland": ["Kohima", "Dimapur"],
-  "Odisha": ["Bhubaneswar", "Cuttack", "Puri", "Rourkela", "Sambalpur"],
-  "Puducherry": ["Puducherry"],
-  "Punjab": ["Ludhiana", "Amritsar", "Jalandhar", "Patiala", "Bathinda"],
-  "Rajasthan": ["Jaipur", "Jodhpur", "Udaipur", "Ajmer", "Bikaner", "Pushkar"],
-  "Sikkim": ["Gangtok", "Pelling", "Namchi"],
-  "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem"],
-  "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Khammam"],
-  "Tripura": ["Agartala"],
-  "Uttar Pradesh": ["Lucknow", "Kanpur", "Varanasi", "Agra", "Noida", "Ayodhya", "Prayagraj", "Meerut"],
-  "Uttarakhand": ["Dehradun", "Haridwar", "Rishikesh", "Haldwani", "Rudrapur", "Kashipur", "Nainital", "Roorkee", "Kichha", "Pantnagar", "Lal kuan", "Lalpur", "Kashipur", "Rudrapryag", "Almora", "Ranikhet", "Bageshwar", "Kausani", "Uttarkashi", "Barkot",],
-  "West Bengal": ["Kolkata", "Howrah", "Darjeeling", "Siliguri", "Durgapur"]
-};
+// Only Uttarakhand is supported across TourSetu dashboards.
+const locationData = { "Uttarakhand": [] };
 
 
 let customerOperatorSearchRequestId = 0;
@@ -1523,10 +1486,7 @@ async function renderCustomerHomepage(user, options = {}) {
     window.mountDashboardUtilityMenu('customer');
     
     // Customer search and agency package forms share the complete state/city master.
-    const stateOptions = [...new Set([...Object.keys(locationData), 'Uttarakhand'])]
-        .sort((a, b) => a.localeCompare(b))
-        .map(state => '<option value="' + window.TourSetuDOM.escapeHTML(state) + '"' + (state === 'Uttarakhand' ? ' selected' : '') + '>' + window.TourSetuDOM.escapeHTML(state) + '</option>')
-        .join('');
+    const stateOptions = '<option value="Uttarakhand" selected>Uttarakhand</option>';
 
     const destOptions = tourDestinations.map(d => 
         `<option value="${d}">${d}</option>`
@@ -6147,19 +6107,9 @@ window.executeLogout = async () => {
    ========================================================= */
 
 // Agar pehle se declared hai toh re-declare mat karein, direct value update/reassign karein (ya ise hata hi dein):
+// Hotel Property Profile uses the exact same city options as Customer Dashboard.
 if (typeof FIXED_HOTEL_DESTINATIONS === 'undefined') {
-    var FIXED_HOTEL_DESTINATIONS = [
-        "Haridwar", 
-        "Rishikesh", 
-        "Dehradun", 
-        "Barkot", 
-        "Uttarkashi", 
-        "Guptkashi", 
-        "Sonprayag", 
-        "Phata", 
-        "Badrinath Main Market", 
-        "Gangotri Temple Road & Market Area"
-    ];
+    var FIXED_HOTEL_DESTINATIONS = UTTARAKHAND_PICKUP_CITIES;
 }
 
 /**
@@ -6219,19 +6169,9 @@ async function evaluateHotelVisibility(hotelId) {
    ========================================================= */
 
 // Destination list check & definition
+// Hotel Property Profile uses the exact same city options as Customer Dashboard.
 if (typeof FIXED_HOTEL_DESTINATIONS === 'undefined') {
-    var FIXED_HOTEL_DESTINATIONS = [
-        "Haridwar", 
-        "Rishikesh", 
-        "Dehradun", 
-        "Barkot", 
-        "Uttarkashi", 
-        "Guptkashi", 
-        "Sonprayag", 
-        "Phata", 
-        "Badrinath Main Market", 
-        "Gangotri Temple Road & Market Area"
-    ];
+    var FIXED_HOTEL_DESTINATIONS = UTTARAKHAND_PICKUP_CITIES;
 }
 
 // 1. Safe Fetch Function for Hotel Profile
@@ -7927,10 +7867,7 @@ window.showPackageForm = function(pEncoded = null) {
         : (derivedStartingState && locationData[derivedStartingState]
             ? derivedStartingState
             : 'Uttarakhand');
-    const stateOptions = [...new Set([...Object.keys(locationData), 'Uttarakhand'])]
-        .sort((a, b) => a.localeCompare(b))
-        .map(state => `<option value="${state}" ${state === selectedState ? 'selected' : ''}>${state}</option>`)
-        .join('');
+    const stateOptions = '<option value="Uttarakhand" selected>Uttarakhand</option>';
 
 
     // =========================================
