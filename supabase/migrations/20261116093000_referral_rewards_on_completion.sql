@@ -22,8 +22,10 @@ begin
   v_definition := pg_get_functiondef('public.guard_booking_mutation()'::regprocedure);
   v_replacement := replace(
     v_definition,
-    E'AS $function$\nbegin',
-    E'AS $function$\nbegin\n  if (select auth.role()) = ''service_role'' and new.status = ''completed'' and old.status in (''paid'',''checked_in'') then\n    return new;\n  end if;'
+    'AS $function$' || chr(10) || 'begin',
+    'AS $function$' || chr(10) || 'begin' || chr(10) ||
+    '  if (select auth.role()) = ''service_role'' and new.status = ''completed'' and old.status in (''paid'',''checked_in'') then' || chr(10) ||
+    '    return new;' || chr(10) || '  end if;'
   );
   if v_replacement = v_definition then
     raise exception 'Could not safely patch guard_booking_mutation()';
@@ -34,8 +36,11 @@ begin
   -- Inject immediately before the existing authentication/authorization checks.
   v_replacement := replace(
     v_definition,
-    E'BEGIN\n  IF uid IS NULL THEN',
-    E'BEGIN\n  IF (select auth.role()) = ''service_role'' and new.booking_status = ''completed'' AND old.booking_status = ''approved'' AND old.payment_status = ''paid'' THEN\n    RETURN new;\n  END IF;\n  IF uid IS NULL THEN'
+    'BEGIN' || chr(10) || '  IF uid IS NULL THEN',
+    'BEGIN' || chr(10) ||
+    '  IF (select auth.role()) = ''service_role'' and new.booking_status = ''completed'' AND old.booking_status = ''approved'' AND old.payment_status = ''paid'' THEN' || chr(10) ||
+    '    RETURN new;' || chr(10) || '  END IF;' || chr(10) ||
+    '  IF uid IS NULL THEN'
   );
   if v_replacement = v_definition then
     raise exception 'Could not safely patch guard_hotel_booking_mutation()';
