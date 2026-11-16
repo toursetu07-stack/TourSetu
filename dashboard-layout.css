@@ -1,0 +1,56 @@
+/* TourSetu dashboard layout: auth-card styles apply only while the auth view is visible. */
+@media (min-width: 769px) {
+  body:has(.toursetu-agency-dashboard), body:has(.hotel-dashboard-shell), body:has(.driver-app) {
+    display:block !important; place-items:initial !important; justify-content:initial !important;
+    align-items:initial !important; width:100% !important; max-width:none !important;
+    min-height:100vh !important; padding:0 !important; margin:0 !important; overflow-x:clip !important;
+  }
+  #app:has(.toursetu-agency-dashboard), #app:has(.hotel-dashboard-shell), #app:has(.driver-app) {
+    display:block !important; width:100% !important; max-width:none !important;
+    min-height:100vh !important; margin:0 !important; padding:0 !important;
+    border:0 !important; border-radius:0 !important; box-shadow:none !important;
+    background:transparent !important;
+  }
+  .toursetu-agency-dashboard { width:100% !important; max-width:none !important; min-height:100vh !important; margin:0 !important; display:flex !important; align-items:stretch !important; }
+  .toursetu-agency-dashboard > .agency-sidebar { position:sticky !important; inset-block-start:0; flex:0 0 260px !important; width:260px !important; min-width:260px !important; height:100vh !important; min-height:100vh !important; overflow-y:auto; }
+  .toursetu-agency-dashboard > .agency-main-content { flex:1 1 0 !important; width:calc(100% - 260px) !important; max-width:none !important; min-width:0 !important; min-height:100vh !important; overflow-x:clip !important; }
+  #main-content > div[style*="display:grid"] { display:grid !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important; width:100% !important; gap:clamp(14px,1.6vw,24px) !important; }
+  #main-content > div[style*="display:grid"] > * { min-width:0 !important; max-width:100% !important; }
+  .ts-mobile-nav-toggle { display:none !important; }
+  .driver-app { width:100% !important; max-width:none !important; min-height:100vh !important; }
+  .driver-app .sidebar { position:sticky; top:0; flex:0 0 250px; }
+}
+@media (max-width: 768px) {
+  body:has(.toursetu-agency-dashboard), body:has(.hotel-dashboard-shell), body:has(.driver-app) {
+    display:block !important; padding:0 !important; margin:0 !important; width:100% !important; min-width:320px !important; min-height:100vh !important;
+  }
+  #app:has(.toursetu-agency-dashboard), #app:has(.hotel-dashboard-shell), #app:has(.driver-app) {
+    display:block !important; width:100% !important; max-width:none !important; min-height:100vh !important;
+    margin:0 !important; padding:0 !important; border:0 !important; border-radius:0 !important; box-shadow:none !important;
+  }
+  .toursetu-agency-dashboard { display:flex !important; flex-direction:column !important; width:100% !important; max-width:none !important; min-height:100vh !important; margin:0 !important; border-radius:0 !important; }
+  .toursetu-agency-dashboard > .agency-sidebar { position:relative !important; inset:auto !important; width:100% !important; min-width:0 !important; height:auto !important; min-height:0 !important; max-height:none !important; padding:12px 14px !important; overflow:visible !important; }
+  .toursetu-agency-dashboard .agency-sidebar nav { display:none !important; flex-direction:column !important; flex-wrap:nowrap !important; width:100% !important; gap:6px !important; margin-top:10px !important; }
+  .toursetu-agency-dashboard .agency-sidebar.ts-mobile-nav-open nav { display:flex !important; }
+  .toursetu-agency-dashboard .agency-sidebar .nav-item { width:100% !important; min-height:44px !important; flex:0 0 auto !important; margin:0 !important; }
+  .toursetu-agency-dashboard > .agency-main-content { width:100% !important; max-width:none !important; min-width:0 !important; min-height:0 !important; padding:18px 14px calc(28px + env(safe-area-inset-bottom)) !important; overflow:visible !important; }
+  #main-content > div[style*="display:grid"] { display:grid !important; grid-template-columns:minmax(0,1fr) !important; width:100% !important; gap:12px !important; }
+  #main-content > div[style*="display:grid"] > * { min-width:0 !important; width:100% !important; max-width:100% !important; }
+  .ts-mobile-nav-toggle { display:flex !important; align-items:center; justify-content:flex-start; gap:10px; width:100%; min-height:46px; padding:10px 14px; border:1px solid rgba(255,255,255,.18); border-radius:10px; background:#111827; color:#fff; font:700 14px/1.2 Inter, sans-serif; cursor:pointer; }
+  .hotel-dashboard-shell { display:flex !important; flex-direction:column !important; width:100% !important; max-width:none !important; min-height:100vh !important; margin:0 !important; }
+  .hotel-dashboard-shell > div:first-child { width:100% !important; min-width:0 !important; min-height:0 !important; }
+  .hotel-dashboard-shell nav { display:none !important; }
+  .hotel-dashboard-shell > div:first-child.ts-mobile-nav-open nav { display:grid !important; grid-template-columns:minmax(0,1fr) !important; }
+  #hotel-main-content { width:100% !important; max-width:none !important; min-width:0 !important; padding:16px 14px calc(28px + env(safe-area-inset-bottom)) !important; }
+  .driver-app { display:flex !important; flex-direction:column !important; width:100% !important; max-width:none !important; min-height:100vh !important; }
+  .driver-app .sidebar { position:relative !important; top:auto !important; width:100% !important; min-width:0 !important; height:auto !important; max-height:none !important; padding:12px 14px !important; }
+  .driver-app .side-nav { display:none !important; flex-direction:column !important; width:100% !important; overflow:visible !important; }
+  .driver-app .sidebar.ts-mobile-nav-open .side-nav { display:flex !important; }
+  .driver-app .side-link { width:100% !important; white-space:normal !important; }
+  .driver-app .main { width:100% !important; margin:0 !important; min-width:0 !important; }
+  .driver-app .content { width:100% !important; max-width:none !important; padding:16px 14px calc(28px + env(safe-area-inset-bottom)) !important; }
+  .driver-app .stats { grid-template-columns:minmax(0,1fr) !important; }
+  .driver-app .driver-grid { grid-template-columns:minmax(0,1fr) !important; }
+  .toursetu-agency-dashboard :where(input,select,textarea,button), .hotel-dashboard-shell :where(input,select,textarea,button), .driver-app :where(input,select,textarea,button) { max-width:100%; min-width:0; }
+}
+@media (prefers-reduced-motion:reduce) { .ts-mobile-nav-toggle { transition:none !important; } }
