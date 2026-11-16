@@ -39,10 +39,10 @@
                         hotelPartnerTermsHtml() +
                     '</div>' +
                     '<label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;">' +
-                        '<input type="checkbox" id="hotel-partner-terms-checkbox" data-ts-csp-change="toggleHotelPartnerTermsButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">' +
+                        '<input type="checkbox" id="hotel-partner-terms-checkbox" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">' +
                         '<span style="font-weight:800;color:#2d3436;line-height:1.5;">I confirm that I am the authorized owner/manager of this property and agree to TourSetu\'s Hotel Partner Terms & Conditions.</span>' +
                     '</label>' +
-                    '<button id="hotel-partner-terms-approved-btn" data-ts-csp-click="acceptHotelPartnerTerms()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">APPROVED</button>' +
+                    '<button id="hotel-partner-terms-approved-btn" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">APPROVED</button>' +
                     '<p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Hotel Dashboard will remain locked until you tick the checkbox and click APPROVED.</p>' +
                 '</div>' +
             '</div>';
@@ -254,4 +254,16 @@
 
     installHotelLegalTermsPanel();
     installHotelDashboardGuard();
+
+    // CSP-safe delegated bindings for this dynamically rendered acceptance gate.
+    document.addEventListener('change', function (event) {
+        if (event.target?.id === 'hotel-partner-terms-checkbox') window.toggleHotelPartnerTermsButton?.();
+    });
+    document.addEventListener('click', function (event) {
+        if (event.target?.closest?.('#hotel-partner-terms-approved-btn')) {
+            event.preventDefault();
+            window.acceptHotelPartnerTerms?.();
+        }
+    });
+
 })();
