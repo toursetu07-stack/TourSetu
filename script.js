@@ -865,8 +865,15 @@ async function applyPendingGoogleSignupRole(user) {
     const {error:metadataError}=await client.auth.updateUser({data:{role:selectedRole}});
     if(metadataError) throw metadataError;
     // Keep the app's profile role in sync. This writes only the authenticated user's row.
+    const isCustomer=selectedRole==='customer';
     const {error:profileError}=await client.from('profiles').upsert(
-        {id:user.id,role:selectedRole},
+        {
+            id:user.id,
+            email:user.email||null,
+            role:selectedRole,
+            is_approved:isCustomer,
+            approval_status:isCustomer?'approved':'pending'
+        },
         {onConflict:'id'}
     );
     if(profileError) {
