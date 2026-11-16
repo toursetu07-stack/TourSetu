@@ -827,6 +827,13 @@ function clearGoogleSignupIntent() {
     }
 }
 
+function isGoogleOAuthReturn() {
+    const params = new URLSearchParams(window.location.search || '');
+    const hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+    return params.has('code') || params.get('auth') === 'complete' ||
+        hash.has('access_token') || hash.has('error') || params.has('error');
+}
+
 let googleOAuthConfirmationInFlight = false;
 let googleOAuthConfirmationUserId = '';
 
@@ -884,7 +891,7 @@ function startAuthStateListener() {
             renderPasswordResetUI();
             return;
         }
-        if (!session?.user || !hasFreshGoogleSignupIntent()) return;
+        if (!session?.user || !hasFreshGoogleSignupIntent() || !isGoogleOAuthReturn()) return;
         if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
             Promise.resolve().then(() => handleGoogleOAuthReturn(session.user));
         }
@@ -930,11 +937,7 @@ async function initApp() {
     if (referralCode && referralCode.trim()) isLoginMode = false;
 
     const { data: { session }, error } = await client.auth.getSession();
-    const params = new URLSearchParams(window.location.search || '');
-    const hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
-    const isOAuthReturn = params.has('code') || params.get('auth') === 'complete' ||
-        hash.has('access_token') || hash.has('error') || params.has('error');
-    if (session?.user && !error && isOAuthReturn && hasFreshGoogleSignupIntent()) {
+    if (session?.user && !error && isGoogleOAuthReturn() && hasFreshGoogleSignupIntent()) {
         await handleGoogleOAuthReturn(session.user);
     } else {
         // A plain refresh must never replay a previous OAuth role-save attempt.
