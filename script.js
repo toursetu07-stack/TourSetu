@@ -1056,6 +1056,9 @@ async function showDashboard(user) {
     if (user?.id && typeof window.identifyOneSignalUser === 'function') {
         window.identifyOneSignalUser(user.id);
     }
+    // Exit the narrow sign-in shell before rendering any authenticated workspace.
+    document.body.classList.add('toursetu-dashboard-active');
+    document.body.classList.remove('toursetu-mobile-nav-open');
     if(role==='admin'){
         window.location.replace('/admin');
         return;
@@ -5035,7 +5038,7 @@ function renderAgencyDashboard(user) {
     const root = createAgencyDashboardElement(
         'div',
         null,
-        "display:flex;min-height:100vh;background:#f8f9fa;margin:-20px;font-family:'Inter',sans-serif;"
+        "display:flex;width:100%;min-height:100vh;background:#f8f9fa;margin:0;font-family:'Inter',sans-serif;"
     );
     root.className = 'toursetu-agency-dashboard';
     root.setAttribute('data-dashboard', 'agency');
@@ -5130,8 +5133,40 @@ function renderAgencyDashboard(user) {
     mainContent.className = 'agency-main-content';
     mainContent.setAttribute('tabindex', '-1');
 
+    const mobileMenu = createAgencyDashboardElement('button', '☰', '');
+    mobileMenu.type = 'button';
+    mobileMenu.className = 'toursetu-agency-mobile-menu';
+    mobileMenu.setAttribute('aria-label', 'Open dashboard navigation');
+    mobileMenu.setAttribute('aria-controls', 'toursetu-agency-sidebar');
+    mobileMenu.setAttribute('aria-expanded', 'false');
+    sidebar.id = 'toursetu-agency-sidebar';
+
+    const mobileBackdrop = createAgencyDashboardElement('button', '', '');
+    mobileBackdrop.type = 'button';
+    mobileBackdrop.className = 'toursetu-agency-mobile-backdrop';
+    mobileBackdrop.setAttribute('aria-label', 'Close dashboard navigation');
+
+    const setMobileNavigation = function (open) {
+        document.body.classList.toggle('toursetu-mobile-nav-open', Boolean(open));
+        mobileMenu.setAttribute('aria-expanded', open ? 'true' : 'false');
+        mobileMenu.setAttribute('aria-label', open ? 'Close dashboard navigation' : 'Open dashboard navigation');
+        mobileMenu.textContent = open ? '×' : '☰';
+    };
+    mobileMenu.addEventListener('click', function () {
+        setMobileNavigation(!document.body.classList.contains('toursetu-mobile-nav-open'));
+    });
+    mobileBackdrop.addEventListener('click', function () { setMobileNavigation(false); });
+    nav.addEventListener('click', function (event) {
+        if (event.target.closest('[data-agency-tab]')) setMobileNavigation(false);
+    });
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') setMobileNavigation(false);
+    });
+
     root.appendChild(sidebar);
     root.appendChild(mainContent);
+    root.appendChild(mobileMenu);
+    root.appendChild(mobileBackdrop);
 
     const logoutModal = createAgencyDashboardElement(
         'div',
