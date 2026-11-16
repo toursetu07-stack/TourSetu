@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2026-11-16-partner-legal-acceptance-v1">
+    <link rel="stylesheet" href="style.css?v=2026-11-16-auth-autofill-eye-fix-v2">
     <!-- XSS defense-in-depth: maintained sanitizer loaded before app code. -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js"></script>
     <script src="security-dom.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
@@ -102,8 +102,12 @@
 <div id="app" role="main">
     <div class="auth-card">
         <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>\n        <div id="auth-section">
-            <input type="email" id="email" placeholder="Email Address" autocomplete="off" inputmode="email" aria-label="Email Address">
-            <input type="password" id="password" placeholder="Password" autocomplete="new-password" aria-label="Password">
+            <form id="loginForm" autocomplete="on" data-ts-csp-submit="handleAuth()">
+            <input type="email" id="email" name="email" placeholder="Email Address" autocomplete="username" inputmode="email" aria-label="Email Address">
+            <div class="password-wrapper" style="position: relative; width: 100%; display: block;">
+              <input type="password" id="password" name="password" placeholder="Password" autocomplete="current-password" aria-label="Password" style="width:100%;padding-right:42px;box-sizing:border-box;">
+              <button type="button" aria-label="Show password" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:auto;height:auto;background:none;border:none;padding:4px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+            </div>
             
 
 
@@ -116,7 +120,8 @@
                 </p>
             </div>
 
-            <button id="auth-btn">Create Account</button>
+            <button id="auth-btn" type="submit">Create Account</button>
+            </form>
             
             <p id="toggle-text">
                 Already have an account? <a href="#" id="toggle-mode-link">Login here</a>
@@ -162,7 +167,7 @@
 <script src="/supabase-config?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 <script src="toursetu-shared-data.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
-<script src="script.js?v=2026-11-16-signin-saved-email-password-toggle-v1"></script>
+<script src="script.js?v=2026-11-16-auth-autofill-eye-fix-v2"></script>
 <script src="onesignal-auth-fix.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="about-us.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="hotel-partner-terms.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
