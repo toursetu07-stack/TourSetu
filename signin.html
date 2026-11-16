@@ -102,8 +102,8 @@
 <div id="app" role="main">
     <div class="auth-card">
         <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>\n        <div id="auth-section">
-            <form id="loginForm" autocomplete="on">
-            <input type="email" id="email" name="email" type="email" placeholder="Email Address" autocomplete="username" inputmode="email" aria-label="Email Address">
+            <form id="loginForm" autocomplete="on" data-ts-csp-submit="handleAuth()">
+            <input type="email" id="email" name="email" placeholder="Email Address" autocomplete="username" inputmode="email" aria-label="Email Address">
             <div class="password-wrapper" style="position: relative; width: 100%; display: block;">
               <input type="password" id="password" name="password" placeholder="Password" autocomplete="current-password" aria-label="Password" style="width:100%;padding-right:42px;box-sizing:border-box;">
               <button type="button" aria-label="Show password" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:auto;height:auto;background:none;border:none;padding:4px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
