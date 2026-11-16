@@ -252,6 +252,7 @@ window.toggleAgencyTermsApprovalButton = function() {
 };
 
 window.acceptAgencyPartnerTerms = async function() {
+    try {
     const checkbox = document.getElementById('agency-partner-terms-checkbox');
     const button = document.getElementById('agency-partner-terms-approved-btn');
     if (!checkbox?.checked) { alert('Please tick the confirmation checkbox before clicking APPROVED.'); return; }
@@ -300,6 +301,12 @@ window.acceptAgencyPartnerTerms = async function() {
     const verification = await getAgencyVerification(user.id).catch(() => null);
     window.currentAgencyVerificationStatus = verification?.status || 'pending';
     await renderAgencyDashboard(user);
+    } catch (error) {
+        console.error("Agency Partner Terms acceptance", error);
+        const retryButton = document.getElementById("agency-partner-terms-approved-btn");
+        if (retryButton) { retryButton.disabled = false; retryButton.textContent = "APPROVED"; retryButton.style.opacity = '1'; retryButton.style.cursor = 'pointer'; }
+        alert("Agency Partner Terms acceptance failed: " + (error?.message || String(error || 'Unknown error')));
+    }
 };
 
 
@@ -15041,7 +15048,7 @@ window.renderCustomerRequests=async function(){
         'denyHotelBookingRequest', 'acknowledgeBookingAlert',
         'executeLandslideResolution', 'startCameraScanner', 'verifyCheckinByOtp',
         'acceptAgencyPartnerTerms', 'toggleAgencyTermsApprovalButton', 'updateBookingStatus', 'confirmHotelCancellation', 'showTab'
-    ]);
+    , 'toggleHotelPartnerTermsButton', 'acceptHotelPartnerTerms', 'toggleHotelPrivacyApprovalButton', 'acceptHotelPartnerPrivacy', 'toggleAgencyPrivacyApprovalButton', 'acceptAgencyPartnerPrivacy']);
 
     function parseLiteralArgs(source, event, element) {
         const parts = [];
