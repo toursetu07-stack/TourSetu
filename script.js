@@ -139,28 +139,7 @@ function getCityProximityScore(state, selectedCity, operatorCity) {
     return stateIndex >= 0 ? 100 + stateIndex : 1000;
 }
 
-// HELPER FUNCTION: Ensure this exists in your script so the dropdowns work
-window.updateCities = function() {
-    const stateSelect = document.getElementById('p-state');
-    const citySelect = document.getElementById('p-city');
-    if (!stateSelect || !citySelect) return;
-
-    const selectedState = stateSelect.value;
-    citySelect.replaceChildren();
-
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = 'Select City';
-    citySelect.appendChild(placeholder);
-
-    const cities = Array.isArray(locationData[selectedState]) ? locationData[selectedState] : [];
-    cities.forEach(city => {
-        const option = document.createElement('option');
-        option.value = city;
-        option.textContent = city;
-        citySelect.appendChild(option);
-    });
-};
+// Agency package city population is defined with the package form below.
 /* =========================================
    2. CORE UTILITY FUNCTIONS
    ========================================= */
@@ -7738,8 +7717,8 @@ async function sendPushNotification(targetUserId, messageTitle, messageBody) {
    10. PACKAGE FORM & HELPER LOGIC
    ========================================= */
 
-// Populate agency package cities from the same master list used by the
-// customer pickup-city selector. Keep a state-data fallback for other states.
+// Populate agency package cities from the exact same master dataset as the
+// customer pickup-city selector. Other states use the shared locationData map.
 window.updateCities = function() {
     const stateSelect = document.getElementById('p-state');
     const citySelect = document.getElementById('p-city');
@@ -7755,8 +7734,7 @@ window.updateCities = function() {
     citySelect.appendChild(placeholder);
     if (!selectedState) return;
 
-    const sourceCities = selectedState === 'Uttarakhand' &&
-        Array.isArray(UTTARAKHAND_PICKUP_CITIES)
+    const sourceCities = selectedState === 'Uttarakhand'
         ? UTTARAKHAND_PICKUP_CITIES
         : (Array.isArray(locationData[selectedState]) ? locationData[selectedState] : []);
 
@@ -7771,6 +7749,8 @@ window.updateCities = function() {
 
     if (previousCity && [...citySelect.options].some(option => option.value === previousCity)) {
         citySelect.value = previousCity;
+    } else {
+        citySelect.value = '';
     }
 };
 
@@ -7820,11 +7800,17 @@ window.showPackageForm = function(pEncoded = null) {
 
 
     // =========================================
-    // FIND SELECTED STATE DURING EDIT
+    // PICKUP STATE OPTIONS
+    // Default to Uttarakhand, while keeping the complete shared state dataset
+    // available so changing state can immediately load its locationData cities.
     // =========================================
-    // TourSetu package pickup is intentionally restricted to Uttarakhand.
-    const selectedState = 'Uttarakhand';
-    const stateOptions = '<option value="Uttarakhand" selected>Uttarakhand</option>';
+    const selectedState = isEdit && pkg.pickup_state && locationData[pkg.pickup_state]
+        ? pkg.pickup_state
+        : 'Uttarakhand';
+    const stateOptions = Object.keys(locationData)
+        .sort((a, b) => a.localeCompare(b))
+        .map(state => `<option value="${state}" ${state === selectedState ? 'selected' : ''}>${state}</option>`)
+        .join('');
 
 
     // =========================================
@@ -8301,7 +8287,17 @@ window.showPackageForm = function(pEncoded = null) {
         </div>
     `;
 
-    // Populate after rendering so Create and Edit share the customer city list.
+    // Bind an external-JS change listener (CSP-safe) and populate immediately
+    // after rendering. This runs for both Create and Edit modal openings.
+    const pickupStateSelect = document.getElementById('p-state');
+    if (pickupStateSelect) {
+        if (window.__toursetuAgencyPackageStateChangeHandler) {
+            pickupStateSelect.removeEventListener('change', window.__toursetuAgencyPackageStateChangeHandler);
+        }
+        window.__toursetuAgencyPackageStateChangeHandler = () => window.updateCities();
+        pickupStateSelect.addEventListener('change', window.__toursetuAgencyPackageStateChangeHandler);
+    }
+
     window.updateCities();
     const startingCitySelect = document.getElementById('p-city');
     const savedStartingCity = isEdit ? String(pkg.starting_location || '') : '';
