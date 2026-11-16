@@ -821,8 +821,16 @@ function hasFreshGoogleSignupIntent() {
 let googleOAuthConfirmationInFlight = false;
 let googleOAuthConfirmationUserId = '';
 
+function isGoogleAuthUser(user) {
+    const providers = Array.isArray(user?.app_metadata?.providers) ? user.app_metadata.providers : [];
+    const identities = Array.isArray(user?.identities) ? user.identities : [];
+    return user?.app_metadata?.provider === 'google' ||
+        providers.includes('google') ||
+        identities.some(identity => identity?.provider === 'google');
+}
+
 async function handleGoogleOAuthReturn(user) {
-    if (!user?.id || !hasFreshGoogleSignupIntent() ||
+    if (!user?.id || !isGoogleAuthUser(user) || !hasFreshGoogleSignupIntent() ||
         googleOAuthConfirmationUserId === user.id || googleOAuthConfirmationInFlight) return;
     googleOAuthConfirmationInFlight = true;
     try {
