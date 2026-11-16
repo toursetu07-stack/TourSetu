@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=2026-11-16-auth-autofill-eye-fix-v2">
+    <link rel="stylesheet" href="style.css?v=2026-11-16-auth-select-email-eye-fix-v1">
     <!-- XSS defense-in-depth: maintained sanitizer loaded before app code. -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js"></script>
     <script src="security-dom.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
@@ -76,6 +76,10 @@
             cursor: pointer;
         }
 
+        .select-email-btn { display:block; width:100%; margin:12px 0 0; padding:11px 14px; border:1px solid #ff9f43; border-radius:8px; background:#fff7ed; color:#b85b00; font:600 14px 'Inter',sans-serif; cursor:pointer; }
+        .select-email-btn:hover { background:#ffedd5; }
+        .password-toggle-btn { touch-action: manipulation; }
+
         /* Hotel Sidebar Styling */
         .nav-item {
             padding: 12px 15px;
@@ -105,8 +109,8 @@
             <form id="loginForm" autocomplete="on" data-ts-csp-submit="handleAuth()">
             <input type="email" id="email" name="email" placeholder="Email Address" autocomplete="username" inputmode="email" aria-label="Email Address">
             <div class="password-wrapper" style="position: relative; width: 100%; display: block;">
-              <input type="password" id="password" name="password" placeholder="Password" autocomplete="current-password" aria-label="Password" style="width:100%;padding-right:42px;box-sizing:border-box;">
-              <button type="button" aria-label="Show password" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:auto;height:auto;background:none;border:none;padding:4px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+              <input type="password" id="loginPassword" name="password" placeholder="Password" autocomplete="current-password" aria-label="Password" style="width:100%;padding-right:42px;box-sizing:border-box;">
+              <button type="button" id="toggleLoginPassword" class="password-toggle-btn" aria-label="Show password" aria-pressed="false" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:auto;height:auto;background:none;border:none;padding:4px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
             </div>
             
 
@@ -120,6 +124,7 @@
                 </p>
             </div>
 
+            <button type="button" id="selectEmailBtn" class="select-email-btn">Select Email</button>
             <button id="auth-btn" type="submit">Create Account</button>
             </form>
             
@@ -167,7 +172,7 @@
 <script src="/supabase-config?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 <script src="toursetu-shared-data.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
-<script src="script.js?v=2026-11-16-auth-autofill-eye-fix-v2"></script>
+<script src="script.js?v=2026-11-16-auth-select-email-eye-fix-v1"></script>
 <script src="onesignal-auth-fix.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="about-us.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="hotel-partner-terms.js?v=2026-11-16-partner-legal-acceptance-v1"></script>

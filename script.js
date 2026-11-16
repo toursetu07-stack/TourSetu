@@ -953,11 +953,12 @@ function renderAuthUI() {
         <form id="${isLoginMode?'loginForm':'registerForm'}" autocomplete="on" data-ts-csp-submit="handleAuth()" novalidate>
         <input type="email" id="email" name="email" placeholder="Email Address" autocomplete="username" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         <div class="password-wrapper" style="position: relative; width: 100%; display: block;">
-          <input type="password" id="password" name="password" placeholder="Password" autocomplete="${isLoginMode?'current-password':'new-password'}" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px 42px 12px 12px;box-sizing:border-box;margin:8px 0;border:1px solid #ddd;border-radius:8px;">
-          <button type="button" aria-label="Show password" aria-pressed="false" data-ts-csp-click="toggleAuthPassword()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:auto;height:auto;background:none;border:none;padding:4px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;color:#667085;"><i id="auth-password-eye" class="fa-regular fa-eye" aria-hidden="true"></i></button>
+          <input type="password" id="${isLoginMode?'loginPassword':'registerPassword'}" name="password" placeholder="Password" autocomplete="${isLoginMode?'current-password':'new-password'}" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px 42px 12px 12px;box-sizing:border-box;margin:8px 0;border:1px solid #ddd;border-radius:8px;">
+          <button type="button" id="${isLoginMode?'toggleLoginPassword':'toggleRegisterPassword'}" class="password-toggle-btn" aria-label="Show password" aria-pressed="false" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:auto;height:auto;background:none;border:none;padding:4px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;color:#667085;"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
         </div>
         ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" data-ts-csp-click="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
         ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" data-ts-csp-change="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select></div>'}
+        <button type="button" id="selectEmailBtn" class="select-email-btn" style="display:block;width:100%;margin:10px 0 0;padding:11px 14px;border:1px solid #ff9f43;border-radius:8px;background:#fff7ed;color:#b85b00;font-weight:700;cursor:pointer;">Select Email</button>
         <div id="business-fields" style="display:none;text-align:left;margin-top:12px;border-top:1px solid #eee;padding-top:12px;">
           <div id="agency-basic-fields">
             <label>Email Address</label><input type="email" id="agency-email" readonly placeholder="Email Address" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;background:#f8f9fa;">
@@ -1016,17 +1017,48 @@ function renderAuthUI() {
         <div id="status" style="margin-top:15px;font-size:13px;font-weight:bold;"></div>
       </div>`;
     const emailInput=document.getElementById('email'),agencyEmail=document.getElementById('agency-email');
-window.toggleAuthPassword=function(){
-    const input=document.getElementById('password');
-    const button=input?.closest('.password-wrapper')?.querySelector('button[aria-label]');
-    const eye=document.getElementById('auth-password-eye');
-    if(!input||!button)return;
-    const reveal=input.type==='password';
-    input.type=reveal?'text':'password';
-    button.setAttribute('aria-label',reveal?'Hide password':'Show password');
-    button.setAttribute('aria-pressed',String(reveal));
-    if(eye){eye.classList.toggle('fa-eye',!reveal);eye.classList.toggle('fa-eye-slash',reveal);}
-};
+    bindAuthFormControls();
+function bindAuthFormControls() {
+    [['toggleLoginPassword','loginPassword'],['toggleRegisterPassword','registerPassword']].forEach(([buttonId,inputId]) => {
+        const button=document.getElementById(buttonId), input=document.getElementById(inputId);
+        if(!button||!input||button.dataset.authToggleBound==='true')return;
+        button.dataset.authToggleBound='true';
+        button.addEventListener('click',event=>{
+            event.preventDefault();
+            event.stopPropagation();
+            const reveal=input.type==='password';
+            input.type=reveal?'text':'password';
+            button.setAttribute('aria-label',reveal?'Hide password':'Show password');
+            button.setAttribute('aria-pressed',String(reveal));
+            const eye=button.querySelector('i');
+            if(eye){eye.classList.toggle('fa-eye',!reveal);eye.classList.toggle('fa-eye-slash',reveal);}
+        });
+    });
+    const selectButton=document.getElementById('selectEmailBtn');
+    if(selectButton&&selectButton.dataset.authSelectBound!=='true'){
+        selectButton.dataset.authSelectBound='true';
+        selectButton.addEventListener('click',async event=>{
+            event.preventDefault();
+            event.stopPropagation();
+            const emailInput=document.getElementById('email');
+            const passwordInput=document.getElementById(isLoginMode?'loginPassword':'registerPassword');
+            if(emailInput){emailInput.focus();emailInput.click();}
+            try{
+                if(navigator.credentials&&typeof navigator.credentials.get==='function'){
+                    const credential=await navigator.credentials.get({password:true,mediation:'optional'});
+                    if(credential){
+                        if(emailInput&&credential.id){emailInput.value=credential.id;emailInput.dispatchEvent(new Event('input',{bubbles:true}));emailInput.dispatchEvent(new Event('change',{bubbles:true}));}
+                        if(passwordInput&&typeof credential.password==='string'){passwordInput.value=credential.password;passwordInput.dispatchEvent(new Event('input',{bubbles:true}));passwordInput.dispatchEvent(new Event('change',{bubbles:true}));}
+                    }
+                }
+            }catch(error){console.debug('Saved credential chooser unavailable:',error);}
+            finally{if(emailInput){emailInput.focus();emailInput.click();}}
+        });
+    }
+}
+function initializeAuthFormControls(){bindAuthFormControls();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initializeAuthFormControls,{once:true});
+else initializeAuthFormControls();
 
 
     if(emailInput&&agencyEmail){agencyEmail.value=emailInput.value;emailInput.addEventListener('input',()=>agencyEmail.value=emailInput.value);}
@@ -1419,7 +1451,7 @@ function getReadableAuthError(error, fallback = 'Something went wrong. Please tr
 }
 
 async function handleAuth(){
-    const status=document.getElementById('status'),role=document.getElementById('role')?.value||'customer',btn=document.getElementById('agency-register-btn')||document.getElementById('auth-btn'),email=document.getElementById('email')?.value.trim(),password=document.getElementById('password')?.value||'';
+    const status=document.getElementById('status'),role=document.getElementById('role')?.value||'customer',btn=document.getElementById('agency-register-btn')||document.getElementById('auth-btn'),email=document.getElementById('email')?.value.trim(),password=document.getElementById(isLoginMode?'loginPassword':'registerPassword')?.value||'';
     if(!email||!password){if(status)status.innerText='⚠️ Please enter email and password';return;}
     const client=getClient();if(!client){if(status)status.innerText='❌ Supabase not initialized';return;}
     if(!isLoginMode&&role==='agency'){
