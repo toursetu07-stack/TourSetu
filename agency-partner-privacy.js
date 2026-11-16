@@ -75,6 +75,10 @@
                 </div>
             </div>
         `;
+        const privacyCheckbox = document.getElementById('agency-partner-privacy-checkbox');
+        const privacyButton = document.getElementById('agency-partner-privacy-approved-btn');
+        privacyCheckbox?.addEventListener('change', window.toggleAgencyPrivacyApprovalButton);
+        privacyButton?.addEventListener('click', window.acceptAgencyPartnerPrivacy);
         return false;
     }
 
@@ -143,6 +147,17 @@
             const retryButton = document.getElementById("agency-partner-privacy-approved-btn");
             if (retryButton) { retryButton.disabled = false; retryButton.textContent = "ACCEPT & CONTINUE"; retryButton.style.opacity = '1'; retryButton.style.cursor = 'pointer'; }
             alert("Agency Partner Privacy acceptance failed: " + (error?.message || String(error || 'Unknown error')));
+        }
+    };
+
+    const originalAcceptAgencyPartnerPrivacy = window.acceptAgencyPartnerPrivacy;
+    window.acceptAgencyPartnerPrivacy = async function (...args) {
+        try { return await originalAcceptAgencyPartnerPrivacy.apply(this, args); }
+        catch (error) {
+            console.error('Agency privacy acceptance failed:', error);
+            const button = document.getElementById('agency-partner-privacy-approved-btn');
+            if (button) { button.disabled = false; button.textContent = 'ACCEPT & CONTINUE'; button.style.cursor = 'pointer'; }
+            alert('Partner Privacy Policy save nahi ho saka. ' + (error?.message || 'Please check your connection and try again.'));
         }
     };
 
