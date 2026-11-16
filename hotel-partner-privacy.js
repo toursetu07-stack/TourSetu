@@ -67,10 +67,10 @@
                         ${hotelPartnerPrivacyPolicyHtml()}
                     </div>
                     <label style="display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:15px;background:#fff8e1;border:1px solid #ffd166;border-radius:10px;cursor:pointer;">
-                        <input type="checkbox" id="hotel-partner-privacy-checkbox" onchange="window.toggleHotelPrivacyApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">
+                        <input type="checkbox" id="hotel-partner-privacy-checkbox" data-ts-csp-change="toggleHotelPrivacyApprovalButton()" style="width:20px;height:20px;margin-top:3px;flex:0 0 auto;cursor:pointer;">
                         <span style="font-weight:800;color:#2d3436;line-height:1.5;">I agree to TourSetu's Hotel Partner Privacy Policy regarding property verification and inventory data.</span>
                     </label>
-                    <button id="hotel-partner-privacy-approved-btn" onclick="window.acceptHotelPartnerPrivacy()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">
+                    <button id="hotel-partner-privacy-approved-btn" data-ts-csp-click="acceptHotelPartnerPrivacy()" disabled style="width:100%;margin-top:14px;background:#27ae60;color:#fff;border:0;padding:14px;border-radius:10px;font-weight:900;font-size:15px;cursor:not-allowed;opacity:.5;">
                         ACCEPT & CONTINUE
                     </button>
                     <p style="margin:12px 0 0;text-align:center;color:#888;font-size:12px;">The Hotel Dashboard will remain locked until you tick the checkbox and click ACCEPT & CONTINUE.</p>
@@ -90,6 +90,7 @@
     };
 
     window.acceptHotelPartnerPrivacy = async function () {
+        try {
         const checkbox = document.getElementById('hotel-partner-privacy-checkbox');
         const button = document.getElementById('hotel-partner-privacy-approved-btn');
         if (!checkbox?.checked) {
@@ -118,7 +119,7 @@
 
         const { error } = await client
             .from('hotel_privacy_acceptances')
-            .insert({ user_id: user.id, policy_version: HOTEL_PRIVACY_VERSION });
+            .upsert({ user_id: user.id, policy_version: HOTEL_PRIVACY_VERSION, accepted_at: new Date().toISOString() }, { onConflict: 'user_id' });
 
         if (error) {
             console.error('Hotel privacy policy acceptance save failed:', error);
@@ -138,6 +139,12 @@
             await window.__toursetuOriginalHotelPrivacyDashboard(user);
         } else if (typeof window.renderHotelDashboard === 'function') {
             await window.renderHotelDashboard(user);
+        }
+        } catch (error) {
+            console.error("Hotel Partner Privacy acceptance", error);
+            const retryButton = document.getElementById("hotel-partner-privacy-approved-btn");
+            if (retryButton) { retryButton.disabled = false; retryButton.textContent = "ACCEPT & CONTINUE"; retryButton.style.opacity = '1'; retryButton.style.cursor = 'pointer'; }
+            alert("Hotel Partner Privacy acceptance failed: " + (error?.message || String(error || 'Unknown error')));
         }
     };
 
