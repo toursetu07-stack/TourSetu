@@ -843,6 +843,11 @@ async function initApp() {
         return;
     }
 
+    // A referral URL is an invitation to join, so open registration directly.
+    // Preserve the referral code captured earlier for attribution at signup.
+    const referralCode = new URLSearchParams(window.location.search).get('ref');
+    if (referralCode && referralCode.trim()) isLoginMode = false;
+
     const { data: { user }, error } = await client.auth.getUser();
     if (user && !error) await showDashboard(user);
     else renderAuthUI();
@@ -952,14 +957,33 @@ window.confirmHotelLogout = async function() {
    4. UI RENDERING (Login / Signup)
    ========================================= */
 
+function clearAuthEmailPasswordFields() {
+    ['email', 'password'].forEach(id => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.value = '';
+        input.setAttribute('autocomplete', id === 'password' ? 'new-password' : 'off');
+        input.setAttribute('autocapitalize', 'none');
+        input.setAttribute('spellcheck', 'false');
+    });
+}
+
+// Clear any browser-restored credentials on initial page load. renderAuthUI()
+// calls this again after swapping between Login and Create Account views.
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', clearAuthEmailPasswordFields, { once: true });
+} else {
+    clearAuthEmailPasswordFields();
+}
+
 function renderAuthUI() {
     const app=document.getElementById('app'); if(!app)return;
     app.innerHTML=`
       <div class="card" style="max-width:520px;margin:50px auto;padding:32px;background:white;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.1);border-radius:15px;font-family:Inter,sans-serif;">
         <h1 style="color:#ff9f43;margin-bottom:8px;">TourSetu</h1>
         <h2 id="form-title" style="margin-bottom:18px;">${isLoginMode?"Welcome Back":"Create Account"}</h2>
-        <input type="email" id="email" placeholder="Email Address" autocomplete="email" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-        <input type="password" id="password" placeholder="Password" autocomplete="${isLoginMode?"current-password":"new-password"}" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <input type="email" id="email" placeholder="Email Address" autocomplete="off" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <input type="password" id="password" placeholder="Password" autocomplete="new-password" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
         ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" data-ts-csp-click="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
         ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" data-ts-csp-change="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select></div>'}
         <div id="business-fields" style="display:none;text-align:left;margin-top:12px;border-top:1px solid #eee;padding-top:12px;">
@@ -1018,6 +1042,7 @@ function renderAuthUI() {
         <p style="margin-top:18px;font-size:14px;color:#636e72;">${isLoginMode?"Don't have an account?":"Already have account?"} <span data-ts-csp-click="toggleMode()" style="color:#ff9f43;cursor:pointer;font-weight:bold;">${isLoginMode?"Create Account":"Login"}</span></p>
         <div id="status" style="margin-top:15px;font-size:13px;font-weight:bold;"></div>
       </div>`;
+    clearAuthEmailPasswordFields();
     const emailInput=document.getElementById('email'),agencyEmail=document.getElementById('agency-email');
     if(emailInput&&agencyEmail){agencyEmail.value=emailInput.value;emailInput.addEventListener('input',()=>agencyEmail.value=emailInput.value);}
 }
