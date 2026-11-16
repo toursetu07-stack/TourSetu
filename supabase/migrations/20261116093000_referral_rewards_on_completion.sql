@@ -1,3 +1,54 @@
+-- Permit trusted backend completion transitions and create one referral reward per booking.
+-- Existing customer/partner status transitions remain enforced by the guard functions.
+alter table public.bookings drop constraint if exists bookings_status_check;
+alter table public.bookings add constraint bookings_status_check
+  check (status = any (array['pending','held','paid','checked_in','completed','cancelled','disputed','approved','denied']::text[]));
+
+alter table public.hotel_bookings drop constraint if exists hotel_bookings_booking_status_check;
+alter table public.hotel_bookings add constraint hotel_bookings_booking_status_check
+  check (booking_status = any (array['pending','approved','denied','cancelled','completed']::text[]));
+
+-- This index may already exist in production; IF NOT EXISTS makes the migration repeat-safe.
+create unique index if not exists referral_rewards_source_type_source_booking_id_key
+  on public.referral_rewards (source_type, source_booking_id);
+
+-- Allow only the Supabase service role to set the terminal completed state.
+-- Preserve the existing guard logic for all authenticated customer/agency/hotel-owner requests.
+do $migration$
+declare
+  v_definition text;
+  v_replacement text;
+begin
+  v_definition := pg_get_functiondef('public.guard_booking_mutation()'::regprocedure);
+  v_replacement := replace(
+    v_definition,
+    E'AS $function$\nbegin',
+    E'AS $function$\nbegin\n  if (select auth.role()) = ''service_role'' and new.status = ''completed'' then\n    return new;\n  end if;'
+  );
+  if v_replacement = v_definition then
+    raise exception 'Could not safely patch guard_booking_mutation()';
+  end if;
+  execute v_replacement;
+
+  v_definition := pg_get_functiondef('public.guard_hotel_booking_mutation()'::regprocedure);
+  v_replacement := replace(
+    v_definition,
+    E'AS $function$\nDECLARE',
+    E'AS $function$\nDECLARE'
+  );
+  -- Inject after DECLARE variables are initialized, immediately before BEGIN.
+  v_replacement := replace(
+    v_definition,
+    E'BEGIN\n  IF uid IS NULL THEN',
+    E'BEGIN\n  IF uid = null and false THEN\n    RAISE EXCEPTION ''unreachable'';\n  END IF;\n  IF (select auth.role()) = ''service_role'' and new.booking_status = ''completed'' THEN\n    RETURN new;\n  END IF;\n  IF uid IS NULL THEN'
+  );
+  if v_replacement = v_definition then
+    raise exception 'Could not safely patch guard_hotel_booking_mutation()';
+  end if;
+  execute v_replacement;
+end;
+$migration$;
+
 -- Referral rewards are created only after a referred booking is completed.
 create or replace function public.create_referral_reward(
  p_source_type text,p_source_booking_id text,p_referred_user_id uuid,
