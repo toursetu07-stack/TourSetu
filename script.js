@@ -809,6 +809,52 @@ function clearAuthRecoveryUrl() {
     try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
 }
 
+function hasFreshGoogleSignupIntent() {
+    try {
+        const startedAt = Number(localStorage.getItem('toursetu_google_signup_started_at') || 0);
+        return !!startedAt && Date.now() - startedAt <= 30 * 60 * 1000;
+    } catch (error) {
+        return false;
+    }
+}
+
+let googleOAuthConfirmationInFlight = false;
+let googleOAuthConfirmationUserId = '';
+
+async function handleGoogleOAuthReturn(user) {
+    if (!user?.id || !hasFreshGoogleSignupIntent() ||
+        googleOAuthConfirmationUserId === user.id || googleOAuthConfirmationInFlight) return;
+    googleOAuthConfirmationInFlight = true;
+    try {
+        const saved = await applyPendingGoogleSignupRole(user);
+        googleOAuthConfirmationUserId = user.id;
+        try { window.history.replaceState({}, document.title, window.location.pathname); } catch (error) {}
+        isLoginMode = true;
+        renderAuthUI();
+        const status = document.getElementById('status');
+        const email = window.TourSetuDOM.escapeHTML(user.email || 'your Google account');
+        const roleNames = { customer: 'Traveler', agency: 'Travel Agency', hotel: 'Hotel Partner', driver: 'Taxi Driver' };
+        const approvalText = saved.approvalStatus === 'approved'
+            ? 'Your account is active.'
+            : (saved.role === 'customer'
+                ? 'Your account is active.'
+                : 'Your registration is saved and awaiting TourSetu verification.');
+        if (status) {
+            status.innerHTML = '<div role="status" aria-live="polite" style="background:#eafaf1;padding:15px;border-radius:10px;border:1px solid #b7ebc6;color:#1e7e34;text-align:left;">' +
+                '<strong>✅ Google account selected successfully!</strong><br>' +
+                'Email: <b>' + email + '</b><br>' +
+                'Registered as: <b>' + roleNames[saved.role] + '</b><br>' +
+                approvalText + '<br><small>You can now continue from this page. No automatic dashboard redirect was performed.</small></div>';
+        }
+    } catch (error) {
+        console.error('Google signup confirmation failed:', error);
+        const status = document.getElementById('status');
+        if (status) status.textContent = '❌ ' + getReadableAuthError(error, 'Google account was selected, but TourSetu could not save the registration. Please try again.');
+    } finally {
+        googleOAuthConfirmationInFlight = false;
+    }
+}
+
 function startAuthStateListener() {
     if (authStateListenerStarted) return;
     authStateListenerStarted = true;
@@ -819,24 +865,9 @@ function startAuthStateListener() {
             renderPasswordResetUI();
             return;
         }
-        if (!session?.user) return;
-        if (event === 'INITIAL_SESSION') {
-            // Restore an already-authenticated session when signin.html is opened directly.
-            Promise.resolve().then(() => routeAuthenticatedUser(session.user));
-            return;
-        }
-        if (event === 'SIGNED_IN') {
-            // Do not interrupt email signup/KYC steps. This event is routed here
-            // only for the explicit Google OAuth return or a fresh Google intent.
-            const params = new URLSearchParams(window.location.search || '');
-            let hasFreshGoogleIntent = false;
-            try {
-                const startedAt = Number(localStorage.getItem('toursetu_google_signup_started_at') || 0);
-                hasFreshGoogleIntent = !!startedAt && Date.now() - startedAt <= 30 * 60 * 1000;
-            } catch (error) {}
-            if (params.get('auth') === 'complete' || hasFreshGoogleIntent) {
-                Promise.resolve().then(() => routeAuthenticatedUser(session.user));
-            }
+        if (!session?.user || !hasFreshGoogleSignupIntent()) return;
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+            Promise.resolve().then(() => handleGoogleOAuthReturn(session.user));
         }
     });
 }
@@ -880,8 +911,13 @@ async function initApp() {
     if (referralCode && referralCode.trim()) isLoginMode = false;
 
     const { data: { session }, error } = await client.auth.getSession();
-    if (session?.user && !error) await routeAuthenticatedUser(session.user);
-    else renderAuthUI();
+    if (session?.user && !error && hasFreshGoogleSignupIntent()) {
+        await handleGoogleOAuthReturn(session.user);
+    } else {
+        // Keep signin as a confirmation/login screen; never auto-route a restored
+        // OAuth session to a dashboard from this page.
+        renderAuthUI();
+    }
 }
 
 async function applyPendingGoogleSignupRole(user) {
@@ -900,7 +936,7 @@ async function applyPendingGoogleSignupRole(user) {
     } catch (error) { console.warn('Unable to read saved Google signup role:', error); }
 
     const { data: existingProfile, error: lookupError } = await client
-        .from('profiles').select('role').eq('id', user.id).maybeSingle();
+        .from('profiles').select('role,is_approved,approval_status').eq('id', user.id).maybeSingle();
     if (lookupError) console.warn('OAuth profile role lookup failed:', lookupError);
     const existingRole = String(existingProfile?.role || '').toLowerCase();
     if (!allowedRoles.has(selectedRole)) {
@@ -912,8 +948,6 @@ async function applyPendingGoogleSignupRole(user) {
 
     try {
         localStorage.setItem('toursetu_authenticated_role', selectedRole);
-        localStorage.removeItem(storageKey);
-        localStorage.removeItem(startedKey);
     } catch (error) { console.warn('OAuth role localStorage update failed:', error); }
 
     if (String(user.user_metadata?.role || '').toLowerCase() !== selectedRole) {
@@ -930,9 +964,17 @@ async function applyPendingGoogleSignupRole(user) {
     }, { onConflict: 'id' });
     if (profileError) {
         console.error('OAuth profile role save failed:', profileError);
-        throw new Error('Your account is signed in, but your TourSetu account type could not be saved. Please contact support.');
+        throw new Error('Your Google account is signed in, but your TourSetu account type could not be saved. Please contact support.');
     }
+    try {
+        localStorage.setItem('toursetu_authenticated_role', selectedRole);
+        localStorage.removeItem(storageKey);
+        localStorage.removeItem(startedKey);
+    } catch (error) { console.warn('OAuth signup intent cleanup failed:', error); }
     user.user_metadata = { ...(user.user_metadata || {}), role: selectedRole };
+    const approvalStatus = String(existingProfile?.approval_status ||
+        (existingProfile?.is_approved === true || selectedRole === 'customer' ? 'approved' : 'pending')).toLowerCase();
+    return { role: selectedRole, approvalStatus };
 }
 
 async function resolveTourSetuRole(user) {
@@ -1154,7 +1196,10 @@ function bindAuthFormControls() {
                 if(!client)throw new Error('Supabase is not initialized. Please refresh and try again.');
                 const {error}=await client.auth.signInWithOAuth({
                     provider:'google',
-                    options:{redirectTo:TOURSETU_AUTH_REDIRECT_URL}
+                    options:{
+                        redirectTo:TOURSETU_AUTH_REDIRECT_URL,
+                        queryParams:{prompt:'select_account'}
+                    }
                 });
                 if(error)throw error;
                 // Supabase normally navigates away. Restore the control if it does not.
