@@ -31,16 +31,11 @@ begin
   execute v_replacement;
 
   v_definition := pg_get_functiondef('public.guard_hotel_booking_mutation()'::regprocedure);
-  v_replacement := replace(
-    v_definition,
-    E'AS $function$\nDECLARE',
-    E'AS $function$\nDECLARE'
-  );
-  -- Inject after DECLARE variables are initialized, immediately before BEGIN.
+  -- Inject immediately before the existing authentication/authorization checks.
   v_replacement := replace(
     v_definition,
     E'BEGIN\n  IF uid IS NULL THEN',
-    E'BEGIN\n  IF uid = null and false THEN\n    RAISE EXCEPTION ''unreachable'';\n  END IF;\n  IF (select auth.role()) = ''service_role'' and new.booking_status = ''completed'' THEN\n    RETURN new;\n  END IF;\n  IF uid IS NULL THEN'
+    E'BEGIN\n  IF (select auth.role()) = ''service_role'' and new.booking_status = ''completed'' THEN\n    RETURN new;\n  END IF;\n  IF uid IS NULL THEN'
   );
   if v_replacement = v_definition then
     raise exception 'Could not safely patch guard_hotel_booking_mutation()';
