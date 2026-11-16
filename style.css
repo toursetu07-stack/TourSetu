@@ -964,3 +964,10 @@ pre, code {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
+
+
+/* Sign-in autofill and password visibility control */
+.password-wrapper { position: relative !important; width: 100% !important; display: block !important; }
+.password-wrapper input[type="password"], .password-wrapper input[type="text"] { width: 100% !important; padding-right: 42px !important; box-sizing: border-box !important; pointer-events: auto !important; position: relative; z-index: 1; }
+.password-wrapper > button[aria-label] { position: absolute !important; right: 12px !important; top: 50% !important; transform: translateY(-50%) !important; width: auto !important; min-width: 0 !important; height: auto !important; min-height: 0 !important; background: none !important; border: 0 !important; padding: 4px !important; cursor: pointer !important; z-index: 5 !important; display: flex !important; align-items: center !important; justify-content: center !important; color: #667085 !important; }
+.password-wrapper > button[aria-label]:hover { transform: translateY(-50%) !important; }
