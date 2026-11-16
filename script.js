@@ -139,28 +139,7 @@ function getCityProximityScore(state, selectedCity, operatorCity) {
     return stateIndex >= 0 ? 100 + stateIndex : 1000;
 }
 
-// HELPER FUNCTION: Ensure this exists in your script so the dropdowns work
-window.updateCities = function() {
-    const stateSelect = document.getElementById('p-state');
-    const citySelect = document.getElementById('p-city');
-    if (!stateSelect || !citySelect) return;
-
-    const selectedState = stateSelect.value;
-    citySelect.replaceChildren();
-
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = 'Select City';
-    citySelect.appendChild(placeholder);
-
-    const cities = Array.isArray(locationData[selectedState]) ? locationData[selectedState] : [];
-    cities.forEach(city => {
-        const option = document.createElement('option');
-        option.value = city;
-        option.textContent = city;
-        citySelect.appendChild(option);
-    });
-};
+// Agency package city population is defined with the package form below.
 /* =========================================
    2. CORE UTILITY FUNCTIONS
    ========================================= */
@@ -7738,22 +7717,40 @@ async function sendPushNotification(targetUserId, messageTitle, messageBody) {
    10. PACKAGE FORM & HELPER LOGIC
    ========================================= */
 
-// Populates the City dropdown based on selected State
+// Populate agency package cities from the exact same master dataset as the
+// customer pickup-city selector. Other states use the shared locationData map.
 window.updateCities = function() {
     const stateSelect = document.getElementById('p-state');
     const citySelect = document.getElementById('p-city');
-    if (!stateSelect || citySelect === null) return;
+    if (!stateSelect || !citySelect) return;
 
     const selectedState = stateSelect.value;
-    citySelect.innerHTML = '<option value="">Select City</option>';
+    const previousCity = citySelect.value;
+    citySelect.replaceChildren();
 
-    if (selectedState && locationData[selectedState]) {
-        locationData[selectedState].forEach(city => {
-            const opt = document.createElement('option');
-            opt.value = city;
-            opt.innerText = city;
-            citySelect.appendChild(opt);
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select City';
+    citySelect.appendChild(placeholder);
+    if (!selectedState) return;
+
+    const sourceCities = selectedState === 'Uttarakhand'
+        ? UTTARAKHAND_PICKUP_CITIES
+        : (Array.isArray(locationData[selectedState]) ? locationData[selectedState] : []);
+
+    [...new Set(sourceCities.filter(city => city != null && String(city).trim()))]
+        .forEach(city => {
+            const value = String(city);
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            citySelect.appendChild(option);
         });
+
+    if (previousCity && [...citySelect.options].some(option => option.value === previousCity)) {
+        citySelect.value = previousCity;
+    } else {
+        citySelect.value = '';
     }
 };
 
@@ -7803,11 +7800,17 @@ window.showPackageForm = function(pEncoded = null) {
 
 
     // =========================================
-    // FIND SELECTED STATE DURING EDIT
+    // PICKUP STATE OPTIONS
+    // Default to Uttarakhand, while keeping the complete shared state dataset
+    // available so changing state can immediately load its locationData cities.
     // =========================================
-    // TourSetu package pickup is intentionally restricted to Uttarakhand.
-    const selectedState = 'Uttarakhand';
-    const stateOptions = '<option value="Uttarakhand" selected>Uttarakhand</option>';
+    const selectedState = isEdit && pkg.pickup_state && locationData[pkg.pickup_state]
+        ? pkg.pickup_state
+        : 'Uttarakhand';
+    const stateOptions = Object.keys(locationData)
+        .sort((a, b) => a.localeCompare(b))
+        .map(state => `<option value="${state}" ${state === selectedState ? 'selected' : ''}>${state}</option>`)
+        .join('');
 
 
     // =========================================
@@ -8131,20 +8134,7 @@ window.showPackageForm = function(pEncoded = null) {
                     box-sizing:border-box;
                 "
             >
-                ${
-                    isEdit && selectedState
-                        ? locationData[selectedState]
-                            .map(c =>
-                                `<option
-                                    value="${c}"
-                                    ${pkg.starting_location === c ? 'selected' : ''}
-                                >
-                                    ${c}
-                                </option>`
-                            )
-                            .join('')
-                        : '<option value="">Select City</option>'
-                }
+                <option value="">Select City</option>
             </select>
 
 
@@ -8296,6 +8286,25 @@ window.showPackageForm = function(pEncoded = null) {
 
         </div>
     `;
+
+    // Bind an external-JS change listener (CSP-safe) and populate immediately
+    // after rendering. This runs for both Create and Edit modal openings.
+    const pickupStateSelect = document.getElementById('p-state');
+    if (pickupStateSelect) {
+        if (window.__toursetuAgencyPackageStateChangeHandler) {
+            pickupStateSelect.removeEventListener('change', window.__toursetuAgencyPackageStateChangeHandler);
+        }
+        window.__toursetuAgencyPackageStateChangeHandler = () => window.updateCities();
+        pickupStateSelect.addEventListener('change', window.__toursetuAgencyPackageStateChangeHandler);
+    }
+
+    window.updateCities();
+    const startingCitySelect = document.getElementById('p-city');
+    const savedStartingCity = isEdit ? String(pkg.starting_location || '') : '';
+    if (startingCitySelect && savedStartingCity &&
+        [...startingCitySelect.options].some(option => option.value === savedStartingCity)) {
+        startingCitySelect.value = savedStartingCity;
+    }
 };
 
 
