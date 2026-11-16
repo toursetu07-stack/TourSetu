@@ -7748,31 +7748,49 @@ async function sendPushNotification(targetUserId, messageTitle, messageBody) {
    10. PACKAGE FORM & HELPER LOGIC
    ========================================= */
 
-// Populate agency package cities from the exact same master dataset as the
-// customer pickup-city selector. Other states use the shared locationData map.
-window.updateCities = function() {
-    const stateSelect = document.getElementById('p-state');
-    const citySelect = document.getElementById('p-city');
-    if (!stateSelect || !citySelect) return;
-    const selectedState = stateSelect.value;
-    const previousCity = citySelect.value;
-    citySelect.replaceChildren();
+// Keep agency Starting City options in lockstep with the customer
+// Dashboard's #search-start selector and the shared master city dataset.
+window.populateAgencyCities = function() {
+    const customerStateSelect = document.getElementById('search-state');
+    const customerCitySelect = document.getElementById('search-start');
+    const agencyStateSelect = document.getElementById('p-state');
+    const agencyCitySelect = document.getElementById('p-city');
+    if (!agencyStateSelect || !agencyCitySelect) return;
+
+    const state = agencyStateSelect.value;
+    const previousCity = agencyCitySelect.value;
+    const customerState = customerStateSelect?.value;
+    const customerCities = customerCitySelect && customerState === state
+        ? [...customerCitySelect.options].map(option => option.value).filter(Boolean)
+        : [];
+    const masterCities = typeof window.getTourSetuCitiesForState === 'function'
+        ? window.getTourSetuCitiesForState(state)
+        : (state === 'Uttarakhand' && Array.isArray(window.TOURSETU_UK_CITIES)
+            ? [...window.TOURSETU_UK_CITIES]
+            : (Array.isArray(locationData[state]) ? [...locationData[state]] : []));
+    // Prefer the live customer selector's exact options when it is already
+    // displaying the same state; otherwise use its shared source function.
+    const cities = [...new Set((customerCities.length ? customerCities : masterCities)
+        .map(city => String(city).trim()).filter(Boolean))];
+
+    agencyCitySelect.replaceChildren();
     const placeholder = document.createElement('option');
     placeholder.value = '';
-    placeholder.textContent = 'Select City';
-    citySelect.appendChild(placeholder);
-    window.getTourSetuCitiesForState(selectedState).forEach(city => {
+    placeholder.textContent = state ? 'Select City' : 'Select State First';
+    agencyCitySelect.appendChild(placeholder);
+    cities.forEach(city => {
         const option = document.createElement('option');
         option.value = city;
         option.textContent = city;
-        citySelect.appendChild(option);
+        agencyCitySelect.appendChild(option);
     });
-    if (previousCity && [...citySelect.options].some(option => option.value === previousCity)) {
-        citySelect.value = previousCity;
-    } else {
-        citySelect.value = '';
-    }
+
+    const preserved = cities.find(city => normalizeMatchCity(city) === normalizeMatchCity(previousCity));
+    agencyCitySelect.value = preserved || '';
 };
+
+// Backward-compatible handler for the existing Pickup State change binding.
+window.updateCities = window.populateAgencyCities;
 
 
 // =========================================
@@ -8325,10 +8343,12 @@ window.showPackageForm = function(pEncoded = null) {
         pickupStateSelect.addEventListener('change', window.__toursetuAgencyPackageStateChangeHandler);
     }
 
-    window.updateCities();
+    window.populateAgencyCities();
     // Reconcile after the modal's injected DOM has completed the current render frame.
     requestAnimationFrame(() => {
-        if (document.getElementById('p-state') && document.getElementById('p-city')) window.updateCities();
+        if (document.getElementById('p-state') && document.getElementById('p-city')) {
+            window.populateAgencyCities();
+        }
     });
     const startingCitySelect = document.getElementById('p-city');
     if (startingCitySelect && savedStartingCity) {
