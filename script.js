@@ -813,12 +813,15 @@ const TOURSETU_AUTH_REDIRECT_URL = 'https://toursetu.in/signin';
 let authStateListenerStarted = false;
 
 function isPasswordRecoveryUrl() {
-    const hash = window.location.hash || '';
-    const search = window.location.search || '';
-    return /(?:^|[&#?])type=recovery(?:&|#|$)/i.test(hash + search);
+    // Supabase can return recovery metadata in either the query string
+    // (PKCE/OTP) or the URL fragment (implicit flow).
+    const queryParams = new URLSearchParams(window.location.search || '');
+    const hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+    return queryParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
 }
 
 function clearAuthRecoveryUrl() {
+    // Remove one-time recovery tokens from the address bar after the flow ends.
     try { window.history.replaceState({}, document.title, window.location.pathname); } catch (e) {}
 }
 
@@ -1111,7 +1114,7 @@ async function handleForgotPassword() {
         if (status) status.innerHTML = '<div style="background:#eafaf1;padding:14px;border-radius:10px;border:1px solid #b7ebc6;color:#1e7e34;text-align:left;"><strong>📩 Password reset email sent</strong><br>If an account exists for <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>, a password reset link has been sent. Please check your inbox.</div>';
     } catch (err) {
         console.error('Password reset request error:', err);
-        if (status) status.innerText = '❌ ' + (err?.message || 'Could not send password reset email.');
+        if (status) status.textContent = '❌ ' + getReadableAuthError(err, 'Could not send password reset email. Please try again.');
     }
 }
 
@@ -1155,7 +1158,12 @@ async function handlePasswordUpdate() {
         if (loginStatus) loginStatus.innerHTML = '<div style="background:#eafaf1;padding:14px;border-radius:10px;border:1px solid #b7ebc6;color:#1e7e34;text-align:left;"><strong>✅ Password updated successfully.</strong><br>Your account password is now the new password you just set. Please login with it.</div>';
     } catch (err) {
         console.error('Password update error:', err);
-        if (status) status.innerText = '❌ ' + (err?.message || 'Could not update password.');
+        const message = String(err?.message || '');
+        if (status) {
+            status.innerText = /session|token|expired|invalid/i.test(message)
+                ? '❌ This password-reset link is invalid or has expired. Please return to Login and request a new reset email.'
+                : '❌ ' + (message || 'Could not update password.');
+        }
         if (button) button.disabled = false;
     }
 }
@@ -1179,7 +1187,7 @@ async function resendConfirmationFromLogin() {
         await resendConfirmationEmail(email);
         if (status) status.innerText = '✅ Confirmation email sent again. Please check your inbox.';
     } catch (e) {
-        if (status) status.innerText = '❌ ' + (e?.message || e);
+        if (status) status.textContent = '❌ ' + getReadableAuthError(e, 'Could not resend the confirmation email. Please try again.');
     }
 }
 
@@ -1407,6 +1415,27 @@ async function uploadHotelDocuments(userId, files) {
 }
 async function getHotelVerification(userId){const {data,error}=await getClient().from('hotel_verification_requests').select('id,status,denial_reason,email,phone,created_at,updated_at').eq('user_id',userId).maybeSingle();if(error)throw error;return data;}
 async function submitHotelKYC(user){const files=getSelectedHotelDocuments(),validationError=await validateHotelDocuments(files);if(validationError)throw new Error(validationError);const client=getClient();const {error:ensureError}=await client.rpc('ensure_my_hotel_verification_request');if(ensureError)throw ensureError;const paths=await uploadHotelDocuments(user.id,files);if(Object.keys(paths).length===0)return;const {error:saveError}=await client.rpc('save_hotel_verification_documents',{p_uttarakhand_tourism_utbm_registration_path:paths.uttarakhand_tourism_utbm_registration_path||null,p_trade_license_local_authority_license_path:paths.trade_license_local_authority_license_path||null,p_gst_certificate_msme_udyam_path:paths.gst_certificate_msme_udyam_path||null,p_fire_safety_noc_path:paths.fire_safety_noc_path||null,p_police_noc_path:paths.police_noc_path||null});if(saveError)throw saveError;}
+// Convert Supabase Auth errors and non-Error rejection payloads into a useful message.
+function getReadableAuthError(error, fallback = 'Something went wrong. Please try again.') {
+    if (typeof error === 'string' && error.trim()) return error.trim();
+    if (error instanceof Error && error.message?.trim()) return error.message.trim();
+    if (error && typeof error === 'object') {
+        const candidates = [error.message, error.error_description, error.msg, error.details, error.hint];
+        const message = candidates.find(value => typeof value === 'string' && value.trim());
+        if (message) return message.trim();
+        const code = typeof error.code === 'string' && error.code.trim() ? error.code.trim() : '';
+        const statusCode = Number.isFinite(error.status) ? String(error.status) : '';
+        const contextMessage = error.context?.message || error.cause?.message;
+        if (typeof contextMessage === 'string' && contextMessage.trim()) return contextMessage.trim();
+        if (code || statusCode) return code && statusCode ? code + ' (HTTP ' + statusCode + ')' : (code || 'HTTP ' + statusCode);
+        try {
+            const serialized = JSON.stringify(error);
+            if (serialized && serialized !== '{}' && serialized !== '[]') return serialized;
+        } catch (_) { /* Use the safe fallback for circular or unserializable values. */ }
+    }
+    return fallback;
+}
+
 async function handleAuth(){
     const status=document.getElementById('status'),role=document.getElementById('role')?.value||'customer',btn=document.getElementById('agency-register-btn')||document.getElementById('auth-btn'),email=document.getElementById('email')?.value.trim(),password=document.getElementById('password')?.value||'';
     if(!email||!password){if(status)status.innerText='⚠️ Please enter email and password';return;}
@@ -1451,7 +1480,7 @@ async function handleAuth(){
             return;
         }
         if(data?.session)await showDashboard(data.user);else if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Verification link aapke email par bhej diya gaya hai. Kripya email check karke account verify karein.<br><br><small>We sent the link to <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>. After verification, return here and log in.</small></div>';
-    }catch(err){console.error('Auth/KYC error:',err);if(status)status.innerText='❌ '+(err?.message||err);}
+    }catch(err){console.error('Auth/KYC error:',err);if(status)status.textContent='❌ '+getReadableAuthError(err,'Signup/login failed. Please check your connection and try again.');}
     finally{if(btn)btn.disabled=false;}
 }
 /* =========================================
