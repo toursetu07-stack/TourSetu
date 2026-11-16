@@ -819,8 +819,24 @@ function startAuthStateListener() {
             renderPasswordResetUI();
             return;
         }
-        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        if (!session?.user) return;
+        if (event === 'INITIAL_SESSION') {
+            // Restore an already-authenticated session when signin.html is opened directly.
             Promise.resolve().then(() => routeAuthenticatedUser(session.user));
+            return;
+        }
+        if (event === 'SIGNED_IN') {
+            // Do not interrupt email signup/KYC steps. This event is routed here
+            // only for the explicit Google OAuth return or a fresh Google intent.
+            const params = new URLSearchParams(window.location.search || '');
+            let hasFreshGoogleIntent = false;
+            try {
+                const startedAt = Number(localStorage.getItem('toursetu_google_signup_started_at') || 0);
+                hasFreshGoogleIntent = !!startedAt && Date.now() - startedAt <= 30 * 60 * 1000;
+            } catch (error) {}
+            if (params.get('auth') === 'complete' || hasFreshGoogleIntent) {
+                Promise.resolve().then(() => routeAuthenticatedUser(session.user));
+            }
         }
     });
 }
