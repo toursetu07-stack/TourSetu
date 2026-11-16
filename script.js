@@ -712,7 +712,7 @@ window.toggleDashboardUtilityMenu = async function(forceOpen) {
     const statsEl = document.getElementById('toursetu-referral-stats');
     try {
         const code = await getMyReferralCode();
-        if (linkInput) linkInput.value = window.location.origin + window.location.pathname + '?ref=' + encodeURIComponent(code);
+        if (linkInput) linkInput.value = window.location.origin + '/signin.html?ref=' + encodeURIComponent(code);
         const { data, error: statsError } = await getClient().rpc('get_referral_dashboard_stats');
         if (statsError) throw statsError;
         const row = Array.isArray(data) ? (data[0] || {}) : (data || {});
@@ -1410,7 +1410,7 @@ async function handleAuth(){
         if(role==='agency'){metadata.gst=document.getElementById('gst-no')?.value.trim()||'';metadata.reg_no=document.getElementById('biz-reg')?.value.trim()||'';metadata.phone=document.getElementById('biz-phone')?.value.trim()||'';metadata.license='';}
         else if(role==='hotel'){metadata.phone=document.getElementById('hotel-phone')?.value.trim()||'';metadata.business_name='';metadata.gst='';metadata.reg_no='';metadata.license='';}
         const redirectUrl=TOURSETU_AUTH_REDIRECT_URL;
-        const {data,error}=await client.auth.signUp({email,password,options:{data:metadata,emailRedirectTo:redirectUrl}});if(error)throw error;if(!data?.user)throw new Error('Account could not be created.');
+        const {data,error}=await client.auth.signUp({email,password,options:{data:metadata,emailRedirectTo:redirectUrl}});if(error)throw error;if(!data?.user)throw new Error('Account could not be created.');if(data.session)await recordReferralLogin();
         if(role==='agency'){
             if(!data.session){if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Verification link aapke email par bhej diya gaya hai. Kripya email check karke account verify karein. Please confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>, then login once to complete the KYC upload.<br><br><small>The agency request is already created in Supabase with <b>pending</b> status.</small></div>';return;}
             await submitAgencyKYC(data.user);if(status)status.innerText='✅ Registration submitted. Opening your Agency Dashboard...';await showDashboard(data.user);return;
