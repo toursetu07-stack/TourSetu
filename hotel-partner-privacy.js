@@ -77,10 +77,6 @@
                 </div>
             </div>
         `;
-        const privacyCheckbox = document.getElementById('hotel-partner-privacy-checkbox');
-        const privacyButton = document.getElementById('hotel-partner-privacy-approved-btn');
-        privacyCheckbox?.addEventListener('change', window.toggleHotelPrivacyApprovalButton);
-        privacyButton?.addEventListener('click', window.acceptHotelPartnerPrivacy);
         return false;
     }
 
