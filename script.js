@@ -888,11 +888,9 @@ async function applyPendingGoogleSignupRole(user) {
     if (lookupError) console.warn('OAuth profile role lookup failed:', lookupError);
     const existingRole = String(existingProfile?.role || '').toLowerCase();
     if (!allowedRoles.has(selectedRole)) {
-        const cachedRole = String(localStorage.getItem('toursetu_authenticated_role') || '').toLowerCase();
         const metadataRole = String(user.user_metadata?.role || '').toLowerCase();
         selectedRole = allowedRoles.has(existingRole) ? existingRole :
-            (allowedRoles.has(cachedRole) ? cachedRole :
-            (allowedRoles.has(metadataRole) ? metadataRole : 'customer'));
+            (allowedRoles.has(metadataRole) ? metadataRole : 'customer');
     }
     if (!allowedRoles.has(selectedRole)) selectedRole = 'customer';
 
