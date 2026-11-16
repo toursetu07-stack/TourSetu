@@ -23,7 +23,7 @@ begin
   v_replacement := replace(
     v_definition,
     E'AS $function$\nbegin',
-    E'AS $function$\nbegin\n  if (select auth.role()) = ''service_role'' and new.status = ''completed'' then\n    return new;\n  end if;'
+    E'AS $function$\nbegin\n  if (select auth.role()) = ''service_role'' and new.status = ''completed'' and old.status in (''paid'',''checked_in'') then\n    return new;\n  end if;'
   );
   if v_replacement = v_definition then
     raise exception 'Could not safely patch guard_booking_mutation()';
@@ -35,7 +35,7 @@ begin
   v_replacement := replace(
     v_definition,
     E'BEGIN\n  IF uid IS NULL THEN',
-    E'BEGIN\n  IF (select auth.role()) = ''service_role'' and new.booking_status = ''completed'' THEN\n    RETURN new;\n  END IF;\n  IF uid IS NULL THEN'
+    E'BEGIN\n  IF (select auth.role()) = ''service_role'' and new.booking_status = ''completed'' AND old.booking_status = ''approved'' AND old.payment_status = ''paid'' THEN\n    RETURN new;\n  END IF;\n  IF uid IS NULL THEN'
   );
   if v_replacement = v_definition then
     raise exception 'Could not safely patch guard_hotel_booking_mutation()';
