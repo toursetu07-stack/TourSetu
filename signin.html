@@ -97,6 +97,20 @@
         }
     </style>
   <link rel="stylesheet" href="responsive.css?v=2026-11-16-partner-legal-acceptance-v1">
+
+    <style id="toursetu-signin-layout-fix">
+      html, body { min-height:100%; }
+      body { display:grid !important; place-items:start center !important; padding:40px 16px !important; margin:0 !important; background:#f6f7fb !important; }
+      #app { display:block !important; width:min(100%,480px) !important; max-width:480px !important; margin:0 auto !important; padding:0 !important; background:transparent !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; }
+      #app > .auth-card { width:100%; max-width:430px; margin:0 auto; padding:30px; background:#fff; border-radius:18px; box-shadow:0 12px 36px rgba(15,23,42,.10); }
+      #form-title { text-align:center; color:#2d3436; margin:0 0 20px; font-size:28px; }
+      #auth-section form { width:100%; }
+      #auth-section input, #auth-section select { width:100%; min-height:48px; padding:12px 14px; border:1px solid #d8dee8; border-radius:9px; box-sizing:border-box; background:#fff; }
+      #auth-section button#auth-btn { width:100%; min-height:48px; border:0; border-radius:9px; background:#ff9f43; color:#fff; font-weight:700; }
+      #status { overflow-wrap:anywhere; }
+      @media(max-width:600px) { body { padding:18px 12px !important; } #app > .auth-card { padding:22px 18px; } }
+    </style>
+
 </head>
 
 <body>
@@ -105,7 +119,8 @@
 
 <div id="app" role="main">
     <div class="auth-card">
-        <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>\n        <div id="auth-section">
+        <h1 id="form-title">🌍 Tour<span style="color: #ff9f43;">Setu</span></h1>
+        <div id="auth-section">
             <form id="loginForm" autocomplete="on" data-ts-csp-submit="handleAuth()">
             <input type="email" id="email" name="email" placeholder="Email Address" autocomplete="username" inputmode="email" aria-label="Email Address">
             <div class="password-wrapper" style="position: relative; width: 100%; display: block;">
@@ -134,13 +149,6 @@
         
         <div id="status" style="margin-top:15px; font-weight:bold;"></div>
 
-        <!-- MY REQUESTS SECTION -->
-        <div id="my-requests-section" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
-            <h3>My Requests</h3>
-            <div id="requests-list">
-                <!-- Yahan JavaScript se requests dynamic load hongi -->
-            </div>
-        </div>
     </div>
 </div>
 
@@ -171,7 +179,7 @@
 <script src="/supabase-config?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 <script src="toursetu-shared-data.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
-<script src="script.js?v=2026-11-16-google-signup-confirmation-v1"></script>
+<script src="script.js?v=2026-11-16-signin-card-role-save-fix-v2"></script>
 <script src="onesignal-auth-fix.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="about-us.js?v=2026-11-16-partner-legal-acceptance-v1"></script>
 <script src="hotel-partner-terms.js?v=2026-11-16-partner-legal-acceptance-v1"></script>

@@ -818,6 +818,22 @@ function hasFreshGoogleSignupIntent() {
     }
 }
 
+function clearGoogleSignupIntent() {
+    try {
+        localStorage.removeItem('toursetu_google_signup_role');
+        localStorage.removeItem('toursetu_google_signup_started_at');
+    } catch (error) {
+        console.warn('Unable to clear Google signup intent:', error);
+    }
+}
+
+function isGoogleOAuthReturn() {
+    const params = new URLSearchParams(window.location.search || '');
+    const hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+    return params.has('code') || params.get('auth') === 'complete' ||
+        hash.has('access_token') || hash.has('error') || params.has('error');
+}
+
 let googleOAuthConfirmationInFlight = false;
 let googleOAuthConfirmationUserId = '';
 
@@ -857,7 +873,9 @@ async function handleGoogleOAuthReturn(user) {
     } catch (error) {
         console.error('Google signup confirmation failed:', error);
         const status = document.getElementById('status');
-        if (status) status.textContent = '❌ ' + getReadableAuthError(error, 'Google account was selected, but TourSetu could not save the registration. Please try again.');
+        if (status) status.textContent = '❌ ' + getReadableAuthError(error, 'Google account is signed in, but registration could not be saved. Please retry Google signup.');
+        clearGoogleSignupIntent();
+        try { window.history.replaceState({}, document.title, window.location.pathname); } catch (cleanupError) {}
     } finally {
         googleOAuthConfirmationInFlight = false;
     }
@@ -873,7 +891,7 @@ function startAuthStateListener() {
             renderPasswordResetUI();
             return;
         }
-        if (!session?.user || !hasFreshGoogleSignupIntent()) return;
+        if (!session?.user || !hasFreshGoogleSignupIntent() || !isGoogleOAuthReturn()) return;
         if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
             Promise.resolve().then(() => handleGoogleOAuthReturn(session.user));
         }
@@ -919,11 +937,11 @@ async function initApp() {
     if (referralCode && referralCode.trim()) isLoginMode = false;
 
     const { data: { session }, error } = await client.auth.getSession();
-    if (session?.user && !error && hasFreshGoogleSignupIntent()) {
+    if (session?.user && !error && isGoogleOAuthReturn() && hasFreshGoogleSignupIntent()) {
         await handleGoogleOAuthReturn(session.user);
     } else {
-        // Keep signin as a confirmation/login screen; never auto-route a restored
-        // OAuth session to a dashboard from this page.
+        // A plain refresh must never replay a previous OAuth role-save attempt.
+        clearGoogleSignupIntent();
         renderAuthUI();
     }
 }
@@ -967,15 +985,28 @@ async function applyPendingGoogleSignupRole(user) {
     }
 
     const isCustomer = selectedRole === 'customer';
-    const { error: profileError } = await client.from('profiles').upsert({
-        id: user.id,
-        email: user.email || null,
-        role: selectedRole,
-        ...(!existingProfile ? { is_approved: isCustomer, approval_status: isCustomer ? 'approved' : 'pending' } : {})
-    }, { onConflict: 'id' });
-    if (profileError) {
-        console.error('OAuth profile role save failed:', profileError);
-        throw new Error('Your Google account is signed in, but your TourSetu account type could not be saved. Please contact support.');
+    let profileWrite;
+    if (existingProfile) {
+        // Update only role/email; preserve partner approval and KYC state.
+        profileWrite = await client.from('profiles')
+            .update({ email: user.email || null, role: selectedRole, updated_at: new Date().toISOString() })
+            .eq('id', user.id).select('id').maybeSingle();
+        if (!profileWrite.error && !profileWrite.data) {
+            profileWrite = { error: new Error('Profile update returned no row (RLS may have blocked the write).') };
+        }
+    } else {
+        profileWrite = await client.from('profiles')
+            .insert({
+                id: user.id, email: user.email || null, role: selectedRole,
+                is_approved: isCustomer, approval_status: isCustomer ? 'approved' : 'pending'
+            }).select('id').single();
+    }
+    if (profileWrite.error) {
+        console.error('OAuth profile role save failed:', {
+            code: profileWrite.error.code, message: profileWrite.error.message,
+            details: profileWrite.error.details, hint: profileWrite.error.hint
+        });
+        throw new Error('TourSetu could not save your account type. Please sign in again or contact support if this continues.');
     }
     try {
         localStorage.setItem('toursetu_authenticated_role', selectedRole);
@@ -1095,7 +1126,7 @@ window.confirmHotelLogout = async function() {
 function renderAuthUI() {
     const app=document.getElementById('app'); if(!app)return;
     app.innerHTML=`
-      <div class="card" style="max-width:520px;margin:50px auto;padding:32px;background:white;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.1);border-radius:15px;font-family:Inter,sans-serif;">
+      <div class="card" style="width:min(430px,100%);max-width:430px;margin:0 auto;padding:30px;background:white;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.1);border-radius:15px;font-family:Inter,sans-serif;">
         <h1 style="color:#ff9f43;margin-bottom:8px;">TourSetu</h1>
         <h2 id="form-title" style="margin-bottom:18px;">${isLoginMode?"Welcome Back":"Create Account"}</h2>
         <form id="${isLoginMode?'loginForm':'registerForm'}" autocomplete="on" data-ts-csp-submit="handleAuth()" novalidate>
