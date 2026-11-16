@@ -905,7 +905,8 @@ async function routeAuthenticatedUser(user) {
     if (authRouteInFlight) return authRouteInFlight;
     authRouteInFlight = (async () => {
         try {
-            await applyPendingGoogleSignupRole(user);
+            // Email/password and other non-Google sessions must never run the
+            // Google signup role-write flow. Resolve the existing profile below.
             await recordReferralLogin();
             await showDashboard(user);
             authRouteCompletedUserId = user.id;
@@ -1022,6 +1023,9 @@ async function applyPendingGoogleSignupRole(user) {
 async function resolveTourSetuRole(user) {
     const allowed = new Set(['customer','agency','hotel','driver']);
     const appRole = String(user?.app_metadata?.role || '').toLowerCase();
+    // Admin authorization comes only from trusted app_metadata, never editable
+    // user_metadata or a client-writable profile role.
+    if (appRole === 'admin') return 'admin';
     if (allowed.has(appRole) && appRole !== 'customer') return appRole;
     let profileRole = '';
     try {
@@ -1051,6 +1055,10 @@ async function showDashboard(user) {
     const role = await resolveTourSetuRole(user);
     if (user?.id && typeof window.identifyOneSignalUser === 'function') {
         window.identifyOneSignalUser(user.id);
+    }
+    if(role==='admin'){
+        window.location.replace('/admin');
+        return;
     }
     if(role==='driver'){
         window.location.replace('/driver');
