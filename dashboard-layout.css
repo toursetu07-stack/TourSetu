@@ -58,7 +58,7 @@ body.ts-dashboard-active #app,
   #hotel-main-content { flex:1 1 0 !important; width:auto !important; max-width:none !important; min-width:0 !important; }
   .driver-app { display:flex !important; align-items:stretch !important; }
   .driver-app > .sidebar { position:sticky !important; inset-block-start:0; flex:0 0 260px !important; width:260px !important; min-width:260px !important; height:100vh !important; }
-  .driver-app .main { flex:1 1 0 !important; width:auto !important; min-width:0 !important; margin-left:260px; }
+  .driver-app .main { flex:1 1 0 !important; width:auto !important; min-width:0 !important; margin-left:0 !important; }
   .driver-app .content { width:100% !important; max-width:1600px !important; margin-inline:auto !important; }
   .ts-mobile-nav-toggle { display:none !important; }
 }
