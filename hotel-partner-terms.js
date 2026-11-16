@@ -47,6 +47,10 @@
                 '</div>' +
             '</div>';
 
+        const termsCheckbox = document.getElementById('hotel-partner-terms-checkbox');
+        const termsButton = document.getElementById('hotel-partner-terms-approved-btn');
+        termsCheckbox?.addEventListener('change', window.toggleHotelPartnerTermsButton);
+        termsButton?.addEventListener('click', window.acceptHotelPartnerTerms);
         window.__tourSetuOriginalHotelDashboard = originalDashboard;
     }
 
@@ -162,6 +166,17 @@
         }
     };
 
+    const originalAcceptHotelPartnerTerms = window.acceptHotelPartnerTerms;
+    window.acceptHotelPartnerTerms = async function (...args) {
+        try { return await originalAcceptHotelPartnerTerms.apply(this, args); }
+        catch (error) {
+            console.error('Hotel terms acceptance failed:', error);
+            const button = document.getElementById('hotel-partner-terms-approved-btn');
+            if (button) { button.disabled = false; button.textContent = 'APPROVED'; button.style.cursor = 'pointer'; }
+            alert('Hotel Partner Terms save nahi ho saka. ' + (error?.message || 'Please check your connection and try again.'));
+        }
+    };
+
     async function hotelTermsGuard(user) {
         // Use the same authenticated Supabase client as the main app.
         const client = typeof getClient === 'function' ? getClient() : null;
@@ -178,7 +193,7 @@
             console.error('Hotel terms acceptance check failed:', error);
             const app = document.getElementById('app');
             if (app) {
-                app.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Inter,sans-serif;"><div style="background:#fff;max-width:560px;width:100%;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center;"><h2>Unable to load Hotel Partner Terms & Conditions</h2><p>Please try again. Your Hotel Dashboard will remain locked until the current terms are recorded.</p><button onclick="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;">TRY AGAIN</button></div></div>';
+                app.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Inter,sans-serif;"><div style="background:#fff;max-width:560px;width:100%;padding:30px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.12);text-align:center;"><h2>Unable to load Hotel Partner Terms & Conditions</h2><p>Please try again. Your Hotel Dashboard will remain locked until the current terms are recorded.</p><button data-ts-csp-click="location.reload()" style="background:#ff9f43;color:#fff;border:0;padding:12px 24px;border-radius:8px;font-weight:800;">TRY AGAIN</button></div></div>';
             }
             return false;
         }
