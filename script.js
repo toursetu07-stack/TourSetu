@@ -7804,9 +7804,16 @@ window.showPackageForm = function(pEncoded = null) {
     // Default to Uttarakhand, while keeping the complete shared state dataset
     // available so changing state can immediately load its locationData cities.
     // =========================================
+    // Older package rows may not have pickup_state populated. Derive it from
+    // the saved starting_location so Edit opens the same state/city dataset
+    // used by customer search and Create Package.
+    const savedStartingCity = isEdit ? String(pkg.starting_location || '').trim() : '';
+    const derivedStartingState = savedStartingCity ? getCityState(savedStartingCity) : '';
     const selectedState = isEdit && pkg.pickup_state && locationData[pkg.pickup_state]
         ? pkg.pickup_state
-        : 'Uttarakhand';
+        : (derivedStartingState && locationData[derivedStartingState]
+            ? derivedStartingState
+            : 'Uttarakhand');
     const stateOptions = Object.keys(locationData)
         .sort((a, b) => a.localeCompare(b))
         .map(state => `<option value="${state}" ${state === selectedState ? 'selected' : ''}>${state}</option>`)
@@ -8300,10 +8307,11 @@ window.showPackageForm = function(pEncoded = null) {
 
     window.updateCities();
     const startingCitySelect = document.getElementById('p-city');
-    const savedStartingCity = isEdit ? String(pkg.starting_location || '') : '';
-    if (startingCitySelect && savedStartingCity &&
-        [...startingCitySelect.options].some(option => option.value === savedStartingCity)) {
-        startingCitySelect.value = savedStartingCity;
+    if (startingCitySelect && savedStartingCity) {
+        const savedCityOption = [...startingCitySelect.options].find(option =>
+            normalizeMatchCity(option.value) === normalizeMatchCity(savedStartingCity)
+        );
+        if (savedCityOption) startingCitySelect.value = savedCityOption.value;
     }
 };
 
