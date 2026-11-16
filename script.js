@@ -944,35 +944,20 @@ window.confirmHotelLogout = async function() {
    4. UI RENDERING (Login / Signup)
    ========================================= */
 
-function clearAuthEmailPasswordFields() {
-    ['email', 'password'].forEach(id => {
-        const input = document.getElementById(id);
-        if (!input) return;
-        input.value = '';
-        input.setAttribute('autocomplete', id === 'password' ? 'new-password' : 'off');
-        input.setAttribute('autocapitalize', 'none');
-        input.setAttribute('spellcheck', 'false');
-    });
-}
-
-// Clear any browser-restored credentials on initial page load. renderAuthUI()
-// calls this again after swapping between Login and Create Account views.
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', clearAuthEmailPasswordFields, { once: true });
-} else {
-    clearAuthEmailPasswordFields();
-}
-
 function renderAuthUI() {
     const app=document.getElementById('app'); if(!app)return;
     app.innerHTML=`
       <div class="card" style="max-width:520px;margin:50px auto;padding:32px;background:white;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.1);border-radius:15px;font-family:Inter,sans-serif;">
         <h1 style="color:#ff9f43;margin-bottom:8px;">TourSetu</h1>
         <h2 id="form-title" style="margin-bottom:18px;">${isLoginMode?"Welcome Back":"Create Account"}</h2>
-        <input type="email" id="email" name="email" placeholder="Email Address" autocomplete="username email" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-        <div style="position:relative;width:100%;margin:8px 0;"><input type="password" id="password" name="password" placeholder="Password" autocomplete="${isLoginMode?'current-password':'new-password'}" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px 46px 12px 12px;margin:0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><button type="button" aria-label="Show password" aria-pressed="false" data-ts-csp-click="toggleAuthPassword()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#667085;cursor:pointer;padding:8px;line-height:1;"><i id="auth-password-eye" class="fa-regular fa-eye" aria-hidden="true"></i></button></div>
+        <form id="auth-form" autocomplete="on" data-ts-csp-submit="handleAuth()">
+        <input type="email" id="email" name="email" placeholder="Email Address" autocomplete="username" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <div style="position:relative;width:100%;display:flex;align-items:center;margin:8px 0;">
+          <input type="password" id="password" name="password" placeholder="Password" autocomplete="${isLoginMode?'current-password':'new-password'}" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px 42px 12px 12px;box-sizing:border-box;margin:0;border:1px solid #ddd;border-radius:8px;">
+          <button type="button" aria-label="Show password" aria-pressed="false" data-ts-csp-click="toggleAuthPassword()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;z-index:2;padding:0;display:flex;align-items:center;color:#667085;"><i id="auth-password-eye" class="fa-regular fa-eye" aria-hidden="true"></i></button>
+        </div>
         ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" data-ts-csp-click="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
-        ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" data-ts-csp-change="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select><button type="button" data-ts-csp-click="chooseSavedEmail()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:10px 12px;border:1px solid #d7dce2;border-radius:8px;background:#f8fafc;color:#344054;font-weight:600;cursor:pointer;"><i class="fa-regular fa-envelope" aria-hidden="true"></i> Choose Saved Email</button></div>'}
+        ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" data-ts-csp-change="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select></div>'}
         <div id="business-fields" style="display:none;text-align:left;margin-top:12px;border-top:1px solid #eee;padding-top:12px;">
           <div id="agency-basic-fields">
             <label>Email Address</label><input type="email" id="agency-email" readonly placeholder="Email Address" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;background:#f8f9fa;">
@@ -1021,15 +1006,15 @@ function renderAuthUI() {
             </div>
             <div style="display:flex;gap:10px;margin-top:14px;">
               <button type="button" data-ts-csp-click="backToAgencyDocumentStep1()" style="background:#636e72;color:white;flex:1;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;">BACK</button>
-              <button type="button" id="agency-register-btn" data-ts-csp-click="handleAuth()" style="background:#ff9f43;color:white;flex:1;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;">REGISTER</button>
+              <button type="submit" id="agency-register-btn" style="background:#ff9f43;color:white;flex:1;padding:13px;border:0;border-radius:8px;font-weight:800;cursor:pointer;">REGISTER</button>
             </div>
           </div>
         </div>
-        <button id="auth-btn" data-ts-csp-click="handleAuth()" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:18px;font-size:16px;">${isLoginMode?"Login":"Register"}</button>
+        <button type="submit" id="auth-btn" style="background:#ff9f43;color:white;width:100%;padding:14px;border-radius:8px;font-weight:bold;cursor:pointer;border:none;margin-top:18px;font-size:16px;">${isLoginMode?"Login":"Register"}</button>
         <p style="margin-top:18px;font-size:14px;color:#636e72;">${isLoginMode?"Don't have an account?":"Already have account?"} <span data-ts-csp-click="toggleMode()" style="color:#ff9f43;cursor:pointer;font-weight:bold;">${isLoginMode?"Create Account":"Login"}</span></p>
+        </form>
         <div id="status" style="margin-top:15px;font-size:13px;font-weight:bold;"></div>
       </div>`;
-    clearAuthEmailPasswordFields();
     const emailInput=document.getElementById('email'),agencyEmail=document.getElementById('agency-email');
 window.toggleAuthPassword=function(){
     const input=document.getElementById('password');
@@ -1042,32 +1027,7 @@ window.toggleAuthPassword=function(){
     button.setAttribute('aria-pressed',String(reveal));
     if(eye){eye.classList.toggle('fa-eye',!reveal);eye.classList.toggle('fa-eye-slash',reveal);}
 };
-window.chooseSavedEmail=async function(){
-    const emailInput=document.getElementById('email');
-    const passwordInput=document.getElementById('password');
-    if(!emailInput)return;
-    let filled=false;
-    try{
-        if(navigator.credentials?.get){
-            const credential=await navigator.credentials.get({password:true,mediation:'optional'});
-            if(credential){
-                const savedEmail=credential.id||credential.name||'';
-                if(savedEmail)emailInput.value=savedEmail;
-                if(passwordInput&&typeof credential.password==='string')passwordInput.value=credential.password;
-                emailInput.dispatchEvent(new Event('input',{bubbles:true}));
-                passwordInput?.dispatchEvent(new Event('input',{bubbles:true}));
-                filled=Boolean(savedEmail||credential.password);
-            }
-        }
-    }catch(error){
-        console.info('Saved account picker unavailable; using browser email autofill.',error);
-    }
-    if(!filled){
-        emailInput.focus();
-        emailInput.click();
-        emailInput.dispatchEvent(new Event('focus',{bubbles:false}));
-    }
-};
+
 
     if(emailInput&&agencyEmail){agencyEmail.value=emailInput.value;emailInput.addEventListener('input',()=>agencyEmail.value=emailInput.value);}
 }
@@ -15028,7 +14988,7 @@ window.renderCustomerRequests=async function(){
 (function installHotelDashboardCspBindings() {
     const hotelRoots = 'body';
     const allowedCalls = new Set([
-        'handleLogout', 'toggleAgencyTermsApprovalButton', 'acceptAgencyPartnerTerms', 'toggleCustomerPrivacyApprovalButton', 'acceptCustomerPrivacyPolicy', 'toggleCustomerTermsApprovalButton', 'acceptCustomerMarketplaceTerms', 'toggleDashboardUtilityMenu', 'copyMyReferralLink', 'shareMyReferralLink', 'openTourSetuLegalPanel', 'handleForgotPassword', 'handleRegisterRoleChange', 'goToAgencyDocumentStep2', 'backToAgencyDocumentStep1', 'handleAuth', 'toggleMode', 'handlePasswordUpdate', 'clearAuthRecoveryUrl', 'renderAuthUI', 'resendConfirmationFromLogin', 'confirmHotelCancellation', 'updateCities', 'processSave', 'deletePackage', 'showTab',
+        'handleLogout', 'toggleAgencyTermsApprovalButton', 'acceptAgencyPartnerTerms', 'toggleCustomerPrivacyApprovalButton', 'acceptCustomerPrivacyPolicy', 'toggleCustomerTermsApprovalButton', 'acceptCustomerMarketplaceTerms', 'toggleDashboardUtilityMenu', 'copyMyReferralLink', 'shareMyReferralLink', 'openTourSetuLegalPanel', 'handleForgotPassword', 'handleRegisterRoleChange', 'goToAgencyDocumentStep2', 'backToAgencyDocumentStep1', 'handleAuth', 'toggleAuthPassword', 'toggleMode', 'handlePasswordUpdate', 'clearAuthRecoveryUrl', 'renderAuthUI', 'resendConfirmationFromLogin', 'confirmHotelCancellation', 'updateCities', 'processSave', 'deletePackage', 'showTab',
         'showHotelTab', 'switchHotelTab', 'openHotelBookingRequestSection', 'toggleStopSell',
         'confirmAndExecuteLogout', 'executeHotelLogout', 'saveHotelProfile', 'handleSaveHotelProfile', 'saveOrUpdateRoomCategory', 'saveRoomCategory', 'showRoomForm', 'updateRoomStockOptimistic', 'handleHotelRequestAction', 'promptHotelAction',
         'approveCustomerHotelBooking', 'denyCustomerHotelBooking',
