@@ -969,10 +969,10 @@ function renderAuthUI() {
       <div class="card" style="max-width:520px;margin:50px auto;padding:32px;background:white;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,.1);border-radius:15px;font-family:Inter,sans-serif;">
         <h1 style="color:#ff9f43;margin-bottom:8px;">TourSetu</h1>
         <h2 id="form-title" style="margin-bottom:18px;">${isLoginMode?"Welcome Back":"Create Account"}</h2>
-        <input type="email" id="email" placeholder="Email Address" autocomplete="off" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
-        <input type="password" id="password" placeholder="Password" autocomplete="new-password" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <input type="email" id="email" name="email" placeholder="Email Address" autocomplete="username email" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;">
+        <div style="position:relative;width:100%;margin:8px 0;"><input type="password" id="password" name="password" placeholder="Password" autocomplete="${isLoginMode?'current-password':'new-password'}" autocapitalize="none" spellcheck="false" style="width:100%;padding:12px 46px 12px 12px;margin:0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><button type="button" aria-label="Show password" aria-pressed="false" data-ts-csp-click="toggleAuthPassword()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#667085;cursor:pointer;padding:8px;line-height:1;"><i id="auth-password-eye" class="fa-regular fa-eye" aria-hidden="true"></i></button></div>
         ${isLoginMode?'<div style="text-align:right;margin:-2px 0 8px;"><button type="button" data-ts-csp-click="handleForgotPassword()" style="background:none;border:0;color:#ff9f43;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0;">Forgot Password?</button></div>':''}
-        ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" data-ts-csp-change="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select></div>'}
+        ${isLoginMode?'': '<div id="role-selection" style="display:block;margin:12px 0;"><label style="display:block;text-align:left;margin:8px 0 5px;font-size:12px;color:#666;font-weight:700;">REGISTER AS</label><select id="role" data-ts-csp-change="handleRegisterRoleChange()" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;"><option value="customer">Traveler</option><option value="agency">Travel Agency</option><option value="hotel">Hotel Partner 🏨</option><option value="driver">Taxi Driver 🚕</option></select><button type="button" data-ts-csp-click="chooseSavedEmail()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:10px 12px;border:1px solid #d7dce2;border-radius:8px;background:#f8fafc;color:#344054;font-weight:600;cursor:pointer;"><i class="fa-regular fa-envelope" aria-hidden="true"></i> Choose Saved Email</button></div>'}
         <div id="business-fields" style="display:none;text-align:left;margin-top:12px;border-top:1px solid #eee;padding-top:12px;">
           <div id="agency-basic-fields">
             <label>Email Address</label><input type="email" id="agency-email" readonly placeholder="Email Address" style="width:100%;padding:12px;margin:5px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box;background:#f8f9fa;">
@@ -1031,6 +1031,44 @@ function renderAuthUI() {
       </div>`;
     clearAuthEmailPasswordFields();
     const emailInput=document.getElementById('email'),agencyEmail=document.getElementById('agency-email');
+window.toggleAuthPassword=function(){
+    const input=document.getElementById('password');
+    const button=input?.parentElement?.querySelector('button[aria-label]');
+    const eye=document.getElementById('auth-password-eye');
+    if(!input||!button)return;
+    const reveal=input.type==='password';
+    input.type=reveal?'text':'password';
+    button.setAttribute('aria-label',reveal?'Hide password':'Show password');
+    button.setAttribute('aria-pressed',String(reveal));
+    if(eye){eye.classList.toggle('fa-eye',!reveal);eye.classList.toggle('fa-eye-slash',reveal);}
+};
+window.chooseSavedEmail=async function(){
+    const emailInput=document.getElementById('email');
+    const passwordInput=document.getElementById('password');
+    if(!emailInput)return;
+    let filled=false;
+    try{
+        if(navigator.credentials?.get){
+            const credential=await navigator.credentials.get({password:true,mediation:'optional'});
+            if(credential){
+                const savedEmail=credential.id||credential.name||'';
+                if(savedEmail)emailInput.value=savedEmail;
+                if(passwordInput&&typeof credential.password==='string')passwordInput.value=credential.password;
+                emailInput.dispatchEvent(new Event('input',{bubbles:true}));
+                passwordInput?.dispatchEvent(new Event('input',{bubbles:true}));
+                filled=Boolean(savedEmail||credential.password);
+            }
+        }
+    }catch(error){
+        console.info('Saved account picker unavailable; using browser email autofill.',error);
+    }
+    if(!filled){
+        emailInput.focus();
+        emailInput.click();
+        emailInput.dispatchEvent(new Event('focus',{bubbles:false}));
+    }
+};
+
     if(emailInput&&agencyEmail){agencyEmail.value=emailInput.value;emailInput.addEventListener('input',()=>agencyEmail.value=emailInput.value);}
 }
 window.goToAgencyDocumentStep2=function(){
