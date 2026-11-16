@@ -814,9 +814,37 @@ function startAuthStateListener() {
     authStateListenerStarted = true;
     const client = getClient();
     if (!client) return;
-    client.auth.onAuthStateChange(async (event) => {
-        if (event === 'PASSWORD_RECOVERY') renderPasswordResetUI();
+    client.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+            renderPasswordResetUI();
+            return;
+        }
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+            Promise.resolve().then(() => routeAuthenticatedUser(session.user));
+        }
     });
+}
+
+let authRouteInFlight = null;
+let authRouteCompletedUserId = '';
+async function routeAuthenticatedUser(user) {
+    if (!user?.id || authRouteCompletedUserId === user.id) return;
+    if (authRouteInFlight) return authRouteInFlight;
+    authRouteInFlight = (async () => {
+        try {
+            await applyPendingGoogleSignupRole(user);
+            await recordReferralLogin();
+            await showDashboard(user);
+            authRouteCompletedUserId = user.id;
+        } catch (error) {
+            console.error('Post-authentication dashboard routing failed:', error);
+            const status = document.getElementById('status');
+            if (status) status.textContent = '❌ Your account is signed in, but dashboard setup failed. Please refresh or contact TourSetu support.';
+        } finally {
+            authRouteInFlight = null;
+        }
+    })();
+    return authRouteInFlight;
 }
 
 async function initApp() {
@@ -835,52 +863,62 @@ async function initApp() {
     const referralCode = new URLSearchParams(window.location.search).get('ref');
     if (referralCode && referralCode.trim()) isLoginMode = false;
 
-    const { data: { user }, error } = await client.auth.getUser();
-    if (user && !error) {
-        await applyPendingGoogleSignupRole(user);
-        await showDashboard(user);
-    } else renderAuthUI();
+    const { data: { session }, error } = await client.auth.getSession();
+    if (session?.user && !error) await routeAuthenticatedUser(session.user);
+    else renderAuthUI();
 }
 
 async function applyPendingGoogleSignupRole(user) {
-    const storageKey='toursetu_google_signup_role';
-    const startedKey='toursetu_google_signup_started_at';
-    let selectedRole='';
+    if (!user?.id) return;
+    const client = getClient();
+    if (!client) return;
+    const storageKey = 'toursetu_google_signup_role';
+    const startedKey = 'toursetu_google_signup_started_at';
+    const allowedRoles = new Set(['customer', 'agency', 'hotel', 'driver']);
+    let selectedRole = '';
     try {
-        const startedAt=Number(localStorage.getItem(startedKey)||0);
-        // Ignore stale intent left behind if the user later signs in normally.
-        if(startedAt && Date.now()-startedAt <= 30*60*1000) {
-            selectedRole=String(localStorage.getItem(storageKey)||'').toLowerCase();
+        const startedAt = Number(localStorage.getItem(startedKey) || 0);
+        if (startedAt && Date.now() - startedAt <= 30 * 60 * 1000) {
+            selectedRole = String(localStorage.getItem(storageKey) || '').toLowerCase();
         }
+    } catch (error) { console.warn('Unable to read saved Google signup role:', error); }
+
+    const { data: existingProfile, error: lookupError } = await client
+        .from('profiles').select('role').eq('id', user.id).maybeSingle();
+    if (lookupError) console.warn('OAuth profile role lookup failed:', lookupError);
+    const existingRole = String(existingProfile?.role || '').toLowerCase();
+    if (!allowedRoles.has(selectedRole)) {
+        const cachedRole = String(localStorage.getItem('toursetu_authenticated_role') || '').toLowerCase();
+        const metadataRole = String(user.user_metadata?.role || '').toLowerCase();
+        selectedRole = allowedRoles.has(existingRole) ? existingRole :
+            (allowedRoles.has(cachedRole) ? cachedRole :
+            (allowedRoles.has(metadataRole) ? metadataRole : 'customer'));
+    }
+    if (!allowedRoles.has(selectedRole)) selectedRole = 'customer';
+
+    try {
+        localStorage.setItem('toursetu_authenticated_role', selectedRole);
         localStorage.removeItem(storageKey);
         localStorage.removeItem(startedKey);
-    } catch(error) {
-        console.warn('Unable to read saved Google signup role:',error);
+    } catch (error) { console.warn('OAuth role localStorage update failed:', error); }
+
+    if (String(user.user_metadata?.role || '').toLowerCase() !== selectedRole) {
+        const { error: metadataError } = await client.auth.updateUser({ data: { role: selectedRole } });
+        if (metadataError) console.warn('OAuth auth-metadata role sync skipped:', metadataError);
     }
-    const allowedRoles=new Set(['customer','agency','hotel','driver']);
-    if(!user?.id || !allowedRoles.has(selectedRole)) return;
-    const client=getClient();
-    if(!client) return;
-    // Store the selected role in Supabase Auth metadata so it survives future sessions.
-    const {error:metadataError}=await client.auth.updateUser({data:{role:selectedRole}});
-    if(metadataError) throw metadataError;
-    // Keep the app's profile role in sync. This writes only the authenticated user's row.
-    const isCustomer=selectedRole==='customer';
-    const {error:profileError}=await client.from('profiles').upsert(
-        {
-            id:user.id,
-            email:user.email||null,
-            role:selectedRole,
-            is_approved:isCustomer,
-            approval_status:isCustomer?'approved':'pending'
-        },
-        {onConflict:'id'}
-    );
-    if(profileError) {
-        console.error('Google signup profile role save failed:',profileError);
-        throw new Error('Google account was created, but saving your selected account type failed. Please contact TourSetu support before continuing.');
+
+    const isCustomer = selectedRole === 'customer';
+    const { error: profileError } = await client.from('profiles').upsert({
+        id: user.id,
+        email: user.email || null,
+        role: selectedRole,
+        ...(!existingProfile ? { is_approved: isCustomer, approval_status: isCustomer ? 'approved' : 'pending' } : {})
+    }, { onConflict: 'id' });
+    if (profileError) {
+        console.error('OAuth profile role save failed:', profileError);
+        throw new Error('Your account is signed in, but your TourSetu account type could not be saved. Please contact support.');
     }
-    user.user_metadata={...(user.user_metadata||{}),role:selectedRole};
+    user.user_metadata = { ...(user.user_metadata || {}), role: selectedRole };
 }
 
 async function resolveTourSetuRole(user) {
@@ -1102,7 +1140,7 @@ function bindAuthFormControls() {
                 if(!client)throw new Error('Supabase is not initialized. Please refresh and try again.');
                 const {error}=await client.auth.signInWithOAuth({
                     provider:'google',
-                    options:{redirectTo:window.location.origin}
+                    options:{redirectTo:TOURSETU_AUTH_REDIRECT_URL}
                 });
                 if(error)throw error;
                 // Supabase normally navigates away. Restore the control if it does not.
@@ -1533,7 +1571,7 @@ async function handleAuth(){
                 throw error;
             }
             if(data?.user){window.identifyOneSignalUser(data.user.id);}
-            await recordReferralLogin();await showDashboard(data.user);return;
+            await routeAuthenticatedUser(data.user);return;
         }
         const metadata={role,is_approved:role==='customer'};
         if(role==='agency'){metadata.gst=document.getElementById('gst-no')?.value.trim()||'';metadata.reg_no=document.getElementById('biz-reg')?.value.trim()||'';metadata.phone=document.getElementById('biz-phone')?.value.trim()||'';metadata.license='';}
@@ -1542,7 +1580,7 @@ async function handleAuth(){
         const {data,error}=await client.auth.signUp({email,password,options:{data:metadata,emailRedirectTo:redirectUrl}});if(error)throw error;if(!data?.user)throw new Error('Account could not be created.');if(data.session)await recordReferralLogin();
         if(role==='agency'){
             if(!data.session){if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Verification link aapke email par bhej diya gaya hai. Kripya email check karke account verify karein. Please confirm <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>, then login once to complete the KYC upload.<br><br><small>The agency request is already created in Supabase with <b>pending</b> status.</small></div>';return;}
-            await submitAgencyKYC(data.user);if(status)status.innerText='✅ Registration submitted. Opening your Agency Dashboard...';await showDashboard(data.user);return;
+            await submitAgencyKYC(data.user);if(status)status.innerText='✅ Registration submitted. Opening your Agency Dashboard...';await routeAuthenticatedUser(data.user);return;
         }
         if(role==='hotel'){
             if(!data.session){
@@ -1551,10 +1589,10 @@ async function handleAuth(){
             }
             await submitHotelKYC(data.user);
             if(status)status.innerText='✅ Hotel account created. Opening your Hotel Dashboard...';
-            await showDashboard(data.user);
+            await routeAuthenticatedUser(data.user);
             return;
         }
-        if(data?.session)await showDashboard(data.user);else if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Verification link aapke email par bhej diya gaya hai. Kripya email check karke account verify karein.<br><br><small>We sent the link to <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>. After verification, return here and log in.</small></div>';
+        if(data?.session)await routeAuthenticatedUser(data.user);else if(status)status.innerHTML='<div style="background:#fff4e6;padding:15px;border-radius:10px;border:1px solid #ffd8a8;color:#d9480f;text-align:left;"><strong>✉️ Email confirmation required</strong><br>Verification link aapke email par bhej diya gaya hai. Kripya email check karke account verify karein.<br><br><small>We sent the link to <b>'+window.TourSetuDOM.escapeHTML(email)+'</b>. After verification, return here and log in.</small></div>';
     }catch(err){console.error('Auth/KYC error:',err);if(status)status.textContent='❌ '+getReadableAuthError(err,'Signup/login failed. Please check your connection and try again.');}
     finally{if(btn)btn.disabled=false;}
 }
