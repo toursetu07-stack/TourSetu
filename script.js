@@ -921,29 +921,95 @@ async function routeAuthenticatedUser(user) {
     return authRouteInFlight;
 }
 
+function saveDashboardLocation(kind, tab) {
+    const safeKind = String(kind || '').toLowerCase();
+    const safeTab = String(tab || '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    if (!safeKind || !safeTab) return;
+    try { window.history.replaceState(null, '', window.location.pathname + window.location.search + '#' + safeKind + '-' + safeTab); }
+    catch (error) { try { window.location.hash = safeKind + '-' + safeTab; } catch (_) {} }
+}
+function restoreDashboardLocation(role) {
+    const raw = String(window.location.hash || '').replace(/^#/, '');
+    if (!raw) return;
+    const match = raw.match(/^(agency|hotel|customer|driver)-(.*)$/i);
+    if (!match || !match[2]) return;
+    const kind = match[1].toLowerCase(), tab = match[2].toLowerCase();
+    if (kind !== String(role || '').toLowerCase()) return;
+    window.setTimeout(() => {
+        try {
+            if (kind === 'agency' && typeof window.showTab === 'function') window.showTab(tab);
+            else if (kind === 'hotel' && typeof window.showHotelTab === 'function') window.showHotelTab(tab);
+            else if (kind === 'customer') {
+                const target = document.getElementById(tab) || document.querySelector('[data-customer-section="' + CSS.escape(tab) + '"]');
+                target?.scrollIntoView({behavior:'instant', block:'start'});
+            } else if (kind === 'driver') {
+                const target = document.getElementById(tab);
+                target?.scrollIntoView({behavior:'instant', block:'start'});
+            }
+        } catch (error) { console.warn('Dashboard location restore skipped:', error); }
+    }, 250);
+}
+(function installDashboardLocationPersistence() {
+    if (window.__toursetuDashboardLocationBound) return;
+    window.__toursetuDashboardLocationBound = true;
+    document.addEventListener('click', event => {
+        const target = event.target instanceof Element ? event.target.closest('[data-agency-tab], [data-hotel-tab], .hotel-nav-btn, [data-customer-tab], [data-dashboard-tab], [data-driver-target]') : null;
+        if (!target) return;
+        const tab = target.dataset.agencyTab || target.dataset.hotelTab || target.dataset.customerTab || target.dataset.dashboardTab || target.dataset.driverTarget || (target.id || '').replace(/^nav-/, '');
+        const kind = target.closest('.toursetu-agency-dashboard') ? 'agency' :
+            target.closest('.hotel-dashboard-shell') ? 'hotel' :
+            target.closest('.driver-app') ? 'driver' :
+            target.dataset.customerTab ? 'customer' : '';
+        if (kind && tab) saveDashboardLocation(kind, tab);
+    }, true);
+    document.addEventListener('click', event => {
+        const node = event.target instanceof Element ? event.target.closest('[data-ts-csp-click]') : null;
+        const source = node?.getAttribute('data-ts-csp-click') || '';
+        const match = source.match(/(?:window\\.)?(showTab|showHotelTab)\\(['"]([a-z0-9_-]+)['"]\\)/i);
+        if (match) saveDashboardLocation(match[1].toLowerCase() === 'showtab' ? 'agency' : 'hotel', match[2]);
+    }, true);
+})();
 async function initApp() {
     console.log("TourSetu Booting Up...");
     const client = getClient();
-    if (!client) return;
+    const app = document.getElementById('app');
+    if (!client) { renderAuthUI(); return; }
     startAuthStateListener();
-
+    if (app) {
+        app.setAttribute('aria-busy', 'true');
+        app.innerHTML = '<div role="status" aria-live="polite" style="max-width:430px;margin:60px auto;padding:24px;text-align:center;color:#475569;">Restoring your secure TourSetu session…</div>';
+    }
     if (isPasswordRecoveryUrl()) {
         renderPasswordResetUI();
+        if (app) app.removeAttribute('aria-busy');
         return;
     }
-
-    // A referral URL is an invitation to join, so open registration directly.
-    // Preserve the referral code captured earlier for attribution at signup.
     const referralCode = new URLSearchParams(window.location.search).get('ref');
     if (referralCode && referralCode.trim()) isLoginMode = false;
-
-    const { data: { session }, error } = await client.auth.getSession();
-    if (session?.user && !error && isGoogleOAuthReturn() && hasFreshGoogleSignupIntent()) {
-        await handleGoogleOAuthReturn(session.user);
-    } else {
-        // A plain refresh must never replay a previous OAuth role-save attempt.
-        clearGoogleSignupIntent();
+    try {
+        const { data, error } = await client.auth.getSession();
+        if (error) throw error;
+        const session = data?.session || null;
+        if (session?.user) {
+            if (isGoogleOAuthReturn() && hasFreshGoogleSignupIntent()) {
+                await handleGoogleOAuthReturn(session.user);
+            } else {
+                clearGoogleSignupIntent();
+                await routeAuthenticatedUser(session.user);
+                const role = await resolveTourSetuRole(session.user);
+                restoreDashboardLocation(role);
+            }
+        } else {
+            clearGoogleSignupIntent();
+            renderAuthUI();
+        }
+    } catch (error) {
+        console.error('TourSetu session restoration failed:', error);
         renderAuthUI();
+        const status = document.getElementById('status');
+        if (status) status.textContent = 'Unable to restore your session securely. Please sign in again.';
+    } finally {
+        if (app) app.removeAttribute('aria-busy');
     }
 }
 
@@ -1081,7 +1147,7 @@ async function showDashboard(user) {
         else if(typeof renderHotelDashboard==="function")renderHotelDashboard(user);
         else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Hotel Dashboard</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button data-ts-csp-click="handleLogout()">Logout</button></div>';
     }else{
-        if(typeof renderCustomerHomepage==="function")renderCustomerHomepage(user);
+        if(typeof renderCustomerHomepage==="function")await renderCustomerHomepage(user);
         else document.getElementById('app').innerHTML='<div style="padding:20px;"><h2>Traveler Home</h2><p>Welcome, '+window.TourSetuDOM.escapeHTML(user.email)+'</p><button data-ts-csp-click="handleLogout()">Logout</button></div>';
     }
 }
@@ -1093,8 +1159,9 @@ async function handleLogout() {
             try { await OneSignal.logout(); } catch (e) {}
         });
     } catch (e) {}
+    try { window.location.hash = ''; sessionStorage.removeItem('toursetu_dashboard_location'); } catch (_) {}
     await getClient().auth.signOut();
-    window.location.reload();
+    window.location.replace('/signin.html');
 }
 
 window.confirmHotelLogout = async function() {
