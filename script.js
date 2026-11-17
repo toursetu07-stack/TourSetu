@@ -999,10 +999,12 @@ async function initApp() {
                 await handleGoogleOAuthReturn(session.user);
             } else {
                 clearGoogleSignupIntent();
-                await routeAuthenticatedUser(session.user);
-                const role = await resolveTourSetuRole(session.user);
-                restoreDashboardLocation(role);
             }
+            // Both OAuth completion and ordinary refresh must finish in the
+            // authenticated role dashboard, never leave the boot/loading shell.
+            await routeAuthenticatedUser(session.user);
+            const role = await resolveTourSetuRole(session.user);
+            restoreDashboardLocation(role);
         } else {
             clearGoogleSignupIntent();
             renderAuthUI();
