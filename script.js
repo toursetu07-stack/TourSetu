@@ -887,6 +887,10 @@ function startAuthStateListener() {
     const client = getClient();
     if (!client) return;
     client.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+            try { window.history.replaceState(null, '', window.location.pathname + window.location.search); sessionStorage.removeItem('toursetu_dashboard_location'); sessionStorage.removeItem('toursetu_driver_location'); } catch (_) {}
+            authRouteCompletedUserId = '';
+        }
         if (event === 'PASSWORD_RECOVERY') {
             renderPasswordResetUI();
             return;
