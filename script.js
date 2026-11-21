@@ -8199,7 +8199,8 @@ window.showPackageForm = function(pEncoded = null) {
             <input
                 type="checkbox"
                 class="d-check agency-dashboard-checkbox agency-destination-checkbox"
-                value="${d}"
+                data-agency-package-destination
+                value="${window.TourSetuDOM.escapeAttribute(String(d))}"
                 aria-label="Select destination ${d}"
                 ${activeDests.includes(d) ? 'checked' : ''}
             >
@@ -8599,7 +8600,9 @@ window.showPackageForm = function(pEncoded = null) {
 
                 <button
                     id="save-btn"
-                    data-ts-csp-click="window.processSave('${isEdit ? pkg.id : ''}')"
+                    type="button"
+                    data-agency-package-action="save"
+                    data-package-id="${isEdit ? window.TourSetuDOM.escapeAttribute(String(pkg.id)) : ''}"
                     style="
                         background:#2ecc71;
                         color:white;
@@ -8619,7 +8622,9 @@ window.showPackageForm = function(pEncoded = null) {
                     isEdit
                     ? `
                     <button
-                        data-ts-csp-click="if(confirm('Are you sure you want to delete this package?')) window.deletePackage('${pkg.id}')"
+                        type="button"
+                        data-agency-package-action="delete"
+                        data-package-id="${window.TourSetuDOM.escapeAttribute(String(pkg.id))}"
                         style="
                             background:#e74c3c;
                             color:white;
@@ -8638,7 +8643,8 @@ window.showPackageForm = function(pEncoded = null) {
 
 
                 <button
-                    data-ts-csp-click="window.showTab('packages')"
+                    type="button"
+                    data-agency-package-action="cancel"
                     style="
                         background:#eee;
                         flex:1;
@@ -8738,7 +8744,7 @@ window.processSave = async function(packageId = '') {
         }
 
         const selectedDests = [];
-        document.querySelectorAll('.d-check:checked').forEach(cb => {
+        document.querySelectorAll('#main-content [data-agency-package-destination]:checked').forEach(cb => {
             selectedDests.push(cb.value);
         });
 
@@ -8840,15 +8846,18 @@ window.processSave = async function(packageId = '') {
         let resultError = null;
 
         if (packageId) {
-            const { error } = await _supabase
+            const { data, error } = await client
                 .from('packages')
                 .update(payload)
                 .eq('id', packageId)
-                .eq('agency_id', user.id);
+                .eq('agency_id', user.id)
+                .select('id')
+                .maybeSingle();
 
             resultError = error;
+            if (!error && !data) throw new Error('Package was not updated. Check that this package belongs to your agency and that database permissions allow the update.');
         } else {
-            const { error } = await _supabase
+            const { error } = await client
                 .from('packages')
                 .insert([payload]);
 
@@ -15544,3 +15553,59 @@ document.addEventListener('click', function (event) {
 });
 
 })();
+
+/* Agency package editor actions use semantic data attributes and a single
+ * document-level delegate. This remains reliable for dynamically rendered forms. */
+document.addEventListener('click', async function(event) {
+    const button = event.target instanceof Element
+        ? event.target.closest('[data-agency-package-action]')
+        : null;
+    if (!button) return;
+    event.preventDefault();
+    if (button.disabled) return;
+
+    const action = button.dataset.agencyPackageAction;
+    const packageId = button.dataset.packageId || '';
+
+    if (action === 'cancel') {
+        if (typeof window.showTab === 'function') window.showTab('packages');
+        return;
+    }
+    if (action === 'save') {
+        if (typeof window.processSave !== 'function') {
+            alert('Package editor is not ready. Please refresh and try again.');
+            return;
+        }
+        await window.processSave(packageId);
+        return;
+    }
+    if (action === 'delete') {
+        if (!packageId || !window.confirm('Are you sure you want to delete this package?')) return;
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        try {
+            const client = getClient();
+            if (!client) throw new Error('Supabase is unavailable. Please refresh and sign in again.');
+            const { data: { user }, error: authError } = await client.auth.getUser();
+            if (authError) throw authError;
+            if (!user?.id) throw new Error('Your session has expired. Please sign in again.');
+            const role = await resolveTourSetuRole(user);
+            if (role !== 'agency') throw new Error('Only an agency account can delete packages.');
+            const { data, error } = await client.from('packages')
+                .delete()
+                .eq('id', packageId)
+                .eq('agency_id', user.id)
+                .select('id')
+                .maybeSingle();
+            if (error) throw error;
+            if (!data) throw new Error('Package was not deleted. It may not belong to your agency or database permissions blocked the action.');
+            alert('Package deleted successfully.');
+            if (typeof window.showTab === 'function') window.showTab('packages');
+        } catch (error) {
+            console.error('Agency package deletion failed:', error);
+            alert('Unable to delete package: ' + (error?.message || 'Please try again.'));
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+        }
+    }
+});
